@@ -492,6 +492,18 @@ Module Type Expr.
             | this :: vs => |> fspec (Vptr fa) (this :: vs) (fun v => Q v free)
             end)
         |-- wp_prval (Emember_call (inl (f, false)) obj es ty) Q.
+
+    Axiom type_ptr: forall (c: globname), Rep Σ.
+
+    Axiom addrOfVirtualFunc :forall (derivedClassNameG : globname)
+             (virtualMethod : obj_name), option obj_name.
+
+    Axiom wp_prval_member_call_virtual : forall ty f obj es Q,
+      wp_lval obj (fun this free => wp_args es (fun vs free' => (* cls subclass *)
+            Exists cls fimpl_name fimpl_addr, _at (_eqv this) (type_ptr cls) ** [| addrOfVirtualFunc cls f = Some fimpl_name |] ** _global fimpl_name &~ fimpl_addr **
+            |> fspec (Vptr fimpl_addr) ti (this :: vs) (fun v => Q v (free ** free'))))
+        |-- wp_prval (Emember_call (inl (f, true)) obj es ty) Q.
+
     Axiom wp_xval_member_call : forall ty f obj es Q,
         Exists fa, _global f &~ fa **
         wp_args ((Lvalue, obj)::es) (fun vs free =>
