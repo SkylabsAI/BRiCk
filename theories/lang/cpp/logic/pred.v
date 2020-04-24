@@ -88,6 +88,19 @@ Module Type CPP_LOGIC.
     Axiom tptsto_has_type : forall σ t q a v,
         @tptsto σ t q a v |-- @tptsto σ t q a v ** [| has_type v t |] ** valid_ptr a.
 
+    (** this states that the pointer is a pointer to the given type,
+        this is persistent. this implies, e.g. that the address is not
+        null, that it is properly aligned (if it exists in memory).
+     *)
+    Parameter type_ptr: forall {resolve : genv} (c: type), ptr -> mpred.
+
+    (** [vtable mp q p] states that a vtable [mp] is the one that C++
+        will use when invoking virtual functions on [p]
+        note: we avoid using names in this definition because the caller
+        may not have the most derived class in scope.
+     *)
+    Parameter vtable : forall (mp : gmap obj_name ptr), Qp -> ptr -> mpred.
+
     (** the pointer points to the code
 
       note that in the presence of code-loading, function calls will

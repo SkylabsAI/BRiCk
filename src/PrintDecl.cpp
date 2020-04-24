@@ -64,14 +64,6 @@ printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
         print.output() << "None";
     }
 
-    print.output() << fmt::line << "; m_virtual := " << fmt::nbsp;
-    if (decl->isVirtual()) {
-        using namespace logging;
-        unsupported() << "[ERR] virtual functions not supported: "
-                      << decl->getNameAsString() << "\n";
-    }
-    print.boolean(decl->isVirtual());
-
     print.output() << fmt::outdent << "|}";
 }
 
@@ -87,8 +79,6 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
     auto record = decl->getParent();
     print.output() << "{| d_class :=" << fmt::nbsp;
     cprint.printGlobalName(record, print);
-    print.output() << fmt::line << " ; d_virtual := ";
-    print.boolean(decl->isVirtual());
     print.output() << fmt::line << " ; d_body :=";
 
     if (decl->isDefaulted()) {
@@ -127,8 +117,8 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
                                               record->bases_end());
             for (auto i = bases.crbegin(), e = bases.crend(); i != e; i++) {
                 if (i->isVirtual()) {
-                    // fatal("virtual base classes are not supported.");
-                    assert(false);
+                    using namespace logging;
+                    fatal() << "virtual base classes are not supported.";
                 }
                 auto rec = i->getType().getTypePtr()->getAsCXXRecordDecl();
                 if (rec) {
@@ -138,7 +128,8 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
                     cprint.printGlobalName(rec->getDestructor(), print);
                     print.output() << fmt::rparen;
                 } else {
-                    //fatal("base class is not a RecordType.");
+                    using namespace logging;
+                    fatal() << "base class is not a RecordType.";
                     assert(false);
                 }
                 print.output() << "::";
@@ -318,6 +309,43 @@ public:
 
         print.output() << fmt::line
                        << " ; s_size := " << layout.getSize().getQuantity();
+
+        // print the virtual function table
+        print.output() << fmt::line
+                       << " ; s_vtable :=" << fmt::indent
+                       << fmt::line;
+        print.begin_list();
+        for (auto m : decl->methods()) {
+            if (m->isVirtual() and not m->isPure()) {
+                print.output() << "(";
+                cprint.printGlobalName(m, print);
+                print.output() << ", ";
+                cprint.printGlobalName(m, print);
+                print.output() << ")";
+                print.cons();
+                for (auto o : m->overridden_methods()) {
+                    print.output() << "(";
+                    cprint.printGlobalName(o, print);
+                    print.output() << ", ";
+                    cprint.printGlobalName(m, print);
+                    print.output() << ")";
+                    print.cons();
+                }
+            }
+        }
+        print.end_list();
+        print.output() << fmt::outdent;
+
+
+        print.output() << fmt::line
+                       << " ; s_virtual_dtor :=" << fmt::nbsp;
+
+        if (decl->getDestructor()->isVirtual()) {
+            print.some();
+            cprint.printGlobalName(decl->getDestructor(), print);
+        } else {
+            print.none();
+        }
 
         // todo(gmm): i need to print any implicit declarations.
 

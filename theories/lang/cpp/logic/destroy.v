@@ -19,8 +19,17 @@ Section destroy.
 
   (* remove from the stack *)
   Definition destruct_obj (dtor : obj_name) (cls : globname) (v : val) (Q : mpred) : mpred :=
-    Exists da, _global dtor &~ da **
-               |> fspec ti (Vptr da) (v :: nil) (fun _ => Q).
+    match σ.(genv_tu) !! cls with
+    | Some (Gstruct s) =>
+      if s.(s_virtual_dtor) then
+        Exists mp, (Exists q, _at (_eqv v) (_vtable q mp) ** ltrue) //\\
+                   Exists da, [| mp !! dtor = Some da |] **
+                   |> fspec ti (Vptr da) (v :: nil) (fun _ => Q)
+      else
+        Exists da, _global dtor &~ da **
+                   |> fspec ti (Vptr da) (v :: nil) (fun _ => Q)
+    | _ => lfalse
+    end.
 
   Fixpoint destruct (t : type) (this : val) (dtor : obj_name) (Q : mpred)
            {struct t}
