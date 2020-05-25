@@ -18,6 +18,8 @@ Definition Nanon (ty : globname) : globname :=
 Definition Talias (underlying : type) (name : globname) : type :=
   underlying.
 
+Definition mk_vtable (methods : list (globname * obj_name)) : list (globname * obj_name) := methods.
+
 Definition NStop : list ident := nil.
 
 Bind Scope Z_scope with Z.

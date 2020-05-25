@@ -75,9 +75,9 @@ Record Struct : Set :=
   (* ^ the type of layout semantics *)
 ; s_size : N
   (* ^ size of the structure (including padding) *)
-; s_vtable : gmap globname globname
+; s_vtable : list (obj_name * obj_name)
   (* ^ function_name -> symbol *)
-; s_virtual_dtor : option globname
+; s_virtual_dtor : option obj_name
 }.
 Instance: EqDecision Struct.
 Proof. solve_decision. Defined.

@@ -312,7 +312,7 @@ public:
 
         // print the virtual function table
         print.output() << fmt::line
-                       << " ; s_vtable :=" << fmt::indent
+                       << " ; s_vtable := mk_vtable" << fmt::nbsp << fmt::indent
                        << fmt::line;
         print.begin_list();
         for (auto m : decl->methods()) {
@@ -336,13 +336,13 @@ public:
         print.end_list();
         print.output() << fmt::outdent;
 
-
         print.output() << fmt::line
                        << " ; s_virtual_dtor :=" << fmt::nbsp;
 
-        if (decl->getDestructor()->isVirtual()) {
+        if (decl->getDestructor() && decl->getDestructor()->isVirtual()) {
             print.some();
             cprint.printGlobalName(decl->getDestructor(), print);
+            print.end_ctor();
         } else {
             print.none();
         }
