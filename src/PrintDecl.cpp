@@ -331,6 +331,7 @@ public:
             }
         }
         print.end_list();
+        print.output() << fmt::outdent;
 
         // print the virtual function table
         print.output() << fmt::line << " ; s_overrides := mk_overrides"
@@ -362,7 +363,7 @@ public:
 
         // todo(gmm): i need to print any implicit declarations.
 
-        print.output() << "|}" << fmt::rparen << fmt::rparen;
+        print.output() << fmt::nbsp << "|}" << fmt::rparen << fmt::rparen;
         return true;
     }
 
@@ -465,8 +466,8 @@ public:
             print.begin_tuple();
 
             // print the initializer list
-            // todo(gmm): parent constructors are defaulted if they are not listed,
-            //   i need to make sure that everything ends up in the list, and in the right order
+            // note that implicit initialization is represented explicitly in this list
+            // also, the order is corrrect with respect to initalization order
             print.begin_list();
             for (auto init : decl->inits()) {
                 print.begin_record();
