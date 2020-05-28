@@ -246,26 +246,6 @@ Section with_cpp.
     iIntros "#X"; iModIntro; iFrame "#".
   Qed.
 
-  (** * virtual function tables *)
-  (* wrap up [pred.vtable] as a [Rep] *)
-  Definition _vtable (q : Qp) (mp : gmap obj_name ptr) : Rep :=
-    {| monPred_at p := vtable mp q p |}.
-
-  (** this definition of [vtable] provides abstraction *)
-  Definition vtable_def (q : Qp)
-             (s : gmap obj_name (thread_info -> list val -> (val -> epred) -> mpred))
-    : Rep :=
-    as_Rep (fun this => Exists fps, (* abstraction *is* existential quantification *)
-      _at (_eq this) (_vtable q fps) **
-      [∗map] n ↦ ps ∈ merge (fun a b => match a , b with
-                                     | Some a , Some b => Some (a,b)
-                                     | _ , _ => None
-                                     end) fps s ,
-      □ (Forall ti vs Q, snd ps ti vs Q -* fspec ti (Vptr (fst ps)) vs Q)).
-  Definition vtable_aux : seal (@vtable_def). by eexists. Qed.
-  Definition vtable := vtable_aux.(unseal).
-  Definition vtable_eq : @vtable = _ := vtable_aux.(seal_eq).
-
   (********************* DERIVED CONCEPTS ****************************)
 
   Definition is_null_def : Rep :=

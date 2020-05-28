@@ -96,10 +96,22 @@ Module Type CPP_LOGIC.
 
     (** [vtable mp q p] states that a vtable [mp] is the one that C++
         will use when invoking virtual functions on [p]
+        - the [list globname] is the inheritence path from the type of the
+          [ptr] to the type of the [this] argument of the method. For
+          example, if you have 'B extends A' and B overrides a method of
+          A, then A's vtable will contain a pointer to B's override and
+          the path ["A"] meaning that the function will act like a non-virtual
+          call to `static_cast<B*>(obj)`.
+
+        note: technically, this list could just be a single [globname] because
+        there is only one path; however, computing this path isn't trivial
+        so we want to annotate it in the syntax so we need to compute it here.
+
         note: we avoid using names in this definition because the caller
         may not have the most derived class in scope.
      *)
-    Parameter vtable : forall (mp : gmap obj_name ptr), Qp -> ptr -> mpred.
+    Parameter vtable : forall (mp : gmap obj_name (ptr * list globname)),
+        Qp -> ptr -> mpred.
 
     (** the pointer points to the code
 

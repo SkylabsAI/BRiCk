@@ -182,7 +182,33 @@ Section with_cpp.
     | i :: is' => wpi (resolve:=resolve) ⊤ ti ρ cls this i (fun f => f ** wpis ti ρ cls this is' Q)
     end.
 
-  Definition wp_ctor (ctor : Ctor) (ti : thread_info) (args : list val)
+  Require Import bedrock.lang.cpp.heap_notations.
+
+  Parameter _vtableR : option (gmap obj_name (ptr * Offset)) -> Qp -> Rep.
+
+  Parameter _classR : genv -> globname -> Qp -> bool -> Rep.
+  (* this represents a pointer to the vtable for the given class.
+   * if the class does not have any virtual functions, then this is [emp]
+   * the boolean represents whether it is initialized.
+   * - we don't really need to worry about whether the compiler 
+   *
+   * this essentially factors into:
+   * - _vptr : genv -> globname -> Offset
+   *   (the location of the _vptr (even the existance of one) depends on the class)
+   * - _vtable : globname -> option (gmap obj_name ptr) -> Qp -> Rep
+   *)
+  Definition init_vtable (thisp : ptr) (cls : globname) (Q : mpred) : mpred :=
+    if true then
+       Exists b, _eq thisp |-> _vtableR b 1 **
+                (_eq thisp |-> _vtableR (Some ∅) 1 -* Q)
+    else
+      Q.
+
+  (* note(gmm): supporting virtual inheritence will require us to add
+   * constructor kinds here
+   *)
+  Definition wp_ctor (ctor : Ctor)
+             (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match ctor.(c_body) with
     | None => lfalse
@@ -193,9 +219,10 @@ Section with_cpp.
       | Vptr thisp :: rest_vals =>
         bind_base_this (Some thisp) Tvoid (fun ρ =>
         bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
-        wpis ti ρ ctor.(c_class) (Vptr thisp) inits
-           (fun free => free **
-                      wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid))))))
+        init_vtable thisp cls
+          (wpis ti ρ ctor.(c_class) (Vptr thisp) inits
+             (fun free => free **
+                        wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid)))))))
       | _ => lfalse
       end
     end.

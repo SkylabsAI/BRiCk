@@ -310,23 +310,38 @@ public:
         print.output() << fmt::line
                        << " ; s_size := " << layout.getSize().getQuantity();
 
+        // print the virtual dispatch table
+        print.output() << fmt::line << " ; s_virtuals := mk_virtuals"
+                       << fmt::nbsp << fmt::indent << fmt::line;
+        print.begin_list();
+        for (auto m : decl->methods()) {
+            if (m->isVirtual()) {
+                print.output() << "(";
+                cprint.printGlobalName(m, print);
+                print.output() << "," << fmt::nbsp;
+                if (m->isPure()) {
+                    print.none();
+                } else {
+                    print.some();
+                    cprint.printGlobalName(m, print);
+                    print.end_ctor();
+                }
+                print.output() << ")";
+                print.cons();
+            }
+        }
+        print.end_list();
+
         // print the virtual function table
-        print.output() << fmt::line
-                       << " ; s_vtable := mk_vtable" << fmt::nbsp << fmt::indent
-                       << fmt::line;
+        print.output() << fmt::line << " ; s_overrides := mk_overrides"
+                       << fmt::nbsp << fmt::indent << fmt::line;
         print.begin_list();
         for (auto m : decl->methods()) {
             if (m->isVirtual() and not m->isPure()) {
-                print.output() << "(";
-                cprint.printGlobalName(m, print);
-                print.output() << ", ";
-                cprint.printGlobalName(m, print);
-                print.output() << ")";
-                print.cons();
                 for (auto o : m->overridden_methods()) {
                     print.output() << "(";
                     cprint.printGlobalName(o, print);
-                    print.output() << ", ";
+                    print.output() << "," << fmt::nbsp;
                     cprint.printGlobalName(m, print);
                     print.output() << ")";
                     print.cons();
@@ -336,9 +351,7 @@ public:
         print.end_list();
         print.output() << fmt::outdent;
 
-        print.output() << fmt::line
-                       << " ; s_virtual_dtor :=" << fmt::nbsp;
-
+        print.output() << fmt::line << " ; s_virtual_dtor :=" << fmt::nbsp;
         if (decl->getDestructor() && decl->getDestructor()->isVirtual()) {
             print.some();
             cprint.printGlobalName(decl->getDestructor(), print);

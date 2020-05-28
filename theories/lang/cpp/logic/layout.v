@@ -25,8 +25,11 @@ Section with_Σ.
   (* this function resolves each symbol in the vtable to the
    * corresponding [ptr].
    *)
-  Definition resolve_vtable (vt : list (obj_name * obj_name)) : option (list (obj_name * ptr)) :=
-    mapM (fun '(k,v) => resolve.(glob_addr) k ≫= fun p => mret (k, p)) vt.
+  (* Definition resolve_vtable (vt : list (obj_name * obj_name)) : option (list (obj_name * ptr)) := *)
+  (*   mapM (fun '(k,v) => resolve.(glob_addr) k ≫= fun p => mret (k, p)) vt. *)
+
+  Parameter vptrR : option globname -> Qp -> Rep.
+  Parameter _vptr : globname -> Offset.
 
   Axiom decompose_struct
   : forall cls st q,
@@ -40,10 +43,10 @@ Section with_Σ.
               let '(n,ty,_) := fld in
               _offsetR (_field {| f_name := n ; f_type := cls |})
                        (anyR (erase_qualifiers ty) q)) **
-           (match resolve_vtable st.(s_vtable) return @Rep _ Σ with
-            | None => lfalse
-            | Some v => _vtable q (list_to_map v)
-            end))
+           (if has_vtable st then
+              _offsetR (_vptr cls) (vptrR None q)
+            else
+              empSP))
           (anyR (Tnamed cls) q).
 
 
