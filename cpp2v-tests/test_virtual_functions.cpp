@@ -20,7 +20,7 @@ int main() {
     B* b = static_cast<C*>(c);
     A* a = static_cast<C*>(a);
 
-    c->foo();
+    c->B::foo();
     b->foo();
     a->foo();
 
