@@ -1,62 +1,53 @@
+Require Import stdpp.fin_maps.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
-Require Import bedrock.lang.cpp.logic.path_pred.
-Require Import bedrock.lang.cpp.logic.pred.
-Require Import stdpp.fin_maps.
-Require Import bedrock.lang.cpp.parser.
+From bedrock.lang.cpp.logic Require Import pred heap_pred path_pred.
 
-Section extends.
-  Context (σ : genv).
+Section dispatch.
+  Context `{Σ : cpp_logic} (σ : genv).
 
-  (** [dispatch mdc f] states that [f] is the name pointer and the fixup offset
-      for a call to [f] on an object of type [obj] whose most-derived
-      class is [mdc].
-   *)
-  Inductive class_derives (mdc : globname) : globname -> Set :=
-  | Derives_here {st}
-      {_ : σ.(genv_tu).(globals) !! mdc = Some (Gstruct st)}
-    : class_derives mdc mdc
+  Definition list_get {T} (t : obj_name) (l : list (obj_name * T)) : option T :=
+    match List.find (fun '(t',_) => if decide (t = t') then true else false) l with
+    | None => None
+    | Some (_, k) => Some k
+    end.
 
-  | Derives_base base {st li result}
-      {_ : σ.(genv_tu).(globals) !! mdc = Some (Gstruct st)}
-      {_ : In (base, li) st.(s_bases)}
-      (_ : class_derives base result)
-    : class_derives mdc result
+  (* the [Offset] to cast a [from] to a [to] *)
+  Fixpoint base_to_derived `(d : class_derives σ to from) : Offset :=
+    match d with
+    | Derives_here st _ => _id
+    | Derives_base base st _ _ _ _ d =>
+      _dot (base_to_derived d) (_derived σ base to)
+    end.
 
-  (* this could be extended for virtuals *)
-  .
+  (* the [Offset] to cast a [from] to a [to] *)
+  Fixpoint derived_to_base `(d : class_derives σ from to) : Offset :=
+    match d with
+    | Derives_here st _ => _id
+    | Derives_base base st _ _ _ _ d =>
+      _dot (_base σ to base) (base_to_derived d)
+    end.
 
-  Section dispatch.
-    Context `{Σ : cpp_logic}.
-    Context (final : obj_name).
 
-    Definition list_get {T} (t : obj_name) (l : list (obj_name * T)) : option T :=
-      match List.find (fun '(t',_) => if decide (t = t') then true else false) l with
-      | None => None
-      | Some (_, k) => Some k
-      end.
+  Fixpoint dispatch `(d : class_derives σ mdc from) (final : obj_name)
+    : (option obj_name * Offset (* from -> cls with obj_name *)) *
+      obj_name :=
+    match d with
+    | Derives_here st _ =>
+      ((mjoin (list_get final st.(s_virtuals)), _id), final)
+    | Derives_base base st _ _ _ _ d' =>
+      let '(result, cand) := dispatch d' final in
+      match list_get cand st.(s_overrides) with
+      | None => (result, cand)
+      | Some cand =>
+        ((mjoin (list_get cand st.(s_virtuals)), base_to_derived d),
+         cand)
+      end
+    end.
 
-    Fixpoint dispatch `(d : class_derives mdc from)
-      : (option obj_name * Offset (* from -> cls with obj_name *)) *
-        (obj_name * Offset (* from -> mdc *)) :=
-      match d with
-      | @Derives_here _ st _ =>
-        ((mjoin (list_get final st.(s_virtuals)), _id), (final, _id))
-      | @Derives_base _ base st _ _ _ _ d =>
-        let '(result, (cand, full)) := dispatch d in
-        let full_path := _dot full (_derived σ base mdc) in
-        match list_get cand st.(s_overrides) with
-        | None => (result, (cand, full_path))
-        | Some cand =>
-          ((mjoin (list_get cand st.(s_virtuals)), full_path),
-           (cand, full_path))
-        end 
-      end.
-  End dispatch.
-
-  Definition get_impl `{Σ : cpp_logic} `(r : class_derives mdc tcls) (f : obj_name)
+  Definition get_impl `(r : class_derives σ mdc tcls) (f : obj_name)
     : option (ptr * Offset) :=
-    let '(sym, off) := (dispatch f r).1 in
+    let '(sym, off) := (dispatch r f).1 in
     match sym with
     | None => None
     | Some s => match glob_addr σ s with
@@ -65,11 +56,32 @@ Section extends.
                end
     end.
 
-End extends.
+End dispatch.
+Arguments get_impl {_ _ σ} {_ _} _ f : rename.
+
+(* [resolve_virtual σ this cls f Q] returns [Q fa this'] if resolving [f] on
+ * [this] results in a function that is equivalent to calling the pointer [fa]
+ * passing [this'] as the "this" argument.
+ *)
+Definition resolve_virtual `{Σ : cpp_logic} {σ : genv}
+           (this : Loc) (cls : globname) (f : obj_name)
+           (Q : forall (faddr this_addr : ptr), mpred) : mpred :=
+  Exists σ' mdc (pf : class_derives σ' mdc cls),
+                (* ^ note that [class_compatible] (below) implies that this is
+                   equivalent to [class_derives σ mdc cls] *)
+    (Exists q, _at this (_instance_of σ' mdc cls q) **
+               [| class_compatible σ.(genv_tu) σ'.(genv_tu) mdc |] ** ltrue) //\\
+    match get_impl pf f with
+    | Some (fa, off) =>
+      Exists p, _offsetL off this &~ p ** Q fa p
+    | None => (* the function wasn't found or the implemenation was pure virtual *)
+      lfalse
+    end.
 
 Module TEST.
+Require Import bedrock.lang.cpp.parser.
 
-Definition module : translation_unit := 
+Definition module : translation_unit :=
   Eval reduce_translation_unit in parser.decls (
     (Dstruct "_Z1A" (Some
         {| s_bases := (nil)
@@ -116,8 +128,6 @@ Definition module : translation_unit :=
               (Some "_ZN1CD0Ev")|}))
         :: nil)%bs.
 
-Arguments get_impl {_ _ _ _ _} _ _.
-
 Definition t p : class_derives {| genv_tu:=module; glob_addr := fun x => Some (p x) ; pointer_size := 8|} "_Z1C" "_Z1A".
 econstructor.
 { reflexivity. }
@@ -129,4 +139,7 @@ econstructor.
 { reflexivity. }
 Defined.
 
-Eval compute in fun p => get_impl (t p) "_ZNK1A3fooEv"%bs.
+
+(* Eval cbv beta iota zeta delta [ get_impl dispatch glob_addr fst ] in fun p => get_impl (t p) "_ZNK1A3fooEv"%bs. *)
+
+End TEST.

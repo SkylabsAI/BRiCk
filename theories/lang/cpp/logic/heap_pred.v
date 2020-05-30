@@ -246,6 +246,11 @@ Section with_cpp.
     iIntros "#X"; iModIntro; iFrame "#".
   Qed.
 
+  (** object identity *)
+  Definition _instance_of (σ : genv) (mdc cls : globname) (q : Qp) : Rep :=
+    as_Rep (fun this => @instance_of _ _ σ mdc cls q this).
+
+
   (********************* DERIVED CONCEPTS ****************************)
 
   Definition is_null_def : Rep :=

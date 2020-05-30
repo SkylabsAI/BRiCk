@@ -14,6 +14,7 @@ From bedrock.lang.cpp Require Import ast semantics spec.
 From bedrock.lang.cpp Require Import
      pred path_pred heap_pred
      wp intensional.
+Require Import bedrock.lang.cpp.heap_notations.
 
 Local Set Universe Polymorphism.
 
@@ -173,11 +174,6 @@ Section with_cpp.
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_method m ti vals Q.
 
-  Require Import bedrock.lang.cpp.heap_notations.
-
-  Definition _instance_of (mdc cls : globname) (q : Qp) : Rep :=
-    as_Rep (fun this => @instance_of _ _ resolve mdc cls q this).
-
   Fixpoint all_identities (f : nat) (mdc : globname) (cls : globname) : Rep.
   refine
     match f with
@@ -185,7 +181,7 @@ Section with_cpp.
     | S f =>
       match resolve.(genv_tu).(globals) !! cls with
       | Some (Gstruct st) =>
-        _instance_of mdc cls 1 **
+        _instance_of resolve mdc cls 1 **
         [∗list] b ∈ st.(s_bases),
            let '(base,_) := b in
            _base resolve cls base |-> all_identities f mdc base
@@ -201,7 +197,7 @@ Section with_cpp.
       ([∗list] b ∈ st.(s_bases),
          let '(base,_) := b in
          thisp ., _base resolve cls base |-> all_identities 100 base base) **
-      (_eq thisp |-> _instance_of cls cls 1 -*
+      (_eq thisp |-> _instance_of resolve cls cls 1 -*
        ([∗list] b ∈ st.(s_bases),
           let '(base,_) := b in
           thisp ., _base resolve cls base |-> all_identities 100 cls base) -* Q)
@@ -281,7 +277,7 @@ Section with_cpp.
   Definition revert_identity (thisp : ptr) (cls : globname) (Q : mpred) : mpred :=
     match resolve.(genv_tu).(globals) !! cls with
     | Some (Gstruct st) =>
-      _eq thisp |-> _instance_of cls cls 1 **
+      _eq thisp |-> _instance_of resolve cls cls 1 **
       ([∗list] b ∈ st.(s_bases),
           let '(base,_) := b in
           thisp ., _base resolve cls base |-> all_identities 100 cls base) **

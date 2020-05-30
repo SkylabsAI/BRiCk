@@ -8,6 +8,7 @@ Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Import
      pred wp path_pred heap_pred.
+Require Import bedrock.lang.cpp.logic.dispatch.
 
 Section destroy.
   Context `{Σ : cpp_logic thread_info} {σ:genv}.
@@ -17,17 +18,18 @@ Section destroy.
   Local Notation anyR := (anyR (resolve:=σ)) (only parsing).
   Local Notation _global := (_global (resolve:=σ)) (only parsing).
 
-  (* remove from the stack *)
+  (* this destroys an object by invoking its (possibly virtual) destructor *)
   Definition destruct_obj (dtor : obj_name) (cls : globname) (v : val) (Q : mpred) : mpred :=
     match σ.(genv_tu) !! cls with
     | Some (Gstruct s) =>
-      if s.(s_virtual_dtor) then
-        Exists mp, (Exists q, _at (_eqv v) (_vtable q mp) ** ltrue) //\\
-                   Exists da, [| mp !! dtor = Some da |] **
-                   |> fspec ti (Vptr da) (v :: nil) (fun _ => Q)
-      else
+      match s.(s_virtual_dtor) with
+      | Some dtor =>
+        resolve_virtual (σ:=σ) (_eqv v) cls dtor (fun da p =>
+                   |> fspec ti (Vptr da) (Vptr p :: nil) (fun _ => Q))
+      | None =>
         Exists da, _global dtor &~ da **
                    |> fspec ti (Vptr da) (v :: nil) (fun _ => Q)
+      end
     | _ => lfalse
     end.
 

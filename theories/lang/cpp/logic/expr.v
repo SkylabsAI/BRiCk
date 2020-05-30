@@ -16,7 +16,8 @@ From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred
      destroy
      wp call intensional
-     translation_unit.
+     translation_unit
+     dispatch.
 
 Module Type Expr.
 
@@ -512,25 +513,44 @@ Module Type Expr.
         |-- wp_init ty addr (Emember_call (inl (f, false)) obj es ty) Q.
 
     (** virtual functions *)
+    Fixpoint class_type (t : type) : option globname :=
+      match t with
+      | Tnamed gn => Some gn
+      | Tpointer t
+      | Treference t
+      | Trv_reference t => class_type t
+      | Tqualified _ t => class_type t
+      | _ => None
+      end.
+
     Axiom wp_prval_virtual_call : forall ty f obj es Q,
       wp_lval obj (fun this free => wp_args es (fun vs free' =>
-          Exists q tbl fimpl_addr,
-            (_at (_eqv this) (_vtable q tbl) ** [| tbl !! f = Some fimpl_addr |] ** ltrue) //\\
-            |> fspec (Vptr fimpl_addr) (this :: vs) (fun v => Q v (free ** free'))))
+          match class_type (type_of obj) with
+          | Some cls =>
+            resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
+              |> fspec (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v => Q v (free ** free')))
+          | _ => lfalse
+          end))
       |-- wp_prval (Emember_call (inl (f, true)) obj es ty) Q.
 
     Axiom wp_xval_virtual_call : forall ty f obj es Q,
       wp_lval obj (fun this free => wp_args es (fun vs free' =>
-          Exists q tbl fimpl_addr,
-            (_at (_eqv this) (_vtable q tbl) ** [| tbl !! f = Some fimpl_addr |] ** ltrue) //\\
-            |> fspec (Vptr fimpl_addr) (this :: vs) (fun v => Q v (free ** free'))))
+          match class_type (type_of obj) with
+          | Some cls =>
+            resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
+              |> fspec (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v => Q v (free ** free')))
+          | _ => lfalse
+          end))
       |-- wp_xval (Emember_call (inl (f, true)) obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall ty f obj es Q addr,
       wp_lval obj (fun this free => wp_args es (fun vs free' =>
-          Exists q tbl fimpl_addr,
-            (_at (_eqv this) (_vtable q tbl) ** [| tbl !! f = Some fimpl_addr |] ** ltrue) //\\
-            |> fspec (Vptr fimpl_addr) (this :: vs) (fun res => [| res = addr |] -* Q (free ** free'))))
+          match class_type (type_of obj) with
+          | Some cls =>
+            resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
+              |> fspec (Vptr fimpl_addr) (Vptr thisp :: vs) (fun res => [| res = addr |] -* Q (free ** free')))
+          | _ => lfalse
+          end))
       |-- wp_init ty addr (Emember_call (inl (f, true)) obj es ty) Q.
 
     (* null *)
