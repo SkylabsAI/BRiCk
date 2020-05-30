@@ -94,23 +94,12 @@ Module Type CPP_LOGIC.
      *)
     Parameter type_ptr: forall {resolve : genv} (c: type), ptr -> mpred.
 
-    (** [vtable mp q p] states that a vtable [mp] is the one that C++
-        will use when invoking virtual functions on [p]
-        - the [list globname] is the inheritence path from the type of the
-          [ptr] to the type of the [this] argument of the method. For
-          example, if you have 'B extends A' and B overrides a method of
-          A, then A's vtable will contain a pointer to B's override and
-          the path ["B"] meaning that the function will act like a non-virtual
-          call to `static_cast<B*>(obj)`.
+    (** [instance_of σ mdc this q p] state that [p] is a pointer to a (live)
+        object of type [this] that is part of an object of type [mdc].
 
-        note: technically, this list could just be a single [globname] because
-        there is only one path; however, computing this path isn't trivial
-        so we want to annotate it in the syntax so we need to compute it here.
-
-        note: we avoid using names in this definition because the caller
-        may not have the most derived class in scope.
+        the information is primarily used for virtual function calls.
      *)
-    Parameter vtable : forall {σ : genv} (mp : list (obj_name * (ptr * (globname * list globname)))),
+    Parameter instance_of : forall {σ : genv} (most_derived this : globname),
         Qp -> ptr -> mpred.
 
     (** the pointer points to the code

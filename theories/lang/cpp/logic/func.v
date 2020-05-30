@@ -173,18 +173,68 @@ Section with_cpp.
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_method m ti vals Q.
 
+  Require Import bedrock.lang.cpp.heap_notations.
 
-  Fixpoint wpis (ti : thread_info) (ρ : region) (cls : globname) (this : val)
+  Definition _instance_of (mdc cls : globname) (q : Qp) : Rep :=
+    as_Rep (fun this => @instance_of _ _ resolve mdc cls q this).
+
+  Fixpoint all_identities (f : nat) (mdc : globname) (cls : globname) : Rep.
+  refine
+    match f with
+    | 0 => lfalse
+    | S f =>
+      match resolve.(genv_tu).(globals) !! cls with
+      | Some (Gstruct st) =>
+        _instance_of mdc cls 1 **
+        [∗list] b ∈ st.(s_bases),
+           let '(base,_) := b in
+           _base resolve cls base |-> all_identities f mdc base
+      | _ => lfalse
+      end
+    end.
+  Defined.
+
+
+  Definition init_identity (thisp : ptr) (cls : globname) (Q : mpred) : mpred :=
+    match resolve.(genv_tu).(globals) !! cls with
+    | Some (Gstruct st) =>
+      ([∗list] b ∈ st.(s_bases),
+         let '(base,_) := b in
+         thisp ., _base resolve cls base |-> all_identities 100 base base) **
+      (_eq thisp |-> _instance_of cls cls 1 -*
+       ([∗list] b ∈ st.(s_bases),
+          let '(base,_) := b in
+          thisp ., _base resolve cls base |-> all_identities 100 cls base) -* Q)
+    | _ => lfalse
+    end.
+
+  Fixpoint wpi_members
+           (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
            (inits : list Initializer)
            (Q : mpred -> mpred) : mpred :=
     match inits with
     | nil => Q empSP
-    | i :: is' => wpi (resolve:=resolve) ⊤ ti ρ cls this i (fun f => f ** wpis ti ρ cls this is' Q)
+    | i :: is' =>
+      match i.(init_path) with
+      | This
+      | Base _ => lfalse
+      | _ => wpi (resolve:=resolve) ⊤ ti ρ cls (Vptr this) i (fun f => f ** wpi_members ti ρ cls this is' Q)
+      end
     end.
 
-  Require Import bedrock.lang.cpp.heap_notations.
-
-  Parameter _vtableR : option (gmap obj_name (ptr * Offset)) -> Qp -> Rep.
+  Fixpoint wpi_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
+           (inits : list Initializer)
+           (Q : mpred -> mpred) : mpred :=
+    match inits with
+    | nil => init_identity this cls (Q empSP)
+    | i :: is' =>
+      match i.(init_path) with
+      | Field _
+      | Indirect _ _ =>
+        init_identity this cls (wpi_members ti ρ cls this inits Q)
+      | _ => wpi (resolve:=resolve) ⊤ ti ρ cls (Vptr this) i (fun f => f ** wpi_members ti ρ cls this is' Q)
+      end
+    end.
 
   Parameter _classR : genv -> globname -> Qp -> bool -> Rep.
   (* this represents a pointer to the vtable for the given class.
@@ -197,12 +247,6 @@ Section with_cpp.
    *   (the location of the _vptr (even the existance of one) depends on the class)
    * - _vtable : globname -> option (gmap obj_name ptr) -> Qp -> Rep
    *)
-  Definition init_vtable (thisp : ptr) (cls : globname) (Q : mpred) : mpred :=
-    if true then
-       Exists b, _eq thisp |-> _vtableR b 1 **
-                (_eq thisp |-> _vtableR (Some ∅) 1 -* Q)
-    else
-      Q.
 
   (* note(gmm): supporting virtual inheritence will require us to add
    * constructor kinds here
@@ -219,8 +263,7 @@ Section with_cpp.
       | Vptr thisp :: rest_vals =>
         bind_base_this (Some thisp) Tvoid (fun ρ =>
         bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
-        init_vtable thisp cls
-          (wpis ti ρ ctor.(c_class) (Vptr thisp) inits
+          (wpi_bases ti ρ ctor.(c_class) thisp inits
              (fun free => free **
                         wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid)))))))
       | _ => lfalse
@@ -235,13 +278,47 @@ Section with_cpp.
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_ctor ctor ti vals Q.
 
-  Fixpoint wpds (ti : thread_info) (ρ : region)
-           (cls : globname) (this : val)
+  Definition revert_identity (thisp : ptr) (cls : globname) (Q : mpred) : mpred :=
+    match resolve.(genv_tu).(globals) !! cls with
+    | Some (Gstruct st) =>
+      _eq thisp |-> _instance_of cls cls 1 **
+      ([∗list] b ∈ st.(s_bases),
+          let '(base,_) := b in
+          thisp ., _base resolve cls base |-> all_identities 100 cls base) **
+      (([∗list] b ∈ st.(s_bases),
+         let '(base,_) := b in
+         thisp ., _base resolve cls base |-> all_identities 100 base base) -* Q)
+    | _ => lfalse
+    end.
+
+
+  Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
            (dests : list (FieldOrBase * globname))
            (Q : mpred) : mpred :=
     match dests with
     | nil => Q
-    | d :: ds => @wpd _ Σ resolve ⊤ ti ρ cls this d (wpds ti ρ cls this ds Q)
+    | d :: is' =>
+      match d.1 with
+      | Field _
+      | Indirect _ _ => lfalse
+      | _ => wpd (resolve:=resolve) ⊤ ti ρ cls (Vptr this) d
+                (wpd_bases ti ρ cls this is' Q)
+      end
+    end.
+
+  Fixpoint wpd_members
+           (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
+           (dests : list (FieldOrBase * globname))
+           (Q : mpred) : mpred :=
+    match dests with
+    | nil => revert_identity this cls Q
+    | d :: is' =>
+      match d.1 with
+      | This
+      | Base _ =>
+        revert_identity this cls (wpd_bases ti ρ cls this dests Q)
+      | _ => wpd (resolve:=resolve) ⊤ ti ρ cls (Vptr this) d (wpd_members ti ρ cls this is' Q)
+      end
     end.
 
   Definition wp_dtor (dtor : Dtor) (ti : thread_info) (args : list val)
@@ -255,7 +332,7 @@ Section with_cpp.
       | Vptr thisp :: rest_vals =>
         bind_base_this (Some thisp) Tvoid (fun ρ =>
         wp (resolve:=resolve) ⊤ ti ρ body
-           (void_return (wpds ti ρ dtor.(d_class) (Vptr thisp) deinit (|> Q Vvoid))))
+           (void_return (wpd_members ti ρ dtor.(d_class) thisp deinit (|> Q Vvoid))))
       | _ => lfalse
       end
     end.
