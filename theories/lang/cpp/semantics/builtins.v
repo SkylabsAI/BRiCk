@@ -8,7 +8,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.operator.
 
-Set Default Proof Using "Type".
+(* Set Default Proof Using "Type". *)
 
 Local Open Scope Z_scope.
 (* see
@@ -81,4 +81,3 @@ Local Definition _bswap32_test :
   bswap W32 (bytes (1::2::3::4::nil)%Z) = bytes (4::3::2::1::nil)%Z := eq_refl.
 Local Definition _bswap64_test :
   bswap W64 (bytes (1::2::3::4::5::6::7::8::nil)%Z) = bytes (8::7::6::5::4::3::2::1::nil)%Z := eq_refl.
-x
