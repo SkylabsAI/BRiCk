@@ -11,7 +11,7 @@ From iris.proofmode Require Import tactics.
 From bedrock Require Import ChargeUtil ChargeCompat.
 
 From bedrock.lang.cpp Require Import ast semantics spec.
-From bedrock.lang.cpp Require Import
+From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred
      wp.
 Require Import bedrock.lang.cpp.heap_notations.
@@ -133,12 +133,17 @@ Section with_cpp.
     match f.(f_body) with
     | None => lfalse
     | Some body =>
+      match body with
+      | inl body =>
       bind_base_this None f.(f_return) (fun ρ =>
       bind_vars f.(f_params) args ρ (fun ρ frees =>
       if is_void f.(f_return) then
         wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid)))
       else
         wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (val_return (fun x => |> Q x)))))
+      | inr builtin =>
+        lfalse (* todo: fix this *)
+      end
     end.
 
   Definition func_ok (f : Func) (ti : thread_info) (spec : function_spec)

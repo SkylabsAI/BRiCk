@@ -38,7 +38,7 @@ Proof. solve_decision. Defined.
 Record Func : Set :=
 { f_return : type
 ; f_params : list (ident * type)
-; f_body   : option Stmt
+; f_body   : option (Stmt + BuiltinFn)
 }.
 Instance: EqDecision Func.
 Proof. solve_decision. Defined.

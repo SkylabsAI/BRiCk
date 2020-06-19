@@ -87,6 +87,8 @@ Variant BuiltinFn : Set :=
 | Bin_trap
 | Bin_bswap16
 | Bin_bswap32
+| Bin_bswap64
+| Bin_bswap128
 | Bin_bzero
 | Bin_ffs
 | Bin_ffsl
