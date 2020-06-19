@@ -99,8 +99,6 @@ public:
     void VisitFunctionDecl(const FunctionDecl *decl, bool) {
         if (decl->isDependentContext())
             return;
-        if (decl->getBuiltinID() != Builtin::ID::NotBuiltin)
-            return;
 
         using namespace comment;
         auto defn = decl->getDefinition();

@@ -17,6 +17,17 @@
 using namespace clang;
 using namespace fmt;
 
+// todo(gmm): this is duplicated!
+bool
+is_builtin(const Decl* d) {
+    if (const FunctionDecl* fd = dyn_cast_or_null<const FunctionDecl>(d)) {
+        if (Builtin::ID::NotBuiltin != fd->getBuiltinID()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void
 printCastKind(Formatter& out, const CastKind ck) {
     if (ck == CastKind::CK_LValueToRValue) {
@@ -261,67 +272,16 @@ public:
         done(expr, print, cprint);
     }
 
-    static Builtin::ID builtin_id(const Decl* d) {
-        if (const FunctionDecl* fd = dyn_cast_or_null<const FunctionDecl>(d)) {
-            if (Builtin::ID::NotBuiltin != fd->getBuiltinID()) {
-                return Builtin::ID(fd->getBuiltinID());
-            }
-        }
-        return Builtin::ID::NotBuiltin;
-    }
-
-    void PrintBuiltin(Builtin::ID id, const ValueDecl* decl, CoqPrinter& print,
-                      ClangPrinter& cprint, const ASTContext&) {
-        switch (id) {
-#define CASEB(x)                                                               \
-    case Builtin::BI__builtin_##x:                                             \
-        print.output() << "Bin_" #x;                                           \
-        break;
-            CASEB(alloca)
-            CASEB(alloca_with_align)
-            CASEB(expect)
-            CASEB(unreachable)
-            CASEB(trap)
-            CASEB(bswap16)
-            CASEB(bswap32)
-            CASEB(bswap64)
-            CASEB(bzero)
-            CASEB(ffs)
-            CASEB(ffsl)
-            CASEB(ffsll)
-            CASEB(clz)
-            CASEB(clzl)
-            CASEB(clzll)
-            CASEB(ctz)
-            CASEB(ctzl)
-            CASEB(ctzll)
-            CASEB(popcount)
-            CASEB(popcountl)
-#undef CASEB
-        default:
-            print.output() << "(Bin_unknown ";
-            print.str(decl->getNameAsString());
-            print.output() << ")";
-            break;
-        }
-    }
-
     void VisitDeclRefExpr(const DeclRefExpr* expr, CoqPrinter& print,
                           ClangPrinter& cprint, const ASTContext& ctxt) {
         auto d = expr->getDecl();
-        if (auto id = builtin_id(d)) {
-            print.ctor("Ebuiltin");
-            PrintBuiltin(id, d, print, cprint, ctxt);
-            done(expr, print, cprint);
+        if (isa<EnumConstantDecl>(d)) {
+            print.ctor("Econst_ref", false);
         } else {
-            if (isa<EnumConstantDecl>(d)) {
-                print.ctor("Econst_ref", false);
-            } else {
-                print.ctor("Evar", false);
-            }
-            cprint.printName(d, print);
-            done(expr, print, cprint);
+            print.ctor("Evar", false);
         }
+        cprint.printName(d, print);
+        done(expr, print, cprint);
     }
 
     void VisitCallExpr(const CallExpr* expr, CoqPrinter& print,
@@ -372,9 +332,12 @@ public:
         // to get the type of a builtin. what this does is get the type of the expression
         // that contains the builtin.
         if (auto ref = dyn_cast<DeclRefExpr>(expr->getSubExpr())) {
-            if (auto bi = builtin_id(ref->getDecl())) {
-                print.ctor("Ebuiltin");
-                PrintBuiltin(bi, ref->getDecl(), print, cprint, ctxt);
+            if (is_builtin(ref->getDecl())) {
+                // assume that this is a builtin
+                print.ctor("Evar", false);
+                print.ctor("Gname", false);
+                cprint.printGlobalName(ref->getDecl(), print);
+                print.end_ctor();
                 done(expr, print, cprint);
                 return;
             }
