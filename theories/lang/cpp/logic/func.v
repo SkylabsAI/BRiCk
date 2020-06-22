@@ -201,6 +201,7 @@ Section with_cpp.
      classes.
    *)
   Definition init_identity (cls : globname) (Q : mpred) : Rep :=
+    pureR Q. (*
     match resolve.(genv_tu).(globals) !! cls with
     | Some (Gstruct st) =>
       ([∗list] b ∈ st.(s_bases),
@@ -213,6 +214,7 @@ Section with_cpp.
           _base resolve cls base |-> all_identities (Some cls) base) -* pureR Q)
     | _ => lfalse
     end.
+*)
 
   (* initialization of members in the initializer list *)
   Fixpoint wpi_members
@@ -275,6 +277,7 @@ Section with_cpp.
       spec.(fs_spec) ti vals Q -* wp_ctor ctor ti vals Q.
 
   Definition revert_identity (cls : globname) (Q : mpred) : Rep :=
+    pureR Q. (*
     match resolve.(genv_tu).(globals) !! cls with
     | Some (Gstruct st) =>
       _identity resolve cls (Some cls) 1 **
@@ -287,7 +290,7 @@ Section with_cpp.
          _base resolve cls base |-> all_identities (Some base) base) -* pureR Q)
     | _ => lfalse
     end.
-
+*)
 
   Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
            (dests : list (FieldOrBase * globname))

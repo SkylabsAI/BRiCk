@@ -33,10 +33,8 @@ Section with_Σ.
            ([∗list] fld ∈ st.(s_fields),
               let '(n,ty,_) := fld in
               _offsetR (_field {| f_name := n ; f_type := cls |})
-                       (anyR (erase_qualifiers ty) 1)) **
-           (if has_vtable st
-            then _identity resolve cls None 1
-            else empSP))
+                       (anyR (erase_qualifiers ty) 1))
+           (* _identity resolve cls None 1 *))
           (anyR (Tnamed cls) 1).
 
   Axiom decompose_union
