@@ -17,7 +17,7 @@ Section with_resolve.
     Exists dp, Exists fp,
       (_global (resolve:=σ) dn &~ dp **
        _offsetL (offset_for σ cls path) (_eqv this) &~ fp ** ltrue) //\\
-      (|> fspec ti (Vptr dp) (this :: nil) (fun _ => Q))
+      (|> fspec ti (Vptr dp) (Vptr fp :: nil) (fun _ => Q))
     |-- wpd (resolve:=σ) M ti ρ cls this (path, dn) Q.
 
 End with_resolve.
