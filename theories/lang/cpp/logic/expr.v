@@ -189,7 +189,7 @@ Module Type Expr.
         |-- wp_prval (Eunop o e ty) Q.
 
     Axiom wp_lval_preinc : forall e ty Q,
-        match companion_type (type_of e) with
+        match companion_type (σ:=resolve) (type_of e) with
         | Some cty =>
           wp_lval e (fun a free => Exists v', Exists v'',
               _at (_eqv a) (primR (erase_qualifiers ty) 1 v') **
@@ -200,7 +200,7 @@ Module Type Expr.
         |-- wp_lval (Epreinc e ty) Q.
 
     Axiom wp_lval_predec : forall e ty Q,
-        match companion_type (type_of e) with
+        match companion_type (σ:=resolve) (type_of e) with
         | Some cty =>
           wp_lval e (fun a free => Exists v', Exists v'',
               _at (_eqv a) (primR (erase_qualifiers ty) 1 v') **
@@ -211,7 +211,7 @@ Module Type Expr.
         |-- wp_lval (Epredec e ty) Q.
 
     Axiom wp_prval_postinc : forall e ty Q,
-        match companion_type (type_of e) with
+        match companion_type (σ:=resolve) (type_of e) with
         | Some cty =>
           wp_lval e (fun a free => Exists v', Exists v'',
               _at (_eqv a) (primR (erase_qualifiers ty) 1 v') **
@@ -222,7 +222,7 @@ Module Type Expr.
         |-- wp_prval (Epostinc e ty) Q.
 
     Axiom wp_prval_postdec : forall e ty Q,
-        match companion_type (type_of e) with
+        match companion_type (σ:=resolve) (type_of e) with
         | Some cty =>
           wp_lval e (fun a free => Exists v', Exists v'',
               _at (_eqv a) (primR (erase_qualifiers ty) 1 v') **

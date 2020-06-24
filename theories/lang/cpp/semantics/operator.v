@@ -21,6 +21,15 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 Parameter eval_unop : forall {resolve : genv}, UnOp -> forall (argT resT : type) (arg res : val), Prop.
 Parameter eval_binop : forall {resolve : genv}, BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
 
+Section with_genv.
+  Context {σ : genv}.
+  Let T_int := Tint σ.(int_bits) Signed.
+  Let T_uint := Tint σ.(int_bits) Unsigned.
+  Let T_long := Tint σ.(long_bits) Signed.
+  Let T_ulong := Tint σ.(long_bits) Unsigned.
+  Let T_longlong := Tint σ.(longlong_bits) Signed.
+  Let T_ulonglong := Tint σ.(longlong_bits) Unsigned.
+
 (* truncation (used for unsigned operations) *)
 Definition trim (w : N) (v : Z) : Z := v mod (2 ^ Z.of_N w).
 
@@ -271,8 +280,10 @@ Axiom eval_unop_not:
  *)
 Fixpoint companion_type (t : type) : option type :=
   match t with
-  | Tpointer _ => Some (Tint int_bits Signed)
+  | Tpointer _ => Some T_int
   | Tint _ _ => Some t
   | Tqualified _ t => companion_type t
   | _ => None
   end.
+
+End with_genv.

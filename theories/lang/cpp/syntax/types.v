@@ -228,36 +228,36 @@ Definition T_uint64  := Tint W64 Unsigned.
 Definition T_int128  := Tint W128 Signed.
 Definition T_uint128 := Tint W128 Unsigned.
 
-(* note(gmm): types without explicit size information need to
- * be parameters of the underlying code, otherwise we can't
- * describe the semantics correctly.
- * - cpp2v should probably insert these types.
- *)
-(**
-https://en.cppreference.com/w/cpp/language/types
-The 4 definitions below use the LP64 data model.
-LLP64 and LP64 agree except for the [long] type: see
-the warning below.
-In future, we may want to parametrize by a data model, or
-the machine word size.
-*)
-Definition char_bits : bitsize := W8.
-Definition short_bits : bitsize := W16.
-Definition int_bits : bitsize := W32.
-Definition long_bits : bitsize := W64. (** warning: LLP64 model uses 32 *)
-Definition long_long_bits : bitsize := W64.
+(* (* note(gmm): types without explicit size information need to *)
+(*  * be parameters of the underlying code, otherwise we can't *)
+(*  * describe the semantics correctly. *)
+(*  * - cpp2v should probably insert these types. *)
+(*  *) *)
+(* (** *)
+(* https://en.cppreference.com/w/cpp/language/types *)
+(* The 4 definitions below use the LP64 data model. *)
+(* LLP64 and LP64 agree except for the [long] type: see *)
+(* the warning below. *)
+(* In future, we may want to parametrize by a data model, or *)
+(* the machine word size. *)
+(* *) *)
+(* Definition char_bits : bitsize := W8. *)
+(* Definition short_bits : bitsize := W16. *)
+(* Definition int_bits : bitsize := W32. *)
+(* Definition long_bits : bitsize := W64. (** warning: LLP64 model uses 32 *) *)
+(* Definition long_long_bits : bitsize := W64. *)
 
-Definition T_ushort : type := Tint short_bits Unsigned.
-Definition T_short : type := Tint short_bits Signed.
-Definition T_ulong : type := Tint long_bits Unsigned.
-Definition T_long : type := Tint long_bits Signed.
-Definition T_ulonglong : type := Tint long_long_bits Unsigned.
-Definition T_longlong : type := Tint long_long_bits Signed.
-Definition T_uint : type := Tint int_bits Unsigned.
-Definition T_int : type := Tint int_bits Signed.
+(* Definition T_ushort : type := Tint short_bits Unsigned. *)
+(* Definition T_short : type := Tint short_bits Signed. *)
+(* Definition T_ulong : type := Tint long_bits Unsigned. *)
+(* Definition T_long : type := Tint long_bits Signed. *)
+(* Definition T_ulonglong : type := Tint long_long_bits Unsigned. *)
+(* Definition T_longlong : type := Tint long_long_bits Signed. *)
+(* Definition T_uint : type := Tint int_bits Unsigned. *)
+(* Definition T_int : type := Tint int_bits Signed. *)
 
-Notation T_schar := (Tchar char_bits Signed) (only parsing).
-Notation T_uchar := (Tchar char_bits Unsigned) (only parsing).
+(* Notation T_schar := (Tchar char_bits Signed) (only parsing). *)
+(* Notation T_uchar := (Tchar char_bits Unsigned) (only parsing). *)
 
 
 Coercion CCcast : PrimCast >-> Cast.

@@ -166,23 +166,34 @@ Record genv : Type :=
 ; pointer_size : N
   (* ^ the size of a pointer (in bytes) *)
 ; byte_order : endian
+  (* ^ byte order *)
+; char_bits : bitsize
+; short_bits : bitsize
+; int_bits : bitsize
+; long_bits : bitsize
+; longlong_bits : bitsize
 }.
 
 (** [genv_leq a b] states that [b] is an extension of [a] *)
-Definition genv_leq (l r : genv) : Prop :=
-  sub_module l.(genv_tu) r.(genv_tu) /\
+Record genv_leq (l r : genv) : Prop :=
+{ genv_tu_leq : sub_module l.(genv_tu) r.(genv_tu)
+; genv_addr_compat :
   (forall a p, l.(glob_addr) a = Some p ->
-          r.(glob_addr) a = Some p) /\
-  l.(pointer_size) = r.(pointer_size) /\
-  l.(byte_order) = r.(byte_order).
+          r.(glob_addr) a = Some p)
+; genv_pointer_size_compat : l.(pointer_size) = r.(pointer_size)
+; genv_byte_order_compat : l.(byte_order) = r.(byte_order)
+; genv_char_bits_compat : l.(char_bits) = r.(char_bits)
+; genv_short_bits_compat : l.(short_bits) = r.(short_bits)
+; genv_int_bits_compat : l.(int_bits) = r.(int_bits)
+; genv_long_bits_compat : l.(long_bits) = r.(long_bits)
+; genv_longlong_bits_compat : l.(longlong_bits) = r.(longlong_bits)
+}.
 
 Instance PreOrder_genv_leq : PreOrder genv_leq.
 Proof.
   constructor.
-  { constructor; [ | constructor ]; auto; reflexivity. }
-  { red. unfold genv_leq.
-    intros ? ? ? [A [B [C D]]] [A' [B' [C' D']]].
-    split; [ | split; [ | split ] ]; etransitivity; eauto. }
+  { constructor; intros; try reflexivity; auto. }
+  { red. destruct 1; destruct 1; constructor; try solve [ etransitivity; eassumption | eauto ]. }
 Qed.
 Definition glob_def (g : genv) (gn : globname) : option GlobDecl :=
   g.(genv_tu).(globals) !! gn.
@@ -191,13 +202,56 @@ Definition genv_eq (l r : genv) : Prop :=
   genv_leq l r /\ genv_leq r l.
 
 Instance genv_tu_proper : Proper (genv_leq ==> sub_module) genv_tu.
-Proof. do 2 red. destruct 1 as [ ? [ ? [ ? ? ]] ]; auto. Qed.
+Proof. do 2 red. destruct 1; auto. Qed.
 
 Instance pointer_size_proper : Proper (genv_leq ==> eq) pointer_size.
-Proof. do 2 red. destruct 1 as [ ? [ ? [ ? ? ]] ]; auto. Qed.
+Proof. do 2 red. destruct 1; auto. Qed.
 
 Instance byte_order_proper : Proper (genv_leq ==> eq) byte_order.
-Proof. do 2 red. destruct 1 as [ ? [ ? [ ? ? ]] ]; auto. Qed.
+Proof. do 2 red. destruct 1; auto. Qed.
+
+Instance char_bits_proper : Proper (genv_leq ==> eq) char_bits.
+Proof. do 2 red. destruct 1; auto. Qed.
+Instance int_bits_proper : Proper (genv_leq ==> eq) int_bits.
+Proof. do 2 red. destruct 1; auto. Qed.
+Instance short_bits_proper : Proper (genv_leq ==> eq) short_bits.
+Proof. do 2 red. destruct 1; auto. Qed.
+Instance long_bits_proper : Proper (genv_leq ==> eq) long_bits.
+Proof. do 2 red. destruct 1; auto. Qed.
+Instance longlong_bits_proper : Proper (genv_leq ==> eq) longlong_bits.
+Proof. do 2 red. destruct 1; auto. Qed.
+
+Definition T_char {σ:genv} := Tint σ.(char_bits) Signed.
+Definition T_uchar {σ:genv} := Tint σ.(char_bits) Unsigned.
+Definition T_short {σ:genv} := Tint σ.(short_bits) Signed.
+Definition T_ushort {σ:genv} := Tint σ.(short_bits) Unsigned.
+Definition T_int {σ:genv} := Tint σ.(int_bits) Signed.
+Definition T_uint {σ:genv} := Tint σ.(int_bits) Unsigned.
+Definition T_long {σ:genv} := Tint σ.(long_bits) Signed.
+Definition T_ulong {σ:genv} := Tint σ.(long_bits) Unsigned.
+Definition T_longlong {σ:genv} := Tint σ.(longlong_bits) Signed.
+Definition T_ulonglong {σ:genv} := Tint σ.(longlong_bits) Unsigned.
+
+Instance T_char_proper : Proper (genv_leq ==> eq) (@T_char).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_uchar_proper : Proper (genv_leq ==> eq) (@T_uchar).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_short_proper : Proper (genv_leq ==> eq) (@T_short).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_ushort_proper : Proper (genv_leq ==> eq) (@T_ushort).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_int_proper : Proper (genv_leq ==> eq) (@T_int).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_uint_proper : Proper (genv_leq ==> eq) (@T_uint).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_long_proper : Proper (genv_leq ==> eq) (@T_long).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_ulong_proper : Proper (genv_leq ==> eq) (@T_ulong).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_longlong_proper : Proper (genv_leq ==> eq) (@T_longlong).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
+Instance T_ulonglong_proper : Proper (genv_leq ==> eq) (@T_ulonglong).
+Proof. do 2 red; destruct x; destruct y; destruct 1; simpl in *; subst; reflexivity. Qed.
 
 
 (* this states that the [genv] is compatible with the given [translation_unit]
