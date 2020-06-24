@@ -480,7 +480,7 @@ Module Type Expr.
         wp_args ((Lvalue, obj)::es) (fun vs free =>
             match vs with
             | nil => lfalse
-            | this :: vs => |> fspec (Vptr fa) (this :: vs) (fun v => Q v free)
+            | this :: vs => _at (_eqv this) is_nonnull ** |> fspec (Vptr fa) (this :: vs) (fun v => Q v free)
             end)
         |-- wp_prval (Emember_call (inl (f, Direct)) obj es ty) Q.
 
@@ -489,7 +489,7 @@ Module Type Expr.
         wp_args ((Lvalue, obj)::es) (fun vs free =>
             match vs with
             | nil => lfalse
-            | this :: vs => |> fspec (Vptr fa) (this :: vs) (fun v => Q v free)
+            | this :: vs => _at (_eqv this) is_nonnull ** |> fspec (Vptr fa) (this :: vs) (fun v => Q v free)
             end)
         |-- wp_xval (Emember_call (inl (f, Direct)) obj es ty) Q.
     Axiom wp_init_member_call : forall f es addr ty obj Q,
@@ -497,7 +497,7 @@ Module Type Expr.
         wp_args ((Rvalue, obj)::es) (fun vs free =>
              match vs with
              | nil => lfalse
-             | this :: vs => |> fspec (Vptr fa) (this :: vs) (fun res =>
+             | this :: vs => _at (_eqv this) is_nonnull ** |> fspec (Vptr fa) (this :: vs) (fun res =>
                       [| res = addr |] -* Q free)
              end)
         |-- wp_init ty addr (Emember_call (inl (f, Direct)) obj es ty) Q.
@@ -514,7 +514,7 @@ Module Type Expr.
       end.
 
     Axiom wp_prval_virtual_call : forall ty f obj es Q,
-      wp_lval obj (fun this free => wp_args es (fun vs free' =>
+      wp_lval obj (fun this free => _at (_eqv this) is_nonnull ** wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
@@ -524,7 +524,7 @@ Module Type Expr.
       |-- wp_prval (Emember_call (inl (f, Virtual)) obj es ty) Q.
 
     Axiom wp_xval_virtual_call : forall ty f obj es Q,
-      wp_lval obj (fun this free => wp_args es (fun vs free' =>
+      wp_lval obj (fun this free => _at (_eqv this) is_nonnull ** wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
@@ -534,7 +534,7 @@ Module Type Expr.
       |-- wp_xval (Emember_call (inl (f, Virtual)) obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall ty f obj es Q addr,
-      wp_lval obj (fun this free => wp_args es (fun vs free' =>
+      wp_lval obj (fun this free => _at (_eqv this) is_nonnull ** wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) (_eqv this) cls f (fun fimpl_addr thisp =>
