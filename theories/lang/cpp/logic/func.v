@@ -24,6 +24,16 @@ Section with_cpp.
   Local Notation _base := (o_base resolve).
   Local Notation _derived := (o_derived resolve).
 
+  Definition add_type_to_post@{X Z Y} (t : type) (wpp : WithPrePost@{X Z Y} mpredI)
+    : WithPrePost@{X Z Y} mpredI :=
+    match drop_qualifiers t with
+    | Tnamed _ | Tarray _ _ => wpp
+    | t' => {| wpp_with := wpp.(wpp_with)
+             ; wpp_pre := wpp.(wpp_pre)
+             ; wpp_post := tele_map (WithEx_map (fun r P => (r, [| has_type r t' |] ** P))) wpp.(wpp_post)
+             |}
+    end.
+
   (* Hoare triple for a function. *)
   Definition TSFunction@{X Z Y} {cc : calling_conv} (ret : type) (targs : list type)
              (PQ : thread_info -> WithPrePost@{X Z Y} mpredI)
@@ -31,7 +41,7 @@ Section with_cpp.
     {| fs_cc        := cc
      ; fs_return    := ret
      ; fs_arguments := targs
-     ; fs_spec ti   := WppD (PQ ti) |}.
+     ; fs_spec ti   := WppD (add_type_to_post ret (PQ ti)) |}.
 
 
   Definition SFunction@{X Z Y} {cc : calling_conv} (ret : type) (targs : list type)
@@ -40,7 +50,7 @@ Section with_cpp.
     {| fs_cc        := cc
      ; fs_return    := ret
      ; fs_arguments := targs
-     ; fs_spec _    := WppD PQ |}.
+     ; fs_spec _    := WppD (add_type_to_post ret PQ) |}.
 
   Local Notation anyR := (@anyR _ Σ resolve) (only parsing).
   Local Notation primR := (@primR _ Σ resolve) (only parsing).
