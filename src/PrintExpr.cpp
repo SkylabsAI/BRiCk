@@ -1204,7 +1204,7 @@ public:
             cprint.printExprAndValCat(i, print, li);
           });
 
-        print.end_ctor();
+        done(expr, print, cprint);
     }
 
     void
@@ -1226,7 +1226,7 @@ public:
         } else {
             cprint.printExpr(expr->getBase(), print, li);
         }
-        print.end_ctor();
+        done(expr, print, cprint);
     }
 
     void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
@@ -1234,7 +1234,7 @@ public:
                                    const ASTContext&) {
         print.ctor("Eunresolved_symbol");
         print.str(expr->getName().getAsString());
-        print.end_ctor();
+        done(expr, print, cprint);
     }
 };
 

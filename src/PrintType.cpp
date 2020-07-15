@@ -81,8 +81,8 @@ public:
 
     void VisitTemplateTypeParmType(const TemplateTypeParmType* type,
                                    CoqPrinter& print, ClangPrinter& cprint) {
-        print.ctor("Tmeta_ref")
-            << "\"" << type->getDecl()->getNameAsString() << "\"";
+        print.ctor("Tvar") << "\"" << type->getDecl()->getNameAsString()
+                           << "\"";
         print.end_ctor();
     }
 
@@ -207,6 +207,8 @@ public:
 #endif
             } else if (type->isDependentType()) {
                 print.output() << "(Tvar \"?\")";
+            } else if (type->isPlaceholderType()) {
+                print.output() << "Tunresolved";
             } else {
                 using namespace logging;
                 fatal() << "[ERR] Unsupported builtin type (" << type->getKind()

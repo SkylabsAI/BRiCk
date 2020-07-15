@@ -96,6 +96,76 @@ Inductive type : Set :=
 
 | Tvar (_ : bs) (* a reference to a type variable *)
 | Tspecialize (_ : bs) (_ : list template_arg)
+with expr : Set :=
+| Econst_ref (_ : VarRef) (_ : type)
+  (* ^ these are different because they do not have addresses *)
+| Evar     (_ : VarRef) (_ : type)
+  (* ^ local variable reference *)
+
+| Echar    (_ : Z) (_ : type)
+| Estring  (_ : bytestring.bs) (_ : type)
+| Eint     (_ : Z) (_ : type)
+| Ebool    (_ : bool)
+  (* ^ literals *)
+
+| Eunop    (_ : UnOp) (_ : Expr) (_ : type)
+| Ebinop   (_ : BinOp) (_ _ : Expr) (_ : type)
+ (* ^ note(gmm): overloaded operators are already resolved. so an overloaded
+  * operator shows up as a function call, not a `Eunop` or `Ebinop`.
+  * this includes the assignment operator for classes.
+  *)
+| Ederef (_ : Expr) (_ : type)
+| Eaddrof (_ : Expr) (_ : type)
+| Eassign (_ _ : Expr) (_ : type)
+| Eassign_op (_ : BinOp) (_ _ : Expr) (_ : type)
+  (* ^ these are specialized because they are common *)
+
+| Epreinc (_ : Expr) (_ : type)
+| Epostinc (_ : Expr) (_ : type)
+| Epredec (_ : Expr) (_ : type)
+| Epostdec (_ : Expr) (_ : type)
+  (* ^ special unary operators *)
+
+| Eseqand (_ _ : Expr) (_ : type)
+| Eseqor  (_ _ : Expr) (_ : type)
+| Ecomma (vc : ValCat) (_ _ : Expr) (_ : type)
+  (* ^ these are specialized because they have special control flow semantics *)
+
+| Ecall    (_ : Expr) (_ : list (ValCat * Expr)) (_ : type)
+| Ecast    (_ : Cast) (_ : ValCat * Expr) (_ : type)
+
+| Emember  (obj : Expr) (_ : field) (_ : type)
+| Emember_call (method : (obj_name * call_type) + Expr) (obj : Expr) (_ : list (ValCat * Expr)) (_ : type)
+(* ^ in (globname * bool), bool = true when method being called is virtual *)
+
+| Esubscript (_ : Expr) (_ : Expr) (_ : type)
+| Esize_of (_ : type + Expr) (_ : type)
+| Ealign_of (_ : type + Expr) (_ : type)
+| Econstructor (_ : globname) (_ : list (ValCat * Expr)) (_ : type)
+| Eimplicit (_ : Expr) (_ : type)
+| Eimplicit_init (_ : type)
+| Eif       (_ _ _ : Expr) (_ : type)
+
+| Ethis (_ : type)
+| Enull
+| Einitlist (_ : list Expr) (_ : option Expr) (_ : type)
+
+| Enew (_ : option globname) (array_size : option Expr) (init : option Expr) (_ : type)
+| Edelete (is_array : bool) (_ : option globname) (_ : Expr) (_ : type)
+
+| Eandclean (_ : Expr) (_ : type)
+| Ematerialize_temp (_ : Expr) (_ : type)
+| Ebind_temp (_ : Expr) (_ : obj_name) (_ : type)
+
+| Ebuiltin (_ : BuiltinFn) (_ : type)
+| Eatomic (_ : AtomicOp) (_ : list (ValCat * Expr)) (_ : type)
+| Eva_arg (_ : Expr) (_ : type)
+| Epseudo_destructor (_ : type) (_ : Expr) (* type void *)
+| Eunsupported (_ : bs) (_ : type)
+
+| Eunresolved_ctor (_ : type) (_ : list (ValCat * Expr))
+| Eunresolved_member (_ : type) (_ : bs) (_ : type)
+| Eunresolved_symbol (_ : bs) (_ : type)
 .
 Instance type_inhabited : Inhabited type := populate Tvoid.
 
