@@ -758,10 +758,11 @@ public:
 
     bool VisitFunctionTemplateDecl(const FunctionTemplateDecl *decl,
                                    CoqPrinter &print, ClangPrinter &cprint,
-                                   const ASTContext &) {
+                                   const ASTContext &ctxt) {
         // we only print specializations
-        assert(false && "FunctionTemplateDecl");
-        return false;
+        return this->Visit(decl->getTemplatedDecl(), print, cprint, ctxt);
+        //cprint.printStmt(decl->getBody(), print);
+        //return true;
     }
 
     bool VisitClassTemplateDecl(const ClassTemplateDecl *decl,

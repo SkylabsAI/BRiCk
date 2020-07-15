@@ -71,6 +71,10 @@ Defined.
 Existing Class calling_conv.
 Existing Instance CC_C.
 
+Variant template_arg : Set :=
+  (* to implement this we need to make types and terms mutually inductive *)
+.
+
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
@@ -89,6 +93,9 @@ Inductive type : Set :=
 (* architecture-specific types; currently unused.
    some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs)
+
+| Tvar (_ : bs) (* a reference to a type variable *)
+| Tspecialize (_ : bs) (_ : list template_arg)
 .
 Instance type_inhabited : Inhabited type := populate Tvoid.
 
@@ -300,6 +307,7 @@ Fixpoint normalize_type (t : type) : type :=
   | Tnullptr => t
   | Tfloat _ => t
   | Tarch _ _ => t
+  | Tvar _ => t
   end.
 
 Section normalize_type_idempotent.

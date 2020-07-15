@@ -82,6 +82,7 @@ class PrintExpr :
                             const ASTContext&, OpaqueNames&> {
 private:
     void done(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint) {
+        //expr->getType()->dump();
         print.output() << fmt::nbsp;
         cprint.printQualType(expr->getType(), print);
         print.end_ctor();
@@ -273,6 +274,8 @@ public:
             break;
         }
 #undef ACASE
+        //expr->getLHS()->dumpColor();
+        //expr->getRHS()->dumpColor();
         cprint.printExpr(expr->getLHS(), print, li);
         print.output() << fmt::nbsp;
         cprint.printExpr(expr->getRHS(), print, li);
@@ -352,6 +355,15 @@ public:
             print.ctor("Econst_ref", false);
             print.ctor("Gname", false);
             cprint.printObjName(d, print);
+            done(expr, print, cprint);
+        } else if (isa<NonTypeTemplateParmDecl>(d)) {
+            print.ctor("Emeta_ref");
+        } else {
+            print.ctor("Evar");
+        }
+        auto t = on.find_anon(expr->getDecl());
+        if (t != -1) {
+            print.ctor("Lname", false) << "\"$" << t << "\"";
             print.end_ctor();
         } else {
             print.ctor("Evar", false);
@@ -1176,6 +1188,53 @@ public:
                                  const ASTContext&, OpaqueNames& li) {
         print.ctor("Earrayloop_index") << li.index_count() << fmt::nbsp;
         done(expr, print, cprint);
+    }
+
+    // unresolved symbols
+
+    void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr* expr,
+                                         CoqPrinter& print,
+                                         ClangPrinter& cprint,
+                                         const ASTContext&, OpaqueNames& li) {
+        print.ctor("Eunresolved_ctor");
+        cprint.printQualType(expr->getType(), print);
+        print.output() << fmt::nbsp;
+
+        print.list(expr->arguments(), [&li](auto print, auto i) {
+            cprint.printExprAndValCat(i, print, li);
+          });
+
+        print.end_ctor();
+    }
+
+    void
+    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr* expr,
+                                     CoqPrinter& print, ClangPrinter& cprint,
+                                     const ASTContext&, OpaqueNames& li) {
+
+        print.ctor("Eunresolved_member");
+
+        cprint.printQualType(expr->getBaseType(), print);
+        print.output() << fmt::nbsp;
+        print.str(expr->getMember().getAsString());
+        print.output() << fmt::nbsp;
+        if (expr->isArrow()) {
+            print.ctor("Ederef", false);
+            cprint.printExpr(expr->getBase(), print, li);
+            done(expr->getBase(), print, cprint);
+
+        } else {
+            cprint.printExpr(expr->getBase(), print, li);
+        }
+        print.end_ctor();
+    }
+
+    void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
+                                   CoqPrinter& print, ClangPrinter& cprint,
+                                   const ASTContext&) {
+        print.ctor("Eunresolved_symbol");
+        print.str(expr->getName().getAsString());
+        print.end_ctor();
     }
 };
 

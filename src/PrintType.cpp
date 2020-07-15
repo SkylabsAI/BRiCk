@@ -81,7 +81,7 @@ public:
 
     void VisitTemplateTypeParmType(const TemplateTypeParmType* type,
                                    CoqPrinter& print, ClangPrinter& cprint) {
-        print.ctor("Ttemplate")
+        print.ctor("Tmeta_ref")
             << "\"" << type->getDecl()->getNameAsString() << "\"";
         print.end_ctor();
     }
@@ -205,6 +205,8 @@ public:
                                << "\"" << fmt::rparen;
                 break;
 #endif
+            } else if (type->isDependentType()) {
+                print.output() << "(Tvar \"?\")";
             } else {
                 using namespace logging;
                 fatal() << "[ERR] Unsupported builtin type (" << type->getKind()
@@ -306,7 +308,32 @@ public:
         if (type->isSugared()) {
             cprint.printQualType(type->desugar(), print);
         } else {
-            VisitType(type, print, cprint);
+            print.ctor("Tspecialize");
+            auto tn = type->getTemplateName();
+            if (tn.getAsTemplateDecl()) {
+                print.str(tn.getAsTemplateDecl()->getNameAsString());
+            } else {
+                print.str("unknown?");
+            }
+
+            print.output() << fmt::nbsp;
+
+            print.begin_list();
+            for (auto i : type->template_arguments()) {
+                switch (i.getKind()) {
+                case TemplateArgument::ArgKind::Null:
+                case TemplateArgument::ArgKind::Type:
+                    cprint.printQualType(i.getAsType(), print);
+                    break;
+                case TemplateArgument::ArgKind::Expression:
+                    cprint.printExpr(i.getAsExpr(), print);
+                    break;
+                }
+                print.cons();
+            }
+            print.end_list();
+
+            print.end_ctor();
         }
     }
 

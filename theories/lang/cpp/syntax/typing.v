@@ -77,6 +77,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr
   | Tarch sz nm => Tarch sz nm
+  | Tvar _ => t
   end.
 
 (** [drop_qualifiers t] drops all the *leading* quallifiers of the type [t].
