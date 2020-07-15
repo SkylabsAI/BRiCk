@@ -73,7 +73,128 @@ Existing Instance CC_C.
 
 Variant template_arg : Set :=
   (* to implement this we need to make types and terms mutually inductive *)
+  .
+
+Variant UnOp : Set :=
+| Uminus
+| Unot
+| Ubnot
+| Uother (_ : bs).
+Instance: EqDecision UnOp.
+Proof. solve_decision. Defined.
+
+Variant BinOp : Set :=
+| Badd
+| Band (* & *)
+| Bcmp (* <=> *)
+| Bdiv (* / *)
+| Beq
+| Bge
+| Bgt
+| Ble
+| Blt
+| Bmul
+| Bneq
+| Bor  (* | *)
+| Bmod
+| Bshl
+| Bshr
+| Bsub
+| Bxor (* ^ *)
+| Bdotp (* .* *)
+| Bdotip (* ->* *)
 .
+Instance: EqDecision BinOp.
+Proof. solve_decision. Defined.
+
+Variant VarRef : Set :=
+| Lname (_ : localname)
+| Gname (_ : globname).
+Instance: EqDecision VarRef.
+Proof. solve_decision. Defined.
+
+Variant ValCat : Set := Lvalue | Rvalue | Xvalue.
+Instance: EqDecision ValCat.
+Proof. solve_decision. Defined.
+
+Variant AtomicOp : Set :=
+| AO__atomic_load
+| AO__atomic_load_n
+| AO__atomic_store
+| AO__atomic_store_n
+| AO__atomic_compare_exchange
+| AO__atomic_compare_exchange_n
+| AO__atomic_exchange
+| AO__atomic_exchange_n
+| AO__atomic_fetch_add
+| AO__atomic_fetch_sub
+| AO__atomic_fetch_and
+| AO__atomic_fetch_or
+| AO__atomic_fetch_xor
+| AO__atomic_fetch_nand
+| AO__atomic_add_fetch
+| AO__atomic_sub_fetch
+| AO__atomic_and_fetch
+| AO__atomic_or_fetch
+| AO__atomic_xor_fetch
+| AO__atomic_nand_fetch
+.
+Instance: EqDecision AtomicOp.
+Proof. solve_decision. Defined.
+
+Variant BuiltinFn : Set :=
+| Bin_alloca
+| Bin_alloca_with_align
+| Bin_expect
+| Bin_unreachable
+| Bin_trap
+| Bin_bswap16
+| Bin_bswap32
+| Bin_bswap64
+| Bin_bswap128
+| Bin_bzero
+| Bin_ffs
+| Bin_ffsl
+| Bin_ffsll
+| Bin_clz
+| Bin_clzl
+| Bin_clzll
+| Bin_ctz
+| Bin_ctzl
+| Bin_ctzll
+| Bin_popcount
+| Bin_popcountl
+| Bin_unknown (_ : bs)
+.
+Instance: EqDecision BuiltinFn.
+Proof. solve_decision. Defined.
+
+Variant call_type : Set := Virtual | Direct.
+Instance: EqDecision call_type.
+Proof. solve_decision. Defined.
+
+
+Variant PrimCast : Set :=
+| Cdependent (* this doesn't have any semantics *)
+| Cbitcast
+| Clvaluebitcast
+| Cl2r
+| Cnoop
+| Carray2pointer
+| Cfunction2pointer
+| Cint2pointer
+| Cpointer2int
+| Cptr2bool
+| Cderived2base
+| Cintegral
+| Cint2bool
+| Cnull2ptr
+| Cbuiltin2function
+| Cconstructorconversion
+| C2void.
+Instance PrimCast_eq: EqDecision PrimCast.
+Proof. solve_decision. Defined.
+
 
 (* types *)
 Inductive type : Set :=
@@ -96,14 +217,15 @@ Inductive type : Set :=
 
 | Tvar (_ : bs) (* a reference to a type variable *)
 | Tspecialize (_ : bs) (_ : list template_arg)
-with expr : Set :=
+
+with Expr : Set :=
 | Econst_ref (_ : VarRef) (_ : type)
   (* ^ these are different because they do not have addresses *)
 | Evar     (_ : VarRef) (_ : type)
   (* ^ local variable reference *)
 
 | Echar    (_ : Z) (_ : type)
-| Estring  (_ : bytestring.bs) (_ : type)
+| Estring  (_ : bs) (_ : type)
 | Eint     (_ : Z) (_ : type)
 | Ebool    (_ : bool)
   (* ^ literals *)
@@ -166,6 +288,18 @@ with expr : Set :=
 | Eunresolved_ctor (_ : type) (_ : list (ValCat * Expr))
 | Eunresolved_member (_ : type) (_ : bs) (_ : type)
 | Eunresolved_symbol (_ : bs) (_ : type)
+
+with Cast : Set :=
+| CCcast       (_ : PrimCast)
+| Cuser        (conversion_function : obj_name)
+| Creinterpret (_ : type)
+| Cstatic      (from to : globname)
+| Cdynamic     (from to : globname)
+| Cconst       (_ : type)
+
+with template_arg : Set :=
+| template_type (_ : type)
+| template_value (_ : Expr)
 .
 Instance type_inhabited : Inhabited type := populate Tvoid.
 
@@ -247,13 +381,14 @@ End type_ind'.
 
 Notation Tchar := Tint (only parsing).
 (* XXX merge type_eq_dec into type_eq. *)
+
 Definition type_eq_dec : forall (ty1 ty2 : type), { ty1 = ty2 } + { ty1 <> ty2 }.
-Proof.
+Proof. (*
   (* rewrite /RelDecision /Decision. *)
   fix IHty1 1.
   rewrite -{1}/(EqDecision type) in IHty1.
-  decide equality; try solve_trivial_decision.
-Defined.
+  decide equality; try solve_trivial_decision. *)
+Admitted. (** TODO *)
 Instance type_eq: EqDecision type := type_eq_dec.
 Section type_countable.
   Local Notation BS x      := (GenLeaf (inr x)).
@@ -306,6 +441,7 @@ Section type_countable.
     induction args; simpl; f_equal; done.
   Defined.
 End type_countable.
+Global Instance type_eq: EqDecision type := type_eq_dec.
 
 Notation Tpointer := Tptr (only parsing).
 Notation Treference := Tref (only parsing).
@@ -378,6 +514,7 @@ Fixpoint normalize_type (t : type) : type :=
   | Tfloat _ => t
   | Tarch _ _ => t
   | Tvar _ => t
+  | Tspecialize _ _ => t
   end.
 
 Section normalize_type_idempotent.
