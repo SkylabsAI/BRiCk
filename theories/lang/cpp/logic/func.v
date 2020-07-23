@@ -248,6 +248,29 @@ Section with_cpp.
       end
     end.
 
+  Definition default_ctor (nm : globname) (st : Struct) : list Initializer * Stmt :=
+    (* todo(gmm): I don't have a way to generate the default constructor name *)
+    let bases := (fun '(cls, _) => {| init_path := Base cls
+                                 ; init_type := Tnamed cls
+                                 ; init_init := Econstructor "" nil (Tnamed cls) |}) <$> st.(s_bases) in
+    let fields := (fun '(x, t, _) => {| init_path := Field x
+                                   ; init_type := t
+                                   ; init_init := Eimplicit_init t |}) <$> st.(s_fields) in
+    (bases ++ fields, Sseq nil).
+
+  Definition wp_ctor_impl (nm : globname) (params : list (ident * type)) (inits : list Initializer) (body : Stmt)
+             (ti : thread_info) (args : list val)
+             (Q : val -> epred) : mpred :=
+    match args with
+    | Vptr thisp :: rest_vals =>
+      bind_base_this (Some thisp) Tvoid (fun ρ =>
+      bind_vars params rest_vals ρ (fun ρ frees =>
+          wpi_bases ti ρ nm thisp inits
+             (fun free => free **
+                      wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid))))))
+    | _ => lfalse
+    end.
+
   (* note(gmm): supporting virtual inheritence will require us to add
    * constructor kinds here
    *)
@@ -256,18 +279,15 @@ Section with_cpp.
              (Q : val -> epred) : mpred :=
     match ctor.(c_body) with
     | None => lfalse
-    | Some Defaulted => lfalse
-      (* ^ defaulted constructors are not supported yet *)
-    | Some (UserDefined (inits, body)) =>
-      match args with
-      | Vptr thisp :: rest_vals =>
-        bind_base_this (Some thisp) Tvoid (fun ρ =>
-        bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
-          (wpi_bases ti ρ ctor.(c_class) thisp inits
-             (fun free => free **
-                        wp (resolve:=resolve) ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid)))))))
-      | _ => lfalse
+    | Some Defaulted =>
+      match resolve.(genv_tu).(globals) !! ctor.(c_class) with
+      | Some (Gstruct st) =>
+        let (inits, body) := default_ctor ctor.(c_class) st in
+        wp_ctor_impl ctor.(c_class) nil inits body ti args Q
+      | _ => False
       end
+    | Some (UserDefined (inits, body)) =>
+      wp_ctor_impl ctor.(c_class) nil inits body ti args Q
     end.
 
   Definition ctor_ok (ctor : Ctor) (ti : thread_info) (spec : function_spec)
@@ -290,7 +310,6 @@ Section with_cpp.
          _base resolve cls base |-> all_identities (Some base) base) -* pureR Q)
     | _ => lfalse
     end.
-
 
   Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
            (dests : list (FieldOrBase * globname))
@@ -321,20 +340,31 @@ Section with_cpp.
       end
     end.
 
+  Definition wp_dtor_impl (nm : globname) (body : Stmt) (deinit : list (FieldOrBase * obj_name))
+             (ti : thread_info) (args : list val)
+             (Q : val -> epred) : mpred :=
+    match args with
+    | Vptr thisp :: rest_vals =>
+      bind_base_this (Some thisp) Tvoid (fun ρ =>
+        wp (resolve:=resolve) ⊤ ti ρ body
+           (void_return (wpd_members ti ρ nm thisp deinit (|> Q Vvoid))))
+    | _ => False
+    end.
+
   Definition wp_dtor (dtor : Dtor) (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match dtor.(d_body) with
-    | None => lfalse
-    | Some Defaulted => lfalse
-      (* ^ defaulted constructors are not supported yet *)
-    | Some (UserDefined (body, deinit)) =>
-      match args with
-      | Vptr thisp :: rest_vals =>
-        bind_base_this (Some thisp) Tvoid (fun ρ =>
-        wp (resolve:=resolve) ⊤ ti ρ body
-           (void_return (wpd_members ti ρ dtor.(d_class) thisp deinit (|> Q Vvoid))))
-      | _ => lfalse
+    | None => False
+    | Some Defaulted =>
+      match resolve.(genv_tu).(globals) !! dtor.(d_class) with
+      | Some (Gstruct st) =>
+        let fields := (fun '(x, ty, _) => (Field x, "?"))%bs <$> st.(s_fields) in
+        let bases := (fun '(cls, _) => (Base cls, "?"))%bs <$> st.(s_bases) in
+        wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q
+      | _ => False
       end
+    | Some (UserDefined (body, deinit)) =>
+      wp_dtor_impl dtor.(d_class) body deinit ti args Q
     end.
 
   Definition dtor_ok (dtor : Dtor) (ti : thread_info) (spec : function_spec)
