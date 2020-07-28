@@ -602,7 +602,9 @@ Axiom has_type_qual : forall t q x,
     has_type x (drop_qualifiers t) ->
     has_type x (Tqualified q t).
 
-Hint Resolve has_type_qual : has_type.
+Axiom has_void_type : has_type Vvoid Tvoid.
+
+Hint Resolve has_type_qual has_void_type : has_type.
 
 Arguments Z.add _ _ : simpl never.
 Arguments Z.sub _ _ : simpl never.
