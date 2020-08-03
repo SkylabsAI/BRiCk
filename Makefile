@@ -7,7 +7,7 @@
 default_target: coq cpp2v
 .PHONY: default_target
 
-CMAKE=$$(which cmake)
+CMAKE:=$(shell which cmake)
 COQMAKEFILE=$(COQBIN)coq_makefile
 
 CPPMK := $(MAKE) -C build
