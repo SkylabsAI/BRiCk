@@ -7,6 +7,8 @@
 default_target: coq cpp2v
 .PHONY: default_target
 
+# Overridable as needed.
+LLVM_CONFIG := $(shell which llvm-config)
 CMAKE:=$(shell which cmake)
 COQMAKEFILE=$(COQBIN)coq_makefile
 
@@ -43,7 +45,7 @@ ifeq ($(SYS),Darwin)
 endif
 
 build/Makefile: Makefile CMakeLists.txt
-	$(CMAKE) -B build $(BUILDARG)
+	CC=`${LLVM_CONFIG} --bindir`/clang CXX=`${LLVM_CONFIG} --bindir`/clang++ $(CMAKE) -B build -DLLVM_CONFIG="${LLVM_CONFIG}" $(BUILDARG)
 
 tocoq: build/Makefile
 	+$(CPPMK) tocoq
