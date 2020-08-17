@@ -230,15 +230,9 @@ Section with_cpp.
   (** function specifications written in weakest pre-condition style.
    *)
   Record function_spec : Type :=
-    { fs_cc : calling_conv
-    ; fs_return : type
-    ; fs_arguments : list type
-    ; fs_spec : thread_info -> list val -> (val -> mpred) -> mpred
+    { fs_spec : thread_info -> list val -> (val -> mpred) -> mpred
     }.
   Arguments function_spec : clear implicits.
   Arguments Build_function_spec : clear implicits.
-
-  Definition type_of_spec `(fs : function_spec) : type :=
-    normalize_type (Tfunction fs.(fs_cc) fs.(fs_return) fs.(fs_arguments)).
 
 End with_cpp.
