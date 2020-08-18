@@ -75,7 +75,7 @@ stages:
 testdeps:
   stage: testdeps
   trigger:
-    bedrocksystems/cpp2v
+    project: bedrocksystems/cpp2v
     strategy: depend
 
 build_latest:
