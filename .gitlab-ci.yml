@@ -35,6 +35,7 @@ variables:
 stages:
   - build
   - test
+  - testdeps
   - release
   - pages
 
@@ -70,6 +71,12 @@ stages:
   except:
     variables:
       - $CI_MERGE_REQUEST_TITLE =~ /^WIP:/
+
+testdeps:
+  stage: testdeps
+  trigger:
+    bedrocksystems/cpp2v
+    strategy: depend
 
 build_latest:
   extends: .build
