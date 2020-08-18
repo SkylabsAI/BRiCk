@@ -79,7 +79,6 @@ testdeps:
   trigger:
     project: bedrocksystems/cpp2v
     strategy: depend
-    branch: aa755-master-patch-94797
   only:
     - merge_requests
 
