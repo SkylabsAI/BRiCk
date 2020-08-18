@@ -77,6 +77,8 @@ testdeps:
   trigger:
     project: bedrocksystems/cpp2v
     strategy: depend
+  only:
+    - merge_requests
 
 build_latest:
   extends: .build
