@@ -75,7 +75,7 @@ stages:
 testdeps:
   stage: testdeps
   variables:
-    COREBRANCH: $CI_COMMIT_BRANCH
+    COREBRANCH: ${CI_COMMIT_BRANCH}
   trigger:
     project: bedrocksystems/cpp2v
     strategy: depend
