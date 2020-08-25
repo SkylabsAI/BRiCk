@@ -263,7 +263,6 @@ public:
     void VisitFunctionDecl(const FunctionDecl *decl, bool) {
         //if (decl->isDependentContext())
         //    return;
-
         using namespace comment;
         auto defn = decl->getDefinition();
         if (defn == decl) {
@@ -347,11 +346,10 @@ public:
     }
 
     void VisitFunctionTemplateDecl(const FunctionTemplateDecl *decl, bool) {
-        // note(gmm): for now, i am just going to return the specializations.
         go(decl);
-        //for (auto i : decl->specializations()) {
-        //    this->Visit(i, true);
-        //}
+        for (auto i : decl->specializations()) {
+            this->Visit(i, true);
+        }
     }
 
     void VisitClassTemplateDecl(const ClassTemplateDecl *decl, bool) {
