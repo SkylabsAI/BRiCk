@@ -460,11 +460,72 @@ public:
             print.none();
         }
 
-        // todo(gmm): i need to print any implicit declarations.
+        print.end_ctor();
+        print.end_ctor();
+        print.end_ctor();
 
-        print.end_ctor();
-        print.end_ctor();
-        print.end_ctor();
+        // todo(gmm): i need to print any implicit declarations.
+        llvm::errs() << decl->getNameAsString() << "\n";
+        { // default constructor
+            if (not decl->hasUserProvidedDefaultConstructor() &&
+                decl->hasDefaultConstructor()) {
+                llvm::errs() << "Generate default constructor\n";
+            }
+        }
+
+        { // copy constructor
+            if (not decl->hasUserDeclaredCopyConstructor()) {
+                auto is_const = decl->implicitCopyConstructorHasConstParam();
+                if (decl->hasTrivialCopyConstructor()) {
+                    llvm::errs() << "Generate trivial copy constructor (const="
+                                 << is_const << ")\n";
+                } else if (decl->hasSimpleCopyConstructor()) {
+                    llvm::errs() << "Generate simple copy constructor (const="
+                                 << is_const << ")\n";
+                } else if (decl->hasNonTrivialCopyConstructor()) {
+                    llvm::errs()
+                        << "Generate non-trivial copy constructor (const="
+                        << is_const << ")\n";
+                } else {
+                    llvm::errs() << "Copy constructor otherwise\n";
+                }
+            }
+        }
+        { // move constructor
+            if (not decl->hasUserDeclaredMoveConstructor()) {
+                if (decl->hasTrivialMoveConstructor()) {
+                    llvm::errs() << "Generate trivial move constructor\n";
+                } else if (decl->hasSimpleMoveConstructor()) {
+                    llvm::errs() << "Generate simple move constructor\n";
+                } else if (decl->hasNonTrivialMoveConstructor()) {
+                    llvm::errs() << "Generate non-trivial move constructor\n";
+                }
+            }
+        }
+
+        { // copy assignment
+            if (not decl->hasUserDeclaredCopyAssignment()) {
+                auto is_const = decl->implicitCopyAssignmentHasConstParam();
+                if (decl->hasTrivialCopyAssignment()) {
+                    llvm::errs() << "Generate trivial copy assignment (const="
+                                 << is_const << ")\n";
+                } else if (decl->hasNonTrivialCopyAssignment()) {
+                    llvm::errs()
+                        << "Generate non-trivial copy assignment (const="
+                        << is_const << ")\n";
+                }
+            }
+        }
+        { // move assigment
+            if (not decl->hasUserDeclaredMoveAssignment()) {
+                if (decl->hasTrivialMoveAssignment()) {
+                    llvm::errs() << "Generate trivial move assignment\n";
+                } else if (decl->hasNonTrivialMoveAssignment()) {
+                    llvm::errs() << "Generate non-trivial move assignment\n";
+                }
+            }
+        }
+
         return true;
     }
 
