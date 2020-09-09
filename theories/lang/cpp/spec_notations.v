@@ -98,6 +98,9 @@ Section with_Σ.
     eapply go. }
   Defined.
 
+  Definition add_prepost_with {t : tele} (P : t -t> PROP) (wpp : WithPrePost) : WithPrePost :=
+    @add_with t (tele_bind (fun args => add_pre (tele_app P args) (add_post (tele_app P args) wpp))).
+
   Definition let_fspec (X : WithPrePost) : WithPrePost := X.
 
   Definition with_arg_fspec (X : WithPrePost) : WithPrePost := X.
@@ -130,6 +133,16 @@ Notation "'\prepost' pp X" :=
   (@add_prepost _ pp%I X%fspec)
   (at level 10, pp at level 100, X at level 200, right associativity,
    format "'[v' '\prepost'  '[hv' pp ']' '//' X ']'").
+
+Notation "'\prepost_with' pp X" :=
+  (@add_prepost_with _ (TeleS (fun q => TeleO)) (fun q => pp%I q) X%fspec)
+  (at level 10, pp at level 100, X at level 200, right associativity, only parsing,
+   format "'[v' '\prepost_with'  '[hv' pp ']' '//' X ']'").
+
+Notation "'\prepost_with{' x .. y '}' pp X" :=
+  (@add_prepost_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..)) (fun x => .. (fun y => pp%I) ..) X%fspec)
+  (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
+   format "'[v' '\prepost_with{' x .. y '}'  '[hv' pp ']' '//' X ']'").
 
 Notation "'\let' x ':=' e X" :=
   (let_fspec (let x := e in X%fspec))
@@ -210,13 +223,15 @@ Abort.
 
 Goal WithPrePost mpredI.
 refine (
-   \with (I J : mpred)
+   \with (I J : mpred) (P : Qp -> mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
    \prepost empSP
    \require True
    \arg{n (nn: nat)} "foo" (Vint n)
    \args{a} [Vint (Z.of_nat a)]
    \with (z : nat)
    \prepost empSP
+   \prepost_with P
+   \prepost_with{q1 q2} _at (_eq p) (R q1 q2 0)
    \pre empSP ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
    \post {x} [ Vint x ] empSP).
 (* Show Proof. *)
