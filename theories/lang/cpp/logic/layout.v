@@ -33,6 +33,7 @@ Section with_Σ.
   Local Notation _field := (_field (resolve:=resolve)) (only parsing).
   Local Notation _sub := (_sub (resolve:=resolve)) (only parsing).
   Local Notation anyR := (anyR (resolve:=resolve)) (only parsing).
+  Local Notation uninitR := (uninitR (resolve:=resolve)) (only parsing).
   Local Notation primR := (primR (resolve:=resolve)) (only parsing).
 
   Definition borrow_from {PROP : bi} (part all : PROP) : PROP :=
@@ -43,7 +44,7 @@ Section with_Σ.
   Axiom decompose_struct
   : forall cls st,
     glob_def resolve cls = Some (Gstruct st) ->
-        anyR (Tnamed cls) 1
+        uninitR (Tnamed cls) 1
     -|- borrow_from
           (([∗list] base ∈ st.(s_bases),
               let '(gn,_) := base in
@@ -55,30 +56,30 @@ Section with_Σ.
            (if has_vtable st
             then _identity resolve cls None 1
             else empSP))
-          (anyR (Tnamed cls) 1).
+          (uninitR (Tnamed cls) 1).
 
   (** decompose a union into the classical conjunction of the alternatives
    *)
   Axiom decompose_union
   : forall (cls : globname) st,
     glob_def resolve cls = Some (Gunion st) ->
-        anyR (Tnamed cls) 1
+        uninitR (Tnamed cls) 1
     -|- [∧list] it ∈ st.(u_fields),
            let '(i, t, _) := it in
            let f := _field {| f_name := i ; f_type := cls |} in
            borrow_from (_offsetR f (anyR (erase_qualifiers t) 1))
-                       (anyR (Tnamed cls) 1).
+                       (uninitR (Tnamed cls) 1).
 
   (** decompose an array into individual components
       note that one past the end of an array is a valid location, but
       it doesn't store anything.
    *)
   Axiom decompose_array : forall t n,
-        anyR (Tarray t n) 1
+        uninitR (Tarray t n) 1
     -|- _offsetR (_sub t (Z.of_N n)) empSP **
         (* ^ note: this is equivalent to [valid_loc (this .[ t ! n ])] *)
         [∗list] i ↦ _ ∈ repeat () (BinNatDef.N.to_nat n),
-                _offsetR (_sub t (Z.of_nat i)) (anyR t 1).
+                _offsetR (_sub t (Z.of_nat i)) (uninitR t 1).
 
   Local Notation Unfold x tm :=
     ltac:(let H := eval unfold x in tm in exact H) (only parsing).
