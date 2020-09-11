@@ -33,6 +33,7 @@ Section with_Σ.
   Local Notation _field := (_field (resolve:=resolve)) (only parsing).
   Local Notation _sub := (_sub (resolve:=resolve)) (only parsing).
   Local Notation anyR := (anyR (resolve:=resolve)) (only parsing).
+  Local Notation primR := (primR (resolve:=resolve)) (only parsing).
 
   Definition borrow_from {PROP : bi} (part all : PROP) : PROP :=
     part ** (part -* all).
@@ -91,9 +92,9 @@ Section with_Σ.
   (* JH: TODO: Determine what new axioms we should add here. *)
 
   Axiom decode_uint_primR : forall q sz (x : Z),
-    primR (resolve:=resolve) (Tint sz Unsigned) q (Vint x) -|-
+    primR (Tint sz Unsigned) q (Vint x) -|-
     Exists l : list N,
-      as_Rep (array' 1 (fun c => primR (resolve:=resolve) (Tint W8 Unsigned) q (Vint c))
+      as_Rep (array' 1 (fun c => primR (Tint W8 Unsigned) q (Vint c))
              (Z.of_N <$> l)) **
       _type_ptr resolve (Tint sz Unsigned) **
       [| decodes_uint l x |].
