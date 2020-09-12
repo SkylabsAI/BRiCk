@@ -4,11 +4,19 @@
  * SPDX-License-Identifier:MIT-0
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-#include <stdalign.h>
+// #include <string.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+//#include <stdalign.h>
+//#include <assert.h>
+#include <stddef.h>
+
+extern "C" {
+  // XXX avoid system headers, on Mac they confuse cpp2v.
+  extern void *malloc(size_t);
+  extern void memcpy(void *__restrict dst, const void* __restrict src, size_t n);
+  extern int printf(const char * __restrict format, ...);
+}
 
 int answer = 42;
 
@@ -69,9 +77,11 @@ alloc_test() {
     Type3* s3BP = (Type3*)ptrB;
     ptrB += size3;
 
+#if 0
     assert(s1BP->field1 == 1);
     assert(*s2BP->field2 == 42);
     assert(*s3BP == 2);
+#endif
     printf("%d %d %d\n", s1BP->field1, *s2BP->field2, *s3BP);
 }
 
