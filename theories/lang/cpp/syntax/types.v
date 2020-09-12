@@ -191,12 +191,14 @@ Variant PrimCast : Set :=
 | Cpointer2int
 | Cptr2bool
 | Cderived2base
+| Cbase2derived
 | Cintegral
 | Cint2bool
 | Cnull2ptr
 | Cbuiltin2function
 | Cconstructorconversion
-| C2void.
+| C2void
+| Cunsupported.
 Instance PrimCast_eq: EqDecision PrimCast.
 Proof. solve_decision. Defined.
 
