@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
 Require Import stdpp.gmap.
-Require Import bedrock.bytestring.
+From bedrock Require Import bytestring.
 
 Require Import Coq.FSets.FMapAVL.
 

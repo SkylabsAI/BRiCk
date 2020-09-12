@@ -5,7 +5,7 @@
  *)
 From iris Require Import bi.bi.
 From iris.proofmode Require Import tactics.
-Require Import bedrock.IrisBridge.
+From bedrock Require Import IrisBridge.
 Import ChargeNotation.
 
 Section with_PROP.

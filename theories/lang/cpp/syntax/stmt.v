@@ -9,7 +9,7 @@ Require Import stdpp.decidable.
 Require Import stdpp.numbers.
 Require Import bedrock.Util.
 From bedrock.lang.cpp.syntax Require Import names types expr.
-Require Import bedrock.bytestring.
+From bedrock Require Import bytestring.
 
 Set Primitive Projections.
 

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
 Require Import stdpp.telescopes.
-Require Import bedrock.bytestring.
+From bedrock Require Import bytestring.
 Require Import bedrock.lang.cpp.logic.
 
 Declare Scope fspec_scope.
