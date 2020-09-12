@@ -181,15 +181,8 @@ Instance: EqDecision Expr.
 Proof.
   do 2 red.
   fix IHe 1.
+  pose (expr_eq_dec := IHe : EqDecision Expr).
   decide equality; try solve_trivial_decision.
-  all: try eapply list_eq_dec; try solve_trivial_decision.
-  all: try eapply prod_eq_dec; try solve_trivial_decision.
-  all: try eapply sum_eq_dec; try solve_trivial_decision.
-  all: try eapply option_eq_dec; try solve_trivial_decision.
-  Unshelve.
-  all: try eapply prod_eq_dec; do 2 red; apply IHe.
-  Unshelve.
-  all: do 2 red; apply IHe.
 Defined.
 
 Definition Edefault_init_expr (e : Expr) : Expr := e.
