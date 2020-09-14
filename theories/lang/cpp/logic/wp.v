@@ -574,7 +574,7 @@ Section with_cpp.
   Instance Kpreds_fupd: FUpd Kpreds :=
     fun l r Q =>
       {| k_normal := |={l,r}=> Q.(k_normal)
-       ; k_return v f := |={l,r}=> Q.(k_return) v f
+       ; k_return v f := (|={l,r}=> Q.(k_return) v f)%I
        ; k_break := |={l,r}=> Q.(k_break)
        ; k_continue := |={l,r}=> Q.(k_continue) |}%I.
 
