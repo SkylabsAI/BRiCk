@@ -11,13 +11,13 @@ From bedrock.lang.cpp Require Import semantics logic.pred ast.
 Set Default Proof Using "Type".
 
 Section with_Σ.
-  Context `{has_cpp : cpp_logic}.
+  Context `{has_cpp : cpp_logic ti}.
 
   (* locations are computations that produce an address.
    *)
   Record Loc : Type :=
     { _location : ptr -> mpred
-    ; _loc_unique : forall p1 p2, _location p1 ** _location p2 |-- [| p1 = p2 |]
+    ; _loc_unique : forall p1 p2, _location p1 ** _location p2 |-@{mpredI} [| p1 = p2 |]
     ; _loc_valid : forall p1, _location p1 |-- valid_ptr p1
     ; _loc_persist : forall p, Persistent (_location p)
     ; _loc_affine : forall p, Affine (_location p)

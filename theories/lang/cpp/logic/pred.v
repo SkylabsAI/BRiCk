@@ -54,17 +54,12 @@ Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
 
   Section with_cpp.
-    Context `{Σ : cpp_logic}.
+    Context `{Σ : cpp_logic thread_info}.
 
-    Definition mpred := iProp Σ.
-    Canonical Structure mpredI : bi :=
-      {| bi_car := mpred
-       ; bi_later := bi_later
-       ; bi_ofe_mixin := (iPropI Σ).(bi_ofe_mixin)
-       ; bi_bi_mixin := (iPropI Σ).(bi_bi_mixin)
-       ; bi_bi_later_mixin := (iPropI Σ).(bi_bi_later_mixin)
-       |}.
-    (* todo: Fix the warning generated from this definition *)
+    (* TODO(hai): these definitions should not be in CPP_LOGIC? *)
+    Definition mpredO := monPredO thread_info (iPropI Σ).
+    Definition mpredI : bi := monPredI thread_info (iPropI Σ).
+    Definition mpred  : Type := bi_car mpredI.
 
     (* Typeclasses Opaque mpred.
     Global Instance mpred_later_contractive : BiLaterContractive mpredI.
