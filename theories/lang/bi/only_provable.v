@@ -179,11 +179,11 @@ Section proofmode.
     @FromExist PROP A [| ∃ x, P x |] (λ a, [| P a |]).
   Proof. by rewrite/FromExist only_provable_exist. Qed.
   Global Instance into_exist_only_provable {A} (P : A → Prop) :
-    @IntoExist PROP A [| ∃ x, P x |] (λ a, [| P a |]).
-  Proof. by rewrite/IntoExist only_provable_exist. Qed.
+    @IntoExist PROP A [| ∃ x, P x |] (λ a, [| P a |]) x.
+  Proof. rewrite/IntoExist=>_. by rewrite only_provable_exist. Qed.
   Global Instance from_forall_only_provable `{Inhabited A} (P : A → Prop) :
-    @FromForall PROP A [| ∀ x, P x |] (λ a, [| P a |]).
-  Proof. by rewrite/FromForall only_provable_forall_2. Qed.
+    @FromForall PROP A [| ∀ x, P x |] (λ a, [| P a |]) x.
+  Proof. rewrite/FromForall=>_. by rewrite only_provable_forall_2. Qed.
   Global Instance into_forall_only_provable {A} (P : A → Prop) :
     @IntoForall PROP A [| ∀ x, P x |] (λ a, [| P a |]).
   Proof. by rewrite/IntoForall only_provable_forall_1. Qed.

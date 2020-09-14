@@ -359,7 +359,7 @@ Module SimpleCPP.
       apply bi.wand_intro_r.
       rewrite/val_ -own_op own_valid singleton_op.
       rewrite uPred.discrete_valid singleton_valid.
-      by f_equiv=>/pair_valid [] _ /= /agree_op_invL'.
+      by f_equiv=>/pair_valid [] _ /= /to_agree_op_inv_L.
     Qed.
 
     Instance: Fractional (val_ a rv).
@@ -384,7 +384,7 @@ Module SimpleCPP.
       apply bi.wand_intro_r.
       rewrite/byte_ -own_op own_valid singleton_op.
       rewrite uPred.discrete_valid singleton_valid.
-      by f_equiv=>/pair_valid [] _ /= /agree_op_invL'.
+      by f_equiv=>/pair_valid [] _ /= /to_agree_op_inv_L.
     Qed.
 
     Instance: Fractional (byte_ a rv).
@@ -401,7 +401,7 @@ Module SimpleCPP.
 
     Lemma frac_valid {A : Type} q1 q2 (v1 v2 : A) :
       ✓ (frac q1 v1 ⋅ frac q2 v2) → ✓ (q1 + q2)%Qp ∧ v1 = v2.
-    Proof. by rewrite pair_valid/= =>-[]? /agree_op_invL'. Qed.
+    Proof. by rewrite pair_valid/= =>-[]? /to_agree_op_inv_L. Qed.
 
     Theorem byte_consistent a b b' q q' :
       byte_ a b q ** byte_ a b' q' |-- byte_ a b (q + q') ** [| b = b' |].
@@ -486,7 +486,7 @@ Module SimpleCPP.
       iIntros "o1 o2".
       iDestruct (own_valid_2 with "o1 o2") as %X.
       revert X.
-      rewrite singleton_op singleton_valid => /agree_op_invL' ?. by subst ma2.
+      rewrite singleton_op singleton_valid => /to_agree_op_inv_L ?. by subst ma2.
     Qed.
 
     (* heap points to *)
