@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-Require Export bedrock.ChargeUtil.
+From bedrock Require Export ChargeUtil.
 Require Export bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Export
      pred
