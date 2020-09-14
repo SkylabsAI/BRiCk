@@ -1,8 +1,3 @@
-(subdir tests
-        (copy_files ../../../cpp2v-tests/*.v)
-        ;(coq.theory (name "bedrock.tests") (flags (-w -convert_concl_no_check -w -ambiguous-paths)))
-        )
-
 (include_subdirs qualified)
 (coq.theory
  (name bedrock.lang)                ; This will determine the toplevel
