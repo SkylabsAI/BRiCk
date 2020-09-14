@@ -1,0 +1,13 @@
+;; (rule
+;;   (targets test_implicit_inits_region_cpp_names.v test_implicit_inits_region_cpp.v)
+;;   (action (run cpp2v -v -names test_implicit_inits_region_cpp_names.v -o test_implicit_inits_region_cpp.v test_implicit_inits_region.cpp --)))
+
+(include_subdirs qualified)
+(coq.theory
+ (name bedrock.lang.tests)
+ ; no package, we don't want to install this.
+ (flags (
+   -w -convert_concl_no_check
+   -w -ambiguous-paths
+   ))
+ (theories bedrock.lang))
