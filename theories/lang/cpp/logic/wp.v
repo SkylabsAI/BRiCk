@@ -17,8 +17,6 @@ From bedrock.lang.cpp Require Import
 Set Primitive Projections.
 Set Default Proof Using "Type".
 
-Local Open Scope bi_scope.
-
 Section with_cpp.
   Context `{Σ : cpp_logic thread_info}.
 
@@ -558,7 +556,7 @@ Section with_cpp.
   Instance Kpreds_fupd: FUpd Kpreds :=
     fun l r Q =>
       {| k_normal := |={l,r}=> Q.(k_normal)
-       ; k_return v f := |={l,r}=> Q.(k_return) v f
+       ; k_return v f := (|={l,r}=> Q.(k_return) v f)%I
        ; k_break := |={l,r}=> Q.(k_break)
        ; k_continue := |={l,r}=> Q.(k_continue) |}.
 
