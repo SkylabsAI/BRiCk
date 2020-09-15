@@ -68,18 +68,6 @@ Module Type LOCATIONS.
 
 End LOCATIONS.
 
-(*
-Module Type PTR_API_BAD (Import P : PTR_API).
-(** ** pointer offsets *)
-(** the offset of a pointer. *)
-Parameter offset_ptr_ : Z -> ptr -> ptr.
-
-Axiom offset_ptr_combine_ : forall b o o',
-    offset_ptr_ o' (offset_ptr_ o b) = offset_ptr_ (o + o') b.
-Axiom offset_ptr_0_ : forall b,
-    offset_ptr_ 0 b = b.
-End PTR_API_BAD.
-*)
 Module Type PTR_API_FULL := LOCATIONS.
 Declare Module PTR_API_FULL_AXIOM : PTR_API_FULL.
 Export PTR_API_FULL_AXIOM.
