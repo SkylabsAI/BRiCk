@@ -17,6 +17,7 @@ From bedrock.lang.cpp.logic Require Import pred z_to_bytes.
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
+Implicit Types (q : Qp).
 
 (* todo: does this not exist as a library somewhere? *)
 Definition fractionalR (V : Type) : cmraT :=
@@ -37,20 +38,35 @@ Module PTR_CONCR <: PTR_API.
   Global Instance : EqDecision alloc_id := _.
   Global Instance : Countable alloc_id := _.
 
+  Definition object_id := N.
+  Global Instance : EqDecision object_id := _.
+  Global Instance : Countable object_id := _.
+
   (* Add offsets from Loc. *)
   Inductive offset := .
+
   Instance : EqDecision offset.
   Proof. solve_decision. Qed.
 
   (* XXX Ain't nobody got time for this *)
   Declare Instance offset_countable : Countable offset.
 
+  Parameter offset_to_N : offset -> N.
+
   (** C++ provides a distinguished pointer [nullptr] that is *never
       dereferenable*
   *)
   Inductive ptr_ :=
   | nullptr_
-  | mk_ptr (a : alloc_id) (o : offset).
+  (* XXX I'm trying to combine Cerberus's allocation IDs to Krebbers's object IDs.
+  That's because object creation is an operation in the C/C++ abstract machine
+  that must be modeled accurately,
+  And you can (1) allocate a memory region and (2) create multiple objects in it.
+
+  TODO: consider if both operations create objects, but the first only
+  creates character arrays, while the second creates additional overlapping objects.
+  *)
+  | mk_ptr (a : alloc_id) (o : object_id) (o : offset).
   Definition ptr := ptr_.
   Definition nullptr := nullptr_.
 
@@ -64,6 +80,7 @@ End PTR_CONCR.
 
 Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
   Import PTR_CONCR.
+  Implicit Types (p : ptr).
 
   Definition addr : Set := N.
   Definition byte : Set := N.
@@ -87,6 +104,7 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
     ; ghost_mem_name : gname
     ; mem_inj_name : gname
     ; blocks_name : gname
+    ; objects_name : gname
     ; code_name : gname
     }.
   Definition _cpp_ghost := cpp_ghost.
@@ -103,8 +121,11 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
          (represented as pointers) to physical memory addresses. Locations that
          are not stored in physical memory (e.g. because they are register
          allocated) are mapped to [None] *)
-    ; blocksG : inG Σ (gmapUR ptr (agreeR (leibnizO (Z * Z))))
-      (* ^ this represents the minimum and maximum offset of the block *)
+    ; blocksG : inG Σ (gmapUR alloc_id (fractionalR N))
+      (* ^ this represents the size of the block *)
+    ; objectsG : inG Σ (gmapUR object_id (agreeR (leibnizO type)))
+      (* ^ this represents the type of the object.
+      XXX Do objects have more attributes? *)
     ; codeG : inG Σ (gmapUR ptr (agreeR (leibnizO (Func + Method + Ctor + Dtor))))
       (* ^ this carries the (compiler-supplied) mapping from C++ locations
          to the code stored at that location *)
@@ -122,18 +143,18 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
 
   Section with_cpp.
     Context `{Σ : cpp_logic}.
-    Definition heap_own (a : addr) (q : Qp) (r : runtime_val') : mpred :=
+    Definition heap_own (a : addr) q (r : runtime_val') : mpred :=
       own (A := gmapR addr (fractionalR runtime_val'))
       _ghost.(heap_name) {[ a := frac q r ]}.
-    Definition ghost_mem_own (p : ptr) (q : Qp) (v : val) : mpred :=
+    Definition ghost_mem_own (p : ptr) q (v : val) : mpred :=
       own (A := gmapR ptr (fractionalR (leibnizO val)))
         _ghost.(ghost_mem_name) {[ p := frac q v ]}.
     Definition mem_inj_own (p : ptr) (va : option N) : mpred :=
       own (A := gmapUR ptr (agreeR (leibnizO (option addr))))
         _ghost.(mem_inj_name) {[ p := to_agree va ]}.
-    Definition blocks_own (p : ptr) (l h : Z) : mpred :=
-      own (A := gmapUR ptr (agreeR (leibnizO (Z * Z))))
-        _ghost.(blocks_name) {[ p := to_agree (l, h) ]}.
+    Definition blocks_own (a : alloc_id) q (sz : N) : mpred :=
+      own (A := gmapUR alloc_id (fractionalR N))
+        _ghost.(blocks_name) {[ a := frac q sz ]}.
 
     (** the pointer points to the code
 
@@ -186,24 +207,70 @@ Module SimpleCPP.
     (** pointer validity *)
     (** Pointers past the end of an object/array can be valid; see
     https://eel.is/c++draft/expr.add#4 *)
-    Definition valid_ptr (p : ptr) : mpred :=
+    (* Definition valid_ptr (p : ptr) : mpred :=
       [| p = nullptr |] \\//
             Exists base l h o,
                 blocks_own base l h **
-                [| (l <= o <= h)%Z |] ** [| p = offset_ptr_ o base |].
+                [| (l <= o <= h)%Z |] ** [| p = offset_ptr_ o base |]. *)
 
-    Theorem valid_ptr_persistent : forall p, Persistent (valid_ptr p).
-    Proof. apply _. Qed.
-    Theorem valid_ptr_affine : forall p, Affine (valid_ptr p).
-    Proof. apply _. Qed.
-    Theorem valid_ptr_timeless : forall p, Timeless (valid_ptr p).
-    Proof. apply _. Qed.
-    Existing Instance valid_ptr_persistent.
-    Existing Instance valid_ptr_affine.
-    Existing Instance valid_ptr_timeless.
+    Definition live_alloc (a : alloc_id) sz q : mpred :=
+      blocks_own a q sz.
+    Instance live_alloc_timeless a q sz : Timeless (live_alloc a sz q) := _.
 
-    Theorem valid_ptr_nullptr : |-- valid_ptr nullptr.
-    Proof. by iLeft. Qed.
+    Theorem live_alloc_agree a sz1 sz2 q1 q2 :
+      live_alloc a sz1 q1 |-- live_alloc a sz2 q2 -*
+      [| sz1 = sz2 |] ** live_alloc a sz1 (q1 + q2).
+    Proof.
+      apply bi.wand_intro_r.
+      (* XXX copied from val_agree. *)
+      rewrite/live_alloc/blocks_own -own_op.
+      iIntros "H".
+      iDestruct (own_valid with "H") as %Hvalid.
+      move: Hvalid.
+      rewrite singleton_op singleton_valid.
+      move=>/pair_valid [] _ /= /agree_op_invL' ->.
+      rewrite frac_op.
+      eauto.
+    Qed.
+
+    Instance live_alloc_fractional a sz : Fractional (live_alloc a sz).
+    Proof.
+      move=> p q.
+      rewrite /live_alloc/blocks_own.
+      by rewrite -own_op singleton_op -pair_op agree_idemp.
+    Qed.
+
+    Definition valid_ptr (p : ptr) (q : Qp) : mpred :=
+      match p with
+      | nullptr_ => True
+      | mk_ptr aId oId o =>
+        (* XXX this is not enough *)
+        ∃ sz, [| (offset_to_N o <= sz)%N |] ** live_alloc aId sz q
+      end.
+
+    Instance valid_ptr_affine p q : Affine (valid_ptr p q) := _.
+    Instance valid_ptr_timeless p q : Timeless (valid_ptr p q).
+    Proof. destruct p; apply _. Qed.
+
+    Instance valid_ptr_nullptr_persistent q : Persistent (valid_ptr nullptr q).
+    Proof. apply _. Qed.
+
+    Instance valid_ptr_fractional p : Fractional (valid_ptr p).
+    Proof.
+      rewrite /valid_ptr; destruct p; first by apply _.
+      move=> p q.
+      iSplit.
+      - iDestruct 1 as (sz Hle) "[L R]".
+        by iSplitL "L"; iExists sz; iFrame "%".
+      - iDestruct 1 as "[L R]".
+        iDestruct "L" as (sz1 Heq1) "L".
+        iExists sz1; iFrame "%".
+        iDestruct "R" as (sz2 Heq2) "R".
+        iDestruct (live_alloc_agree with "L R") as (<-) "$".
+    Qed.
+
+    Theorem valid_ptr_nullptr q : |-- valid_ptr nullptr q.
+    Proof. done. Qed.
 
     Definition size_to_bytes (s : bitsize) : nat :=
       match s with
@@ -262,6 +329,7 @@ Module SimpleCPP.
         | Tpointer _ =>
           match v with
           | Vptr p =>
+            (* XXX aaargh, this is a different pointer. *)
             if decide (p = nullptr) then
               [| vs = cptr 0 |]
             else
@@ -699,12 +767,13 @@ Module SimpleCPP.
         placement [new] over an existing object.
      *)
     Theorem identity_forget : forall σ mdc this p,
-        @identity σ this (Some mdc) 1 p |-- @identity σ this None 1 p.
+        @identity σ this (Some mdc) 1 p
+        |-- |={↑logicN}=> @identity σ this None 1 p.
     Proof. rewrite /identity. eauto. Qed.
 
   End with_cpp.
 
 End SimpleCPP.
 
-Module Type SimpleCPP_INTF :=  SimpleCPP_BASE <+ CPP_LOGIC.
-Module L : SimpleCPP_INTF := SimpleCPP.
+Module Type SimpleCPP_INTF := PTR_API <+ SimpleCPP_BASE <+ CPP_LOGIC.
+Module L : SimpleCPP_INTF := PTR_CONCR <+ SimpleCPP.
