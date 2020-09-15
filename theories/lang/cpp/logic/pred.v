@@ -99,7 +99,7 @@ End CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 
-Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
+Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : LOCATIONS).
 
   (* TODO: unify with [raw_byte]. This should just be machine bytes. See also
     cpp2v-core#135. *)
