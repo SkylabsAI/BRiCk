@@ -423,7 +423,7 @@ Module SimpleCPP.
       destruct (erase_qualifiers y0); auto.
       all: destruct y1; auto.
       all: try (setoid_rewrite H; reflexivity).
-      { destruct (decide (p = nullptr)); try setoid_rewrite H; auto. }
+      { case_decide; try setoid_rewrite H; auto. }
     Qed.
 
     Definition val_ (a : ptr) (v : val) (q : Qp) : mpred :=
