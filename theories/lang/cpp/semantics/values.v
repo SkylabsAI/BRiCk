@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
 (**
- * The "operational" style definitions about C++.
- *
- * The definitions in this file are based (loosely) on CompCert.
+   The "operational" style definitions about C++.
+
+   These definitions are derived from the C++ standard.
  *)
 Require Import Coq.NArith.BinNat.
 Require Import Coq.ZArith.BinInt.
-Require Import Coq.Strings.Ascii.
+Require Coq.Strings.Ascii.
 From Coq Require Import ssreflect.
 Require Import stdpp.base stdpp.countable.
 
@@ -22,8 +22,8 @@ Local Close Scope nat_scope.
 Local Open Scope general_if_scope.
 Local Open Scope Z_scope.
 
-Module Type PTR_API.
-  (** * Pointers.
+Module Type LOCATIONS.
+  (** * Locations.
 
       This is the abstract model of pointers in C++.
       - A simple model is [block * offset] which is representing a collection
@@ -34,6 +34,8 @@ Module Type PTR_API.
         https://robbertkrebbers.nl/thesis.html.
       Not all of our pointers have physical addresses; for discussion, see
       documentation of [tptsto] and [pinned_ptr].
+
+      TODO(gmm): rename [ptr] -> [loc]
   *)
 
   Parameter ptr : Set.
@@ -41,12 +43,32 @@ Module Type PTR_API.
   Declare Instance ptr_countable : Countable ptr.
 
   (** C++ provides a distinguished pointer [nullptr] that is *never
-      dereferenable*
+      dereferenceable*
   *)
   Parameter nullptr : ptr.
 
-End PTR_API.
+  (** * Offsets.
 
+      Offsets represent paths between locations
+
+      TODO(gmm): these seem like they might need the program to interpret
+                 the type?
+   *)
+  Parameter offset : Set.
+  (* [o_field cls n] represents [x.n] for [x : cls] *)
+  Parameter o_field : (* type-name: *) globname -> ident -> offset.
+  (* [o_sub ty n] represents [x[n]] for [x : cls*] *)
+  Parameter o_sub : type -> Z -> offset.
+  (* [o_offset ty n] represents [x + n] for [x : cls*] *)
+  Parameter o_offset : type -> Z -> offset.
+
+  (** combine an offset and a pointer to get a new pointer
+   *)
+  Parameter offset_ptr : offset -> ptr -> ptr.
+
+End LOCATIONS.
+
+(*
 Module Type PTR_API_BAD (Import P : PTR_API).
 (** ** pointer offsets *)
 (** the offset of a pointer. *)
@@ -57,8 +79,8 @@ Axiom offset_ptr_combine_ : forall b o o',
 Axiom offset_ptr_0_ : forall b,
     offset_ptr_ 0 b = b.
 End PTR_API_BAD.
-
-Module Type PTR_API_FULL := PTR_API <+ PTR_API_BAD.
+*)
+Module Type PTR_API_FULL := LOCATIONS.
 Declare Module PTR_API_FULL_AXIOM : PTR_API_FULL.
 Export PTR_API_FULL_AXIOM.
 
@@ -85,7 +107,7 @@ Instance: EqDecision val := val_dec.
 
 (** wrappers for constructing certain values *)
 Definition Vchar (a : Ascii.ascii) : val :=
-  Vint (Z.of_N (N_of_ascii a)).
+  Vint (Z.of_N (Ascii.N_of_ascii a)).
 Definition Vbool (b : bool) : val :=
   Vint (if b then 1 else 0).
 Definition Vnat (b : nat) : val :=
@@ -98,16 +120,6 @@ Notation Vz := Vint (only parsing).
 Definition Vvoid := Vundef.
 
 (** lifting pointer offsets to values *)
-Definition offset_ptr (o : Z) (v : val) : val :=
-  match v with
-  | Vptr p => Vptr (offset_ptr_ o p)
-  | _ => Vundef
-  end.
-Theorem offset_ptr_val : forall v o p,
-    Vptr p = v ->
-    Vptr (offset_ptr_ o p) = offset_ptr o v.
-Proof. intros; subst; reflexivity. Qed.
-
 Definition is_true (v : val) : option bool :=
   match v with
   | Vint v => Some (negb (Z.eqb v 0))
@@ -131,14 +143,14 @@ Proof. inversion 1; reflexivity. Qed.
     to model the stack frame in separation logic, we use a notion of regions
     that are threaded through the semantics.
 
-    we instantiate [region] as a stack of finite maps from variables
+    we instantiate [region] as a stack of names mapping to addresses
     to their addresses.
  *)
 Inductive region : Type :=
 | Remp (this : option ptr) (result : option ptr)
-| Rbind (_ : ident) (_ : ptr) (_ : region).
+| Rbind (_ : localname) (_ : ptr) (_ : region).
 
-Fixpoint get_location (ρ : region) (b : ident) : option ptr :=
+Fixpoint get_location (ρ : region) (b : localname) : option ptr :=
   match ρ with
   | Remp _ _ => None
   | Rbind x p rs =>

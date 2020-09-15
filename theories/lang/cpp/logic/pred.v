@@ -72,7 +72,7 @@ End CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 
-Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
+Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : LOCATIONS).
 
   Section with_cpp.
     Context `{Σ : cpp_logic}.
