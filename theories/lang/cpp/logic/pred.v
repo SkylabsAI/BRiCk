@@ -30,8 +30,8 @@ Set Default Proof Using "Type".
 
 Module Type CPP_LOGIC_CLASS_BASE.
   Parameter cppG : gFunctors -> Type.
-  Parameter has_inv : forall Σ, cppG Σ -> invG Σ.
-  Parameter has_cinv : forall Σ, cppG Σ -> cinvG Σ.
+  Global Declare Instance has_inv Σ : cppG Σ -> invG Σ.
+  Global Declare Instance has_cinv Σ : cppG Σ -> cinvG Σ.
 
   Existing Class cppG.
 
@@ -43,9 +43,10 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
   Class cpp_logic {thread_info : biIndex} : Type :=
   { _Σ       : gFunctors
   ; _ghost   : _cpp_ghost
-  ; has_cppG :> cppG _Σ }.
+  ; has_cppG : cppG _Σ }.
   Arguments cpp_logic : clear implicits.
   Coercion _Σ : cpp_logic >-> gFunctors.
+  Existing Instance has_cppG.
 
 End CPP_LOGIC_CLASS_MIXIN.
 
@@ -73,12 +74,9 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
     (* valid pointers allow for accessing one past the end of a structure/array *)
     Parameter valid_ptr : ptr -> mpred.
 
-    Axiom valid_ptr_persistent : forall p, Persistent (valid_ptr p).
-    Axiom valid_ptr_affine : forall p, Affine (valid_ptr p).
-    Axiom valid_ptr_timeless : forall p, Timeless (valid_ptr p).
-    Existing Instance valid_ptr_persistent.
-    Existing Instance valid_ptr_affine.
-    Existing Instance valid_ptr_timeless.
+    Global Declare Instance valid_ptr_persistent p : Persistent (valid_ptr p).
+    Global Declare Instance valid_ptr_affine p : Affine (valid_ptr p).
+    Global Declare Instance valid_ptr_timeless p : Timeless (valid_ptr p).
 
     Axiom valid_ptr_nullptr : |-- valid_ptr nullptr.
 
@@ -96,17 +94,15 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
     *)
     Parameter tptsto : forall {σ:genv} (t : type) (q : Qp) (a : ptr) (v : val), mpred.
 
-    Axiom tptsto_proper :
+    Global Declare Instance tptsto_proper :
       Proper (genv_eq ==> eq ==> eq ==> eq ==> eq ==> (≡)) (@tptsto).
-    Axiom tptsto_mono :
+    Global Declare Instance tptsto_mono :
       Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (⊢)) (@tptsto).
 
-    Axiom tptsto_timeless :
-      forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
-    Axiom tptsto_fractional :
-      forall {σ} ty a v, Fractional (λ q, @tptsto σ ty q a v).
-    Axiom tptsto_as_fractional :
-      forall {σ} ty q a v, AsFractional (@tptsto σ ty q a v) (λ q, @tptsto σ ty q a v)%I q.
+    Global Declare Instance tptsto_timeless {σ} ty q a v: Timeless (@tptsto σ ty q a v).
+    Global Declare Instance tptsto_fractional {σ} ty a v: Fractional (λ q, @tptsto σ ty q a v).
+    Global Declare Instance tptsto_as_fractional {σ} ty q a v:
+      AsFractional (@tptsto σ ty q a v) (λ q, @tptsto σ ty q a v) q.
 
 (* not currently sound wrt [simple_pred]
     Axiom tptsto_agree : forall {σ} ty q1 q2 a v1 v2,
@@ -124,7 +120,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
         - the address is properly aligned (if it exists in memory)
      *)
     Parameter type_ptr: forall {resolve : genv} (c: type), ptr -> mpred.
-    Axiom type_ptr_persistent : forall σ p ty,
+    Global Declare Instance type_ptr_persistent σ p ty :
       Persistent (type_ptr (resolve:=σ) ty p).
 
     (** [identity σ this mdc q p] state that [p] is a pointer to a (live)
@@ -165,21 +161,21 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
       Local Notation ctor_at := (ctor_at σ) (only parsing).
       Local Notation dtor_at := (dtor_at σ) (only parsing).
 
-      Axiom code_at_persistent : forall f p, Persistent (code_at f p).
-      Axiom code_at_affine : forall f p, Affine (code_at f p).
-      Axiom code_at_timeless : forall f p, Timeless (code_at f p).
+      Global Declare Instance code_at_persistent f p : Persistent (code_at f p).
+      Global Declare Instance code_at_affine f p : Affine (code_at f p).
+      Global Declare Instance code_at_timeless f p : Timeless (code_at f p).
 
-      Axiom method_at_persistent : forall f p, Persistent (method_at f p).
-      Axiom method_at_affine : forall f p, Affine (method_at f p).
-      Axiom method_at_timeless : forall f p, Timeless (method_at f p).
+      Global Declare Instance method_at_persistent f p : Persistent (method_at f p).
+      Global Declare Instance method_at_affine f p : Affine (method_at f p).
+      Global Declare Instance method_at_timeless f p : Timeless (method_at f p).
 
-      Axiom ctor_at_persistent : forall f p, Persistent (ctor_at f p).
-      Axiom ctor_at_affine : forall f p, Affine (ctor_at f p).
-      Axiom ctor_at_timeless : forall f p, Timeless (ctor_at f p).
+      Global Declare Instance ctor_at_persistent f p : Persistent (ctor_at f p).
+      Global Declare Instance ctor_at_affine f p : Affine (ctor_at f p).
+      Global Declare Instance ctor_at_timeless f p : Timeless (ctor_at f p).
 
-      Axiom dtor_at_persistent : forall f p, Persistent (dtor_at f p).
-      Axiom dtor_at_affine : forall f p, Affine (dtor_at f p).
-      Axiom dtor_at_timeless : forall f p, Timeless (dtor_at f p).
+      Global Declare Instance dtor_at_persistent f p: Persistent (dtor_at f p).
+      Global Declare Instance dtor_at_affine f p: Affine (dtor_at f p).
+      Global Declare Instance dtor_at_timeless f p: Timeless (dtor_at f p).
     End with_genv.
 
     (** Physical representation of pointers. *)
@@ -188,9 +184,9 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
     [pinned_ptr] will only hold on pointers that are associated to addresses,
     but other pointers exist. *)
     Parameter pinned_ptr : N -> ptr -> mpred.
-    Axiom pinned_ptr_persistent : forall va p, Persistent (pinned_ptr va p).
-    Axiom pinned_ptr_affine : forall va p, Affine (pinned_ptr va p).
-    Axiom pinned_ptr_timeless : forall va p, Timeless (pinned_ptr va p).
+    Global Declare Instance pinned_ptr_persistent va p : Persistent (pinned_ptr va p).
+    Global Declare Instance pinned_ptr_affine va p : Affine (pinned_ptr va p).
+    Global Declare Instance pinned_ptr_timeless va p : Timeless (pinned_ptr va p).
     Axiom pinned_ptr_unique : forall va va' p,
         pinned_ptr va p ** pinned_ptr va' p |-- bi_pure (va = va').
 
@@ -205,40 +201,6 @@ Export LC L.
 Bind Scope bi_scope with mpred.
 Bind Scope bi_scope with mpredI.
 Bind Scope bi_scope with bi_car.
-
-(** Instances from [LC] *)
-Existing Instances LC.has_inv LC.has_cinv LC.has_cppG.
-
-(** Instances from [L] *)
-Existing Instances
-  (** [valid_ptr] *)
-  L.valid_ptr_persistent L.valid_ptr_affine L.valid_ptr_timeless
-
-  (** [tptsto] *)
-  L.tptsto_proper L.tptsto_mono
-  L.tptsto_timeless
-  L.tptsto_fractional L.tptsto_as_fractional
-
-  (** [type_ptr] *)
-  L.type_ptr_persistent
-
-  (** [identity] *)
-  (** PDS: [Fractional], [AsFractional], [Timeless]? *)
-
-  (** [code_at] *)
-  L.code_at_persistent L.code_at_affine L.code_at_timeless
-
-  (** [method_at *)
-  L.method_at_persistent L.method_at_affine L.method_at_timeless
-
-  (** [ctor_at] *)
-  L.ctor_at_persistent L.ctor_at_affine L.ctor_at_timeless
-
-  (** [dtor_at] *)
-  L.dtor_at_persistent L.dtor_at_affine L.dtor_at_timeless
-
-  (** [pinned_ptr] *)
-  L.pinned_ptr_persistent L.pinned_ptr_affine L.pinned_ptr_timeless.
 
 Section with_cpp.
   Context `{Σ : cpp_logic}.
