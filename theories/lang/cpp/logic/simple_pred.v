@@ -32,9 +32,38 @@ Local Lemma length__Z_to_bytes {σ} n sgn v :
   length (_Z_to_bytes n (values.byte_order σ) sgn v) = n.
 Proof. apply _Z_to_bytes_length. Qed.
 
+Module PTR_CONCR <: PTR_API.
+  Definition alloc_id := N.
+  Global Instance : EqDecision alloc_id := _.
+  Global Instance : Countable alloc_id := _.
+
+  (* Add offsets from Loc. *)
+  Inductive offset := .
+  Instance : EqDecision offset.
+  Proof. solve_decision. Qed.
+
+  (* XXX Ain't nobody got time for this *)
+  Declare Instance offset_countable : Countable offset.
+
+  (** C++ provides a distinguished pointer [nullptr] that is *never
+      dereferenable*
+  *)
+  Inductive ptr_ :=
+  | nullptr_
+  | mk_ptr (a : alloc_id) (o : offset).
+  Definition ptr := ptr_.
+  Definition nullptr := nullptr_.
+
+  Instance ptr_eq_dec : EqDecision ptr.
+  Proof. solve_decision. Qed.
+
+  Declare Instance ptr_countable : Countable ptr.
+End PTR_CONCR.
+
 (** soundness proof *)
 
 Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
+  Import PTR_CONCR.
 
   Definition addr : Set := N.
   Definition byte : Set := N.
@@ -121,6 +150,7 @@ End SimpleCPP_BASE.
 (* TODO: make this a [Module Type] and provide an instance for it. *)
 Module SimpleCPP_VIRTUAL.
   Include SimpleCPP_BASE.
+  Import PTR_CONCR.
 
   Section with_cpp.
     Context `{Σ : cpp_logic}.

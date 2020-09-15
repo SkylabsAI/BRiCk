@@ -55,18 +55,22 @@ Module Type PTR_API.
   *)
   Parameter nullptr : ptr.
 
-  (** ** pointer offsets *)
-  (** the offset of a pointer. *)
-  Parameter offset_ptr_ : Z -> ptr -> ptr.
-
-  Axiom offset_ptr_combine_ : forall b o o',
-      offset_ptr_ o' (offset_ptr_ o b) = offset_ptr_ (o + o') b.
-  Axiom offset_ptr_0_ : forall b,
-      offset_ptr_ 0 b = b.
 End PTR_API.
 
-Declare Module PTR : PTR_API.
-Export PTR.
+Module Type PTR_API_BAD (Import P : PTR_API).
+(** ** pointer offsets *)
+(** the offset of a pointer. *)
+Parameter offset_ptr_ : Z -> ptr -> ptr.
+
+Axiom offset_ptr_combine_ : forall b o o',
+    offset_ptr_ o' (offset_ptr_ o b) = offset_ptr_ (o + o') b.
+Axiom offset_ptr_0_ : forall b,
+    offset_ptr_ 0 b = b.
+End PTR_API_BAD.
+
+Module Type PTR_API_FULL := PTR_API <+ PTR_API_BAD.
+Declare Module PTR_API_FULL_AXIOM : PTR_API_FULL.
+Export PTR_API_FULL_AXIOM.
 
 (** * Raw bytes
     Raw bytes represent the low-level view of data.

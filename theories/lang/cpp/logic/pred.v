@@ -96,7 +96,7 @@ End CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 
-Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
+Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
 
   (* TODO: unify with [raw_byte]. This should just be machine bytes. See also
     cpp2v-core#135. *)
@@ -277,7 +277,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
 End CPP_LOGIC.
 
 Declare Module LC : CPP_LOGIC_CLASS.
-Declare Module L : CPP_LOGIC LC.
+Declare Module L : CPP_LOGIC LC PTR_API_FULL_AXIOM.
 Export LC L.
 
 Section with_cpp.
