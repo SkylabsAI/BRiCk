@@ -238,8 +238,8 @@ Module SimpleCPP.
         iDestruct "R" as (sz2 Heq2) "R".
         iDestruct (live_alloc_agree with "L R") as (<-) "$".
     Qed.
-    Instance valid_ptr_affine q p : Affine (valid_ptr p q) := _.
-    Instance valid_ptr_timeless q p : Timeless (valid_ptr p q).
+    Instance valid_ptr_affine p q : Affine (valid_ptr p q) := _.
+    Instance valid_ptr_timeless p q : Timeless (valid_ptr p q).
     Proof. destruct p; apply _. Qed.
 
     Theorem valid_ptr_nullptr : |-- valid_ptr nullptr 1.
@@ -689,12 +689,13 @@ Module SimpleCPP.
         placement [new] over an existing object.
      *)
     Theorem identity_forget : forall σ mdc this p,
-        @identity σ this (Some mdc) 1 p |-- @identity σ this None 1 p.
+        @identity σ this (Some mdc) 1 p
+        |-- |={↑logicN}=> @identity σ this None 1 p.
     Proof. rewrite /identity. eauto. Qed.
 
   End with_cpp.
 
 End SimpleCPP.
 
-Module Type SimpleCPP_INTF := SimpleCPP_BASE <+ CPP_LOGIC.
-Module L : SimpleCPP_INTF := SimpleCPP.
+Module Type SimpleCPP_INTF := PTR_API <+ SimpleCPP_BASE <+ CPP_LOGIC.
+Module L : SimpleCPP_INTF := PTR_CONCR <+ SimpleCPP.
