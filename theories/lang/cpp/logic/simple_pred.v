@@ -271,6 +271,9 @@ Module SimpleCPP.
       Proof. by rewrite/aptr fmap_length seq_length. Qed.
       Lemma length_cptr a : length (cptr a) = POINTER_BYTES.
       Proof. by rewrite /cptr length_Z_to_bytes. Qed.
+      Axiom hack : PTR_API_FULL_AXIOM.ptr = ptr.
+      Definition cast_ptr : PTR_API_FULL_AXIOM.ptr -> ptr.
+      Proof. by destruct hack. Qed.
 
       (** WRT pointer equality, see https://eel.is/c++draft/expr.eq#3 *)
       Definition encodes (t : type) (v : val) (vs : list runtime_val) : mpred :=
@@ -302,10 +305,10 @@ Module SimpleCPP.
           match v with
           | Vptr p =>
             (* XXX aaargh, this is a different pointer. *)
-            if decide (p = nullptr) then
+            if decide (cast_ptr p = nullptr) then
               [| vs = cptr 0 |]
             else
-              [| vs = aptr p |]
+              [| vs = aptr (cast_ptr p) |]
           | _ => lfalse
           end
         | Tfunction _ _
@@ -313,8 +316,8 @@ Module SimpleCPP.
         | Trv_reference _ =>
           match v with
           | Vptr p =>
-            [| p <> nullptr |] **
-            [| vs = aptr p |]
+            [| cast_ptr p <> nullptr |] **
+            [| vs = aptr (cast_ptr p) |]
           | Vundef => [| length vs = POINTER_BYTES |]
           | _ => lfalse
           end
