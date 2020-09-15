@@ -348,9 +348,9 @@ Module SimpleCPP.
     Instance: Timeless (val_ a rv q).
     Proof. apply _. Qed.
 
-    (* TODO(hai): different in weak memory. The current definition doesn't
-      take the thread_info in mpred into account, which contains at least a
-      thread-view. *)
+
+    (* Note: the current definition doesn't take weak memory into accoutn. In
+      particular, it doesn't rely on the thread-local info for the value rv. *)
     Definition byte_ (a : addr) (rv : runtime_val) (q : Qp) : mpred.
     refine (
       ⎡ own _ghost.(heap_name) {[ a := frac (o:=leibnizO _) q rv ]} ⎤%I).

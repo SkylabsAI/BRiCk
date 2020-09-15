@@ -290,15 +290,35 @@ public:
         return true;
     }
 
+    void printFieldInitializer(const FieldDecl *field, CoqPrinter &print,
+                               ClangPrinter &cprint) {
+    	Expr *expr = field->getInClassInitializer();
+    	if (expr != nullptr) {
+            print.ctor("Some");
+            cprint.printExpr(expr, print);
+            print.end_ctor();
+    	} else {
+            print.none();
+    	}
+    }
+
     bool printFields(const CXXRecordDecl *decl, const ASTRecordLayout &layout,
                      CoqPrinter &print, ClangPrinter &cprint) {
         auto i = 0;
         print.begin_list();
         for (const FieldDecl *field : decl->fields()) {
+            if (field->isBitField()) {
+                logging::fatal()
+                    << "bit fields are not supported "
+                    << cprint.sourceRange(field->getSourceRange()) << "\n";
+                logging::die();
+            }
             print.output() << "(";
             printMangledFieldName(field, print, cprint);
             print.output() << "," << fmt::nbsp;
             cprint.printQualType(field->getType(), print);
+            print.output() << "," << fmt::nbsp;
+            printFieldInitializer(field, print, cprint);
             print.output() << "," << fmt::nbsp;
             print.output() << "Build_LayoutInfo " << layout.getFieldOffset(i++)
                            << ")";
