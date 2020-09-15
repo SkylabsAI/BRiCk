@@ -85,18 +85,43 @@ Section with_Σ.
     (* mpred version of [inv]: s/inv/Inv;s/iProp Σ/mpred *)
     Definition Inv : namespace → mpred → mpred := λ N P, ⎡ inv N (∀ i, P i) ⎤%I.
 
-    Lemma Inv_alloc : forall n I, |> <obj> I |-- (|={⊤}=> Inv n I)%I.
+    Lemma Inv_alloc N P : |> <obj> P |-- (|={⊤}=> Inv N P)%I.
     Proof.
       intros. iIntros "I".
       iMod (inv_alloc with "[I]") as "$"; last done.
       clear_objectively.
     Qed.
 
-    Global Instance: Persistent (Inv n P).
-    Proof. apply _. Qed.
+    Lemma Inv_acc E N P :
+      ↑N ⊆ E → Inv N P |-- |={E,E∖↑N}=> |> <obj> P ∗ (|> <obj> P ={E∖↑N,E}=∗ emp).
+    Proof.
+      iIntros (SN) "I".
+      iMod (inv_acc with "I") as "[I C]"; first done.
+      iModIntro. iSplitL "I"; first clear_objectively.
+      iIntros "I". iMod ("C" with "[I]"); last done.
+      clear_objectively.
+    Qed.
 
-    Global Instance: Affine (Inv n P).
-    Proof. apply _. Qed.
+    Global Instance Inv_contractive N : Contractive (Inv N).
+    Proof. solve_contractive. Qed.
+
+    Global Instance Inv_ne N : NonExpansive (Inv N) := _.
+
+    Global Instance Inv_proper N : Proper (equiv ==> equiv) (Inv N) := _.
+
+    Global Instance Inv_persistent : Persistent (Inv n P) := _.
+
+    Global Instance Inv_affine : Affine (Inv n P) := _.
+
+    Global Instance into_acc_Inv N P E:
+    IntoAcc (X := unit) (Inv N P)
+            (↑N ⊆ E) True (fupd E (E ∖ ↑N)) (fupd (E ∖ ↑N) E)
+            (λ _ : (), (▷ <obj> P)%I) (λ _ : (), (▷ <obj> P)%I) (λ _ : (), None).
+    Proof.
+      rewrite /IntoAcc /accessor bi.exist_unit /=.
+      iIntros (?) "Hinv _".
+      by iApply (Inv_acc with "Hinv").
+    Qed.
   End with_invG.
 
   Section with_cinvG.
@@ -157,10 +182,29 @@ Section with_Σ.
       clear_objectively.
     Qed.
 
-    Global Instance TInv_persistent : Persistent (TInv Ns γ P).
-    Proof. apply _. Qed.
-    Global Instance TInv_affine : Affine (TInv Ns γ P).
-    Proof. apply _. Qed.
+    Lemma TInv_acc E N γ (q: frac) P :
+      ↑N ⊆ E →
+      TInv N γ P |-- TInv_own γ q -*
+        |={E,E∖↑N}=> |> <obj> P ∗ TInv_own γ q ∗ (|> <obj> P ={E∖↑N,E}=∗ emp).
+    Proof.
+      iIntros (?) "#Hinv Hγ".
+      iMod (cinv_acc with "Hinv Hγ") as "(I & $ & H)"; first done.
+      iIntros "!>". iSplitL "I"; first clear_objectively.
+      iIntros "I". iMod ("H" with "[I]"); last done.
+      clear_objectively.
+    Qed.
+
+    Global Instance TInv_own_timeless γ q : Timeless (TInv_own γ q) := _.
+
+    Global Instance TInv_contractive N γ : Contractive (TInv N γ).
+    Proof. solve_contractive. Qed.
+    Global Instance TInv_ne N γ : NonExpansive (TInv N γ) := _.
+    Global Instance TInv_proper N γ : Proper ((≡) ==> (≡)) (TInv N γ) := _.
+
+    Global Instance TInv_persistent : Persistent (TInv Ns γ P) := _.
+
+    Global Instance TInv_affine : Affine (TInv Ns γ P) := _.
+
     Global Instance TInv_own_fractional γ : Fractional (TInv_own γ).
     Proof. intros ??. by rewrite -embed_sep -fractional. Qed.
     Global Instance TInv_own_as_fractional γ q :
@@ -221,6 +265,16 @@ Section with_Σ.
       iLeft. clear_objectively.
     Qed.
 
+    (* for proofmode's iInv *)
+    Global Instance into_acc_TInv E N γ P q :
+      IntoAcc (X:=unit) (TInv N γ P)
+              (↑N ⊆ E) (TInv_own γ q) (fupd E (E∖↑N)) (fupd (E∖↑N) E)
+              (λ _, |> <obj> P ∗ TInv_own γ q)%I (λ _, |> <obj> P)%I (λ _, None)%I.
+    Proof.
+      rewrite /IntoAcc /accessor bi.exist_unit -assoc.
+      iIntros (?) "#Hinv Hown".
+      by iApply (TInv_acc with "Hinv Hown").
+    Qed.
   End with_cinvG.
 End with_Σ.
 
