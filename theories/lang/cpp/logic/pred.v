@@ -13,6 +13,7 @@
  *)
 From Coq.Classes Require Import
      RelationClasses Morphisms.
+From stdpp Require Import namespaces strings.
 
 From iris.base_logic.lib Require Export iprop.
 Require Import iris.bi.monpred.
@@ -27,6 +28,8 @@ Export ChargeNotation.
 From bedrock.lang.cpp Require Import ast semantics.
 
 Set Default Proof Using "Type".
+
+Definition logicN : namespace := nroot .@ "bedrock.logic".
 
 Module Type CPP_LOGIC_CLASS_BASE.
   Parameter cppG : gFunctors -> Type.
@@ -140,6 +143,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
         compilers can use the ownership here to represent dynamic dispatch
         tables.
      *)
+    (* XXX reconceive this to track "object creation" in the abstract machine. *)
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : option globname),
         Qp -> ptr -> mpred.
@@ -147,9 +151,12 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
 
     (** this allows you to forget an object identity, necessary for doing
         placement [new] over an existing object.
+        XXX in fact, we should talk about types, and go from/to "array of
+        bytes" to "fancier objects".
      *)
     Axiom identity_forget : forall σ mdc this p,
-        @identity σ this (Some mdc) 1 p |-- @identity σ this None 1 p.
+        @identity σ this (Some mdc) 1 p
+        |-- |={↑logicN}=> @identity σ this None 1 p.
 
     (** the pointer points to the code
 
