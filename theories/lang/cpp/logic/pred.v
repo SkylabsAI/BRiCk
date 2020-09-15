@@ -69,7 +69,7 @@ End CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 
-Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
+Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
 
   Section with_cpp.
     Context `{Σ : cpp_logic}.
@@ -203,7 +203,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
 End CPP_LOGIC.
 
 Declare Module LC : CPP_LOGIC_CLASS.
-Declare Module L : CPP_LOGIC LC.
+Declare Module L : CPP_LOGIC LC PTR_API_FULL_AXIOM.
 Export LC L.
 
 Section with_cpp.
