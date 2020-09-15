@@ -83,12 +83,13 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS) (Import PTR : PTR_API).
     Proof. apply _. Qed. *)
 
     (* valid pointers allow for accessing one past the end of a structure/array *)
-    Parameter valid_ptr : Qp -> ptr -> mpred.
+    Parameter valid_ptr : ptr -> Qp -> mpred.
 
-    Global Declare Instance valid_ptr_affine p q : Affine (valid_ptr q p).
-    Global Declare Instance valid_ptr_timeless p q : Timeless (valid_ptr q p).
+    Global Declare Instance valid_ptr_fractional p : Fractional (valid_ptr p).
+    Global Declare Instance valid_ptr_affine p q : Affine (valid_ptr p q).
+    Global Declare Instance valid_ptr_timeless p q : Timeless (valid_ptr p q).
 
-    Axiom valid_ptr_nullptr : ∀ q, |-- valid_ptr q nullptr.
+    Axiom valid_ptr_nullptr : |-- valid_ptr nullptr 1.
 
     (**
     Typed points-to predicate. Fact [tptsto t q p v] asserts the following things:
