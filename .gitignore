@@ -18,3 +18,4 @@ public
 doc/html
 .Makefile.coq.d
 _build
+*.ERR
