@@ -101,6 +101,13 @@ Instance: EqDecision LayoutType.
 Proof. solve_decision. Defined.
 
 (** Structures *)
+Variant DtorType : Set :=
+| DtorDeleted
+| DtorDefault
+| DtorUser (_ : obj_name).
+Instance: EqDecision DtorType.
+Proof. solve_decision. Defined.
+
 Record Struct : Set :=
 { s_bases : list (globname * LayoutInfo)
   (* ^ base classes *)
@@ -114,8 +121,10 @@ Record Struct : Set :=
   (* ^ function_name -> symbol *)
 ; s_overrides : list (obj_name * obj_name)
   (* ^ k |-> v ~ update k with v *)
-; s_virtual_dtor : option obj_name
-  (* ^ the name of the virtual destructor, if it is virtual *)
+; s_dtor : DtorType
+  (* ^ the destructor *)
+; s_virtual_dtor : bool
+  (* ^ [true] if the destructor is virual *)
 }.
 Instance: EqDecision Struct.
 Proof. solve_decision. Defined.
