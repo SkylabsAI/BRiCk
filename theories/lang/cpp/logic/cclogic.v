@@ -19,7 +19,7 @@ From iris.algebra Require Import excl auth.
 
 From iris.proofmode Require Import tactics.
 
-Require Import bedrock.ChargeCompat.
+From bedrock Require Import ChargeCompat.
 Require Import bedrock.lang.cpp.ast.
 From bedrock.lang.cpp Require Import
      logic.pred.

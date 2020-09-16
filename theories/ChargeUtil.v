@@ -8,7 +8,7 @@ From Coq.Classes Require Import
 
 Require Import Coq.Lists.List.
 From iris.bi Require Import bi.
-Require Import bedrock.IrisBridge.
+From bedrock Require Import IrisBridge.
 Import ChargeNotation.
 
 (* From Cpp Require Import ChargeCompat. *)

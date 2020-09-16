@@ -10,7 +10,7 @@ Require Import stdpp.base.
 Require Import stdpp.decidable.
 Require Import bedrock.lang.cpp.syntax.translation_unit.
 Require Import bedrock.lang.cpp.ast.
-Require Import bedrock.avl.
+From bedrock Require Import avl.
 Require Import ExtLib.Tactics.
 
 Set Default Proof Using "Type".
