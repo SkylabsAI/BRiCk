@@ -33,7 +33,7 @@ Local Lemma length__Z_to_bytes {σ} n sgn v :
   length (_Z_to_bytes n (values.byte_order σ) sgn v) = n.
 Proof. apply _Z_to_bytes_length. Qed.
 
-Module PTR_CONCR <: PTR_API.
+Module PTR_CONCR <: LOCATIONS.
   Definition alloc_id := N.
   Global Instance : EqDecision alloc_id := _.
   Global Instance : Countable alloc_id := _.
@@ -778,5 +778,5 @@ Module SimpleCPP.
 
 End SimpleCPP.
 
-Module Type SimpleCPP_INTF := PTR_API <+ SimpleCPP_BASE <+ CPP_LOGIC.
+Module Type SimpleCPP_INTF := LOCATIONS <+ SimpleCPP_BASE <+ CPP_LOGIC.
 Module L : SimpleCPP_INTF := PTR_CONCR <+ SimpleCPP.
