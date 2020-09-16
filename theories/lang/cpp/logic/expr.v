@@ -626,9 +626,8 @@ Module Type Expr.
     Axiom wp_xval_temp : forall e ty Q,
         (let raw_type := erase_qualifiers ty in
          Forall a, _at (_eqv a) (uninitR raw_type 1) -*
-                  let '(e,dt) := destructor_for e in
                   wp_init ty a e
-                          (fun free => Q a (destruct_val ty a dt (_at (_eqv a) (anyR raw_type 1) ** free))))
+                          (fun free => Q a (destruct_val ty a (_at (_eqv a) (anyR raw_type 1) ** free))))
         |-- wp_xval (Ematerialize_temp e ty) Q.
 
     (** temporary materialization only occurs when the resulting value is used.
@@ -641,9 +640,8 @@ Module Type Expr.
         (let ty := type_of e in
          let raw_type := erase_qualifiers ty in
          Forall a, _at (_eqv a) (uninitR raw_type 1) -*
-                   let '(e,dt) := destructor_for e in
                    wp_init ty a e (fun free =>
-                     Q a (destruct_val ty a dt (_at (_eqv a) (anyR raw_type 1) ** free))))
+                     Q a (destruct_val ty a (_at (_eqv a) (anyR raw_type 1) ** free))))
         |-- wp_prval e Q.
 
 
@@ -661,14 +659,13 @@ Module Type Expr.
       |-- wp_init ty a (Ebind_temp e dtor ty) Q.
        ]]
      *)
-
     Axiom wp_prval_materialize : forall ty e dtor Q,
       (Forall a : val,
       let raw_type := erase_qualifiers ty in
       _at (_eqv a) (uninitR raw_type 1) -*
           wp_init ty a e (fun free =>
                             Q a (destruct_val ty a (Some dtor) (_at (_eqv a) (anyR raw_type 1) ** free))))
-      |-- wp_prval (Ebind_temp e dtor ty) Q.
+      |-- wp_prval (Ebind_temp e dtor ty) Q. (* the destructor isn't technically needed anymore *)
 
     Axiom wp_pseudo_destructor : forall e ty Q,
         wp_prval e Q

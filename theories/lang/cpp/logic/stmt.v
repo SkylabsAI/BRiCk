@@ -120,7 +120,7 @@ Module Type Stmt.
       | Tnamed cls =>
         Forall a, _at (_eq a) (uninitR ty 1) -*
                   let destroy P :=
-                      destruct_val ty (Vptr a) dtor (_at (_eq a) (anyR ty 1) ** P)
+                      destruct_val ty (Vptr a) (_at (_eq a) (anyR ty 1) ** P)
                   in
                   let continue :=
                       k (Rbind x a ρ) (Kat_exit destroy Q)
@@ -133,7 +133,7 @@ Module Type Stmt.
       | Tarray ty' N =>
         Forall a, _at (_eq a) (uninitR ty 1) -*
                   let destroy P :=
-                      destruct_val ty (Vptr a) dtor (_at (_eq a) (anyR ty 1) ** P)
+                      destruct_val ty (Vptr a) (_at (_eq a) (anyR ty 1) ** P)
                   in
                   let continue :=
                       k (Rbind x a ρ) (Kat_exit destroy Q)
