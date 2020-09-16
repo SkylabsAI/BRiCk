@@ -75,7 +75,7 @@ Section with_Σ.
 
   Section with_invG.
     Context `{!invG Σ}.
-
+    Implicit Type (P: mpred).
     (* the names of invariants *)
     Definition iname : Set := namespace.
 
@@ -92,6 +92,12 @@ Section with_Σ.
       clear_objectively.
     Qed.
 
+    Lemma Inv_alloc_objective N P `{!Objective P} :
+      |> P |-- (|={⊤}=> Inv N P)%I.
+    Proof.
+      rewrite -Inv_alloc. iIntros "P !>". by iApply objective_objectively.
+    Qed.
+
     Lemma Inv_acc E N P :
       ↑N ⊆ E → Inv N P |-- |={E,E∖↑N}=> |> <obj> P ∗ (|> <obj> P ={E∖↑N,E}=∗ emp).
     Proof.
@@ -100,6 +106,16 @@ Section with_Σ.
       iModIntro. iSplitL "I"; first clear_objectively.
       iIntros "I". iMod ("C" with "[I]"); last done.
       clear_objectively.
+    Qed.
+
+    Lemma Inv_acc_objective E N P `{!Objective P} :
+      ↑N ⊆ E → Inv N P |-- |={E,E∖↑N}=> |> P ∗ (|> P ={E∖↑N,E}=∗ emp).
+    Proof.
+      iIntros (SN) "I". iMod (Inv_acc with "I") as "[I C]"; first done.
+      iModIntro. iSplitL "I".
+      - iNext. by iApply monPred_objectively_elim.
+      - iIntros "I". iApply ("C" with "[I]").
+        iNext. by iApply objective_objectively.
     Qed.
 
     Global Instance Inv_contractive N : Contractive (Inv N).
@@ -126,6 +142,7 @@ Section with_Σ.
 
   Section with_cinvG.
     Context `{!cinvG Σ}.
+    Implicit Types (P I : mpred).
     (* mpred version of [cinv]: s/cinv/TInv;s/iProp Σ/mpred *)
     Definition TInv : namespace → gname → mpred → mpred
       := λ N γ P, ⎡ cinv N γ (∀ i, P i) ⎤%I.
@@ -163,7 +180,7 @@ Section with_Σ.
       clear_objectively.
     Qed.
 
-    Corollary TInv_alloc_ghost_named_inv : forall M N I,
+    Corollary TInv_alloc_ghost_named_inv : forall M N (I : _ -> mpred),
       (∀ γ : gname, <obj> I γ) |--
       (|={M}=> Exists γ, TInv N γ (I γ) ** TInv_own γ 1%Qp )%I.
     Proof.
@@ -182,6 +199,12 @@ Section with_Σ.
       clear_objectively.
     Qed.
 
+    Lemma TInv_alloc_objective : forall M N I `{!Objective I},
+      |> I |-- (|={M}=> Exists γ, TInv N γ I ** TInv_own γ 1%Qp)%I.
+    Proof.
+      intros. rewrite -TInv_alloc. iIntros "I !>". by iApply objective_objectively.
+    Qed.
+
     Lemma TInv_acc E N γ (q: frac) P :
       ↑N ⊆ E →
       TInv N γ P |-- TInv_own γ q -*
@@ -192,6 +215,18 @@ Section with_Σ.
       iIntros "!>". iSplitL "I"; first clear_objectively.
       iIntros "I". iMod ("H" with "[I]"); last done.
       clear_objectively.
+    Qed.
+
+    Lemma TInv_acc_objective E N γ (q: frac) P `{!Objective P} :
+      ↑N ⊆ E →
+      TInv N γ P |-- TInv_own γ q -*
+        |={E,E∖↑N}=> |> P ∗ TInv_own γ q ∗ (|> P ={E∖↑N,E}=∗ emp).
+    Proof.
+      iIntros (?) "#Hinv Hγ".
+      iMod (TInv_acc with "Hinv Hγ") as "(I & $ & C)"; first done.
+      iIntros "!>". iSplitL "I".
+      - iNext. by iApply monPred_objectively_elim.
+      - iIntros "I". iApply "C". iNext. by iApply objective_objectively.
     Qed.
 
     Global Instance TInv_own_timeless γ q : Timeless (TInv_own γ q) := _.
@@ -218,6 +253,15 @@ Section with_Σ.
       iIntros (SN) "TI O".
       iMod (cinv_cancel with "[$TI] [$O]") as "I"; first done.
       iModIntro. clear_objectively.
+    Qed.
+
+    Lemma TInv_cancel_objective M N γ I `{!Objective I}:
+      ↑N ⊆ M ->
+      TInv N γ I |-- TInv_own γ 1%Qp -* (|={M}=> |> I)%I.
+    Proof.
+      iIntros (SN) "I O".
+      iMod (TInv_cancel with "I O") as "I"; first done.
+      iIntros "!> !>". by iApply monPred_objectively_elim.
     Qed.
 
     #[deprecated(since="20200824", note="Use TInv_cancel instead")]
