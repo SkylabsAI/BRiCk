@@ -585,9 +585,8 @@ Module Type Expr.
      *)
     Axiom wp_xval_temp : forall e ty Q,
         (Forall a, _at (_eqv a) (uninitR (erase_qualifiers ty) 1) -*
-                  let '(e,dt) := destructor_for e in
                   wp_init ty a e
-                          (fun free => Q a (mdestroy ty a dt free)))
+                          (fun free => Q a (mdestroy ty a free)))
         |-- wp_xval (Ematerialize_temp e ty) Q.
 
     (** temporary materialization only occurs when the resulting value is used.
@@ -599,9 +598,8 @@ Module Type Expr.
         is_aggregate (type_of e) = true ->
         (let ty := erase_qualifiers (type_of e) in
          Forall a, _at (_eqv a) (uninitR ty 1) -*
-                   let '(e,dt) := destructor_for e in
                    wp_init ty a e (fun free =>
-                                     Q a (mdestroy ty a dt free)))
+                                     Q a (mdestroy ty a free)))
         |-- wp_prval e Q.
 
 
@@ -619,13 +617,12 @@ Module Type Expr.
       |-- wp_init ty a (Ebind_temp e dtor ty) Q.
        ]]
      *)
-
     Axiom wp_prval_materialize : forall ty e dtor Q,
       Forall a : val,
       _at (_eqv a) (uninitR (erase_qualifiers ty) 1) -*
           wp_init ty a e (fun free =>
-                            Q a (mdestroy ty a (Some dtor) free))
-      |-- wp_prval (Ebind_temp e dtor ty) Q.
+                            Q a (mdestroy ty a free))
+      |-- wp_prval (Ebind_temp e dtor ty) Q. (* the destructor isn't technically needed anymore *)
 
     Axiom wp_pseudo_destructor : forall e ty Q,
         wp_prval e Q

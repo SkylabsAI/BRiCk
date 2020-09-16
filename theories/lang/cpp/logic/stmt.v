@@ -122,7 +122,7 @@ Module Type Stmt.
                   let destroy :=
                       match dtor with
                       | None => fun x => x
-                      | Some dtor => destruct_obj dtor cls (Vptr a)
+                      | Some dtor => destruct_obj cls (Vptr a)
                       end (_at (_eq a) (anyR (erase_qualifiers ty) 1))
                   in
                   let continue :=
@@ -138,7 +138,7 @@ Module Type Stmt.
                   let destroy :=
                       match dtor with
                       | None => fun x => x
-                      | Some dtor => destruct_val ty (Vptr a) dtor
+                      | Some dtor => destruct_val ty (Vptr a)
                       end (_at (_eq a) (anyR (erase_qualifiers ty) 1))
                   in
                   let continue :=

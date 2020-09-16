@@ -58,7 +58,7 @@ Proof. solve_decision. Defined.
 Record Dtor : Set :=
 { d_class  : globname
 ; d_cc     : calling_conv
-; d_body   : option (OrDefault (Stmt * list (FieldOrBase * obj_name)))
+; d_body   : option (OrDefault (Stmt * list FieldOrBase))
 }.
 Instance: EqDecision Dtor.
 Proof. solve_decision. Defined.

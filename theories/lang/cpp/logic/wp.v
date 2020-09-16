@@ -483,7 +483,7 @@ Section with_cpp.
   Parameter wpd
     : forall {resolve:genv} (M : coPset) (ti : thread_info) (ρ : region)
         (cls : globname) (this : val)
-        (init : FieldOrBase * obj_name)
+        (deinit : FieldOrBase)
         (Q : epred), mpred.
 
   Axiom wpd_shift : forall σ M ti ρ cls this e Q,
@@ -506,7 +506,7 @@ Section with_cpp.
   Section wpd.
     Local Close Scope bi_scope.
     Context {σ : genv} (M : coPset) (ti : thread_info) (ρ : region)
-      (cls : globname) (this : val) (init : FieldOrBase * obj_name).
+      (cls : globname) (this : val) (init : FieldOrBase).
     Local Notation WP := (wpd (resolve:=σ) M ti ρ cls this init) (only parsing).
     Implicit Types P : mpred.
     Implicit Types k : mpred.

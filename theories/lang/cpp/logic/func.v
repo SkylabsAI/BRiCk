@@ -13,7 +13,7 @@ From bedrock Require Import ChargeUtil ChargeCompat.
 From bedrock.lang.cpp Require Import ast semantics spec.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred
-     wp builtins.
+     wp builtins destroy.
 Require Import bedrock.lang.cpp.heap_notations.
 
 Local Set Universe Polymorphism.
@@ -330,12 +330,12 @@ Section with_cpp.
     end.
 
   Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
-           (dests : list (FieldOrBase * globname))
+           (dests : list FieldOrBase)
            (Q : mpred) : mpred :=
     match dests with
     | nil => Q
     | d :: is' =>
-      match d.1 with
+      match d with
       | Field _
       | Indirect _ _ => lfalse
       | _ => wpd (resolve:=resolve) ⊤ ti ρ cls (Vptr this) d
@@ -345,12 +345,12 @@ Section with_cpp.
 
   Fixpoint wpd_members
            (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
-           (dests : list (FieldOrBase * globname))
+           (dests : list FieldOrBase)
            (Q : mpred) : mpred :=
     match dests with
     | nil => this |-> revert_identity cls Q
     | d :: is' =>
-      match d.1 with
+      match d with
       | This
       | Base _ =>
         this |-> revert_identity cls (wpd_bases ti ρ cls this dests Q)
@@ -358,7 +358,7 @@ Section with_cpp.
       end
     end.
 
-  Definition wp_dtor_impl (nm : globname) (body : Stmt) (deinit : list (FieldOrBase * obj_name))
+  Definition wp_dtor_impl (nm : globname) (body : Stmt) (deinit : list FieldOrBase)
              (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match args with
@@ -374,13 +374,21 @@ Section with_cpp.
     match dtor.(d_body) with
     | None => False
     | Some Defaulted =>
+      match args with
+      | Vptr p :: nil =>
+        wp_dtor (σ:=resolve) ti (Tnamed dtor.(d_class)) (_eq p) (Q Vundef)
+      | _ => False
+      end
+(*
+      (* todo, this is duplicated *)
       match resolve.(genv_tu).(globals) !! dtor.(d_class) with
       | Some (Gstruct st) =>
-        let fields := (fun '(x, ty, _, _) => (Field x, "?"))%bs <$> st.(s_fields) in
-        let bases := (fun '(cls, _) => (Base cls, "?"))%bs <$> st.(s_bases) in
+        let fields := (fun '(x, ty, _, _) => Field x) <$> st.(s_fields) in
+        let bases := (fun '(cls, _) => Base cls) <$> st.(s_bases) in
         wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q
       | _ => False
       end
+*)
     | Some (UserImplemented (body, deinit)) =>
       wp_dtor_impl dtor.(d_class) body deinit ti args Q
     end.

@@ -20,7 +20,7 @@ Section with_resolve.
   Fixpoint wp_args (es : list (ValCat * Expr)) (Q : list val -> FreeTemps -> mpred)
   : mpred :=
     match es with
-    | nil => Q nil empSP
+    | nil => Q nil emp
     | (vc,e) :: es =>
       let ty := type_of e in
       match vc with
@@ -32,12 +32,11 @@ Section with_resolve.
       | Rvalue =>
         if is_aggregate ty then
           Forall a, _at (_eq a) (anyR (resolve:=σ) (erase_qualifiers ty) 1) -*
-          let (e,dt) := destructor_for e in
           Exists Qarg,
           wp_init ty (Vptr a) e Qarg **
             wp_args es (fun vs frees =>
                           Forall free,
-                          Qarg free -* Q (Vptr a :: vs) (mdestroy (σ:=σ) ti ty (Vptr a) dt free ** frees))
+                          Qarg free -* Q (Vptr a :: vs) (mdestroy (σ:=σ) ti ty (Vptr a) free ** frees))
         else
           Exists Qarg,
           wp_prval e Qarg **
@@ -49,6 +48,6 @@ Section with_resolve.
             wp_args es (fun vs frees => Forall v free,
                                      Qarg v free -* Q (v :: vs) (free ** frees))
       end
-    end.
+    end%I.
 
 End with_resolve.
