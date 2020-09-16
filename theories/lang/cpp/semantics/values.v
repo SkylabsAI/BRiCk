@@ -67,10 +67,8 @@ Module Type LOCATIONS.
   Parameter offset : Set.
   (* [o_field cls n] represents [x.n] for [x : cls] *)
   Parameter o_field : (* type-name: *) globname -> ident -> offset.
-  (* [o_sub ty n] represents [x[n]] for [x : cls*] *)
+  (* [o_sub ty n] represents [x + n] for [x : cls*] *)
   Parameter o_sub : type -> Z -> offset.
-  (* [o_offset ty n] represents [x + n] for [x : cls*] *)
-  Parameter o_offset : type -> Z -> offset.
 
   (** combine an offset and a pointer to get a new pointer
    *)
