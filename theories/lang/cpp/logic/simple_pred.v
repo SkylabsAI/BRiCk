@@ -43,7 +43,14 @@ Module PTR_CONCR <: LOCATIONS.
   Global Instance : Countable object_id := _.
 
   (* Add offsets from Loc. *)
-  Inductive offset := .
+  Inductive offset_ :=
+  | o_field_ : (* type-name: *) globname -> ident -> offset_
+  | o_sub_ : type -> Z -> offset_
+  | o_dot_ : offset_ -> offset_ -> offset_.
+  Definition offset := offset_.
+  Definition o_field := o_field_.
+  Definition o_sub := o_sub_.
+  Definition o_dot := o_dot_.
 
   Instance : EqDecision offset.
   Proof. solve_decision. Qed.
@@ -66,7 +73,7 @@ Module PTR_CONCR <: LOCATIONS.
   TODO: consider if both operations create objects, but the first only
   creates character arrays, while the second creates additional overlapping objects.
   *)
-  | mk_ptr (a : alloc_id) (o : object_id) (o : offset).
+  | mk_ptr (a : alloc_id) (oid : object_id) (o : offset).
   Definition ptr := ptr_.
   Definition nullptr := nullptr_.
 
@@ -74,6 +81,12 @@ Module PTR_CONCR <: LOCATIONS.
   Proof. solve_decision. Qed.
 
   Declare Instance ptr_countable : Countable ptr.
+  Definition offset_ptr (o : offset) (p : ptr) : ptr :=
+    match p with
+    | nullptr_ => nullptr_
+    | mk_ptr a oid o' => mk_ptr a oid (o_dot o' o)
+    end.
+
 End PTR_CONCR.
 
 (** soundness proof *)
