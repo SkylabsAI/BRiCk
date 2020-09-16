@@ -24,7 +24,7 @@ clean:
 %_cpp.v %_cpp_names.v: %.cpp $(CPP2V)
 	$(CPP2V) -v -names $*_cpp_names.v -o $*_cpp.v $< --
 
-%.vo: %.v
+%.vo: %.v ../theories/lang/cpp/parser.vo
 	$(COQC) $(WARN) -Q $(QPATH) bedrock $<
 
 .PRECIOUS: %_cpp.v

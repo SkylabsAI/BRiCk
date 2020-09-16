@@ -248,14 +248,31 @@ Section with_cpp.
       end
     end.
 
-  Definition default_ctor (nm : globname) (st : Struct) : list Initializer * Stmt :=
-    (* todo(gmm): I don't have a way to generate the default constructor name *)
+  Fixpoint foldM {T U} (f : T -> option U) (ls : list T) : option (list U) :=
+    match ls with
+    | nil => Some nil
+    | l :: ls => match f l , foldM f ls with
+                 | Some u , Some us => Some (u :: us)
+                 | _ , _ => None
+                 end
+    end.
+
+  Definition default_ctor (nm : globname) (st : Struct) : (list Initializer * Stmt) :=
+    (* todo(gmm): I don't have a way to generate the default constructor name without
+       getting clang to generate the code for me, and I'm not sure how to do this.
+       - only thing to do is to record the value in the class. this could be a [Defaulted] or a [UserImplemented]
+       - this would likely be quite large, but i could compress everything down to some bits if i didn't do name
+         mangling.
+     *)
     let bases := (fun '(cls, _) => {| init_path := Base cls
-                                 ; init_type := Tnamed cls
-                                 ; init_init := Econstructor "" nil (Tnamed cls) |}) <$> st.(s_bases) in
-    let fields := (fun '(x, t, _) => {| init_path := Field x
-                                   ; init_type := t
-                                   ; init_init := Eimplicit_init t |}) <$> st.(s_fields) in
+                                    ; init_type := Tnamed cls
+                                    ; init_init := Econstructor "" nil (Tnamed cls) |}) <$> st.(s_bases) in
+    let fields := (fun '(x, t, i, _) => {| init_path := Field x
+                                         ; init_type := t
+                                         ; init_init := match i with
+                                                        | None => Eimplicit_init t
+                                                        | Some e => e
+                                                        end |}) <$> st.(s_fields) in
     (bases ++ fields, Sseq nil).
 
   Definition wp_ctor_impl (nm : globname) (params : list (ident * type)) (inits : list Initializer) (body : Stmt)
@@ -272,13 +289,14 @@ Section with_cpp.
     end.
 
   (* note(gmm): supporting virtual inheritence will require us to add
-   * constructor kinds here
+   * constructor kinds here.
+   * the alternative (better) approach is to get away from name mangling.
    *)
   Definition wp_ctor (ctor : Ctor)
              (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match ctor.(c_body) with
-    | None => lfalse
+    | None => False
     | Some Defaulted =>
       match resolve.(genv_tu).(globals) !! ctor.(c_class) with
       | Some (Gstruct st) =>
@@ -286,7 +304,7 @@ Section with_cpp.
         wp_ctor_impl ctor.(c_class) nil inits body ti args Q
       | _ => False
       end
-    | Some (UserDefined (inits, body)) =>
+    | Some (UserImplemented (inits, body)) =>
       wp_ctor_impl ctor.(c_class) nil inits body ti args Q
     end.
 
@@ -358,12 +376,12 @@ Section with_cpp.
     | Some Defaulted =>
       match resolve.(genv_tu).(globals) !! dtor.(d_class) with
       | Some (Gstruct st) =>
-        let fields := (fun '(x, ty, _) => (Field x, "?"))%bs <$> st.(s_fields) in
+        let fields := (fun '(x, ty, _, _) => (Field x, "?"))%bs <$> st.(s_fields) in
         let bases := (fun '(cls, _) => (Base cls, "?"))%bs <$> st.(s_bases) in
         wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q
       | _ => False
       end
-    | Some (UserDefined (body, deinit)) =>
+    | Some (UserImplemented (body, deinit)) =>
       wp_dtor_impl dtor.(d_class) body deinit ti args Q
     end.
 

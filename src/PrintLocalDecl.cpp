@@ -19,7 +19,19 @@ private:
 
     static CXXDestructorDecl* get_dtor(QualType qt) {
         if (auto rd = qt->getAsCXXRecordDecl()) {
-            return rd->getDestructor();
+            // according to the c++ standard, all classes have destructors.
+            // in some instances clang includes a destructor and in other instances
+            // it doesn't. the only instances where clang can sometimes include a destructor and sometimes not
+            // seems to be when the destructor is defaulted.
+            //
+            // an alternative is to record the destructor information in the class.
+            // this would allow us to verify the destructor once and for all in the header file.
+            auto dtor = rd->getDestructor();
+            if (!dtor or dtor->isDefaulted()) {
+                return nullptr;
+            } else {
+                return dtor;
+            }
         } else if (auto ary = qt->getAsArrayTypeUnsafe()) {
             return get_dtor(ary->getElementType());
         } else {

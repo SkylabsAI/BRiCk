@@ -23,7 +23,7 @@ Record VarDecl : Set :=
 { vd_name : ident
 ; vd_type : type
 ; vd_init : option Expr
-; vd_dtor : option obj_name
+; vd_dtor : option obj_name (* [None] means defaulted *)
 }.
 Instance: EqDecision VarDecl.
 Proof. solve_decision. Defined.
@@ -70,16 +70,6 @@ Proof.
 Defined.
 
 Definition Sskip := Sseq nil.
-
-
-
-Variant OrDefault {t : Set} : Set :=
-| Defaulted
-| UserDefined (_ : t).
-Arguments OrDefault : clear implicits.
-
-Instance OrDefault_eq_dec: forall {T: Set}, EqDecision T -> EqDecision (OrDefault T).
-Proof. solve_decision. Defined.
 
 
 Variant FieldOrBase : Set :=
