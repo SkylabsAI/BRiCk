@@ -23,7 +23,7 @@ Proof. solve_decision. Defined.
 
 Record Func : Set :=
 { f_return : type
-; f_params : list (ident * type)
+; f_params : list (localname * type)
 ; f_cc     : calling_conv
 ; f_body   : option FunctionBody
 }.
@@ -42,7 +42,7 @@ Proof. solve_decision. Defined.
 (* Constructors *)
 Record Ctor : Set :=
 { c_class  : globname
-; c_params : list (ident * type)
+; c_params : list (localname * type)
 ; c_cc     : calling_conv
 ; c_body   : option (OrDefault (list Initializer * Stmt))
 }.
@@ -63,9 +63,12 @@ Record Method : Set :=
 { m_return  : type
 ; m_class   : globname
 ; m_this_qual : type_qualifiers
-; m_params  : list (ident * type)
+; m_params  : list (localname * type)
 ; m_cc      : calling_conv
-; m_body    : option (OrDefault Stmt)
+; m_body    : option Stmt
+  (* ^ TODO: there are special methods that can be defaulted, e.g.
+     copy- and move-assignment operators, maybe also <=> (c++20)
+   *)
 }.
 Instance: EqDecision Method.
 Proof. solve_decision. Defined.
