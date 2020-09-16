@@ -451,12 +451,22 @@ public:
         }
         print.end_list();
 
-        if (decl->getDestructor() && decl->getDestructor()->isVirtual()) {
-            print.some();
-            cprint.printGlobalName(decl->getDestructor(), print);
-            print.end_ctor();
+        if (decl->hasUserDeclaredDestructor()) {
+            if (decl->getDestructor()->isDeleted()) {
+                print.output() << "DtorDeleted";
+            } else {
+                print.ctor("DtorUser", false);
+                cprint.printGlobalName(decl->getDestructor(), print);
+                print.end_ctor();
+            }
         } else {
-            print.none();
+            print.output() << "DtorDefault";
+        }
+
+        if (decl->getDestructor() && decl->getDestructor()->isVirtual()) {
+            print.output() << "true";
+        } else {
+            print.output() << "false";
         }
 
         print.end_ctor();
