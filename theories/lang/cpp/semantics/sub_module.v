@@ -69,11 +69,16 @@ Definition ObjValue_le (a b : ObjValue) : option unit :=
                (List.map (fun x => normalize_type (snd x)) c'.(c_params)) $
     match c.(c_body) , c'.(c_body) with
     | None , _ => Some tt
-    | _ , None => None
-    | Some x , Some y =>
-    require_eq (List.map (fun '(a,b) => (a,normalize_type b)) c.(c_params))
-               (List.map (fun '(a,b) => (a,normalize_type b)) c'.(c_params)) $
-      require_eq x y $ Some tt
+    | Some a , Some b =>
+      match a , b with
+      | Defaulted , Defaulted => Some tt
+      | UserImplemented x , UserImplemented y =>
+        require_eq (List.map (fun '(a,b) => (a,normalize_type b)) c.(c_params))
+                   (List.map (fun '(a,b) => (a,normalize_type b)) c'.(c_params)) $
+                 require_eq x y $ Some tt
+      | _ , _ => None
+      end
+    | _ , _ => None
     end
   | Odestructor dd , Odestructor dd' =>
     require_eq dd.(d_class) dd'.(d_class) $
@@ -158,9 +163,9 @@ Qed.
 Theorem ObjValue_le_refl : forall a, ObjValue_le a a = Some tt.
 Proof.
   destruct a; simpl; repeat rewrite require_eq_refl; eauto.
-  all: match goal with
-       | |- context [ match ?X with _ => _ end ] => destruct X
-       end; repeat rewrite require_eq_refl; eauto.
+  all: repeat match goal with
+              | |- context [ match ?X with _ => _ end ] => destruct X
+              end; repeat rewrite require_eq_refl; eauto.
 Qed.
 
 Theorem ObjValue_le_trans : forall a b c, ObjValue_le a b = Some tt -> ObjValue_le b c = Some tt -> ObjValue_le a c = Some tt.

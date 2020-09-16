@@ -13,29 +13,7 @@ From bedrock.lang.cpp.syntax Require Import names expr stmt types.
 Set Primitive Projections.
 Set Default Proof Using "Type".
 
-(** Record an offset in _bits_. *)
-Record LayoutInfo : Set :=
-{ li_offset : Z }.
-Instance: EqDecision LayoutInfo.
-Proof. solve_decision. Defined.
-
-Record Ctor : Set :=
-{ c_class  : globname
-; c_params : list (ident * type)
-; c_cc     : calling_conv
-; c_body   : option (OrDefault (list Initializer * Stmt))
-}.
-Instance: EqDecision Ctor.
-Proof. solve_decision. Defined.
-
-Record Dtor : Set :=
-{ d_class  : globname
-; d_cc     : calling_conv
-; d_body   : option (OrDefault (Stmt * list (FieldOrBase * obj_name)))
-}.
-Instance: EqDecision Dtor.
-Proof. solve_decision. Defined.
-
+(* Functions *)
 Variant FunctionBody : Set :=
 | Impl (_ : Stmt)
 | Builtin (_ : BuiltinFn)
@@ -52,17 +30,54 @@ Record Func : Set :=
 Instance: EqDecision Func.
 Proof. solve_decision. Defined.
 
+(* allow for defaulted values *)
+Variant OrDefault {t : Set} : Set :=
+| Defaulted
+| UserImplemented (_ : t).
+Arguments OrDefault : clear implicits.
+
+Instance OrDefault_eq_dec: forall {T: Set}, EqDecision T -> EqDecision (OrDefault T).
+Proof. solve_decision. Defined.
+
+(* Constructors *)
+Record Ctor : Set :=
+{ c_class  : globname
+; c_params : list (ident * type)
+; c_cc     : calling_conv
+; c_body   : option (OrDefault (list Initializer * Stmt))
+}.
+Instance: EqDecision Ctor.
+Proof. solve_decision. Defined.
+
+(* Destructors *)
+Record Dtor : Set :=
+{ d_class  : globname
+; d_cc     : calling_conv
+; d_body   : option (OrDefault (Stmt * list (FieldOrBase * obj_name)))
+}.
+Instance: EqDecision Dtor.
+Proof. solve_decision. Defined.
+
+(* Methods *)
 Record Method : Set :=
 { m_return  : type
 ; m_class   : globname
 ; m_this_qual : type_qualifiers
 ; m_params  : list (ident * type)
 ; m_cc      : calling_conv
-; m_body    : option Stmt
+; m_body    : option (OrDefault Stmt)
 }.
 Instance: EqDecision Method.
 Proof. solve_decision. Defined.
 
+(** Record an offset in _bits_. *)
+Record LayoutInfo : Set :=
+{ li_offset : Z }.
+Instance: EqDecision LayoutInfo.
+Proof. solve_decision. Defined.
+
+
+(* Unions *)
 Record Union : Set :=
 { u_fields : list (ident * type * option Expr * LayoutInfo)
   (* ^ fields with type, initializer, and layout information *)
@@ -77,6 +92,7 @@ Variant LayoutType : Set := POD | Standard | Unspecified.
 Instance: EqDecision LayoutType.
 Proof. solve_decision. Defined.
 
+(** Structures *)
 Record Struct : Set :=
 { s_bases : list (globname * LayoutInfo)
   (* ^ base classes *)

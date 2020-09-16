@@ -146,8 +146,12 @@ printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
     print.output() << fmt::line;
     if (decl->getBody()) {
         print.ctor("Some", false);
+        print.ctor("UserImplemented", false);
         cprint.printStmt(decl->getBody(), print);
         print.end_ctor();
+        print.end_ctor();
+    } else if (decl->isDefaulted()) {
+        print.output() << "(Some Defaulted)";
     } else {
         print.output() << "None";
     }
@@ -166,12 +170,9 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
     cprint.printCallingConv(getCallingConv(decl), print);
     print.output() << fmt::line;
 
-    if (decl->isDefaulted()) {
-        // todo(gmm): I need to generate this.
-        print.output() << "(Some Defaulted)";
-    } else if (decl->getBody()) {
+    if (decl->getBody()) {
         print.some();
-        print.ctor("UserDefined");
+        print.ctor("UserImplemented");
         print.begin_tuple();
         cprint.printStmt(decl->getBody(), print);
         print.next_tuple();
@@ -224,6 +225,9 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
         print.end_tuple();
         print.end_ctor();
         print.end_ctor();
+    } else if (decl->isDefaulted()) {
+        // todo(gmm): I need to generate this.
+        print.output() << "(Some Defaulted)";
     } else {
         print.none();
     }
@@ -460,13 +464,18 @@ public:
         print.end_ctor();
         print.end_ctor();
 
+#if 0
         // todo(gmm): i need to print any implicit declarations.
         llvm::errs() << decl->getNameAsString() << "\n";
-        { // default constructor
-            if (not decl->hasUserProvidedDefaultConstructor() &&
-                decl->hasDefaultConstructor()) {
-                llvm::errs() << "Generate default constructor\n";
-            }
+        // default constructor
+        if (not decl->hasUserProvidedDefaultConstructor() &&
+            decl->hasDefaultConstructor()) {
+            print.cons();
+            print.ctor("Dconstructor");
+            // name?
+
+            llvm::errs() << "Generate default constructor\n";
+            print.end_ctor();
         }
 
         { // copy constructor
@@ -521,7 +530,7 @@ public:
                 }
             }
         }
-
+#endif
         return true;
     }
 
@@ -614,7 +623,7 @@ public:
 
         if (decl->getBody()) {
             print.some();
-            print.ctor("UserDefined");
+            print.ctor("UserImplemented");
             print.begin_tuple();
 
             // print the initializer list
@@ -693,6 +702,10 @@ public:
             cprint.printStmt(decl->getBody(), print);
             print.end_tuple();
             print.end_ctor();
+            print.end_ctor();
+        } else if (decl->isDefaulted()) {
+            print.some();
+            print.output() << "Defaulted";
             print.end_ctor();
         } else {
             print.output() << fmt::nbsp;
