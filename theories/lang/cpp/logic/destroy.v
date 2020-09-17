@@ -20,9 +20,20 @@ Section destroy.
   Local Notation anyR := (anyR (resolve:=σ)) (only parsing).
   Local Notation _global := (_global (resolve:=σ)) (only parsing).
 
-  Definition wp_dtor_pre (dtor_type : type -d> Loc -d> mpred -d> mpredI)
-    : type -d> Loc -d> mpred -d> mpredI :=
-    (fun t this Q =>
+  Instance fold_left_ne {T : ofeT} {U : Type} {n} :
+    Proper ((dist n ==> pointwise_relation _ (dist n)) ==> eq ==> dist n ==> dist n) (@fold_left T U).
+  Proof.
+    do 4 red; intros f1 f2 Hf xs1 _ <-.
+    induction xs1; simpl; first done.
+    intros x1 x2 Hx.
+    eapply IHxs1, Hf, Hx.
+  Qed.
+
+  Unset Program Cases.
+
+  Program Definition wp_dtor_pre (wp_dtor : type -d> Loc -d> mpredI -n> mpredI)
+    : type -d> Loc -d> mpredI -n> mpredI :=
+    λ t this, λne Q,
        match drop_qualifiers t with
        | Tnamed cls =>
          match σ.(genv_tu).(globals) !! cls with
@@ -40,20 +51,20 @@ Section destroy.
            | DtorDefault =>
              let bases :=
                  fold_left (fun Q '(base, _) =>
-                              |> dtor_type (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
+                              |> wp_dtor (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
              in
              fold_left (fun Q '(x,ty,_,_) =>
                           match drop_qualifiers ty with
                           | Tnamed nm =>
                             let l' := _offsetL (_field (resolve:=σ) {| f_type := cls ; f_name := x |}) this  in
-                            |> dtor_type ty l' Q
+                            |> wp_dtor ty l' Q
                           | _ => Q
                           end) st.(s_fields) bases
            (*
             let fields := flat_map (fun '(x, ty, _, _) =>
                                       match drop_qualifiers ty with
                                       | Tnamed nm =>
-                                        rec _ nm Q 
+                                        rec _ nm Q
                                       | _ => nil
                                       end)%bs st.(s_fields) in
             let bases := (fun '(cls, _) => (Base cls, cls ++ "D0Ev"))%bs <$> st.(s_bases) in
@@ -61,42 +72,52 @@ Section destroy.
             wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q *)
            end
          | Some (Gunion _) => Q
-         | Some (Genum t _) => |> dtor_type t this Q
+         | Some (Genum t _) => |> wp_dtor t this Q
          | _ => False
          end
        | _ => Q
-       end)%I.
-
-  Lemma fold_left_proper {T : ofeT} {U : Type} {n} :
-    Proper ((dist n ==> pointwise_relation _ (dist n)) ==> eq ==> dist n ==> dist n) (@fold_left T U).
-  Proof.
-    red. red. red. red.
-    induction x0; intros; subst; simpl; eauto.
-    eapply IHx0; eauto.
-    eapply H; eauto.
+       end%I.
+  Next Obligation.
+  (* Instance wp_dtor_pre_ne : ∀ (wp_dtor : type -d> Loc -d> mpredI -n> mpredI) (t : type)
+    (this : Loc) (n : nat),
+    Proper (dist n ==> dist n) (λ Q : mpredI, wp_dtor_pre wp_dtor t this Q).
+  Proof. *)
+    intros wp_dtor t this n Q1 Q2 HQ.
+    (* unfold wp_dtor_pre. *)
+    simpl.
+    repeat case_match; try fast_done; first last. {
+      f_contractive.
+      by apply ofe_mor_car_ne, dist_S, HQ.
+    }
+    by repeat f_equiv.
+    apply fold_left_ne, fold_left_ne; try done;
+      intros Q1' Q2' HQ' a;
+      repeat case_match => //; f_contractive;
+      by apply ofe_mor_car_ne, dist_S, HQ'.
   Qed.
 
-  Definition wp_dtor : type -> Loc -> mpred -> mpred.
-    refine (fixpoint wp_dtor_pre).
-    { red. red; intros.
-      unfold wp_dtor_pre. red. red. red. red. red. red. red. red. red.
-      intros.
-      repeat match goal with
-             | |- match ?X with _ => _ end ≡{_}≡ match ?X with _ => _ end =>
-               destruct X; eauto
-             end.
-      eapply fold_left_proper; eauto.
-      2:{ eapply fold_left_proper; eauto.
-          red. red; intros. destruct a.
-          admit. }
-      2:{ eapply uPred_later_contractive.
-          destruct n; eauto.
-          red in H.  red. apply H. }
-      { do 2 red; intros.
-        destruct a as [ [[? ?] ?] ? ].
-        destruct (drop_qualifiers t); eauto.
-        admit. }
-  Admitted.
+  Instance wp_dtor_pre_contractive : Contractive wp_dtor_pre.
+  Proof.
+    intros n f1 f2 Hf t this Q.
+    unfold wp_dtor_pre; simpl.
+    repeat case_match; try fast_done; first last. {
+      f_contractive.
+      apply Hf.
+    }
+    repeat f_equiv; intros Q1 Q2 HQ a;
+      repeat case_match => //; f_contractive;
+      apply dist_S in HQ; rewrite HQ;
+      apply Hf.
+  Qed.
+
+  Definition wp_dtor : type -d> Loc -d> mpredI -n> mpredI :=
+    fixpoint wp_dtor_pre.
+
+  Lemma wp_dtor_unfold : wp_dtor ≡ wp_dtor_pre wp_dtor.
+  Proof. apply fixpoint_unfold. Qed.
+
+  Lemma wp_dtor_unfold_eta t this Q : wp_dtor t this Q ≡ wp_dtor_pre wp_dtor t this Q.
+  Proof. apply wp_dtor_unfold. Qed.
 
   (* this destructs an object by invoking its destructor
      note: it does *not* free the underlying memory.
