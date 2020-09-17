@@ -725,6 +725,10 @@ Section with_cpp.
     : forall (tt : type_table) (fun_type : type) (ti : thread_info)
              (addr : val) (ls : list val) (Q : val -> epred), mpred.
 
+  Axiom fspec_ne: forall tt fun_type ti addr ls n,
+    Proper (pointwise_relation _ (dist n) ==> dist n) (fspec tt fun_type ti addr ls).
+  Global Existing Instance fspec_ne.
+
   Axiom fspec_complete_type : forall te ft ti a ls Q,
       fspec te ft ti a ls Q
       |-- fspec te ft ti a ls Q **
