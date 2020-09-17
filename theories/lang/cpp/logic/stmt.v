@@ -35,6 +35,7 @@ Module Type Stmt.
     Local Notation wpAnys := (wpAnys (resolve:=resolve) M ti).
     Local Notation fspec := (fspec ti).
     Local Notation destruct_val := (destruct_val (σ:=resolve) ti) (only parsing).
+    Local Notation mdestroy := (mdestroy (σ:=resolve) ti) (only parsing).
     Local Notation destruct_obj := (destruct_obj (σ:=resolve) ti) (only parsing).
 
     Local Notation glob_def := (glob_def resolve) (only parsing).
@@ -89,7 +90,7 @@ Module Type Stmt.
      * note that references do not allocate anything in the semantics, they are
      * just aliases.
      *)
-    Fixpoint wp_decl (ρ : region) (x : ident) (ty : type) (init : option Expr) (dtor : option obj_name)
+    Fixpoint wp_decl (ρ : region) (x : ident) (ty : type) (init : option Expr)
                (k : region -> Kpreds -> mpred) (Q : Kpreds)
                (* ^ Q is the continuation for after the declaration
                 *   goes out of scope.
@@ -119,15 +120,8 @@ Module Type Stmt.
 
       | Tnamed cls =>
         Forall a, _at (_eq a) (uninitR (erase_qualifiers ty) 1) -*
-                  let destroy :=
-                      match dtor with
-                      | None => fun x => x
-                      | Some dtor => destruct_obj cls (Vptr a)
-                      end (_at (_eq a) (anyR (erase_qualifiers ty) 1))
-                  in
-                  let continue :=
-                      k (Rbind x a ρ) (Kfree destroy Q)
-                  in
+                  let destroy := mdestroy ty (Vptr a) in
+                  let continue := k (Rbind x a ρ) (Kat_exit destroy Q) in
                   match init with
                   | None => continue
                   | Some init =>
@@ -135,15 +129,8 @@ Module Type Stmt.
                   end
       | Tarray ty' N =>
         Forall a, _at (_eq a) (uninitR (erase_qualifiers ty) 1) -*
-                  let destroy :=
-                      match dtor with
-                      | None => fun x => x
-                      | Some dtor => destruct_val ty (Vptr a)
-                      end (_at (_eq a) (anyR (erase_qualifiers ty) 1))
-                  in
-                  let continue :=
-                      k (Rbind x a ρ) (Kfree destroy Q)
-                  in
+                  let destroy := mdestroy ty (Vptr a) in
+                  let continue := k (Rbind x a ρ) (Kat_exit destroy Q) in
                   match init with
                   | None => continue
                   | Some init =>
@@ -165,7 +152,7 @@ Module Type Stmt.
 
       | Tfunction _ _ => lfalse (* not supported *)
 
-      | Tqualified _ ty => wp_decl ρ x ty init dtor k Q
+      | Tqualified _ ty => wp_decl ρ x ty init k Q
       | Tnullptr =>
         Forall a : ptr,
         let continue :=
@@ -179,16 +166,16 @@ Module Type Stmt.
           wp_prval ρ init (fun v free => free **
                               _at (_eq a) (primR (erase_qualifiers ty) 1 v) -* continue)
         end
-      | Tfloat _ => lfalse (* not supportd *)
-      | Tarch _ _ => lfalse (* not supported *)
-      end.
+      | Tfloat _ => False (* not supportd *)
+      | Tarch _ _ => False (* not supported *)
+      end%I.
 
     Fixpoint wp_decls (ρ : region) (ds : list VarDecl)
              (k : region -> Kpreds -> mpred) (Q : Kpreds) : mpred :=
       match ds with
       | nil => k ρ Q
-      | {| vd_name := x ; vd_type := ty ; vd_init := init ; vd_dtor := dtor |} :: ds =>
-        |> wp_decl ρ x ty init dtor (fun ρ => wp_decls ρ ds k) Q
+      | {| vd_name := x ; vd_type := ty ; vd_init := init |} :: ds =>
+        |> wp_decl ρ x ty init (fun ρ => wp_decls ρ ds k) Q
       end.
 
     (* note(gmm): this rule is non-compositional because

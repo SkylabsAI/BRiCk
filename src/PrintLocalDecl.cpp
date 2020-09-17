@@ -17,62 +17,24 @@ class PrintLocalDecl :
 private:
     PrintLocalDecl() {}
 
-    static CXXDestructorDecl* get_dtor(QualType qt) {
-        if (auto rd = qt->getAsCXXRecordDecl()) {
-            // according to the c++ standard, all classes have destructors.
-            // in some instances clang includes a destructor and in other instances
-            // it doesn't. the only instances where clang can sometimes include a destructor and sometimes not
-            // seems to be when the destructor is defaulted.
-            //
-            // an alternative is to record the destructor information in the class.
-            // this would allow us to verify the destructor once and for all in the header file.
-            auto dtor = rd->getDestructor();
-            if (!dtor or dtor->isDefaulted()) {
-                return nullptr;
-            } else {
-                return dtor;
-            }
-        } else if (auto ary = qt->getAsArrayTypeUnsafe()) {
-            return get_dtor(ary->getElementType());
-        } else {
-            return nullptr;
-        }
-    };
-
 public:
     static PrintLocalDecl printer;
 
     bool VisitVarDecl(const VarDecl* decl, CoqPrinter& print,
                       ClangPrinter& cprint) {
-        print.begin_record();
-        print.record_field("vd_name")
-            << "\"" << decl->getNameAsString() << "\"";
-
-        print.output() << fmt::line << ";";
-        print.record_field("vd_type");
+        print.ctor("Build_VarDecl")
+            << fmt::nbsp << "\"" << decl->getNameAsString() << "\""
+            << fmt::nbsp;
         cprint.printQualType(decl->getType(), print);
 
-        print.output() << fmt::line << ";";
-        print.record_field("vd_init");
         if (decl->hasInit()) {
-            print.ctor("Some", false);
+            print.ctor("Some");
             cprint.printExpr(decl->getInit(), print);
-            print.output() << fmt::rparen;
-        } else {
-            print.none();
-        }
-
-        print.output() << fmt::line << ";";
-        print.record_field("vd_dtor");
-        if (auto dest = get_dtor(decl->getType())) {
-            print.some();
-            cprint.printGlobalName(dest, print);
             print.end_ctor();
         } else {
             print.none();
         }
-
-        print.end_record();
+        print.end_ctor();
         return true;
     }
 
