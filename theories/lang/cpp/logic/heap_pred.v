@@ -16,6 +16,7 @@ Require Import bedrock.lang.cpp.logic.spec.
 
 Set Default Proof Using "Type".
 
+(* TODO: these should be upstream *)
 Definition monPred_at_persistent_inv {V bi} (P : monPred V bi) :
   (∀ i, Persistent (P i)) → Persistent P := monPred_persistent _.
 

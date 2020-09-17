@@ -69,7 +69,7 @@ Notation monPred := (monPred I PROP).
 Notation component := (component I).
 Implicit Types P Q : monPred.
 
-(* explicitly monotonizing *)
+(* explicitly monotonizing with monPred_upclosed *)
 Definition monPred_objectively_but_def (coms : list component) P : monPred :=
   monPred_upclosed (λ j, ∀ i, ⌜eq_with coms i j⌝ → P i)%I.
 Definition monPred_objectively_but_aux : seal (@monPred_objectively_but_def).
@@ -87,6 +87,28 @@ Context {I : biIndex} {PROP : bi}.
 Local Notation monPred := (monPred I PROP).
 Implicit Types i : I.
 Implicit Types P Q : monPred.
+
+Lemma monPred_objectively_but_mono' :
+  Proper ((⊆) ==> (≡) ==> (bi_entails)) (@monPred_objectively_but I PROP).
+Proof.
+  intros coms coms' SUB P1 P2 EQ2. constructor => i.
+  rewrite monPred_objectively_but_eq /=.
+  iIntros "P" (j Lej i' EQ); iSpecialize ("P" $! j with "[%//]").
+  rewrite -EQ2. iApply ("P" with "[%]"). by rewrite ->SUB.
+Qed.
+
+Global Instance monPred_objectively_but_proper :
+  Proper ((=) ==> (≡) ==> (≡)) (@monPred_objectively_but I PROP).
+Proof.
+  intros coms coms' <- P P' EQ.
+  iSplit; iIntros "P".
+  - iApply monPred_objectively_but_mono'; eauto.
+  - iApply monPred_objectively_but_mono'. eauto. rewrite EQ; eauto. done.
+Qed.
+
+Lemma monPred_objectively_but_mono coms coms' P :
+  coms ⊆ coms' -> <obj>{- coms} P |-- <obj>{- coms'} P.
+Proof. intros SUB. by apply monPred_objectively_but_mono'. Qed.
 
 Lemma monPred_objectively_but_nil P :
   <obj>{- nil} P -|- <obj> P.
@@ -112,14 +134,11 @@ Proof.
     by symmetry.
 Qed.
 
-Lemma monPred_objectively_but_mono coms coms' P :
-  coms ⊆ coms' -> <obj>{- coms} P |-- <obj>{- coms'} P.
+Instance monPred_objectively_but_objective_but_instance coms P :
+  ObjectiveBut coms (<obj>{- coms} P).
 Proof.
-  intros SUB. constructor => i. rewrite monPred_objectively_but_eq /=.
-  iIntros "P" (j Lej i' EQ).
-  iSpecialize ("P" $! j with "[%//]").
-  iApply ("P" $! i' with "[%]").
-  by rewrite ->SUB.
-Qed.
+  intros i j EQ. rewrite monPred_objectively_but_eq /=.
+  iIntros "P" (j' Lej i' Lei').
+Abort.
 
 End properties.
