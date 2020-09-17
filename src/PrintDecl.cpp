@@ -148,9 +148,6 @@ printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
         print.ctor("Some", false);
         cprint.printStmt(decl->getBody(), print);
         print.end_ctor();
-    } else if (decl->isDefaulted()) {
-        assert(false && "don't support defaulted methods yet");
-        // decl->getOverloadedOperator() // this would
     } else {
         print.output() << "None";
     }
@@ -186,11 +183,7 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
                 const FieldDecl *fd = *i;
                 if (auto rd =
                         fd->getType().getTypePtr()->getAsCXXRecordDecl()) {
-                    print.begin_tuple();
-                    print.output()
-                        << "Field \"" << fd->getName() << "\"," << fmt::nbsp;
-                    cprint.printGlobalName(rd->getDestructor(), print);
-                    print.end_tuple();
+                    print.output() << "Field \"" << fd->getName() << "\"";
                     print.cons();
                 }
             }
@@ -207,11 +200,8 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
                 }
                 auto rec = i->getType().getTypePtr()->getAsCXXRecordDecl();
                 if (rec) {
-                    print.ctor("Base");
+                    print.output() << "Base ";
                     cprint.printGlobalName(rec, print);
-                    print.output() << "," << fmt::nbsp;
-                    cprint.printGlobalName(rec->getDestructor(), print);
-                    print.output() << fmt::rparen;
                 } else {
                     using namespace logging;
                     fatal() << "base class is not a RecordType.";
@@ -453,14 +443,14 @@ public:
 
         if (decl->hasUserDeclaredDestructor()) {
             if (decl->getDestructor()->isDeleted()) {
-                print.output() << "DtorDeleted";
+                print.output() << "DtorDeleted" << fmt::nbsp;
             } else {
                 print.ctor("DtorUser", false);
                 cprint.printGlobalName(decl->getDestructor(), print);
                 print.end_ctor();
             }
         } else {
-            print.output() << "DtorDefault";
+            print.output() << "DtorDefault" << fmt::nbsp;
         }
 
         if (decl->getDestructor() && decl->getDestructor()->isVirtual()) {
@@ -587,6 +577,9 @@ public:
             printFunction(decl, print, cprint);
             print.end_ctor();
         } else {
+            if (decl->isDefaulted() and not decl->getBody()) {
+                return false;
+            }
             print.ctor("Dmethod");
             cprint.printGlobalName(decl, print);
             printMethod(decl, print, cprint);
@@ -796,7 +789,7 @@ public:
         }
         print.end_list();
         print.end_ctor();
-        return false;
+        return true;
     }
 
     bool VisitEnumDecl(const EnumDecl *decl, CoqPrinter &print,
@@ -824,7 +817,7 @@ public:
         print.end_list();
 
         print.end_ctor();
-        return false;
+        return true;
     }
 
     bool VisitLinkageSpecDecl(const LinkageSpecDecl *decl, CoqPrinter &print,

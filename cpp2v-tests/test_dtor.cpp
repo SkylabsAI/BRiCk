@@ -1,5 +1,11 @@
+struct Y {
+  int y;
+};
+
 struct X {
   int x;
+
+  Y y;
 };
 
 
