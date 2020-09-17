@@ -35,6 +35,7 @@ Module Type Stmt.
     Local Notation wpAnys := (wpAnys (resolve:=resolve) M ti).
     Local Notation fspec := (fspec ti).
     Local Notation destruct_val := (destruct_val (σ:=resolve) ti) (only parsing).
+    Local Notation mdestroy := (mdestroy (σ:=resolve) ti) (only parsing).
     Local Notation destruct_obj := (destruct_obj (σ:=resolve) ti) (only parsing).
 
     Local Notation glob_def := (glob_def resolve) (only parsing).
@@ -89,7 +90,7 @@ Module Type Stmt.
      * note that references do not allocate anything in the semantics, they are
      * just aliases.
      *)
-    Fixpoint wp_decl (ρ : region) (x : ident) (ty : type) (init : option Expr) (dtor : option obj_name)
+    Fixpoint wp_decl (ρ : region) (x : ident) (ty : type) (init : option Expr)
                (k : region -> Kpreds -> mpred) (Q : Kpreds)
                (* ^ Q is the continuation for after the declaration
                 *   goes out of scope.
@@ -159,7 +160,7 @@ Module Type Stmt.
 
       | Tfunction _ _ => False (* not supported *)
 
-      | Tqualified _ ty => wp_decl ρ x ty init dtor k Q
+      | Tqualified _ ty => wp_decl ρ x ty init k Q
       | Tnullptr =>
         Forall a : ptr,
         let continue :=
@@ -175,14 +176,14 @@ Module Type Stmt.
         end
       | Tfloat _ => False (* not supportd *)
       | Tarch _ _ => False (* not supported *)
-      end.
+      end%I.
 
     Fixpoint wp_decls (ρ : region) (ds : list VarDecl)
              (k : region -> Kpreds -> mpred) (Q : Kpreds) : mpred :=
       match ds with
       | nil => k ρ Q
-      | {| vd_name := x ; vd_type := ty ; vd_init := init ; vd_dtor := dtor |} :: ds =>
-        |> wp_decl ρ x ty init dtor (fun ρ => wp_decls ρ ds k) Q
+      | {| vd_name := x ; vd_type := ty ; vd_init := init |} :: ds =>
+        |> wp_decl ρ x ty init (fun ρ => wp_decls ρ ds k) Q
       end.
 
     (* note(gmm): this rule is non-compositional because
