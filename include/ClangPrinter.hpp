@@ -21,13 +21,15 @@ class ASTContext;
 class MangleContext;
 class ValueDecl;
 class SourceRange;
+class CompilerInstance;
+class Sema;
 }
 
 class CoqPrinter;
 
 class ClangPrinter {
 public:
-    bool printDecl(const clang::Decl* d, CoqPrinter& print);
+    bool printDecl(clang::Decl* d, CoqPrinter& print);
 
     void printParam(const clang::ParmVarDecl* d, CoqPrinter& print);
 
@@ -63,9 +65,12 @@ public:
 
     std::string sourceRange(const clang::SourceRange&& sr) const;
 
-    ClangPrinter(clang::ASTContext* context);
+    ClangPrinter(clang::CompilerInstance* compiler, clang::ASTContext* context);
+
+    clang::Sema& getSema() const;
 
 private:
+    clang::CompilerInstance* compiler_;
     clang::ASTContext* context_;
     clang::MangleContext* mangleContext_;
     clang::DiagnosticsEngine engine_;
