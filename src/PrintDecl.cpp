@@ -123,30 +123,30 @@ printFunction(const FunctionDecl *decl, CoqPrinter &print,
 }
 
 void
-printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
-            ClangPrinter &cprint) {
+printMethod(CXXMethodDecl *decl, CoqPrinter &print, ClangPrinter &cprint) {
     print.ctor("Build_Method");
     cprint.printQualType(decl->getCallResultType(), print);
     print.output() << fmt::line;
     cprint.printGlobalName(decl->getParent(), print);
     print.output() << fmt::line;
     cprint.printQualifier(decl->isConst(), decl->isVolatile(), print);
-
+    print.output() << fmt::nbsp;
     print.begin_list();
     for (auto i : decl->parameters()) {
         cprint.printParam(i, print);
         print.cons();
     }
-    print.end_list();
+    print.end_list() << fmt::nbsp;
 
     cprint.printCallingConv(getCallingConv(decl), print);
-    print.output() << fmt::nbsp;
 
     print.output() << fmt::line;
     if (decl->getBody()) {
         print.ctor("Some", false);
         cprint.printStmt(decl->getBody(), print);
         print.end_ctor();
+    } else if (decl->isDefaulted()) {
+        print.output() << "(Some Defaulted)";
     } else {
         print.output() << "None";
     }
@@ -225,7 +225,7 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
 
 class PrintDecl :
     public DeclVisitorArgs<PrintDecl, bool, CoqPrinter &, ClangPrinter &,
-                                const ASTContext &> {
+                           const ASTContext &> {
 private:
     PrintDecl() {}
 
@@ -350,7 +350,7 @@ public:
                          ClangPrinter &cprint, const ASTContext &ctxt) {
         assert(decl->getTagKind() == TagTypeKind::TTK_Class ||
                decl->getTagKind() == TagTypeKind::TTK_Struct);
-        cprint.getSema().ForceDeclarationOfImplicitMembers(decl);
+        // cprint.getSema().ForceDeclarationOfImplicitMembers(decl);
         auto &layout = ctxt.getASTRecordLayout(decl);
         print.ctor("Dstruct");
         cprint.printGlobalName(decl, print);
@@ -570,7 +570,7 @@ public:
         return true;
     }
 
-    bool VisitCXXMethodDecl(const CXXMethodDecl *decl, CoqPrinter &print,
+    bool VisitCXXMethodDecl(CXXMethodDecl *decl, CoqPrinter &print,
                             ClangPrinter &cprint, const ASTContext &) {
         if (decl->isStatic()) {
             print.ctor("Dfunction");
@@ -578,9 +578,20 @@ public:
             printFunction(decl, print, cprint);
             print.end_ctor();
         } else {
-            if (decl->isDefaulted() and not decl->getBody()) {
-                return false;
+            if (not decl->getBody() && decl->isDefaulted()) {
+                if (decl->isMoveAssignmentOperator()) {
+                    cprint.getSema().DefineImplicitMoveAssignment(
+                        decl->getLocation(), decl);
+
+                } else if (decl->isCopyAssignmentOperator()) {
+                    cprint.getSema().DefineImplicitCopyAssignment(
+                        decl->getLocation(), decl);
+                } else {
+                    logging::log()
+                        << "Didn't generate body for defaulted method\n";
+                }
             }
+
             print.ctor("Dmethod");
             cprint.printGlobalName(decl, print);
             printMethod(decl, print, cprint);
@@ -608,9 +619,8 @@ public:
         return true;
     }
 
-    bool VisitCXXConstructorDecl(const CXXConstructorDecl *decl,
-                                 CoqPrinter &print, ClangPrinter &cprint,
-                                 const ASTContext &) {
+    bool VisitCXXConstructorDecl(CXXConstructorDecl *decl, CoqPrinter &print,
+                                 ClangPrinter &cprint, const ASTContext &) {
         print.ctor("Dconstructor");
         cprint.printGlobalName(decl, print);
         print.ctor("Build_Ctor");
@@ -622,9 +632,23 @@ public:
             cprint.printParam(i, print);
             print.cons();
         }
-        print.end_list();
+        print.end_list() << fmt::nbsp;
 
         cprint.printCallingConv(getCallingConv(decl), print);
+        print.output() << fmt::nbsp;
+
+        if (not decl->getBody() && decl->isDefaulted()) {
+            if (decl->isDefaultConstructor()) {
+                cprint.getSema().DefineImplicitDefaultConstructor(
+                    decl->getLocation(), decl);
+            } else if (decl->isCopyConstructor()) {
+                cprint.getSema().DefineImplicitCopyConstructor(
+                    decl->getLocation(), decl);
+            } else if (decl->isMoveConstructor()) {
+                cprint.getSema().DefineImplicitMoveConstructor(
+                    decl->getLocation(), decl);
+            }
+        }
 
         print.output() << fmt::line;
         if (decl->getBody()) {
@@ -721,9 +745,13 @@ public:
         return true;
     }
 
-    bool VisitCXXDestructorDecl(const CXXDestructorDecl *decl,
-                                CoqPrinter &print, ClangPrinter &cprint,
-                                const ASTContext &ctxt) {
+    bool VisitCXXDestructorDecl(CXXDestructorDecl *decl, CoqPrinter &print,
+                                ClangPrinter &cprint, const ASTContext &ctxt) {
+        if (not decl->hasBody() && decl->isDefaulted()) {
+            cprint.getSema().DefineImplicitDestructor(decl->getLocation(),
+                                                      decl);
+        }
+
         print.ctor("Ddestructor");
         cprint.printGlobalName(decl, print);
         printDestructor(decl, print, cprint);
