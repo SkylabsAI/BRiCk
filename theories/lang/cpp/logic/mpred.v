@@ -27,6 +27,9 @@ Structure MLens {I J : biIndex} : Type := MLensMake {
 
 Arguments MLens : clear implicits.
 
+Notation "i '.=' ( L , j )" := (mlens_set L j i) (at level 50, format "i  .= ( L ,  j )") : stdpp_scope.
+Notation "i '.^' L " := (mlens_get L i) (at level 49, format "i .^ L") : stdpp_scope.
+
 Program Definition MLens_id {I} : MLens I I := {|
   mlens_get := fun i => i;
   mlens_set := fun j i => j;
@@ -50,8 +53,8 @@ Infix "*i" := biIndex_prod (at level 120, right associativity): stdpp_scope.
 
 Program Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J :=
 {|
-  mlens_get := fun i => (mlens_get L i).1 ;
-  mlens_set := fun j i => mlens_set L (j, (mlens_get L i).2) i ;
+  mlens_get := fun i => (i.^L).1 ;
+  mlens_set := fun j i => i .= (L, (j, (i.^L).2)) ;
 |}.
 Next Obligation. intros ??? L ???. by rewrite mlens_get_mono; eauto. Qed.
 Next Obligation.
@@ -62,7 +65,7 @@ Qed.
 Next Obligation. intros ??? L ??. by rewrite /= mlens_get_set. Qed.
 Next Obligation.
   simpl. intros ??? L i.
-  rewrite (_: ((mlens_get L i).1, (mlens_get L i).2) = mlens_get L i).
+  rewrite (_: ((i.^L).1, (i.^L).2) = i.^L).
   - by rewrite mlens_set_get.
   - by destruct (mlens_get L i).
 Qed.
@@ -70,8 +73,8 @@ Next Obligation. intros ??? L ???. rewrite /= mlens_get_set mlens_set_set //. Qe
 
 Program Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K :=
 {|
-  mlens_get := fun i => (mlens_get L i).2 ;
-  mlens_set := fun k i => mlens_set L ((mlens_get L i).1, k) i ;
+  mlens_get := fun i => (i.^L).2 ;
+  mlens_set := fun k i => i .= (L, ((i.^L).1, k)) ;
 |}.
 Next Obligation. intros ??? L ???. by rewrite mlens_get_mono; eauto. Qed.
 Next Obligation.
@@ -82,7 +85,7 @@ Qed.
 Next Obligation. intros ??? L ??. by rewrite /= mlens_get_set. Qed.
 Next Obligation.
   simpl. intros ??? L i.
-  rewrite (_: ((mlens_get L i).1, (mlens_get L i).2) = mlens_get L i).
+  rewrite (_: ((i.^L).1, (i.^L).2) = i.^L).
   - by rewrite mlens_set_get.
   - by destruct (mlens_get L i).
 Qed.
@@ -94,34 +97,34 @@ Notation monPred := (monPred I PROP).
 Implicit Type (P Q : monPred).
 
 (* @(ml,j) P *)
-Program Definition monPred_exactly_with {J} (ml : MLens I J) (j : J) P :=
-  MonPred (λ i, P (mlens_set ml j i))%I _.
+Program Definition monPred_exactly_with {J} (L : MLens I J) (j : J) P :=
+  MonPred (λ i, P (i .= (L, j)))%I _.
 Next Obligation. intros ??? P ???. rewrite mlens_set_mono; eauto. Qed.
 
 (* <obj>_{ml} P *)
-Definition monPred_objectively_with {J} (ml : MLens I J) P : monPred :=
-  Forall j : J, monPred_exactly_with ml j P.
+Definition monPred_objectively_with {J} (L : MLens I J) P : monPred :=
+  Forall j : J, monPred_exactly_with L j P.
 
 Program Definition monPred_embed {J}
-  (ml : MLens I J) (P : monpred.monPred J PROP) : monPred :=
-  MonPred (λ i, P (mlens_get ml i))%I _.
+  (L : MLens I J) (P : monpred.monPred J PROP) : monPred :=
+  MonPred (λ i, P (i.^L))%I _.
 Next Obligation. intros ?? P ???. rewrite mlens_get_mono; eauto. Qed.
 
-Definition monPred_atleast {J} (ml : MLens I J) (j : J) : monPred :=
-  monPred_embed ml (monPred_in j).
+Definition monPred_atleast {J} (L : MLens I J) (j : J) : monPred :=
+  monPred_embed L (monPred_in j).
 
 End Bi.
 
 (* TODO: ml should be TC-searched using the type I and J *)
 (* @j P <obj>_J P *)
-Notation "'@(' ml , j ')' P" := (monPred_exactly_with ml j P)
-  (at level 50, format "@( ml , j )  P") : bi_scope.
-Notation "'<obj>_{' ml '}' P" := (monPred_objectively_with ml P)
-  (at level 49, format "<obj>_{ ml }  P"): bi_scope.
+Notation "'@(' L , j ')' P" := (monPred_exactly_with L j P)
+  (at level 50, format "@( L , j )  P") : bi_scope.
+Notation "'<obj>_{' L '}' P" := (monPred_objectively_with L P)
+  (at level 49, format "<obj>_{ L }  P"): bi_scope.
 
 (* ObjectiveWith respect to J *)
 Class ObjectiveWith {I J: biIndex} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
-  objective_with i j : P i -∗ P (mlens_set L j i).
+  objective_with i j : P i -∗ P (i .= (L, j)).
 Arguments ObjectiveWith {_ _ _} _ _%I.
 Arguments objective_with {_ _ _} _ _%I {_}.
 Hint Mode ObjectiveWith ! ! + + ! : typeclass_instances.
