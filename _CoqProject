@@ -52,7 +52,7 @@ theories/lang/cpp/logic/translation_unit.v
 theories/lang/cpp/logic/z_to_bytes.v
 theories/lang/cpp/logic/cclogic.v
 # ^^ This is probably going to be eliminated
-theories/lang/cpp/logic/objective.v
+theories/lang/cpp/logic/mpred.v
 theories/lang/cpp/logic/atomics.v
 theories/lang/cpp/logic/builtins.v
 theories/lang/cpp/logic/layout.v
