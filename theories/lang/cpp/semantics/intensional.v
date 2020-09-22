@@ -13,6 +13,7 @@
  * AST and remove these nodes.
  *)
 Require Import Coq.ZArith.ZArith_base.
+Require Import stdpp.gmap.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.values.
 
@@ -81,4 +82,15 @@ Fixpoint prim_initializable (t : type) : bool :=
   | Tnullptr => true
   | Tqualified _ t => prim_initializable t
   | _ => false
+  end.
+
+(* compute the type of a field *)
+Definition type_of_field (te : type_table) (f : field) : option type :=
+  match te !! f.(f_type) with
+  | Some (Gstruct st) =>
+    match List.filter (fun '(x, _, _, _) => bool_decide (x = f.(f_name))) st.(s_fields) with
+    | (_, t, _, _) :: nil => Some t
+    | _ => None
+    end
+  | _ => None
   end.

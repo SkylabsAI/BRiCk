@@ -104,11 +104,21 @@ Module Type Expr.
      *
      * note: we need [vc] in order to distinguish the two forms of [rvalue], [xvalue] and [prvalue]
      *)
-    Axiom wp_lval_member : forall ty vc a m Q,
-      wpe vc a (fun base free =>
-                  Exists addr, (_offsetL (_field m) (_eqv base) &~ addr ** ltrue) //\\ Q (Vptr addr) free)
-      |-- wp_lval (Emember vc a m ty) Q.
+   Axiom wp_lval_member : forall ty vc a m Q,
+        match type_of_field resolve.(genv_tu).(globals) m with
+        | None => False
+        | Some t' =>
+          wpe vc a (fun base free =>
+                      match drop_qualifiers t' with
+                      | Tref rty =>
+                        Exists addr, (_at (_offsetL (_field m) (_eqv base)) (refR rty addr) ** ltrue) //\\
+                                     Q (Vptr addr) free
 
+                      | _ =>
+                        Exists addr, (_offsetL (_field m) (_eqv base) &~ addr ** ltrue) //\\ Q (Vptr addr) free
+                      end)
+        end
+      |-- wp_lval (Emember vc a m ty) Q.
 
     (* [Emember a m ty] is a prvalue if
      * - [a] is a member enumerator or non-static member function, or
