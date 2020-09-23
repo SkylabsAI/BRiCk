@@ -178,28 +178,6 @@ Section with_cpp.
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_method m ti vals Q.
 
-  Fixpoint all_identities' (f : nat) (mdc : option globname) (cls : globname) : Rep.
-  refine
-    match f with
-    | 0 => lfalse
-    | S f =>
-      match resolve.(genv_tu).(globals) !! cls with
-      | Some (Gstruct st) =>
-        _identity resolve cls mdc 1 **
-        [∗list] b ∈ st.(s_bases),
-           let '(base,_) := b in
-           _base resolve cls base |-> all_identities' f mdc base
-      | _ => lfalse
-      end
-    end.
-  Defined.
-  Definition all_identities : option globname -> globname -> Rep :=
-    let size := avl.IM.cardinal resolve.(genv_tu).(globals) in
-    (* ^ the number of global entries is an upper bound on the height of the
-       derivation tree.
-     *)
-    all_identities' size.
-
   (* this function creates an [_instance_of] fact for this class *and*,
      transitively, updates all of the [_instance_of] assertions for all base
      classes.
@@ -315,20 +293,6 @@ Section with_cpp.
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_ctor ctor ti vals Q.
 
-  Definition revert_identity (cls : globname) (Q : mpred) : Rep :=
-    match resolve.(genv_tu).(globals) !! cls with
-    | Some (Gstruct st) =>
-      _identity resolve cls (Some cls) 1 **
-      ([∗list] b ∈ st.(s_bases),
-          let '(base,_) := b in
-          _base resolve cls base |-> all_identities (Some cls) base) **
-      (_identity resolve cls None 1 -*
-       ([∗list] b ∈ st.(s_bases),
-         let '(base,_) := b in
-         _base resolve cls base |-> all_identities (Some base) base) -* pureR Q)
-    | _ => lfalse
-    end.
-
   Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
            (dests : list FieldOrBase)
            (Q : mpred) : mpred :=
@@ -358,14 +322,18 @@ Section with_cpp.
       end
     end.
 
-  Definition wp_dtor_impl (nm : globname) (body : Stmt) (deinit : list FieldOrBase)
+  (* i don't want to repeat the object-destruction logic which is essentially
+     the default destructor. it gets run at the end of every destructor
+   *)
+
+  Definition wp_dtor_impl (nm : globname) (body : Stmt)
              (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match args with
     | Vptr thisp :: rest_vals =>
       bind_base_this (Some thisp) Tvoid (fun ρ =>
         wp (resolve:=resolve) ⊤ ti ρ body
-           (void_return (wpd_members ti ρ nm thisp deinit (|> Q Vvoid))))
+           (void_return (wp_dtor wpd_members ti ρ nm thisp (|> Q Vvoid))))
     | _ => False
     end.
 
@@ -379,18 +347,8 @@ Section with_cpp.
         wp_dtor (σ:=resolve) ti (Tnamed dtor.(d_class)) (_eq p) (Q Vundef)
       | _ => False
       end
-(*
-      (* todo, this is duplicated *)
-      match resolve.(genv_tu).(globals) !! dtor.(d_class) with
-      | Some (Gstruct st) =>
-        let fields := (fun '(x, ty, _, _) => Field x) <$> st.(s_fields) in
-        let bases := (fun '(cls, _) => Base cls) <$> st.(s_bases) in
-        wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q
-      | _ => False
-      end
-*)
-    | Some (UserImplemented (body, deinit)) =>
-      wp_dtor_impl dtor.(d_class) body deinit ti args Q
+    | Some (UserImplemented body) =>
+      wp_dtor_impl dtor.(d_class) body ti args Q
     end.
 
   Definition dtor_ok (dtor : Dtor) (ti : thread_info) (spec : function_spec)

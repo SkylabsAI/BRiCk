@@ -10,6 +10,8 @@ From bedrock.lang.cpp.logic Require Import
      pred wp path_pred heap_pred.
 Require Import bedrock.lang.cpp.logic.dispatch.
 
+Require Import bedrock.lang.cpp.heap_notations.
+
 Set Default Proof Using "Type".
 
 Section destroy.
@@ -20,6 +22,7 @@ Section destroy.
   Local Notation anyR := (anyR (resolve:=σ)) (only parsing).
   Local Notation _global := (_global (resolve:=σ)) (only parsing).
 
+  (* TODO: move? *)
   Instance fold_left_ne {T : ofeT} {U : Type} {n} :
     Proper ((dist n ==> pointwise_relation _ (dist n)) ==> eq ==> dist n ==> dist n) (@fold_left T U).
   Proof.
@@ -29,9 +32,58 @@ Section destroy.
     eapply IHxs1, Hf, Hx.
   Qed.
 
+  Fixpoint all_identities' (f : nat) (mdc : option globname) (cls : globname) : Rep :=
+    match f with
+    | 0 => lfalse
+    | S f =>
+      match σ.(genv_tu).(globals) !! cls with
+      | Some (Gstruct st) =>
+        _identity σ cls mdc 1 **
+        [∗list] b ∈ st.(s_bases),
+           let '(base,_) := b in
+           _base σ cls base |-> all_identities' f mdc base
+      | _ => False
+      end
+    end%I.
+
+  Definition all_identities : option globname -> globname -> Rep :=
+    let size := avl.IM.cardinal σ.(genv_tu).(globals) in
+    (* ^ the number of global entries is an upper bound on the height of the
+       derivation tree.
+     *)
+    all_identities' size.
+
+  (** [revert_identities cls Q] destroys the identity of [cls] that lives at [this].
+      In doing so, it updates the identities of all base classes to have each base
+      be its own "most-derived-class".
+
+      This is necessary to make virtual dispatch work correctly when base classes
+      are destroyed.
+   *)
+  Definition revert_identity (cls : globname) (Q : mpred) : Rep :=
+    match σ.(genv_tu).(globals) !! cls with
+    | Some (Gstruct st) =>
+      _identity σ cls (Some cls) 1 **
+      ([∗list] b ∈ st.(s_bases),
+          let '(base,_) := b in
+          _base σ cls base |-> all_identities (Some cls) base) **
+      (_identity σ cls None 1 -*
+       ([∗list] b ∈ st.(s_bases),
+         let '(base,_) := b in
+         _base σ cls base |-> all_identities (Some base) base) -* pureR Q)
+    | _ => False
+    end%I.
+
+  Instance revert_identity_ne : Proper (dist n ==> dist n) (revert_identity cls).
+  Proof.
+    red. red. rewrite /revert_identity; intros.
+    repeat case_match =>//.
+    solve_proper.
+  Qed.
+
   Unset Program Cases.
 
-  Program Definition wp_dtor_pre (wp_dtor : type -d> Loc -d> mpredI -n> mpredI)
+  Program Definition wp_dtor_pre (destruct_type : type -d> Loc -d> mpredI -n> mpredI)
     : type -d> Loc -d> mpredI -n> mpredI :=
     λ t this, λne Q,
        match drop_qualifiers t with
@@ -44,56 +96,55 @@ Section destroy.
              match σ.(genv_tu).(symbols) !! nm with
              | Some (Odestructor d) =>
                let dt := type_of_value (Odestructor d) in
-               Exists da thisp, _global nm &~ da ** this &~ thisp **
+              Exists da thisp, _global nm &~ da ** this &~ thisp **
                                         |> fspec σ.(genv_tu).(globals) dt ti (Vptr da) (Vptr thisp :: nil) (fun _ => Q)
              | _ => False
              end
            | DtorDefault =>
              let bases :=
                  fold_left (fun Q '(base, _) =>
-                              |> wp_dtor (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
+                              |> destruct_type (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
              in
+             let ident := this |-> revert_identity cls bases in
              fold_left (fun Q '(x,ty,_,_) =>
                           match drop_qualifiers ty with
                           | Tnamed nm =>
                             let l' := _offsetL (_field (resolve:=σ) {| f_type := cls ; f_name := x |}) this  in
-                            |> wp_dtor ty l' Q
+                            |> destruct_type ty l' Q
                           | _ => Q
-                          end) st.(s_fields) bases
-           (*
-            let fields := flat_map (fun '(x, ty, _, _) =>
-                                      match drop_qualifiers ty with
-                                      | Tnamed nm =>
-                                        rec _ nm Q
-                                      | _ => nil
-                                      end)%bs st.(s_fields) in
-            let bases := (fun '(cls, _) => (Base cls, cls ++ "D0Ev"))%bs <$> st.(s_bases) in
-            (* ^ TODO(gmm): sketchy mangling *)
-            wp_dtor_impl dtor.(d_class) (Sseq nil) (List.rev (bases ++ fields)) ti args Q *)
+                          end) st.(s_fields) ident
            end
          | Some (Gunion _) => Q
-         | Some (Genum t _) => |> wp_dtor t this Q
+         | Some (Genum t _) => |> destruct_type t this Q
          | _ => False
          end
-       | _ => Q
+       | Tarray ty n =>
+         (* destroy an array by destroying each element starting from the end *)
+         List.fold_left (fun Q off =>
+                           |> destruct_type ty (this ., (_sub ty (Z.of_nat off))) Q) (seq 0 (N.to_nat n)) Q
+       | Tptr _ | Tref _ | Trv_ref _
+       | Tint _ _ | Tfunction _ _ | Tbool | Tmember_pointer _ _ | Tfloat _
+       | Tnullptr | Tarch _ _ => Q
+
+       | Tqualified _ _ | Tvoid => False
        end%I.
   Next Obligation.
-  (* Instance wp_dtor_pre_ne : ∀ (wp_dtor : type -d> Loc -d> mpredI -n> mpredI) (t : type)
-    (this : Loc) (n : nat),
-    Proper (dist n ==> dist n) (λ Q : mpredI, wp_dtor_pre wp_dtor t this Q).
-  Proof. *)
     intros wp_dtor t this n Q1 Q2 HQ.
-    (* unfold wp_dtor_pre. *)
     simpl.
     repeat case_match; try fast_done; first last. {
       f_contractive.
       by apply ofe_mor_car_ne, dist_S, HQ.
     }
     by repeat f_equiv.
-    apply fold_left_ne, fold_left_ne; try done;
-      intros Q1' Q2' HQ' a;
-      repeat case_match => //; f_contractive;
-      by apply ofe_mor_car_ne, dist_S, HQ'.
+    apply fold_left_ne; try done.
+    { intros ? ? ? ?; repeat case_match => //; f_contractive; subst.
+      apply ofe_mor_car_ne, dist_S; eauto. }
+    { apply _at_ne. apply revert_identity_ne.
+      apply fold_left_ne; try done.
+      do 4 intro; repeat case_match => //; subst; f_contractive.
+      apply ofe_mor_car_ne, dist_S; eauto. }
+    apply fold_left_ne; try done.
+    do 4 intro. rewrite H. eauto.
   Qed.
 
   Instance wp_dtor_pre_contractive : Contractive wp_dtor_pre.
@@ -107,9 +158,17 @@ Section destroy.
     repeat f_equiv; intros Q1 Q2 HQ a;
       repeat case_match => //; f_contractive;
       apply dist_S in HQ; rewrite HQ;
-      apply Hf.
+        apply Hf.
+    apply fold_left_ne; try done.
+    do 4 intro. rewrite H. f_contractive. apply Hf.
   Qed.
 
+  (** [wp_dtor ty this Q] represents the weakest pre-condition for invoking the
+      destructor for the type [ty] on the location [this] with post-condition [Q].
+
+      Note that this is like the weakest pre-condition for a function, it does
+      perform virtual dispatch.
+   *)
   Definition wp_dtor : type -d> Loc -d> mpredI -n> mpredI :=
     fixpoint wp_dtor_pre.
 

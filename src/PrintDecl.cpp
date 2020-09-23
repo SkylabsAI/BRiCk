@@ -169,53 +169,10 @@ printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
     if (decl->getBody()) {
         print.some();
         print.ctor("UserImplemented");
-        print.begin_tuple();
         cprint.printStmt(decl->getBody(), print);
-        print.next_tuple();
-
-        print.begin_list();
-        // i need to destruct each field, and then each parent class
-        // in the REVERSE order of construction
-        {
-            std::list<const FieldDecl *> fields(record->field_begin(),
-                                                record->field_end());
-            for (auto i = fields.crbegin(), e = fields.crend(); i != e; i++) {
-                const FieldDecl *fd = *i;
-                if (auto rd =
-                        fd->getType().getTypePtr()->getAsCXXRecordDecl()) {
-                    print.output() << "Field \"" << fd->getName() << "\"";
-                    print.cons();
-                }
-            }
-        }
-
-        // base classes
-        {
-            std::list<CXXBaseSpecifier> bases(record->bases_begin(),
-                                              record->bases_end());
-            for (auto i = bases.crbegin(), e = bases.crend(); i != e; i++) {
-                if (i->isVirtual()) {
-                    using namespace logging;
-                    fatal() << "virtual base classes are not supported.";
-                }
-                auto rec = i->getType().getTypePtr()->getAsCXXRecordDecl();
-                if (rec) {
-                    print.output() << "Base ";
-                    cprint.printGlobalName(rec, print);
-                } else {
-                    using namespace logging;
-                    fatal() << "base class is not a RecordType.";
-                    assert(false);
-                }
-                print.output() << "::";
-            }
-        }
-        print.end_list();
-        print.end_tuple();
         print.end_ctor();
         print.end_ctor();
     } else if (decl->isDefaulted()) {
-        // todo(gmm): I need to generate this.
         print.output() << "(Some Defaulted)";
     } else {
         print.none();
