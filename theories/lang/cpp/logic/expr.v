@@ -111,7 +111,7 @@ Module Type Expr.
           wpe vc a (fun base free =>
                       match drop_qualifiers t' with
                       | Tref rty =>
-                        Exists addr, (_at (_offsetL (_field m) (_eqv base)) (refR rty addr) ** ltrue) //\\
+                        Exists addr, (Exists q, _at (_offsetL (_field m) (_eqv base)) (refR (resolve:=resolve) rty q addr) ** ltrue) //\\
                                      Q (Vptr addr) free
 
                       | _ =>

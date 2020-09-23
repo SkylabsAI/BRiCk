@@ -524,17 +524,16 @@ Section with_cpp.
   Global Instance anyR_timeless resolve ty q : Timeless (anyR (resolve:=resolve) ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
 
-  Definition refR_def (ty : type) (p : ptr) : Rep :=
-    as_Rep (fun addr => [| addr = p |]).
+  Definition refR_def {resolve} (ty : type) (q : Qp) (p : ptr) : Rep :=
+    primR (resolve:=resolve) (Tref ty) q (Vptr p).
   Definition refR_aux : seal (@refR_def). by eexists. Qed.
   Definition refR := refR_aux.(unseal).
   Definition refR_eq : @refR = _ := refR_aux.(seal_eq).
+  Arguments refR {resolve} _ _ _.
 
-  Global Instance refR_persistent ty p : Persistent (refR ty p).
+  Global Instance refR_affine {resolve} ty q p : Affine (refR (resolve:=resolve) ty q p).
   Proof. rewrite refR_eq. apply _. Qed.
-  Global Instance refR_affine ty p : Affine (refR ty p).
-  Proof. rewrite refR_eq. apply _. Qed.
-  Global Instance refR_timeless ty p : Timeless (refR ty p).
+  Global Instance refR_timeless {resolve} ty q p : Timeless (refR (resolve:=resolve) ty q p).
   Proof. rewrite refR_eq. apply _. Qed.
 
   (* this is the core definition that everything will be based on.
@@ -602,7 +601,7 @@ Typeclasses Opaque _type_ptr.
 Arguments anyR {_ Σ resolve} ty q : rename.
 Arguments uninitR {_ Σ resolve} ty q : rename.
 Arguments primR {_ Σ resolve} ty q v : rename.
-Arguments refR {_ Σ} ty v : rename.
+Arguments refR {_ Σ resolve} ty q v : rename.
 Arguments cptr {_ Σ resolve} _ : rename.
 
 Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} nm s :

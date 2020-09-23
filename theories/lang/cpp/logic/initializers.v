@@ -33,8 +33,8 @@ Module Type Init.
     Local Notation _super := (_super (resolve:=σ)) (only parsing).
     Local Notation primR := (primR (resolve:=σ)) (only parsing).
     Local Notation anyR := (anyR (resolve:=σ)) (only parsing).
+    Local Notation refR := (refR (resolve:=σ)) (only parsing).
     Local Notation offset_for := (offset_for σ) (only parsing).
-
 
     (* this is really about expression evaluation, so it doesn't make sense for
      * it to be recursive on a type.
@@ -42,7 +42,7 @@ Module Type Init.
     Fixpoint wp_initialize (ty : type) (addr : val) (init : Expr) (k : FreeTemps -> mpred)
     {struct ty} : mpred :=
       match ty with
-      | Tvoid => lfalse
+      | Tvoid => False
       | Tpointer _
       | Tmember_pointer _ _
       | Tbool
@@ -56,14 +56,17 @@ Module Type Init.
       | Tarray _ _
       | Tnamed _ => wp_init ty addr (not_mine init) k
 
-      | Treference t => lfalse (* reference fields are not supported *)
-      | Trv_reference t => lfalse (* reference fields are not supported *)
-      | Tfunction _ _ => lfalse (* functions not supported *)
+      | Treference t =>
+        wp_lval init (fun v free =>
+                        _at (_eqv addr) (anyR ty 1) ** Exists p, _eqv v &~ p **
+                       (   _at (_eqv addr) (refR ty 1 p) -* k free))
+      | Trv_reference t => False (* reference fields are not supported *)
+      | Tfunction _ _ => False (* fields can not be functions (only pointers to functions) *)
 
       | Tqualified _ ty => wp_initialize ty addr init k
-      | Tnullptr => lfalse (* nullptr fields are not supported *)
-      | Tarch _ _ => lfalse (* vendor-specific types are not supported *)
-      | Tfloat _ => lfalse (* floating point numbers are not supported *)
+      | Tnullptr => False (* nullptr fields are not supported *)
+      | Tarch _ _ => False (* vendor-specific types are not supported *)
+      | Tfloat _ => False (* floating point numbers are not supported *)
       end.
 
     Axiom wpi_initialize : forall this_val i cls Q,
