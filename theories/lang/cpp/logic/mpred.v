@@ -102,6 +102,9 @@ mkMLensLe {
   mlens_le_set_outer i j k : (i .= (Lj, j)) .= (Lk, k) = i .= (Lk, k);
 }.
 
+Definition mlens_equiv {I J K : biIndex} (Lj: MLens I J) (Lk: MLens I K) :=
+  mlens_le Lj Lk /\ mlens_le Lk Lj.
+
 Section mlens_le.
   Context {I J : biIndex}.
 
@@ -149,6 +152,22 @@ Section mlens_le.
   Qed.
 End mlens_le.
 
+Section mlens_equiv.
+  Context {I J : biIndex}.
+
+  Lemma mlens_equiv_reflexive (L: MLens I J): mlens_equiv L L.
+  Proof. split; apply mlens_le_reflexive. Qed.
+
+  Lemma mlens_equiv_symmetric {K} (Lj : MLens I J) (Lk : MLens I K) :
+    mlens_equiv Lj Lk <-> mlens_equiv Lk Lj.
+  Proof. rewrite /mlens_equiv. intuition. Qed.
+
+  Lemma mlens_equiv_transitive {K H}
+    (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
+    mlens_equiv Lj Lk -> mlens_equiv Lk Lh -> mlens_equiv Lj Lh.
+  Proof. intros [Le1 Le2] [Le3 Le4]. split; eapply mlens_le_transitive; eauto. Qed.
+End mlens_equiv.
+
 Section Bi.
 Context {I J : biIndex} {PROP : bi}.
 Notation monPred := (monPred I PROP).
@@ -174,7 +193,8 @@ Definition monPred_atleast (L : MLens I J) (j : J) : monPred :=
 End Bi.
 
 (* TODO: ml should be TC-searched using the type I and J *)
-(* @j P <obj>_J P *)
+(** @j P
+    <obj>_J P *)
 Notation "'@(' L , j ')' P" := (monPred_exactly_with L j P)
   (at level 50, format "@( L , j )  P") : bi_scope.
 Notation "'<obj>_{' L '}' P" := (monPred_objectively_with L P)
@@ -223,26 +243,18 @@ Proof.
     iApply (monPred_objectively_with_mono with "P"); eauto; by rewrite EQ.
 Qed.
 
-Lemma monPred_objectively_with_lens_mono {K} (Lj : MLens I J) (Lk : MLens I K) P :
-  mlens_le Lj Lk ->
-  <obj>_{Lk} P |-- <obj>_{Lj} P.
-Proof.
-  intros Le. constructor => i /=. rewrite !monPred_at_forall /=.
-  iIntros "P" (x).
-  iSpecialize ("P" $! (i .= (Lj, x)).^Lk). by rewrite mlens_le_set_inner.
-Qed.
 
 (* Lemma monPred_objectively_commute
   <obj>_{ml1} <obj>_{ml2} P -|- <obj>_{ml2} <obj>_{ml1} P *)
 
-Lemma monPred_objectively_with_exactly_with_idemp (L : MLens I J) (j : J) P :
+Lemma monPred_exactly_with_elim_objectively_with (L : MLens I J) (j : J) P :
   @(L,j) <obj>_{L} P -|- <obj>_{L} P.
 Proof.
   constructor => i /=. rewrite !monPred_at_forall /=.
   setoid_rewrite mlens_set_set. eauto.
 Qed.
 
-Lemma monPred_objectively_with_exactly_with_commute (L : MLens I J) (j : J) P :
+Lemma monPred_objectively_with_into_exactly_with (L : MLens I J) (j : J) P :
   <obj>_{L} P |-- @(L,j) P.
 Proof. constructor => i /=. rewrite monPred_at_forall /=. eauto. Qed.
 
@@ -253,14 +265,23 @@ Proof.
   rewrite -{2}(mlens_set_get L i). eauto.
 Qed.
 
-Lemma monPred_objectively_with_exactly_with (L : MLens I J) (j : J) P :
+Lemma monPred_exactly_with_objectively_with_elim (L : MLens I J) (j : J) P :
   @(L,j) <obj>_{L} P |-- @(L,j) P.
 Proof.
   constructor => i /=. rewrite monPred_at_forall /=.
   setoid_rewrite mlens_set_set. eauto.
 Qed.
 
-Global Instance monPred_objectively_with_objective_with_mono {K}
+Lemma monPred_objectively_with_lens_mono {K} (Lj : MLens I J) (Lk : MLens I K) P :
+  mlens_le Lj Lk ->
+  <obj>_{Lk} P |-- <obj>_{Lj} P.
+Proof.
+  intros Le. constructor => i /=. rewrite !monPred_at_forall /=.
+  iIntros "P" (x).
+  iSpecialize ("P" $! (i .= (Lj, x)).^Lk). by rewrite mlens_le_set_inner.
+Qed.
+
+Global Instance monPred_objectively_with_objective_with_lens_mono {K}
   (Lj : MLens I J) (Lk : MLens I K) P :
   mlens_le Lj Lk ->
   ObjectiveWith Lj (<obj>_{Lk} P).
@@ -272,7 +293,7 @@ Qed.
 Global Instance monPred_objectively_with_objective_with (L : MLens I J) P :
   ObjectiveWith L (<obj>_{L} P).
 Proof.
-  apply monPred_objectively_with_objective_with_mono, mlens_le_reflexive.
+  apply monPred_objectively_with_objective_with_lens_mono, mlens_le_reflexive.
 Qed.
 
 Global Instance monPred_exactly_with_objective_with_mono {K}
@@ -291,3 +312,18 @@ Proof.
   constructor => i /=. by rewrite monPred_at_forall monPred_at_objectively /=.
 Qed.
 End BiProperties.
+
+Section BiEquiv.
+  Context {I : biIndex} {PROP : bi}.
+  Notation monPred := (monPred I PROP).
+  Implicit Type (P Q : monPred).
+
+  Lemma monPred_objectively_with_lens_equiv {J K}
+    (Lj : MLens I J) (Lk : MLens I K) P :
+    mlens_equiv Lj Lk ->
+    <obj>_{Lk} P -|- <obj>_{Lj} P.
+  Proof.
+    intros []. apply bi.equiv_spec.
+    split; by apply monPred_objectively_with_lens_mono.
+  Qed.
+End BiEquiv.
