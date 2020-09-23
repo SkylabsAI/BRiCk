@@ -325,15 +325,14 @@ Section with_cpp.
   (* i don't want to repeat the object-destruction logic which is essentially
      the default destructor. it gets run at the end of every destructor
    *)
-
-  Definition wp_dtor_impl (nm : globname) (body : Stmt)
+  Definition wp_dtor_struct (nm : globname) (st : Struct) (body : Stmt)
              (ti : thread_info) (args : list val)
              (Q : val -> epred) : mpred :=
     match args with
     | Vptr thisp :: rest_vals =>
       bind_base_this (Some thisp) Tvoid (fun ρ =>
         wp (resolve:=resolve) ⊤ ti ρ body
-           (void_return (wp_dtor wpd_members ti ρ nm thisp (|> Q Vvoid))))
+           (void_return (wp_default_dtor ti nm st (_eq thisp) (Q Vundef))))
     | _ => False
     end.
 
@@ -348,7 +347,19 @@ Section with_cpp.
       | _ => False
       end
     | Some (UserImplemented body) =>
-      wp_dtor_impl dtor.(d_class) body ti args Q
+      match resolve.(genv_tu) !! dtor.(d_class) with
+      | Some (Gstruct st) =>
+        wp_dtor_struct dtor.(d_class) st body ti args Q
+      | Some (Gunion u) =>
+        match args with
+        | Vptr thisp :: rest_vals =>
+          bind_base_this (Some thisp) Tvoid (fun ρ =>
+                                               wp (resolve:=resolve) ⊤ ti ρ body
+                                                  (void_return (Q Vundef)))
+        | _ => False
+        end
+      | _ => False
+      end
     end.
 
   Definition dtor_ok (dtor : Dtor) (ti : thread_info) (spec : function_spec)

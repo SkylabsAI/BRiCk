@@ -83,6 +83,45 @@ Section destroy.
 
   Unset Program Cases.
 
+  Program Definition wp_default_dtor_pre (destruct_type : type -d> Loc -d> mpredI -n> mpredI)
+    : globname -d> Struct -d> Loc -d> mpredI -n> mpredI :=
+    λ cls st this, λne Q,
+    let bases :=
+        fold_left (fun Q '(base, _) =>
+                     |> destruct_type (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
+    in
+    let ident := this |-> revert_identity cls bases in
+    fold_left (fun Q '(x,ty,_,_) =>
+                 match drop_qualifiers ty with
+                 | Tnamed nm =>
+                   let l' := _offsetL (_field (resolve:=σ) {| f_type := cls ; f_name := x |}) this  in
+                   |> destruct_type ty l' Q
+                 | _ => Q
+                 end) st.(s_fields) ident.
+  Next Obligation.
+    intros ? ? ? ? ? ? ? ?; simpl.
+    apply fold_left_ne; eauto.
+    { intros ? ? ? ?; repeat case_match =>/=; eauto.
+      rewrite H0. reflexivity. }
+    { apply _at_ne. apply revert_identity_ne.
+      apply fold_left_ne; try done.
+      do 4 intro; repeat case_match => //; subst; f_contractive.
+      apply ofe_mor_car_ne, dist_S; eauto. }
+  Qed.
+
+  Instance wp_default_dtor_contractive : Contractive wp_default_dtor_pre.
+  Proof.
+    intros n f1 f2 Hf cls st this Q.
+    unfold wp_default_dtor_pre; simpl.
+    apply fold_left_ne; eauto.
+    { intros ? ? ? ?; repeat case_match => /=; eauto.
+      rewrite H.
+      f_contractive. eapply Hf. }
+    apply _at_ne. apply revert_identity_ne.
+    apply fold_left_ne; try done.
+    do 4 intro; repeat case_match => /=. rewrite H. f_contractive. apply Hf.
+  Qed.
+
   Program Definition wp_dtor_pre (destruct_type : type -d> Loc -d> mpredI -n> mpredI)
     : type -d> Loc -d> mpredI -n> mpredI :=
     λ t this, λne Q,
@@ -101,18 +140,7 @@ Section destroy.
              | _ => False
              end
            | DtorDefault =>
-             let bases :=
-                 fold_left (fun Q '(base, _) =>
-                              |> destruct_type (Tnamed base) (_offsetL (_base σ cls base) this) Q) st.(s_bases) Q
-             in
-             let ident := this |-> revert_identity cls bases in
-             fold_left (fun Q '(x,ty,_,_) =>
-                          match drop_qualifiers ty with
-                          | Tnamed nm =>
-                            let l' := _offsetL (_field (resolve:=σ) {| f_type := cls ; f_name := x |}) this  in
-                            |> destruct_type ty l' Q
-                          | _ => Q
-                          end) st.(s_fields) ident
+             wp_default_dtor_pre destruct_type cls st this Q
            end
          | Some (Gunion _) => Q
          | Some (Genum t _) => |> destruct_type t this Q
@@ -136,13 +164,7 @@ Section destroy.
       by apply ofe_mor_car_ne, dist_S, HQ.
     }
     by repeat f_equiv.
-    apply fold_left_ne; try done.
-    { intros ? ? ? ?; repeat case_match => //; f_contractive; subst.
-      apply ofe_mor_car_ne, dist_S; eauto. }
-    { apply _at_ne. apply revert_identity_ne.
-      apply fold_left_ne; try done.
-      do 4 intro; repeat case_match => //; subst; f_contractive.
-      apply ofe_mor_car_ne, dist_S; eauto. }
+    apply wp_default_dtor_pre; eauto.
     apply fold_left_ne; try done.
     do 4 intro. rewrite H. eauto.
   Qed.
@@ -155,10 +177,7 @@ Section destroy.
       f_contractive.
       apply Hf.
     }
-    repeat f_equiv; intros Q1 Q2 HQ a;
-      repeat case_match => //; f_contractive;
-      apply dist_S in HQ; rewrite HQ;
-        apply Hf.
+    eapply wp_default_dtor_contractive; eauto.
     apply fold_left_ne; try done.
     do 4 intro. rewrite H. f_contractive. apply Hf.
   Qed.
@@ -177,6 +196,8 @@ Section destroy.
 
   Lemma wp_dtor_unfold_eta t this Q : wp_dtor t this Q ≡ wp_dtor_pre wp_dtor t this Q.
   Proof. apply wp_dtor_unfold. Qed.
+
+  Definition wp_default_dtor := wp_default_dtor_pre wp_dtor.
 
   (* this destructs an object by invoking its destructor
      note: it does *not* free the underlying memory.
@@ -200,10 +221,6 @@ Section destroy.
         end
       | DtorDefault =>
         wp_dtor (Tnamed cls) (_eqv v) Q
-          (* what would i do here?
-           * - i need to define the semantics of a default destructor
-           * - the only complexity with this would be virtual inheritence.
-           *)
       end
     | _ => False
     end.
