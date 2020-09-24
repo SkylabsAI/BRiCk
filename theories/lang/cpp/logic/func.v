@@ -13,7 +13,7 @@ From bedrock Require Import ChargeUtil ChargeCompat.
 From bedrock.lang.cpp Require Import ast semantics spec.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred
-     wp builtins destroy.
+     wp builtins destroy destructors.
 Require Import bedrock.lang.cpp.heap_notations.
 
 Local Set Universe Polymorphism.
@@ -292,35 +292,6 @@ Section with_cpp.
     (* forall each argument, apply to [fs_spec ti] *)
     □ Forall Q : val -> mpred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_ctor ctor ti vals Q.
-
-  Fixpoint wpd_bases (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
-           (dests : list FieldOrBase)
-           (Q : mpred) : mpred :=
-    match dests with
-    | nil => Q
-    | d :: is' =>
-      match d with
-      | Field _
-      | Indirect _ _ => lfalse
-      | _ => wpd (resolve:=resolve) ⊤ ti ρ cls (Vptr this) d
-                (wpd_bases ti ρ cls this is' Q)
-      end
-    end.
-
-  Fixpoint wpd_members
-           (ti : thread_info) (ρ : region) (cls : globname) (this : ptr)
-           (dests : list FieldOrBase)
-           (Q : mpred) : mpred :=
-    match dests with
-    | nil => this |-> revert_identity cls Q
-    | d :: is' =>
-      match d with
-      | This
-      | Base _ =>
-        this |-> revert_identity cls (wpd_bases ti ρ cls this dests Q)
-      | _ => wpd (resolve:=resolve) ⊤ ti ρ cls (Vptr this) d (wpd_members ti ρ cls this is' Q)
-      end
-    end.
 
   (* i don't want to repeat the object-destruction logic which is essentially
      the default destructor. it gets run at the end of every destructor

@@ -509,6 +509,7 @@ Section with_cpp.
     Qed.
   End wpi.
 
+(*
   (** destructors *)
   Parameter wpd
     : forall {resolve:genv} (M : coPset) (ti : thread_info) (ρ : region)
@@ -567,6 +568,7 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wpd.
     Qed.
   End wpd.
+ *)
 
   (** Statements *)
 
