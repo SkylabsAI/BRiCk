@@ -142,7 +142,15 @@ Section destroy.
            | DtorDefault =>
              wp_default_dtor_pre destruct_type cls st this Q
            end
-         | Some (Gunion _) => Q
+         | Some (Gunion _) =>
+           (* Unions are variant types and they are *not* destructed.
+              See http://eel.is/c++draft/class.dtor#14
+              "After executing the body of the destructor ... a destructor for
+               class X calls the destructors for X's direct **non-variant**
+               non-static data members, the destructors for X's non-virtual
+               direct base classes and,..."
+            *)
+           Q
          | Some (Genum t _) => |> destruct_type t this Q
          | _ => False
          end
