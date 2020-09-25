@@ -3,8 +3,6 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-Require Import Coq.Lists.List.
-
 From iris.bi Require Import bi monpred.
 From iris.proofmode Require Import tactics.
 
