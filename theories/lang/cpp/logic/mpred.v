@@ -6,11 +6,7 @@
 Require Import Coq.Lists.List.
 
 From iris.bi Require Import bi monpred.
-From iris.base_logic.lib Require Import
-      fancy_updates invariants cancelable_invariants own.
 From iris.proofmode Require Import tactics.
-
-From bedrock.lang.cpp.logic Require Import pred.
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
@@ -109,7 +105,7 @@ Section Bi.
 
   (* <obj>_{ml} P *)
   Definition monPred_objectively_with (L : MLens I J) P : monPred :=
-    Forall j : J, monPred_exactly_at L j P.
+    (∀ j : J, monPred_exactly_at L j P)%I.
 
   Program Definition monPred_embed
     (L : MLens I J) (P : monpred.monPred J PROP) : monPred :=
@@ -153,7 +149,7 @@ Section Lid_properties.
   Proof. constructor; try done. by move => ?? /= ->. Qed.
 
   Lemma monPred_objectively_with_id_objectively {PROP} (P: monPred I PROP) :
-    <obj> P -|- <obj>_{Lid} P.
+    <obj> P ⊣⊢ <obj>_{Lid} P.
   Proof.
     constructor => i /=. by rewrite monPred_at_forall monPred_at_objectively /=.
   Qed.
@@ -204,26 +200,26 @@ Section objectivelyWith.
   Qed.
 
   Lemma monPred_objectively_with_elim (L : MLens I J) P :
-    <obj>_{L} P |-- P.
+    <obj>_{L} P ⊢ P.
   Proof.
     constructor => i /=. rewrite monPred_at_forall /=.
     rewrite -{2}(mlens_set_get L i). eauto.
   Qed.
 
   Lemma monPred_objective_with_intro_objectively_with (L : MLens I J) P :
-    ObjectiveWith L P -> P |-- <obj>_{L} P.
+    ObjectiveWith L P -> P ⊢ <obj>_{L} P.
   Proof.
     intros OBJ. constructor => i /=. rewrite monPred_at_forall /=.
     iIntros "P" (j). by iApply OBJ.
   Qed.
 
   (* Lemma monPred_objectively_commute
-    <obj>_{ml1} <obj>_{ml2} P -|- <obj>_{ml2} <obj>_{ml1} P *)
+    <obj>_{ml1} <obj>_{ml2} P ⊣⊢ <obj>_{ml2} <obj>_{ml1} P *)
 
   Lemma monPred_objectively_with_lens_mono {K}
     (Lj : MLens I J) (Lk : MLens I K) P :
     Lj .<= Lk ->
-    <obj>_{Lk} P |-- <obj>_{Lj} P.
+    <obj>_{Lk} P ⊢ <obj>_{Lj} P.
   Proof.
     intros Le. constructor => i /=. rewrite !monPred_at_forall /=.
     iIntros "P" (x).
@@ -241,7 +237,7 @@ End objectivelyWith.
 Lemma monPred_objectively_with_lens_equiv {I J K} {PROP}
   (Lj : MLens I J) (Lk : MLens I K) (P : monPred I PROP) :
   Lj .≡ Lk ->
-  <obj>_{Lj} P -|- <obj>_{Lk} P.
+  <obj>_{Lj} P ⊣⊢ <obj>_{Lk} P.
 Proof.
   intros []. apply bi.equiv_spec.
   split; by apply monPred_objectively_with_lens_mono.
@@ -261,7 +257,7 @@ Corollary monPred_objective_with_intro_objectively_with_lens_mono  {I J K} {PROP
   (Lj : MLens I J) (Lk : MLens I K) (P: monPred I PROP) :
   Lj .<= Lk ->
   ObjectiveWith Lk P ->
-  P |-- <obj>_{Lj} P.
+  P ⊢ <obj>_{Lj} P.
 Proof.
   iIntros (Le OBJ). apply monPred_objective_with_intro_objectively_with.
   eapply monPred_objective_with_lens_mono; eauto.
@@ -288,18 +284,18 @@ Section exactlyAt.
   Qed.
 
   Lemma monPred_exactly_at_elim_objectively_with (L : MLens I J) (j : J) P :
-    @(L,j) <obj>_{L} P -|- <obj>_{L} P.
+    @(L,j) <obj>_{L} P ⊣⊢ <obj>_{L} P.
   Proof.
     constructor => i /=. rewrite !monPred_at_forall /=.
     setoid_rewrite mlens_set_set. eauto.
   Qed.
 
   Lemma monPred_objectively_with_into_exactly_at (L : MLens I J) (j : J) P :
-    <obj>_{L} P |-- @(L,j) P.
+    <obj>_{L} P ⊢ @(L,j) P.
   Proof. constructor => i /=. rewrite monPred_at_forall /=. eauto. Qed.
 
   Corollary monPred_exactly_at_objectively_with_elim (L : MLens I J) (j : J) P :
-    @(L,j) <obj>_{L} P |-- @(L,j) P.
+    @(L,j) <obj>_{L} P ⊢ @(L,j) P.
   Proof.
     etrans; last apply monPred_objectively_with_into_exactly_at.
     by rewrite monPred_exactly_at_elim_objectively_with.
