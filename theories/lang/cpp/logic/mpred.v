@@ -94,24 +94,24 @@ Qed.
 Section Bi.
   Context {I J : biIndex} {PROP : bi}.
   Notation monPred := (monPred I PROP).
-  Implicit Type (P Q : monPred).
+  Implicit Type (P Q : monPred) (L : MLens I J).
 
   (* @(ml,j) P *)
-  Program Definition monPred_exactly_at (L : MLens I J) (j : J) P :=
+  Program Definition monPred_exactly_at L (j : J) P :=
     MonPred (λ i, P (i .= (L, j)))%I _.
   Next Obligation. intros ?? P ???. rewrite mlens_set_mono; eauto. Qed.
 
   (* <obj>_{ml} P *)
-  Definition monPred_objectively_with (L : MLens I J) P : monPred :=
+  Definition monPred_objectively_with L P : monPred :=
     (∀ j : J, monPred_exactly_at L j P)%I.
 
-  Program Definition monPred_embed
-    (L : MLens I J) (P : monpred.monPred J PROP) : monPred :=
+  Program Definition monPred2_embed
+    L (P : monpred.monPred J PROP) : monPred :=
     MonPred (λ i, P (i.^L))%I _.
   Next Obligation. intros ? P ???. rewrite mlens_get_mono; eauto. Qed.
 
-  Definition monPred_atleast (L : MLens I J) (j : J) : monPred :=
-    monPred_embed L (monPred_in j).
+  Definition monPred_atleast L (j : J) : monPred :=
+    monPred2_embed L (monPred_in j).
 End Bi.
 
 (* TODO: ml should be TC-searched using the type I and J *)
@@ -121,6 +121,10 @@ Notation "'@(' L , j ')' P" := (monPred_exactly_at L j P)
   (at level 50, format "@( L , j )  P") : bi_scope.
 Notation "'<obj>_{' L '}' P" := (monPred_objectively_with L P)
   (at level 49, format "<obj>_{ L }  P"): bi_scope.
+Notation "'[|' P '|]_{' L '}'" := (monPred2_embed L P)
+  (at level 48, format "[|  P  |]_{ L }"): bi_scope.
+Notation "'|`{' L '}' j" := (monPred_atleast L j)
+  (at level 48, format "|`{ L }  j"): bi_scope.
 
 (* ObjectiveWith respect to J *)
 Class ObjectiveWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
@@ -180,16 +184,20 @@ Proof. intros []. split; by apply monPred_objective_with_lens_mono. Qed.
 Section objectivelyWith.
   Context {I J : biIndex} {PROP : bi}.
   Notation monPred := (monPred I PROP).
-  Implicit Type (P Q : monPred).
+  Implicit Type (P Q : monPred) (L : MLens I J).
 
-  Global Instance monPred_objectively_with_mono (L : MLens I J) :
+  Global Instance monPred2_embed_proper L :
+    Proper (bi_entails ==> bi_entails) (monPred2_embed (PROP:=PROP) L).
+  Proof. intros P Q Eq. constructor. solve_proper. Qed.
+
+  Global Instance monPred_objectively_with_mono L :
     Proper (bi_entails ==> bi_entails)
           (@monPred_objectively_with _ _ PROP L).
   Proof.
     intros P Q EN. constructor => i /=. rewrite !monPred_at_forall /=.
     by setoid_rewrite EN.
   Qed.
-  Global Instance monPred_objectively_with_proper (L : MLens I J) :
+  Global Instance monPred_objectively_with_proper L :
     Proper ((≡) ==> (≡)) (@monPred_objectively_with _ _ PROP L).
   Proof.
     intros P Q EQ.
@@ -197,14 +205,14 @@ Section objectivelyWith.
       iApply (monPred_objectively_with_mono with "P"); eauto; by rewrite EQ.
   Qed.
 
-  Lemma monPred_objectively_with_elim (L : MLens I J) P :
+  Lemma monPred_objectively_with_elim L P :
     <obj>_{L} P ⊢ P.
   Proof.
     constructor => i /=. rewrite monPred_at_forall /=.
     rewrite -{2}(mlens_set_get L i). eauto.
   Qed.
 
-  Lemma monPred_objective_with_intro_objectively_with (L : MLens I J) P :
+  Lemma monPred_objective_with_intro_objectively_with L P :
     ObjectiveWith L P -> P ⊢ <obj>_{L} P.
   Proof.
     intros OBJ. constructor => i /=. rewrite monPred_at_forall /=.
@@ -224,7 +232,7 @@ Section objectivelyWith.
     iSpecialize ("P" $! (i .= (Lj, x)).^Lk). by rewrite mlens_le_set_inner.
   Qed.
 
-  Global Instance monPred_objectively_with_objective_with (L : MLens I J) P :
+  Global Instance monPred_objectively_with_objective_with L P :
     ObjectiveWith L (<obj>_{L} P).
   Proof.
     intros i j. rewrite !monPred_at_forall /=.
@@ -264,16 +272,16 @@ Qed.
 
 Section exactlyAt.
   Context {I J} {PROP}.
-  Implicit Types (P Q: monPred I PROP).
+  Implicit Types (P Q: monPred I PROP) (L : MLens I J).
   (* exactly at *)
-  Global Instance monPred_exactly_at_mono (L : MLens I J) :
+  Global Instance monPred_exactly_at_mono L :
     Proper (sqsubseteq ==> bi_entails ==> bi_entails)
           (@monPred_exactly_at _ _ PROP L).
   Proof.
     intros i1 i2 Lei P Q EN. constructor => i /=.
     rewrite EN mlens_set_mono; eauto.
   Qed.
-  Global Instance monPred_exactly_at_proper (L : MLens I J) j :
+  Global Instance monPred_exactly_at_proper L j :
     Proper ((≡) ==> (≡)) (@monPred_exactly_at _ _ PROP L j).
   Proof.
     intros P Q EQ.
@@ -281,25 +289,25 @@ Section exactlyAt.
       iApply (monPred_exactly_at_mono with "P"); eauto; by rewrite EQ.
   Qed.
 
-  Lemma monPred_exactly_at_elim_objectively_with (L : MLens I J) (j : J) P :
+  Lemma monPred_exactly_at_elim_objectively_with L (j : J) P :
     @(L,j) <obj>_{L} P ⊣⊢ <obj>_{L} P.
   Proof.
     constructor => i /=. rewrite !monPred_at_forall /=.
     setoid_rewrite mlens_set_set. eauto.
   Qed.
 
-  Lemma monPred_objectively_with_into_exactly_at (L : MLens I J) (j : J) P :
+  Lemma monPred_objectively_with_into_exactly_at L (j : J) P :
     <obj>_{L} P ⊢ @(L,j) P.
   Proof. constructor => i /=. rewrite monPred_at_forall /=. eauto. Qed.
 
-  Corollary monPred_exactly_at_objectively_with_elim (L : MLens I J) (j : J) P :
+  Corollary monPred_exactly_at_objectively_with_elim L (j : J) P :
     @(L,j) <obj>_{L} P ⊢ @(L,j) P.
   Proof.
     etrans; last apply monPred_objectively_with_into_exactly_at.
     by rewrite monPred_exactly_at_elim_objectively_with.
   Qed.
 
-  Global Instance monPred_exactly_at_objective_with (L : MLens I J) P j :
+  Global Instance monPred_exactly_at_objective_with L P j :
     ObjectiveWith L (@(L,j) P).
   Proof. intros i j'. by rewrite /= mlens_set_set. Qed.
 End exactlyAt.
@@ -523,4 +531,24 @@ Section bi_prod.
     apply (monPred_objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L)).
     by apply monPred_objective_with_join.
   Qed.
+
+  Lemma monPred2_embed_objective_with_left
+    {PROP: bi} L (P : monPred K PROP) :
+    ObjectiveWith (L.l) ([| P |]_{L.r}).
+  Proof. intros i j. by rewrite /= mlens_get_set /=. Qed.
+
+  Lemma monPred2_embed_objective_with_right
+    {PROP: bi} L (P : monPred J PROP) :
+    ObjectiveWith (L.r) ([| P |]_{L.l}).
+  Proof. intros i k. by rewrite /= mlens_get_set /=. Qed.
+
+  Corollary monPred2_atleast_objective_with_left
+    {PROP: bi} L (k : K) :
+    ObjectiveWith (PROP:=PROP) (L.l) (|`{L.r} k).
+  Proof. by apply monPred2_embed_objective_with_left. Qed.
+
+  Corollary monPred2_atleast_objective_with_right
+    {PROP: bi} L (j : J) :
+    ObjectiveWith (PROP:=PROP) (L.r) (|`{L.l} j).
+  Proof. by apply monPred2_embed_objective_with_right. Qed.
 End bi_prod.
