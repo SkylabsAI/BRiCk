@@ -50,8 +50,8 @@ Section with_cpp.
   Axiom byte_at_objective_with_other :
     forall pa q v, ObjectiveWith L_OTHER (byte_at pa q v).
 
-  Existing Instances byte_at_objective_with_asid
-                     byte_at_objective_with_other.
+  Global Existing Instances byte_at_objective_with_asid
+                            byte_at_objective_with_other.
 End with_cpp.
 End CPP_PHYSICAL.
 
@@ -73,24 +73,19 @@ Section with_cpp.
   Definition page_mapping va q pa : mpred :=
     monPred2_embed L_ASID (page_mapping' va q pa).
 
-  Instance page_mapping_objective_with_other va q pa :
-    ObjectiveWith L_OTHER (page_mapping va q pa).
-  Proof. apply monPred2_embed_objective_with_right. Qed.
-
-  Instance page_mapping_exactly_with_objective_with :
-    Objective (@(L_ASID, asid) (page_mapping va q pa)).
-  Proof.
-    intros.
-    apply monPred_objective_with_id_objective.
-    apply monPred_exactly_with_objective_with_left.
-    apply _.
-  Qed.
-
   Definition vbyte va (v: byte) q : mpred :=
     Exists pa, byte_at pa q v ** page_mapping va q pa.
 
+  Instance page_mapping_objective_with_other va q pa :
+    ObjectiveWith L_OTHER (page_mapping va q pa).
+  Proof. apply _. Qed.
+
+  Instance page_mapping_exactly_with_objective_with :
+    Objective (@(L_ASID, asid) (page_mapping va q pa)).
+  Proof. apply _. Qed.
+
   Instance vbyte_objective_with_other va v q :
     ObjectiveWith L_OTHER (vbyte va v q).
-  Abort.
+  Proof. apply _. Qed.
 End with_cpp.
 End ASID_THEORY.
