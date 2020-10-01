@@ -69,7 +69,8 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
     Definition mpred_unfold : mpredO -n> mPrePredO :=
       OfeMor mpred_unfold_base.
 
-    (* Program Definition mpred_fold_base (P : mPrePredO)
+    (* TODO: fold-ing requires monotonicity of mPrePredO.
+    Program Definition mpred_fold_base (P : mPrePredO)
        : mpredO :=
       MonPred (fun i => iProp_fold (P i)) _.
     Next Obligation.
