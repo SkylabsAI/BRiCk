@@ -65,6 +65,7 @@ Module Type LOCATIONS.
                  the type?
    *)
   Parameter offset : Set.
+  Definition offsets := list offset.
   (* [o_field cls n] represents [x.n] for [x : cls] *)
   Parameter o_field : (* type-name: *) globname -> ident -> offset.
   (* [o_sub ty n] represents [x + n] for [x : cls*] *)

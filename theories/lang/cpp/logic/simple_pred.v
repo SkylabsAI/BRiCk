@@ -45,12 +45,13 @@ Module PTR_CONCR <: LOCATIONS.
   (* Add offsets from Loc. *)
   Inductive offset_ :=
   | o_field_ : (* type-name: *) globname -> ident -> offset_
-  | o_sub_ : type -> Z -> offset_
-  | o_dot_ : offset_ -> offset_ -> offset_.
+  | o_sub_ : type -> Z -> offset_.
+  (* | o_dot_ : offset_ -> offset_ -> offset_. *)
   Definition offset := offset_.
   Definition o_field := o_field_.
   Definition o_sub := o_sub_.
-  Definition o_dot := o_dot_.
+  Definition offsets := list offset.
+  Definition o_dot : offsets -> offsets -> offsets := (++).
 
   Instance : EqDecision offset.
   Proof. solve_decision. Qed.
@@ -59,6 +60,8 @@ Module PTR_CONCR <: LOCATIONS.
   Declare Instance offset_countable : Countable offset.
 
   Parameter offset_to_N : offset -> N.
+  Definition offsets_to_N : offsets -> N :=
+    λ o, foldr N.add 0%N (map offset_to_N o).
 
   (** C++ provides a distinguished pointer [nullptr] that is *never
       dereferenable*
@@ -73,18 +76,19 @@ Module PTR_CONCR <: LOCATIONS.
   TODO: consider if both operations create objects, but the first only
   creates character arrays, while the second creates additional overlapping objects.
   *)
-  | mk_ptr (a : alloc_id) (oid : object_id) (o : offset).
+  | mk_ptr (a : alloc_id) (oid : object_id) (o : offsets).
   Definition ptr := ptr_.
   Definition nullptr := nullptr_.
 
-  Instance ptr_eq_dec : EqDecision ptr.
+  Instance ptr_eq_dec' : EqDecision ptr.
   Proof. solve_decision. Qed.
+  Instance ptr_eq_dec : EqDecision ptr := ptr_eq_dec'.
 
   Declare Instance ptr_countable : Countable ptr.
   Definition offset_ptr (o : offset) (p : ptr) : ptr :=
     match p with
     | nullptr_ => nullptr_
-    | mk_ptr a oid o' => mk_ptr a oid (o_dot o' o)
+    | mk_ptr a oid o' => mk_ptr a oid (o_dot o' [o])
     end.
 
 End PTR_CONCR.
@@ -211,6 +215,7 @@ End SimpleCPP_VIRTUAL.
 
 Module SimpleCPP.
   Include SimpleCPP_VIRTUAL.
+  Import PTR_CONCR.
 
   Definition runtime_val := runtime_val'.
 
@@ -258,7 +263,7 @@ Module SimpleCPP.
       | nullptr_ => True
       | mk_ptr aId oId o =>
         (* XXX this is not enough *)
-        ∃ sz, [| (offset_to_N o <= sz)%N |] ** live_alloc aId sz q
+        ∃ sz, [| (offsets_to_N o <= sz)%N |] ** live_alloc aId sz q
       end.
 
     Instance valid_ptr_affine p q : Affine (valid_ptr p q) := _.
