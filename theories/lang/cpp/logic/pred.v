@@ -83,9 +83,12 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
       OfeMor mpred_fold_base.
 
     Definition mpred_fold_unfold :
-      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P := iProp_fold_unfold.
+      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P.
+    Abort.
+
     Definition mpred_unfold_fold :
-      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P := iProp_unfold_fold. *)
+      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P.
+    Abort. *)
 
     (* TODO: generalize to a telescope version of -d> *)
     (* With something like -td> below:
