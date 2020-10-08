@@ -110,8 +110,7 @@ Section Bi.
   Definition monPred_objectively_with L P : monPred :=
     (∀ j : J, monPred_exactly_at L j P)%I.
 
-  Program Definition monPred2_embed
-    L (P : monpred.monPred J PROP) : monPred :=
+  Program Definition monPred2_embed L (P : monpred.monPred J PROP) : monPred :=
     MonPred (λ i, P (i.^L))%I _.
   Next Obligation. intros ? P ???. rewrite mlens_get_mono; eauto. Qed.
 
