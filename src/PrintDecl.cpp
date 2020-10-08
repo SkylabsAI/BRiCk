@@ -339,6 +339,7 @@ public:
                          ClangPrinter &cprint, const ASTContext &ctxt) {
         assert(decl->getTagKind() == TagTypeKind::TTK_Class ||
                decl->getTagKind() == TagTypeKind::TTK_Struct);
+
         auto &layout = ctxt.getASTRecordLayout(decl);
         print.ctor("Dstruct");
         cprint.printTypeName(decl, print);
@@ -767,10 +768,9 @@ public:
 
     bool VisitClassTemplateDecl(const ClassTemplateDecl *decl,
                                 CoqPrinter &print, ClangPrinter &cprint,
-                                const ASTContext &) {
+                                const ASTContext &ctxt) {
         // we only print specializations
-        assert(false && "ClassTemplateDecl");
-        return false;
+        return this->Visit(decl->getTemplatedDecl(), print, cprint, ctxt);
     }
 
     bool VisitFriendDecl(const FriendDecl *, CoqPrinter &, ClangPrinter &,

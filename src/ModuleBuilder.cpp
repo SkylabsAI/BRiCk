@@ -352,7 +352,8 @@ public:
         }
     }
 
-    void VisitClassTemplateDecl(const ClassTemplateDecl *decl, bool) {
+    void VisitClassTemplateDecl(const ClassTemplateDecl *decl, bool p) {
+        this->Visit(decl->getTemplatedDecl(), p);
         for (auto i : decl->specializations()) {
             this->Visit(i, true);
         }

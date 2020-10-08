@@ -419,18 +419,34 @@ ClangPrinter::printValCat(const Expr *d, CoqPrinter &print) {
 #endif
     // note(gmm): Classify doesn't work on dependent types which occur in templates
     // that clang can't completely eliminate.
-
-    auto Class = d->Classify(*this->context_);
-    if (Class.isLValue()) {
-        print.output() << "Lvalue";
-    } else if (Class.isXValue()) {
+    if (d->isXValue()) {
         print.output() << "Xvalue";
-    } else if (Class.isPRValue()) {
-        print.output() << "Prvalue";
-    } else {
-        assert(false);
-        //fatal("unknown value category");
+    } else if (d->isLValue()) {
+        print.output() << "Lvalue";
+    } else if (d->isPRValue()) {
+        print.output() << "Rvalue";
     }
+
+#if 0
+    if (not d->isTypeDependent()) {
+
+        auto Class = d->Classify(*this->context_);
+        if (Class.isLValue()) {
+            print.output() << "Lvalue";
+        } else if (Class.isXValue()) {
+            print.output() << "Xvalue";
+        } else if (Class.isRValue()) {
+            print.output() << "Rvalue";
+        } else {
+            assert(false);
+            //fatal("unknown value category");
+        }
+    } else {
+        llvm::errs() << d->isLValue() << d->isXValue() << d->isRValue()
+                     << "\n";
+        print.output() << "?value";
+    }
+#endif
 }
 
 void
