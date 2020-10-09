@@ -33,7 +33,7 @@ Local Lemma length__Z_to_bytes {σ} n sgn v :
   length (_Z_to_bytes n (values.byte_order σ) sgn v) = n.
 Proof. apply _Z_to_bytes_length. Qed.
 
-Module PTR_CONCR <: LOCATIONS.
+Module LOCATIONS_CONCR <: LOCATIONS.
   Definition alloc_id := N.
   Global Instance : EqDecision alloc_id := _.
   Global Instance : Countable alloc_id := _.
@@ -91,12 +91,12 @@ Module PTR_CONCR <: LOCATIONS.
     | mk_ptr a oid o' => mk_ptr a oid (o_dot o' [o])
     end.
 
-End PTR_CONCR.
+End LOCATIONS_CONCR.
 
 (** soundness proof *)
 
 Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
-  Import PTR_CONCR.
+  Import LOCATIONS_CONCR.
   Implicit Types (p : ptr).
 
   Definition addr : Set := N.
@@ -188,7 +188,7 @@ End SimpleCPP_BASE.
 (* TODO: make this a [Module Type] and provide an instance for it. *)
 Module SimpleCPP_VIRTUAL.
   Include SimpleCPP_BASE.
-  Import PTR_CONCR.
+  Import LOCATIONS_CONCR.
 
   Section with_cpp.
     Context `{Σ : cpp_logic}.
@@ -215,7 +215,7 @@ End SimpleCPP_VIRTUAL.
 
 Module SimpleCPP.
   Include SimpleCPP_VIRTUAL.
-  Import PTR_CONCR.
+  Import LOCATIONS_CONCR.
 
   Definition runtime_val := runtime_val'.
 
@@ -797,4 +797,4 @@ Module SimpleCPP.
 End SimpleCPP.
 
 Module Type SimpleCPP_INTF := LOCATIONS <+ SimpleCPP_BASE <+ CPP_LOGIC.
-Module L : SimpleCPP_INTF := PTR_CONCR <+ SimpleCPP.
+Module L : SimpleCPP_INTF := LOCATIONS_CONCR <+ SimpleCPP.
