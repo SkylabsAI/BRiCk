@@ -35,11 +35,11 @@ Proof. apply _Z_to_bytes_length. Qed.
 
 Module LOCATIONS_CONCR <: LOCATIONS.
   Definition alloc_id := N.
-  Global Instance : EqDecision alloc_id := _.
+  Global Instance alloc_id_eq_dec : EqDecision alloc_id := _.
   Global Instance : Countable alloc_id := _.
 
   Definition object_id := N.
-  Global Instance : EqDecision object_id := _.
+  Global Instance object_id_eq_dec : EqDecision object_id := _.
   Global Instance : Countable object_id := _.
 
   (* Add offsets from Loc. *)
@@ -53,11 +53,12 @@ Module LOCATIONS_CONCR <: LOCATIONS.
   Definition offsets := list offset.
   Definition o_dot : offsets -> offsets -> offsets := (++).
 
-  Instance : EqDecision offset.
+  Instance offset_eq_dec : EqDecision offset.
   Proof. solve_decision. Qed.
 
   (* XXX Ain't nobody got time for this *)
-  Declare Instance offset_countable : Countable offset.
+  Axiom offset_countable : Countable offset.
+  Existing Instance offset_countable.
 
   Parameter offset_to_N : offset -> N.
   Definition offsets_to_N : offsets -> N :=
@@ -91,6 +92,7 @@ Module LOCATIONS_CONCR <: LOCATIONS.
     | mk_ptr a oid o' => mk_ptr a oid (o_dot o' [o])
     end.
 
+  Include LOCATIONS_VAL_MIXIN.
 End LOCATIONS_CONCR.
 
 (** soundness proof *)
@@ -317,9 +319,6 @@ Module SimpleCPP.
       Proof. by rewrite/aptr fmap_length seq_length. Qed.
       Lemma length_cptr a : length (cptr a) = POINTER_BYTES.
       Proof. by rewrite /cptr length_Z_to_bytes. Qed.
-      Axiom hack : PTR_API_FULL_AXIOM.ptr = ptr.
-      Definition cast_ptr : PTR_API_FULL_AXIOM.ptr -> ptr.
-      Proof. by destruct hack. Qed.
 
       (** WRT pointer equality, see https://eel.is/c++draft/expr.eq#3 *)
       Definition encodes (t : type) (v : val) (vs : list runtime_val) : mpred :=
@@ -351,10 +350,10 @@ Module SimpleCPP.
           match v with
           | Vptr p =>
             (* XXX aaargh, this is a different pointer. *)
-            if decide (cast_ptr p = nullptr) then
+            if decide (p = nullptr) then
               [| vs = cptr 0 |]
             else
-              [| vs = aptr (cast_ptr p) |]
+              [| vs = aptr (p) |]
           | _ => lfalse
           end
         | Tfunction _ _
@@ -362,8 +361,8 @@ Module SimpleCPP.
         | Trv_reference _ =>
           match v with
           | Vptr p =>
-            [| cast_ptr p <> nullptr |] **
-            [| vs = aptr (cast_ptr p) |]
+            [| p <> nullptr |] **
+            [| vs = aptr (p) |]
           | Vundef => [| length vs = POINTER_BYTES |]
           | _ => lfalse
           end
@@ -796,5 +795,5 @@ Module SimpleCPP.
 
 End SimpleCPP.
 
-Module Type SimpleCPP_INTF := LOCATIONS <+ SimpleCPP_BASE <+ CPP_LOGIC.
+Module Type SimpleCPP_INTF := LOCATIONS_FULL_API <+ SimpleCPP_BASE <+ CPP_LOGIC.
 Module L : SimpleCPP_INTF := LOCATIONS_CONCR <+ SimpleCPP.

@@ -22,6 +22,19 @@ Local Close Scope nat_scope.
 Local Open Scope general_if_scope.
 Local Open Scope Z_scope.
 
+(** * Raw bytes
+    Raw bytes represent the low-level view of data.
+    [raw_byte] abstracts over the internal structure of this low-level view of data.
+    E.g. in the [simple_pred] model, [raw_byte] would be instantiated with [runtime_val].
+
+    [raw_int_byte] is a raw byte that is a concrete integer values (i.e. not a pointer fragment or poison).
+ *)
+Parameter raw_byte : Set.
+Parameter raw_byte_eq_dec : EqDecision raw_byte.
+Existing Instance raw_byte_eq_dec.
+
+Axiom raw_int_byte : N -> raw_byte.
+
 Module Type LOCATIONS.
   (** * Locations.
 
@@ -74,46 +87,34 @@ Module Type LOCATIONS.
   (** combine an offset and a pointer to get a new pointer
    *)
   Parameter offset_ptr : offset -> ptr -> ptr.
-
 End LOCATIONS.
 
-Module Type PTR_API_FULL := LOCATIONS.
-Declare Module PTR_API_FULL_AXIOM : PTR_API_FULL.
-Export PTR_API_FULL_AXIOM.
+Module Type LOCATIONS_VAL_MIXIN (Import L : LOCATIONS).
+  (** * values
+      Abstract C++ runtime values come in two flavors.
+      - integers
+      - pointers
+      There is also a distinguished undefined element [Vundef] that
+      models uninitialized values. Operations on [Vundef] are all
+      undefined behavior.
+      [Vraw] (a raw byte) represents the low-level bytewise view of data.
+      See [logic/layout.v] for more axioms about it.
+  *)
+  Variant val : Set :=
+  | Vint (_ : Z)
+  | Vptr (_ : ptr)
+  | Vraw (_ : raw_byte)
+  | Vundef
+  .
 
-(** * Raw bytes
-    Raw bytes represent the low-level view of data.
-    [raw_byte] abstracts over the internal structure of this low-level view of data.
-    E.g. in the [simple_pred] model, [raw_byte] would be instantiated with [runtime_val].
+  Definition val_dec : forall a b : val, {a = b} + {a <> b}.
+  Proof. solve_decision. Defined.
+  Instance val_eq_dec : EqDecision val := val_dec.
+End LOCATIONS_VAL_MIXIN.
 
-    [raw_int_byte] is a raw byte that is a concrete integer values (i.e. not a pointer fragment or poison).
- *)
-Parameter raw_byte : Set.
-Parameter raw_byte_eq_dec : EqDecision raw_byte.
-Existing Instance raw_byte_eq_dec.
-
-Axiom raw_int_byte : N -> raw_byte.
-
-(** * values
-    Abstract C++ runtime values come in two flavors.
-    - integers
-    - pointers
-    There is also a distinguished undefined element [Vundef] that
-    models uninitialized values. Operations on [Vundef] are all
-    undefined behavior.
-    [Vraw] (a raw byte) represents the low-level bytewise view of data.
-    See [logic/layout.v] for more axioms about it.
- *)
-Variant val : Set :=
-| Vint (_ : Z)
-| Vptr (_ : ptr)
-| Vraw (_ : raw_byte)
-| Vundef
-.
-
-Definition val_dec : forall a b : val, {a = b} + {a <> b}.
-Proof. solve_decision. Defined.
-Instance: EqDecision val := val_dec.
+Module Type LOCATIONS_FULL_API := LOCATIONS <+ LOCATIONS_VAL_MIXIN.
+Declare Module LOCATIONS_FULL_API_AXIOM : LOCATIONS_FULL_API.
+Export LOCATIONS_FULL_API_AXIOM.
 
 (** wrappers for constructing certain values *)
 Definition Vchar (a : Ascii.ascii) : val :=
