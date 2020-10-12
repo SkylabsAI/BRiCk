@@ -525,6 +525,16 @@ Section bi_prod.
             , objective_with_join.
   Qed.
 
+  Global Instance objective_with_split_l L P
+    `{!ObjectiveWith L P} :
+    ObjectiveWith (L.l) P.
+  Proof. apply (objective_with_lens_mono _ L). apply _. apply mlens_le_left. Qed.
+
+  Global Instance objective_with_split_r L P
+    `{!ObjectiveWith L P} :
+    ObjectiveWith (L.r) P.
+  Proof. apply (objective_with_lens_mono _ L). apply _. apply mlens_le_right. Qed.
+
   Global Instance monPred2_embed_objective_with_left L (P : monPred K PROP) :
     ObjectiveWith (L.l) ([| P |]_{L.r}).
   Proof. intros i j. by rewrite /= mlens_get_set /=. Qed.
