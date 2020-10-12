@@ -602,13 +602,13 @@ Module Type Expr.
 
        https://eel.is/c++draft/expr.delete
      *)
-    Axiom wp_prval_delete : forall delete_fn e ty dtor destroyed_type Q,
+    Axiom wp_prval_delete : forall delete_fn e ty destroyed_type Q,
         (* call the destructor on the object, and then call delete_fn *)
         wp_prval e (fun vp free =>
-          destruct_val destroyed_type vp dtor
+          destruct_val destroyed_type vp
               (Exists da, _global delete_fn.1 &~ da **
                fspec delete_fn.2 ti (Vptr da) (vp :: nil) (fun v => Q v free)))
-        |-- wp_prval (Edelete false (Some delete_fn) e destroyed_type dtor ty) Q.
+        |-- wp_prval (Edelete false (Some delete_fn) e destroyed_type ty) Q.
 
 
     (** temporary expressions
@@ -659,13 +659,13 @@ Module Type Expr.
       |-- wp_init ty a (Ebind_temp e dtor ty) Q.
        ]]
      *)
-    Axiom wp_prval_materialize : forall ty e dtor Q,
+    Axiom wp_prval_materialize : forall ty e Q,
       (Forall a : val,
       let raw_type := erase_qualifiers ty in
       _at (_eqv a) (uninitR raw_type 1) -*
           wp_init ty a e (fun free =>
-                            Q a (destruct_val ty a (Some dtor) (_at (_eqv a) (anyR raw_type 1) ** free))))
-      |-- wp_prval (Ebind_temp e dtor ty) Q. (* the destructor isn't technically needed anymore *)
+                            Q a (destruct_val ty a (_at (_eqv a) (anyR raw_type 1) ** free))))
+      |-- wp_prval (Ebind_temp e ty) Q. (* the destructor isn't technically needed anymore *)
 
     Axiom wp_pseudo_destructor : forall e ty Q,
         wp_prval e Q

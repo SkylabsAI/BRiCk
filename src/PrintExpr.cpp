@@ -871,8 +871,6 @@ public:
                                    const ASTContext&) {
         print.ctor("Ebind_temp");
         cprint.printExpr(expr->getSubExpr(), print);
-        print.output() << fmt::nbsp;
-        cprint.printGlobalName(expr->getTemporary()->getDestructor(), print);
         done(expr, print, cprint);
     }
 

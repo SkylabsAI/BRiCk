@@ -1,5 +1,5 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
+ * Copyright (C) BedRock Systems Inc. 2019-2020 Gregory Malecha
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
@@ -16,27 +16,15 @@ Require Import Coq.ZArith.ZArith_base.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.values.
 
-(* The AST includes [Ebind_temp] nodes that contain destructor information
- * however, these nodes are embedded in the sub-expression rather than in the
- * creating node.
- *
- * This function extracts the destructor information from [Ebind_temp] and
- * returns it along with the child node if it exists.
- *)
-Fixpoint destructor_for (e : Expr) : Expr * option obj_name :=
-  match e with
-  | Ebind_temp e dtor _ => (e, Some dtor)
-  | Eandclean e _ => destructor_for e
-  | _ => (e, None)
-  end.
-
 (* if an expression is being constructed into an object not owned by
  * the lexical scope of this object, then we won't be in charge of
  * running the destructor
  *)
-Definition not_mine (e : Expr) : Expr :=
-  match destructor_for e with
-  | (a,_) => a
+Fixpoint not_mine (e : Expr) : Expr :=
+  match e with
+  | Ebind_temp e _ => e
+  | Eandclean e _ => not_mine e
+  | _ => e
   end.
 
 (* this function determines whether the type is an aggregate type, i.e.

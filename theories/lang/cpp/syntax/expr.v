@@ -166,11 +166,11 @@ Inductive Expr : Set :=
        (alloc_ty : type)
        (array_size : option Expr) (init : option Expr) (_ : type)
 | Edelete (is_array : bool) (delete_fn : option (obj_name * type)) (arg : Expr)
-          (deleted_type : type) (dtor : option obj_name) (_ : type)
+          (deleted_type : type) (_ : type)
 
 | Eandclean (_ : Expr) (_ : type)
 | Ematerialize_temp (_ : Expr) (_ : type)
-| Ebind_temp (_ : Expr) (_ : obj_name) (_ : type)
+| Ebind_temp (_ : Expr) (_ : type)
 
 | Ebuiltin (_ : BuiltinFn) (_ : type)
 | Eatomic (_ : AtomicOp) (_ : list (ValCat * Expr)) (_ : type)
