@@ -739,12 +739,8 @@ public:
         print.ctor(
             "Dnamespace") /* << "\"" << decl->getNameAsString() << "\"" */
             << fmt::line;
-        print.begin_list();
-        for (auto d : decl->decls()) {
-            cprint.printDecl(d, print);
-            print.cons();
-        }
-        print.end_list();
+        print.list(decl->decls(),
+                   [&](auto &print, auto d) { cprint.printDecl(d, print); });
         print.end_ctor();
         return true;
     }
@@ -764,14 +760,11 @@ public:
         }
         print.output() << fmt::nbsp;
 
-        print.begin_list();
-        for (auto i : decl->enumerators()) {
-            print.output() << fmt::line << "(\"" << i->getNameAsString()
-                           << "\"," << fmt::nbsp << "("
-                           << i->getInitVal().getExtValue() << ")%Z)";
-            print.cons();
-        }
-        print.end_list();
+        print.list(decl->enumerators(), [&cprint](auto &print, auto i) {
+            print.output() << "(\"" << i->getNameAsString() << "\","
+                           << fmt::nbsp << "(" << i->getInitVal().getExtValue()
+                           << ")%Z)";
+        });
 
         print.end_ctor();
         return true;
