@@ -279,11 +279,11 @@ Section with_cpp.
       match resolve.(genv_tu).(globals) !! ctor.(c_class) with
       | Some (Gstruct st) =>
         let (inits, body) := default_ctor ctor.(c_class) st in
-        wp_ctor_impl ctor.(c_class) nil inits body ti args Q
+        wp_ctor_impl ctor.(c_class) ctor.(c_params) inits body ti args Q
       | _ => False
       end
     | Some (UserImplemented (inits, body)) =>
-      wp_ctor_impl ctor.(c_class) nil inits body ti args Q
+      wp_ctor_impl ctor.(c_class) ctor.(c_params) inits body ti args Q
     end.
 
   Definition ctor_ok (ctor : Ctor) (ti : thread_info) (spec : function_spec)
@@ -325,8 +325,7 @@ Section with_cpp.
         match args with
         | Vptr thisp :: rest_vals =>
           bind_base_this (Some thisp) Tvoid (fun ρ =>
-                                               wp (resolve:=resolve) ⊤ ti ρ body
-                                                  (void_return (Q Vundef)))
+             wp (resolve:=resolve) ⊤ ti ρ body (void_return (Q Vundef)))
         | _ => False
         end
       | _ => False
