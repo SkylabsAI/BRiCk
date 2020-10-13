@@ -289,12 +289,9 @@ public:
         print.ctor("Ecall");
         cprint.printExpr(expr->getCallee(), print);
         print.output() << fmt::line;
-        print.begin_list();
-        for (auto i : expr->arguments()) {
+        print.list(expr->arguments(), [&cprint](auto& print, auto i) {
             cprint.printExprAndValCat(i, print);
-            print.cons();
-        }
-        print.end_list();
+        });
         done(expr, print, cprint);
     }
 
@@ -523,12 +520,10 @@ public:
         print.ctor("Econstructor");
         // print.output() << expr->isElidable() << fmt::nbsp;
         cprint.printGlobalName(expr->getConstructor(), print);
-        print.output() << fmt::nbsp << fmt::lparen;
-        for (auto i : expr->arguments()) {
+
+        print.list(expr->arguments(), [&cprint](auto& print, auto i) {
             cprint.printExprAndValCat(i, print);
-            print.cons();
-        }
-        print.end_list();
+        });
         //print.output() << fmt::nbsp << expr->isElidable();
         done(expr, print, cprint);
     }
@@ -606,12 +601,10 @@ public:
             assert(false && "no method and not a binary operator");
         }
 
-        print.output() << fmt::nbsp << fmt::lparen;
-        for (auto i : expr->arguments()) {
+        print.output() << fmt::nbsp;
+        print.list(expr->arguments(), [&cprint](auto& print, auto i) {
             cprint.printExprAndValCat(i, print);
-            print.cons();
-        }
-        print.end_list();
+        });
         done(expr, print, cprint);
     }
 
@@ -651,12 +644,9 @@ public:
                            ClangPrinter& cprint, const ASTContext&) {
         print.ctor("Einitlist");
 
-        print.begin_list();
-        for (auto i : expr->inits()) {
+        print.list(expr->inits(), [&cprint](auto& print, auto i) {
             cprint.printExpr(i, print);
-            print.cons();
-        }
-        print.end_list() << fmt::nbsp;
+        }) << fmt::nbsp;
 
         if (expr->getArrayFiller()) {
             print.some();
@@ -740,14 +730,10 @@ public:
             print.none();
         }
 
-        print.begin_list();
-        for (auto arg : expr->placement_arguments()) {
+        print.list(expr->placement_arguments(), [&cprint](auto& print,
+                                                          auto arg) {
             cprint.printExprAndValCat(arg, print);
-            print.cons();
-        }
-        print.end_list();
-
-        print.output() << fmt::nbsp;
+        }) << fmt::nbsp;
 
         cprint.printQualType(expr->getAllocatedType(), print);
 
@@ -873,12 +859,9 @@ public:
         cprint.printGlobalName(expr->getConstructor(), print);
         print.output() << fmt::nbsp;
 
-        print.begin_list();
-        for (auto i : expr->arguments()) {
+        print.list(expr->arguments(), [&cprint](auto& print, auto i) {
             cprint.printExprAndValCat(i, print);
-            print.cons();
-        }
-        print.end_list();
+        });
 
         //print.output() << fmt::nbsp << expr->isElidable();
 
