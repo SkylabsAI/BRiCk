@@ -125,10 +125,10 @@ Notation "'@(' L , j ')' P" := (monPred_exactly_at L j P)
   (at level 50, format "@( L , j )  P") : bi_scope.
 Notation "'<obj>_{' L '}' P" := (monPred_objectively_with L P)
   (at level 49, format "<obj>_{ L }  P"): bi_scope.
-Notation "'[|' P '|]_{' L '}'" := (monPred2_embed L P)
-  (at level 48, format "[|  P  |]_{ L }"): bi_scope.
-Notation "'|`{' L '}' j" := (monPred_atleast L j)
-  (at level 48, format "|`{ L }  j"): bi_scope.
+Notation "'||' P '||_{' L '}'" := (monPred2_embed L P)
+  (at level 48, format "||  P  ||_{ L }"): bi_scope.
+Notation "'⊒{' L '}' j" := (monPred_atleast L j)
+  (at level 48, format "⊒{ L }  j"): bi_scope.
 
 (* ObjectiveWith respect to J *)
 Class ObjectiveWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
@@ -536,19 +536,19 @@ Section bi_prod.
   Proof. apply (objective_with_lens_mono _ L). apply _. apply mlens_le_right. Qed.
 
   Global Instance monPred2_embed_objective_with_left L (P : monPred K PROP) :
-    ObjectiveWith (L.l) ([| P |]_{L.r}).
+    ObjectiveWith (L.l) (|| P ||_{L.r}).
   Proof. intros i j. by rewrite /= mlens_get_set /=. Qed.
 
   Global Instance monPred2_embed_objective_with_right L (P : monPred J PROP) :
-    ObjectiveWith (L.r) ([| P |]_{L.l}).
+    ObjectiveWith (L.r) (|| P ||_{L.l}).
   Proof. intros i k. by rewrite /= mlens_get_set /=. Qed.
 
-  Corollary monPred2_atleast_objective_with_left L (k : K) :
-    ObjectiveWith (PROP:=PROP) (L.l) (|`{L.r} k).
+  Corollary monPred_atleast_objective_with_left L (k : K) :
+    ObjectiveWith (PROP:=PROP) (L.l) (⊒{L.r} k).
   Proof. apply _. Qed.
 
-  Corollary monPred2_atleast_objective_with_right L (j : J) :
-    ObjectiveWith (PROP:=PROP) (L.r) (|`{L.l} j).
+  Corollary monPred_atleast_objective_with_right L (j : J) :
+    ObjectiveWith (PROP:=PROP) (L.r) (⊒{L.l} j).
   Proof. apply _. Qed.
 End bi_prod.
 
@@ -556,6 +556,15 @@ Section objectiveWith_other.
   Context {I J : biIndex} {PROP : bi}.
   Local Notation monPred := (monPred I PROP).
   Implicit Types (L : MLens I J) (P Q : monPred).
+
+  Global Instance monPred_atleast_persistent L i : Persistent (⊒{L} i : monPred)%I.
+  Proof. constructor => i' /=. rewrite monPred_at_persistently /= monPred_at_in. eauto. Qed.
+  Global Instance monPred_atleast_timeless L i : Timeless (⊒{L} i : monPred)%I.
+  Proof.
+    constructor => i' /=.
+    rewrite monPred_at_later /= monPred_at_except_0 /=!monPred_at_in.
+    by iIntros ">$".
+  Qed.
 
   Global Instance embed_objective_with L (P : PROP) : ObjectiveWith L ⎡P⎤.
   Proof. intros ??. by rewrite !monPred_at_embed. Qed.
