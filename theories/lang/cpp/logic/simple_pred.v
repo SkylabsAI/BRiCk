@@ -261,14 +261,29 @@ Module SimpleCPP.
           destruct v; try refine _.
         - case_decide; refine _.
         - destruct z.
-          Set Typeclasses Debug.
+        (* Transparent only_provable. *)
+        (* lazy beta delta [only_provable bi_affinely bi_emp mpredI uPredI]. *)
+        apply: only_provable_persistent.
+          all: destruct p.
+          Transparent only_provable.
+          Typeclasses Opaque only_provable.
+          Opaque only_provable.
+          Typeclasses Opaque bi_pure.
+          apply _.
+          apply _.
+          +
           apply _.
           Undo.
           Transparent only_provable.
           Typeclasses Opaque only_provable.
           Opaque only_provable.
           Fail apply _.
-          all: repeat case_match; refine _.
+          apply: only_provable_persistent.
+          Undo.
+          (* unfold decide, decide_rel, RelDecision_instance_0. *)
+          lazy [val_dec]; simpl. apply _.
+          lazy [val_dec]. simpl. refine _.
+          lazy [val_dec]. simpl. refine _.
       Qed.
 
       Global Instance encodes_timeless : forall t v a, Timeless (encodes t v a).
