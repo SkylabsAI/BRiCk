@@ -260,16 +260,22 @@ Module SimpleCPP.
         intros; destruct (erase_qualifiers t); intros;
           destruct v; try refine _.
         - case_decide; refine _.
-        - destruct z; refine _.
-          destruct p; refine _.
+        - destruct z.
+          Set Typeclasses Debug.
+          apply _.
+          Undo.
+          Transparent only_provable.
+          Typeclasses Opaque only_provable.
+          Opaque only_provable.
+          Fail apply _.
+          all: repeat case_match; refine _.
       Qed.
 
       Global Instance encodes_timeless : forall t v a, Timeless (encodes t v a).
       Proof.
         intros. unfold encodes. destruct (erase_qualifiers t); destruct v; refine _.
         - case_decide; refine _.
-        - destruct z; refine _.
-          destruct p; refine _.
+        - repeat case_match; refine _.
       Qed.
 
       Local Hint Resolve bi.False_elim : core.
