@@ -11,8 +11,7 @@
     - the memory model is simplified from the standard C++ memory
       model.
  *)
-From Coq.Classes Require Import
-     RelationClasses Morphisms.
+Require Import bedrock.lang.prelude.base.
 
 From iris.base_logic.lib Require Export iprop.
 Require Import iris.bi.monpred.
@@ -25,8 +24,6 @@ Require Export bedrock.lang.bi.prelude.
 Export ChargeNotation.
 
 From bedrock.lang.cpp Require Import ast semantics.
-
-Set Default Proof Using "Type".
 
 Module Type CPP_LOGIC_CLASS_BASE.
   Parameter cppG : gFunctors -> Type.
@@ -129,6 +126,10 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
     Global Existing Instances valid_ptr_persistent valid_ptr_affine valid_ptr_timeless.
 
     Axiom valid_ptr_nullptr : |-- valid_ptr nullptr.
+
+    (** Formalizes the notion of "provides storage",
+    http://eel.is/c++draft/intro.object#def:provides_storage *)
+    Parameter provides_storage : ptr -> ptr -> type -> mpred.
 
     (**
     Typed points-to predicate. Fact [tptsto t q p v] asserts the following things:
@@ -284,6 +285,9 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS).
         |={M}=> Exists vs, @encodes σ ty v vs ** vbytes va vs 1 **
                 (Forall v' vs', @encodes  σ ty v' vs' -* vbytes va vs' 1 -*
                                 |={M}=> @tptsto σ ty 1 p v').
+
+    Axiom provides_storage_pinned_ptr : forall res newp aty va,
+       provides_storage res newp aty ** pinned_ptr va res |-- pinned_ptr va newp.
 
     Global Existing Instances
       pinned_ptr_persistent pinned_ptr_affine pinned_ptr_timeless.

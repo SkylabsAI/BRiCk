@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
+Require Import bedrock.lang.prelude.base.
 From iris.algebra Require Import excl gmap.
 From iris.algebra.lib Require Import frac_auth.
 From iris.bi Require Import monpred.
@@ -14,9 +15,6 @@ From iris.proofmode Require Import tactics.
 From iris_string_ident Require Import ltac2_string_ident.
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import pred z_to_bytes.
-
-Set Default Proof Using "Type".
-Set Suggest Proof Using.
 
 (* todo: does this not exist as a library somewhere? *)
 Definition fractionalR (V : Type) : cmraT :=
@@ -174,6 +172,10 @@ Module SimpleCPP.
 
     Theorem valid_ptr_nullptr : |-- valid_ptr nullptr.
     Proof. by iLeft. Qed.
+
+    (** This is a very simplistic definition of [provides_storage].
+    A more useful definition should probably not be persistent. *)
+    Definition provides_storage (base newp : ptr) (_ : type) : mpred := [| base = newp |].
 
     Definition size_to_bytes (s : bitsize) : nat :=
       match s with
@@ -644,6 +646,10 @@ Module SimpleCPP.
       iSplit; first done. iExists (Some va). iFrame "MJ".
       iExists vs'. eauto with iFrame.
     Qed.
+
+    Theorem provides_storage_pinned_ptr : forall res newp aty va,
+       provides_storage res newp aty ** pinned_ptr va res |-- pinned_ptr va newp.
+    Proof. iIntros (????) "[-> $]". Qed.
 
     Definition type_ptr {resolve : genv} (c: type) (p : ptr) : mpred :=
       Exists (o : option addr) n,

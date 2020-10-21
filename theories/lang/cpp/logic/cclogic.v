@@ -3,13 +3,14 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
+Require Import bedrock.lang.prelude.base.
+
 From iris.bi Require Import lib.fractional monpred.
 From iris.base_logic.lib Require Import invariants cancelable_invariants.
 From iris.proofmode Require Import tactics.
 
 From bedrock.lang.cpp Require Import logic.pred.
 
-Set Default Proof Using "Type".
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.

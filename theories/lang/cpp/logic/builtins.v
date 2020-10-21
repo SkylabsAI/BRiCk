@@ -3,15 +3,13 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-Require Import Coq.Lists.List.
+Require Import bedrock.lang.prelude.base.
 Require Import iris.proofmode.tactics.
 Require Import bedrock.lang.bi.ChargeCompat.
 From bedrock.lang.cpp Require Import ast semantics.
 Require Import bedrock.lang.cpp.semantics.builtins.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred wp.
-
-Set Default Proof Using "Type".
 
 Section with_Σ.
   Context `{Σ : cpp_logic thread_info} {resolve:genv}.
@@ -117,5 +115,12 @@ Section with_Σ.
           [| has_type (Vint x) (Tint W128 Unsigned) |] ** Q (Vint (bswap W128 x))
       |-- BUILTIN Bin_bswap128 (Tfunction (Tint W128 Unsigned) (Tint W128 Unsigned :: nil))
           (Vint x :: nil) Q.
+
+
+  (** std::launder (http://eel.is/c++draft/ptr.launder) *)
+  Axiom wp_launder : forall ty res newp Q,
+      provides_storage res newp ty ** (provides_storage res newp ty -* Q (Vptr newp))
+      |-- BUILTIN Bin_launder (Tfunction (Tptr Tvoid) (Tptr Tvoid :: nil))
+          (Vptr res :: nil) Q.
 
 End with_Σ.
