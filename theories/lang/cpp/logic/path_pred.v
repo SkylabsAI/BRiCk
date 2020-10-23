@@ -282,14 +282,15 @@ Section with_Σ.
   (** offsets *)
 
   Global Instance Offset_Equiv : Equiv Offset :=
-    fun o1 o2 => forall p1 p2, @_offset o1 p1 p2 -|- @_offset o2 p1 p2.
+    fun o1 o2 => _offset_eval o1 = _offset_eval o2 /\ (forall p, _valid_offset o1 p -|- _valid_offset o2 p).
 
   Global Instance Offset_Equivalence : Equivalence (≡@{Offset}).
   Proof.
     split.
     - done.
-    - do 3 red. intros. by symmetry.
-    - do 3 red. intros. etrans; eauto.
+    - do 3 red. intros * [??]. by split; symmetry.
+    - do 3 red. intros * [? E1] [? E2]. split. by etrans.
+      move=> p. by rewrite E1 E2.
   Qed.
 
   Local Program Definition invalidO : Offset := MkOffset None (funI _ => False) _.
@@ -396,48 +397,54 @@ Section with_Σ.
   Definition _offsetL := _offsetL_aux.(unseal).
   Definition _offsetL_eq : @_offsetL = _ := _offsetL_aux.(seal_eq).
 
+  (* XXX NOTE: This lemma requires the equivalences to become more intensional. *)
   Global Instance _offsetL_proper : Proper ((≡) ==> (≡) ==> (≡)) _offsetL.
   Proof.
-    rewrite _offsetL_eq=>o1 o2 HO l1 l2 HL p /=.
-    f_equiv=>to. by rewrite (HO to) (HL to).
+    move =>o1 o2 [Hoe Hove] l1 l2 [Hle Hlve].
+    rewrite _offsetL_eq /_offsetL_def; split => /=.
+    (* XXX Offset_ptr should be proper *)
+    (* XXX missing LOTS of setoids *)
+    by rewrite Hle /Offset_ptr Hoe.
+    by rewrite Hlve Hle Hove.
   Qed.
 
-  Lemma _offsetL_dot : forall (o1 o2 : Offset) (l : Loc),
+  Global Arguments Offset_ptr !_ /. (* XXX *)
+  Lemma _offsetL_dot (o1 o2 : Offset) (l : Loc) :
       _offsetL o2 (_offsetL o1 l) -|- _offsetL (_dot o1 o2) l.
   Proof.
-    rewrite /equiv /Loc_Equiv _offsetL_eq _dot_eq. simpl.
-    split'.
-    { iIntros "X". iDestruct "X" as (from) "[X Y]".
-      iDestruct "Y" as (from0) "[Y Z]".
-      iExists from0. iFrame. iExists _. iFrame. }
-    { iIntros "X". iDestruct "X" as (from) "[X Y]".
-      iDestruct "X" as (from0) "[X Z]".
-      iExists _. iFrame. iExists _. iFrame. }
+    rewrite /equiv /Loc_Equiv _offsetL_eq _dot_eq /=.
+    rewrite !raw_offset_ptr_compose_offsets /_dot_def /=.
+    by rewrite assoc.
   Qed.
 
-  Lemma _dot_dot : forall (o1 o2 l: Offset),
+  Lemma _dot_dot (o1 o2 l: Offset) :
       _dot o2 (_dot o1 l) -|- _dot (_dot o2 o1) l.
   Proof.
-    rewrite /equiv /Offset_Equiv _dot_eq. simpl.
-    split'.
-    { iIntros "X". iDestruct "X" as (from) "[X Y]".
-      iDestruct "Y" as (from0) "[Y Z]".
-      iExists from0. iFrame. iExists _. iFrame. }
-    { iIntros "X". iDestruct "X" as (from) "[X Y]".
-      iDestruct "X" as (from0) "[X Z]".
-      iExists _. iFrame. iExists _. iFrame. }
-  Qed.
+    rewrite /equiv /Offset_Equiv _dot_eq /=. split => /=.
+    admit. (* associativity of composition. *)
+    intros p.
+    rewrite -assoc.
+    f_equiv.
+    f_equiv.
+    f_equiv.
+    admit.
+  Admitted.
 
+  Global Arguments _location !_ /.
+  (* XXX Fix Loc_equiv to match Loc_Equiv. And without rewriting it properly! *)
   Lemma _offsetL_Loc_impl : forall l1 l2 o,
       Loc_equiv l1 l2 |-- Loc_equiv (_offsetL o l1) (_offsetL o l2).
   Proof.
-    intros. rewrite /Loc_equiv _offsetL_eq /_offsetL_def /=.
-    iIntros "#A"; iModIntro. iIntros (p); iSplit.
+    intros.
+    rewrite /Loc_equiv _offsetL_eq /_offsetL_def /=.
+    iIntros "#A !>" (p).
+    (* iSplit.
     - iIntros "X". iDestruct "X" as (p') "[X #Y]".
       iExists p'. iFrame. iApply "A"; iAssumption.
     - iIntros "X". iDestruct "X" as (p') "[X #Y]".
       iExists p'. iFrame. iApply "A"; iAssumption.
-  Qed.
+  Qed. *)
+  Admitted.
 
 
   (* this is for `Indirect` field references *)
