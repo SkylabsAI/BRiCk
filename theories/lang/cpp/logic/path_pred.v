@@ -87,18 +87,18 @@ Section with_Σ.
   Global Instance _off_timeless o p1 p2: Timeless (_offset o p1 p2) := _.
 
   Global Instance Loc_Equiv : Equiv Loc :=
-    fun l r => forall p, @_location l p -|- @_location r p.
+    fun l1 l2 => _loc_eval l1 = _loc_eval l2 /\ (_valid_loc l1 -|- _valid_loc l2).
 
   Global Instance Loc_Equivalence : Equivalence (≡@{Loc}).
   Proof.
     split.
     - done.
-    - do 3 red. intros. by symmetry.
-    - do 3 red. intros. etrans; eauto.
+    - do 3 red. intros * [??]. by split; symmetry.
+    - do 3 red. intros * [??] [??]. by split; etrans.
   Qed.
 
   Global Instance _location_proper : Proper ((≡) ==> eq ==> (≡)) _location.
-  Proof. by intros ??? ??->. Qed.
+  Proof. rewrite /_location. intros ?? [-> ValEq] ??->. by rewrite ValEq. Qed.
   Global Instance _location_mono : Proper ((≡) ==> eq ==> (⊢)) _location.
   Proof. intros l1 l2 HL p1 p2 ->. by rewrite HL. Qed.
   Global Instance _location_flip_mono : Proper ((≡) ==> eq ==> flip (⊢)) _location.
