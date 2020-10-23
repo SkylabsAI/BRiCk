@@ -474,7 +474,7 @@ Global Existing Instance Proper_align_of.
 Axiom align_of_size_of : forall {σ : genv} (t : type) sz,
     size_of σ t = Some sz ->
     exists al, align_of (resolve:=σ) t = Some al /\
-          (* alignmend is a multiple of the size *)
+          (* alignment is a multiple of the size *)
           (al mod sz = 0)%N.
 
 Arguments Z.add _ _ : simpl never.
