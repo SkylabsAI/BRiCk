@@ -71,7 +71,7 @@ Section with_Σ.
     (* mpred version of [inv]: s/inv/Inv;s/iProp Σ/mpred *)
     Definition Inv : namespace → mpred → mpred := λ N P, ⎡ inv N (∀ i, P i) ⎤%I.
 
-    Lemma Inv_alloc N P : |> <obj> P |-- |={⊤}=> Inv N P.
+    Lemma Inv_alloc N E P : |> <obj> P |-- |={E}=> Inv N P.
     Proof.
       intros. iIntros "I".
       iMod (inv_alloc with "[I]") as "$"; last done.
