@@ -7,22 +7,77 @@ Require Import bedrock.lang.prelude.base.
 
 Require Import iris.proofmode.tactics.
 From bedrock.lang.cpp Require Import semantics logic.pred ast.
+From iris_string_ident Require Import ltac2_string_ident.
+
+Implicit Types (p : ptr).
+
+(* XXX upstream. *)
+Parameter invalid_ptr : ptr.
+Axiom invalid_invalid_ptr_1 : forall `{has_cpp : cpp_logic}, valid_ptr invalid_ptr |-- False.
+
+Record Loc `{has_cpp : cpp_logic} : Type := MkLoc
+  { _loc_eval : ptr
+  ; _valid_loc : mpred
+  ; _loc_eval_valid : _valid_loc -|- valid_ptr _loc_eval
+  ; _valid_loc_persist : Persistent _valid_loc
+  ; _valid_loc_affine : Affine _valid_loc
+  ; _valid_loc_timeless : Timeless _valid_loc
+  }.
+Arguments MkLoc {_ _} _ _%I _ {_ _ _}.
+Existing Instances _valid_loc_persist _valid_loc_affine _valid_loc_timeless.
+
+Notation raw_ptr_offset := (option Z).
+(* Inductive raw_ptr_offset := InvRawO | RawO (z : Z). *)
+Definition raw_offset_ptr_ (r : raw_ptr_offset) (p : ptr) : ptr :=
+  default invalid_ptr (flip offset_ptr_ p <$> r).
+Arguments raw_offset_ptr_ !_ /.
+(* TODO: We're exposing actual offsets, so this whole thing must be hidden.
+Worse, _offset_eval is the only real semantics.
+*)
+Record Offset `{has_cpp : cpp_logic} : Type := MkOffset
+  { _offset_eval : raw_ptr_offset
+  ; _valid_offset : ptr -> mpred
+  ; _offset_eval_valid p : _valid_offset p |-- valid_ptr p -* valid_ptr (raw_offset_ptr_ _offset_eval p)
+  ; _valid_offset_persist p : Persistent (_valid_offset p)
+  ; _valid_offset_affine p : Affine (_valid_offset p)
+  ; _valid_offset_timeless p : Timeless (_valid_offset p)
+  }.
+Arguments MkOffset {_ _} _ _%I _ {_ _ _}.
+
+Existing Instances _valid_offset_persist _valid_offset_affine _valid_offset_timeless.
 
 Section with_Σ.
   Context `{has_cpp : cpp_logic}.
 
+  Implicit Types (l : Loc) (o : Offset).
   (* locations represent C++ computations that produce an address.
    *)
-  Record Loc : Type :=
-    { _location : ptr -> mpred
-    ; _loc_unique : forall p1 p2, _location p1 ** _location p2 |-- [| p1 = p2 |]
-    ; _loc_valid : forall p1, _location p1 |-- valid_ptr p1
-    ; _loc_persist : forall p, Persistent (_location p)
-    ; _loc_affine : forall p, Affine (_location p)
-    ; _loc_timeless : forall p, Timeless (_location p)
-    }.
+  (* XXX seal *)
+  Definition _location (l : Loc) (p : ptr) : mpred :=
+    [| p = _loc_eval l |] ** _valid_loc l.
 
-  Global Existing Instances _loc_persist _loc_affine _loc_timeless.
+  Lemma _loc_unique l p1 p2 : _location l p1 ** _location l p2 |-- [| p1 = p2 |].
+  Proof. rewrite /_location. by iIntros "[[-> _] [-> _]]". Qed.
+  Lemma _loc_valid l p1: _location l p1 |-- valid_ptr p1.
+  Proof. rewrite /_location /= _loc_eval_valid. iIntros "[-> $]". Qed.
+  Global Instance _loc_persist l p: Persistent (_location l p) := _.
+  Global Instance _loc_affine l p : Affine (_location l p) := _.
+  Global Instance _loc_timeless l p: Timeless (_location l p) := _.
+
+  Definition _offset o p1 p2 : mpred :=
+    [| p2 = raw_offset_ptr_ (_offset_eval o) p1 |] ** _valid_offset o p1.
+  Lemma _off_functional o p p1 p2: _offset o p p1 ** _offset o p p2 |-- [| p1 = p2 |].
+  Proof. rewrite /_offset. by iIntros "[[-> _] [-> _]]". Qed.
+
+  Lemma _off_valid o p1 p2 : valid_ptr p1 ** _offset o p1 p2 |-- valid_ptr p2.
+  Proof.
+    rewrite /_offset; iIntros "[#VP1 [-> #VO]]".
+    by iApply (_offset_eval_valid with "VO VP1").
+  Qed.
+
+  Global Instance _off_persist o p1 p2: Persistent (_offset o p1 p2) := _.
+  Global Instance _off_affine o p1 p2: Affine (_offset o p1 p2) := _.
+  Global Instance _off_timeless o p1 p2: Timeless (_offset o p1 p2) := _.
 
   Global Instance Loc_Equiv : Equiv Loc :=
     fun l r => forall p, @_location l p -|- @_location r p.
@@ -44,7 +99,7 @@ Section with_Σ.
 
   (* [mpred] implication between [Loc] *)
   Definition Loc_impl (l1 l2 : Loc) : mpred :=
-    □ (Forall p, l1.(_location) p -* l2.(_location) p).
+    □ (Forall p, _location l1 p -* _location l2 p).
 
   Global Instance Loc_impl_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_impl.
   Proof. solve_proper. Qed.
@@ -57,7 +112,7 @@ Section with_Σ.
 
   (* [mpred] equivalence of [Loc] *)
   Definition Loc_equiv (l1 l2 : Loc) : mpred :=
-    □ (Forall l, (l1.(_location) l ∗-∗ l2.(_location) l)).
+    □ (Forall p, (_location l1 p ∗-∗ _location l2 p)).
 
   Global Instance Loc_equiv_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_equiv.
   Proof. solve_proper. Qed.
@@ -94,18 +149,14 @@ Section with_Σ.
   Qed.
 
   (** absolute locations *)
-  Definition invalid : Loc.
-  refine {| _location _ := lfalse |}.
-  abstract (intros; iIntros "[[] _]").
-  abstract (intros; iIntros "[]").
-  Defined.
+  Lemma invalid_invalid_ptr : valid_ptr invalid_ptr -|- False.
+  Proof. split'. apply invalid_invalid_ptr_1. iIntros "[]". Qed.
 
-  Definition _eq_def (p : ptr) : Loc.
-  refine
-    {| _location p' := [| p = p' |] ** valid_ptr p' |}.
-  abstract (intros; iIntros "[[-> _] [#H _]]"; iFrame "#").
-  abstract (intros; iIntros "[-> #H]"; iFrame "#").
-  Defined.
+  Program Definition invalidL : Loc := MkLoc invalid_ptr lfalse _.
+  Next Obligation. by rewrite invalid_invalid_ptr. Qed.
+
+  Program Definition _eq_def (p : ptr) : Loc := MkLoc p (valid_ptr p) _.
+  Next Obligation. done. Qed.
   Definition _eq_aux : seal (@_eq_def). Proof. by eexists. Qed.
   Definition _eq := _eq_aux.(unseal).
   Definition _eq_eq : @_eq = _ := _eq_aux.(seal_eq).
@@ -113,7 +164,7 @@ Section with_Σ.
   Definition _eqv (a : val) : Loc :=
     match a with
     | Vptr p => _eq p
-    | _ => invalid
+    | _ => invalidL
     end.
 
   Lemma _eqv_eq : forall p, _eqv (Vptr p) = _eq p.
@@ -122,7 +173,7 @@ Section with_Σ.
   Definition _global_def (resolve : genv) (x : obj_name) : Loc :=
     match glob_addr resolve x with
     | Some p => _eq p
-    | _ => invalid
+    | _ => invalidL
     end.
   Definition _global_aux : seal (@_global_def). Proof. by eexists. Qed.
   Definition _global := _global_aux.(unseal).
@@ -131,24 +182,24 @@ Section with_Σ.
   Definition _local (ρ : region) (b : ident) : Loc :=
     match get_location ρ b with
     | Some p => _eq p
-    | _ => invalid
+    | _ => invalidL
     end.
 
   Definition _this (ρ : region) : Loc :=
     match get_this ρ with
     | Some p => _eq p
-    | _ => invalid
+    | _ => invalidL
     end.
 
   Definition _result (ρ : region) : Loc :=
     match get_result ρ with
     | Some p => _eq p
-    | _ => invalid
+    | _ => invalidL
     end.
 
   (** [addr_of]: [addr_of l p] says that pointer [p] "matches" location [l]. *)
   Definition addr_of_def (a : Loc) (b : ptr) : mpred :=
-    a.(_location) b.
+    _location a b.
   Definition addr_of_aux : seal (@addr_of_def). Proof. by eexists. Qed.
   Definition addr_of := addr_of_aux.(unseal).
   Definition addr_of_eq : @addr_of = _ := addr_of_aux.(seal_eq).
@@ -179,17 +230,12 @@ Section with_Σ.
     iDestruct (_loc_unique with "[A B]") as %H; [ | eauto ]; eauto.
   Qed.
 
-  Lemma addr_of_Loc_eq : forall l p, l &~ p |-- Loc_equiv l (_eq p).
+  Lemma addr_of_Loc_eq l p : l &~ p |-- Loc_equiv l (_eq p).
   Proof.
-    intros. rewrite /Loc_equiv addr_of_eq /addr_of_def _eq_eq /_eq_def /=.
-    iIntros "#L". iIntros (ll). iModIntro.
-    iSplit.
-    - iIntros "#H".
-      iSplit.
-      { iApply _loc_unique; iSplit; iAssumption. }
-      { iApply _loc_valid; iAssumption. }
-    - iIntros "[% #H]".
-      subst. iAssumption.
+    rewrite /Loc_equiv addr_of_eq /addr_of_def /_location.
+    iIntros "[-> #L]" (ll) "!>".
+    rewrite _eq_eq /_eq_def /= -_loc_eval_valid.
+    by iApply bi.wand_iff_refl.
   Qed.
 
   Lemma addr_of_Loc_impl : forall l p, l &~ p |-- Loc_impl l (_eq p).
@@ -202,6 +248,12 @@ Section with_Σ.
   Definition valid_loc_aux : seal (@valid_loc_def). Proof. by eexists. Qed.
   Definition valid_loc := valid_loc_aux.(unseal).
   Definition valid_loc_eq : valid_loc = @valid_loc_def := valid_loc_aux.(seal_eq).
+  Lemma valid_loc_equiv l : valid_loc l -|- _valid_loc l.
+  Proof.
+    rewrite valid_loc_eq /valid_loc_def addr_of_eq /addr_of_def /_location /=.
+    split'; first by iDestruct 1 as (?) "[_ $]".
+    iIntros "V"; iExists (_loc_eval l). by iFrame.
+  Qed.
 
   Global Instance valid_loc_proper : Proper ((≡) ==> (≡)) valid_loc.
   Proof. rewrite valid_loc_eq. solve_proper. Qed.
@@ -220,19 +272,9 @@ Section with_Σ.
   Proof. rewrite valid_loc_eq. apply _. Qed.
 
   (** offsets *)
-  Record Offset : Type :=
-  { _offset : ptr -> ptr -> mpred
-  ; _off_functional : forall p p1 p2, _offset p p1 ** _offset p p2 |-- [| p1 = p2 |]
-  ; _off_valid : forall p1 p2, valid_ptr p1 ** _offset p1 p2 |-- valid_ptr p2
-  ; _off_persist : forall p1 p2, Persistent (_offset p1 p2)
-  ; _off_affine : forall p1 p2, Affine (_offset p1 p2)
-  ; _off_timeless : forall p1 p2, Timeless (_offset p1 p2)
-  }.
-
-  Global Existing Instances _off_persist _off_affine _off_timeless.
 
   Global Instance Offset_Equiv : Equiv Offset :=
-    fun l r => forall p q, @_offset l p q -|- @_offset r p q.
+    fun o1 o2 => forall p1 p2, @_offset o1 p1 p2 -|- @_offset o2 p1 p2.
 
   Global Instance Offset_Equivalence : Equivalence (≡@{Offset}).
   Proof.
@@ -242,17 +284,17 @@ Section with_Σ.
     - do 3 red. intros. etrans; eauto.
   Qed.
 
-  Local Definition invalidO : Offset.
-  refine {| _offset _ _ := lfalse |}.
-  abstract (intros; iIntros "[_ []]").
-  abstract (intros; iIntros "[_ []]").
-  Defined.
+  Local Program Definition invalidO : Offset := MkOffset None (funI _ => False) _.
+  Next Obligation. iIntros "% []". Qed.
 
-  Definition offsetO (o : Z) : Offset.
-  refine {| _offset from to := [| to = offset_ptr_ o from |] ** valid_ptr to |}.
+  Program Definition offsetO (o : Z) : Offset :=
+    MkOffset (Some o) (funI p => □ (valid_ptr p -* valid_ptr (offset_ptr_ o p))) _.
+  Next Obligation. iIntros (??) "#$ /=". Qed.
+
+  (* refine {| _offset from to := [| to = offset_ptr_ o from |] ** valid_ptr to |}.
   abstract (intros; iIntros "[[#H _] [-> _]]"; iFrame "#").
   abstract (intros; iIntros "[A [B C]]"; iFrame).
-  Defined.
+  Defined. *)
 
   Definition offsetO_opt (o : option Z) : Offset :=
     match o with
@@ -261,33 +303,42 @@ Section with_Σ.
     end.
 
   (** the identity [Offset] *)
-  Definition _id_def : Offset.
-   refine {| _offset from to := [| from = to |] |}.
-   abstract (intros; iIntros "[-> #H]"; iFrame "#").
-   abstract (intros; iIntros "[H <-]"; iFrame).
-  Defined.
+  Definition _id_def : Offset := offsetO 0.
   Definition _id_aux : seal (@_id_def). Proof. by eexists. Qed.
   Definition _id := _id_aux.(unseal).
   Definition _id_eq : @_id = _ := _id_aux.(seal_eq).
 
   (** path composition *)
-  Definition _dot_def (o1 o2 : Offset) : Offset.
-  refine {| _offset from to :=
-              Exists mid, _offset o1 from mid ** _offset o2 mid to |}.
-  { intros.
-    iIntros "[H1 H2]".
-    iDestruct "H1" as (m1) "[A A']".
-    iDestruct "H2" as (m2) "[B B']".
-    iDestruct (_off_functional with "[A B]") as %X. iFrame.
-    subst.
-    iDestruct ((_off_functional o2) with "[A' B']") as %Y. iFrame.
-    by iPureIntro. }
-  { intros.
-    iIntros "[H H']".
-    iDestruct "H'" as (m) "[H1 H2]".
-    iApply _off_valid. iFrame.
-    iApply _off_valid. iFrame. }
-  Defined.
+  Definition compose_offsets (o1 o2 : Offset) : option Z :=
+    z1 ← _offset_eval o1; z2 ← _offset_eval o2; Some (z1 + z2)%Z.
+  Definition Offset_ptr o p := raw_offset_ptr_ (_offset_eval o) p.
+
+  Axiom offset_invalid_ptr : forall z,
+    offset_ptr_ z invalid_ptr = invalid_ptr.
+  Lemma raw_offset_invalid_ptr r :
+    raw_offset_ptr_ r invalid_ptr = invalid_ptr.
+  Proof. case: r => //= z. exact: offset_invalid_ptr. Qed.
+
+  Lemma raw_offset_ptr_compose_offsets o1 o2 p :
+    raw_offset_ptr_ (compose_offsets o1 o2) p =
+    Offset_ptr o2 (Offset_ptr o1 p).
+  Proof.
+    rewrite /compose_offsets/=/Offset_ptr.
+    case: (_offset_eval o1) => [z1| ] /=; first last.
+    by rewrite raw_offset_invalid_ptr.
+    case: (_offset_eval o2) => [z2| ] //=.
+    by rewrite offset_ptr_combine_.
+  Qed.
+
+  Program Definition _dot_def (o1 o2 : Offset) : Offset :=
+  MkOffset (compose_offsets o1 o2)
+    (funI p => _valid_offset o1 p ** _valid_offset o2 (Offset_ptr o1 p)) _.
+  Next Obligation.
+    iIntros (???) "/= [O1 O2] P /=".
+    rewrite raw_offset_ptr_compose_offsets.
+    iApply (_offset_eval_valid with "O2").
+    iApply (_offset_eval_valid with "O1 P").
+  Qed.
   Definition _dot_aux : seal (@_dot_def). Proof. by eexists. Qed.
   Definition _dot := _dot_aux.(unseal).
   Definition _dot_eq : @_dot = _ := _dot_aux.(seal_eq).
@@ -333,6 +384,15 @@ Section with_Σ.
   (** offset from a location
    *)
   Program Definition _offsetL_def (o : Offset) (l : Loc) : Loc :=
+    MkLoc (Offset_ptr o (_loc_eval l)) (_valid_loc l ** _valid_offset o (_loc_eval l)) _.
+  Next Obligation.
+    iIntros (??); rewrite _loc_eval_valid; split'. {
+      iIntros "[P O]".
+      iApply (_offset_eval_valid with "O P").
+    } {
+      iIntros "P".
+    iApply (_loc_eval_valid with "L").
+
     {| _location p := Exists from, _offset o from p ** _location l from |}.
   Next Obligation.
     simpl. iIntros (o l p1 p2) "[L R]".
