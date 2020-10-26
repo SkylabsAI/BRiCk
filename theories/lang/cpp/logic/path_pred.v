@@ -106,10 +106,11 @@ Section with_Σ.
 
   (* [mpred] implication between [Loc] *)
   Definition Loc_impl (l1 l2 : Loc) : mpred :=
-    □ (Forall p, _location l1 p -* _location l2 p).
+    [| _loc_eval l1 = _loc_eval l2 |] ** □ (_valid_loc l1 -* _valid_loc l2).
 
   Global Instance Loc_impl_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_impl.
-  Proof. solve_proper. Qed.
+  Proof. Admitted.
+    (* solve_proper. Qed. *)
   Global Instance Loc_impl_persistent l1 l2 : Persistent (Loc_impl l1 l2).
   Proof. apply _. Qed.
   Global Instance Loc_impl_affine l1 l2 : Affine (Loc_impl l1 l2).
@@ -119,10 +120,11 @@ Section with_Σ.
 
   (* [mpred] equivalence of [Loc] *)
   Definition Loc_equiv (l1 l2 : Loc) : mpred :=
-    □ (Forall p, (_location l1 p ∗-∗ _location l2 p)).
+    [| _loc_eval l1 = _loc_eval l2 |] ** □ (_valid_loc l1 ∗-∗ _valid_loc l2).
 
   Global Instance Loc_equiv_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_equiv.
-  Proof. solve_proper. Qed.
+  Proof. Admitted.
+    (* solve_proper. Qed. *)
   Global Instance Loc_equiv_persistent l1 l2 : Persistent (Loc_equiv l1 l2).
   Proof. apply _. Qed.
   Global Instance Loc_equiv_affine l1 l2 : Affine (Loc_equiv l1 l2).
@@ -133,26 +135,23 @@ Section with_Σ.
   Lemma Loc_equiv_impl l1 l2 :
     Loc_equiv l1 l2 -|- Loc_impl l1 l2 ** Loc_impl l2 l1.
   Proof.
-    iSplit.
-    - iIntros "#EQ".
-      iSplit; iIntros "!>"; iIntros (p) "Hp"; iApply ("EQ" with "Hp").
-    - iIntros "#[H1 H2] !>". iIntros (p).
-      iSplit; iIntros "Hp"; [by iApply "H1"|by iApply "H2"].
+    rewrite /Loc_equiv/Loc_impl; split'.
+    - by iIntros "[-> #[$ $]] !%".
+    - by iIntros "[[-> #$] [_ #$]]".
   Qed.
 
   Lemma Loc_equiv_refl l : |-- Loc_equiv l l.
-  Proof. iIntros "!>" (p). by iApply bi.wand_iff_refl. Qed.
+  Proof. iSplit => //. iIntros "!>". by iApply bi.wand_iff_refl. Qed.
   Lemma Loc_equiv_sym l1 l2 : Loc_equiv l1 l2 |-- Loc_equiv l2 l1.
-  Proof.
-    iIntros "#H !>". iIntros (p).
-    iSplit; iIntros "Hp"; iApply ("H" with "Hp").
-  Qed.
+  Proof. rewrite /Loc_equiv. by iIntros "[-> #[$$]]". Qed.
   Lemma Loc_equiv_trans l1 l2 l3 :
     Loc_equiv l1 l2 |-- Loc_equiv l2 l3 -* Loc_equiv l1 l3.
   Proof.
-    iIntros "#H1 #H2 !>" (p). iSplit.
-    - iIntros "L1". iApply "H2". by iApply "H1".
-    - iIntros "L3". iApply "H1". by iApply "H2".
+    rewrite /Loc_equiv. iIntros "[-> #[H12 H21]] [-> #[H23 H32]]".
+    iSplit; first done.
+    iIntros "!>"; iSplit; iIntros "#H".
+    iApply ("H23" with "(H12 H)").
+    iApply ("H21" with "(H32 H)").
   Qed.
 
   (** absolute locations *)
@@ -241,8 +240,8 @@ Section with_Σ.
   Proof.
     rewrite /Loc_equiv addr_of_eq /addr_of_def /_location.
     rewrite _eq_eq /_eq_def /=.
-    iIntros "[-> #L]" (ll) "!>".
-    iSplit; iIntros "[-> _]"; iSplit => //.
+    iIntros "[-> #L]". iSplit; first done. iIntros "!>".
+    iSplit; iIntros "H"; last done.
     by iApply _loc_eval_valid.
   Qed.
 
@@ -437,15 +436,9 @@ Section with_Σ.
   Proof.
     intros.
     rewrite /Loc_equiv _offsetL_eq /_offsetL_def /=.
-    iIntros "#A !>" (p).
-    (* iSplit.
-    - iIntros "X". iDestruct "X" as (p') "[X #Y]".
-      iExists p'. iFrame. iApply "A"; iAssumption.
-    - iIntros "X". iDestruct "X" as (p') "[X #Y]".
-      iExists p'. iFrame. iApply "A"; iAssumption.
-  Qed. *)
-  Admitted.
-
+    iIntros "[-> #A]". iSplit; first done. iIntros "!>".
+    by iSplit; iIntros "[? $]"; iApply "A".
+  Qed.
 
   (* this is for `Indirect` field references *)
   Fixpoint path_to_Offset (resolve:genv) (from : globname) (final : ident)
