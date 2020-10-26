@@ -15,6 +15,18 @@ Implicit Types (p : ptr).
 Parameter invalid_ptr : ptr.
 Axiom invalid_invalid_ptr_1 : forall `{has_cpp : cpp_logic}, valid_ptr invalid_ptr |-- False.
 
+Notation raw_ptr_offset := (option Z).
+(* Inductive raw_ptr_offset := InvRawO | RawO (z : Z). *)
+Definition raw_offset_ptr_ (r : raw_ptr_offset) (p : ptr) : ptr :=
+  default invalid_ptr (flip offset_ptr_ p <$> r).
+Arguments raw_offset_ptr_ !_ /.
+
+Axiom offset_invalid_ptr : forall z,
+  offset_ptr_ z invalid_ptr = invalid_ptr.
+Lemma raw_offset_invalid_ptr r :
+  raw_offset_ptr_ r invalid_ptr = invalid_ptr.
+Proof. case: r => //= z. exact: offset_invalid_ptr. Qed.
+
 Record Loc `{has_cpp : cpp_logic} : Type := MkLoc
   { _loc_eval : ptr
   ; _valid_loc : mpred
@@ -26,11 +38,6 @@ Record Loc `{has_cpp : cpp_logic} : Type := MkLoc
 Arguments MkLoc {_ _} _ _%I _ {_ _ _}.
 Existing Instances _valid_loc_persist _valid_loc_affine _valid_loc_timeless.
 
-Notation raw_ptr_offset := (option Z).
-(* Inductive raw_ptr_offset := InvRawO | RawO (z : Z). *)
-Definition raw_offset_ptr_ (r : raw_ptr_offset) (p : ptr) : ptr :=
-  default invalid_ptr (flip offset_ptr_ p <$> r).
-Arguments raw_offset_ptr_ !_ /.
 (* TODO: We're exposing actual offsets, so this whole thing must be hidden.
 Worse, _offset_eval is the only real semantics.
 *)
@@ -312,12 +319,6 @@ Section with_Σ.
   Definition compose_offsets (o1 o2 : Offset) : option Z :=
     z1 ← _offset_eval o1; z2 ← _offset_eval o2; Some (z1 + z2)%Z.
   Definition Offset_ptr o p := raw_offset_ptr_ (_offset_eval o) p.
-
-  Axiom offset_invalid_ptr : forall z,
-    offset_ptr_ z invalid_ptr = invalid_ptr.
-  Lemma raw_offset_invalid_ptr r :
-    raw_offset_ptr_ r invalid_ptr = invalid_ptr.
-  Proof. case: r => //= z. exact: offset_invalid_ptr. Qed.
 
   Lemma raw_offset_ptr_compose_offsets o1 o2 p :
     raw_offset_ptr_ (compose_offsets o1 o2) p =
