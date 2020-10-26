@@ -30,7 +30,7 @@ Proof. case: r => //= z. exact: offset_invalid_ptr. Qed.
 Record Loc `{has_cpp : cpp_logic} : Type := MkLoc
   { _loc_eval : ptr
   ; _valid_loc : mpred
-  ; _loc_eval_valid : _valid_loc -|- valid_ptr _loc_eval
+  ; _loc_eval_valid : _valid_loc |-- valid_ptr _loc_eval
   ; _valid_loc_persist : Persistent _valid_loc
   ; _valid_loc_affine : Affine _valid_loc
   ; _valid_loc_timeless : Timeless _valid_loc
@@ -240,9 +240,10 @@ Section with_Σ.
   Lemma addr_of_Loc_eq l p : l &~ p |-- Loc_equiv l (_eq p).
   Proof.
     rewrite /Loc_equiv addr_of_eq /addr_of_def /_location.
+    rewrite _eq_eq /_eq_def /=.
     iIntros "[-> #L]" (ll) "!>".
-    rewrite _eq_eq /_eq_def /= -_loc_eval_valid.
-    by iApply bi.wand_iff_refl.
+    iSplit; iIntros "[-> _]"; iSplit => //.
+    by iApply _loc_eval_valid.
   Qed.
 
   Lemma addr_of_Loc_impl : forall l p, l &~ p |-- Loc_impl l (_eq p).
@@ -387,24 +388,9 @@ Section with_Σ.
   Program Definition _offsetL_def (o : Offset) (l : Loc) : Loc :=
     MkLoc (Offset_ptr o (_loc_eval l)) (_valid_loc l ** _valid_offset o (_loc_eval l)) _.
   Next Obligation.
-    iIntros (??); rewrite _loc_eval_valid; split'. {
-      iIntros "[P O]".
-      iApply (_offset_eval_valid with "O P").
-    } {
-      iIntros "P".
-    iApply (_loc_eval_valid with "L").
-
-    {| _location p := Exists from, _offset o from p ** _location l from |}.
-  Next Obligation.
-    simpl. iIntros (o l p1 p2) "[L R]".
-    iDestruct "L" as (pl) "[Lo Ll]".
-    iDestruct "R" as (pr) "[Ro Rl]".
-    iDestruct (_loc_unique l pl pr with "[$]") as %->.
-    iApply _off_functional. iFrame.
-  Qed.
-  Next Obligation.
-    simpl. iIntros (o l p1) "H". iDestruct "H" as (p) "[O L]".
-    iApply _off_valid. iFrame. iApply _loc_valid. iFrame.
+    iIntros (??) "[P O]".
+    iApply (_offset_eval_valid with "O").
+    by iApply _loc_eval_valid.
   Qed.
   Definition _offsetL_aux : seal (@_offsetL_def). Proof. by eexists. Qed.
   Definition _offsetL := _offsetL_aux.(unseal).
