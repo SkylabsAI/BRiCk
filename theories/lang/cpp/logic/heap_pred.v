@@ -186,16 +186,14 @@ Section with_cpp.
     intros. rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
     iIntros "[#H L]"; iDestruct "L" as (l) "[L R]".
     iExists _; iFrame "#∗".
-    by iApply "H".
+    iApply (Loc_impl_location with "H L").
   Qed.
 
-  Lemma _at_loc_rwe : forall (l1 l2 : Loc) (R : Rep),
-      Loc_equiv l1 l2 |-- (_at l1 R ∗-∗ _at l2 R).
+  Lemma _at_loc_rwe (l1 l2 : Loc) (R : Rep) :
+    Loc_equiv l1 l2 |-- (_at l1 R ∗-∗ _at l2 R).
   Proof.
-    intros. iIntros "#A".
-    iSplit; iIntros "B";
-      iApply _at_loc_rw; iFrame;
-      iIntros "!>" (l) "H"; by iApply "A".
+    rewrite Loc_equiv_impl; iIntros "#[??]".
+    by iSplit; iIntros "B"; iApply _at_loc_rw; iFrame.
   Qed.
 
   Lemma _at_loc_materialize : forall (l : Loc) (r : Rep),
@@ -284,11 +282,14 @@ Section with_cpp.
       _at l (_offsetR o r) -|- _at (_offsetL o l) r.
   Proof.
     rewrite !_at_loc_materialize.
-    rewrite _offsetR_eq _offsetL_eq path_pred.addr_of_eq
-            /addr_of_def /_offsetR_def /_offsetL_def;
-    split'; simpl.
-    { iDestruct 1 as (a) "[#L X]"; iDestruct "X" as (to) "[O R]". eauto. }
-    { iDestruct 1 as (a) "[X R]"; iDestruct "X" as (from) "[#O L]". eauto. }
+    rewrite _offsetR_eq path_pred.addr_of_eq
+            /addr_of_def /_offsetR_def /=.
+    rewrite _offsetL_eq /_offsetL_def /_location /=.
+    split'.
+    { iDestruct 1 as (a) "[#[-> L] X]". iDestruct "X" as (to) "[[%Heq O] R]".
+      iExists to; rewrite -!assoc. by iFrame "#∗". }
+    { iDestruct 1 as (a) "[[-> [L X]] R]".
+      iExists _. iFrame. eauto. }
   Qed.
 
   Global Instance _at_fractional (r : Qp → Rep) (l : Loc) `{!Fractional r} :

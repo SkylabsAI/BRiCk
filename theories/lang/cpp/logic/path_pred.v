@@ -52,6 +52,9 @@ Record Offset `{has_cpp : cpp_logic} : Type := MkOffset
 Arguments MkOffset {_ _} _ _%I _ {_ _ _}.
 
 Existing Instances _valid_offset_persist _valid_offset_affine _valid_offset_timeless.
+Definition _location `{cpp_logic} (l : Loc) (p : ptr) : mpred :=
+  [| p = _loc_eval l |] ** _valid_loc l.
+Arguments _location {_ _} !_ _ /.
 
 Section with_Σ.
   Context `{has_cpp : cpp_logic}.
@@ -60,8 +63,6 @@ Section with_Σ.
   (* locations represent C++ computations that produce an address.
    *)
   (* XXX seal *)
-  Definition _location (l : Loc) (p : ptr) : mpred :=
-    [| p = _loc_eval l |] ** _valid_loc l.
 
   Lemma _loc_unique l p1 p2 : _location l p1 ** _location l p2 |-- [| p1 = p2 |].
   Proof. rewrite /_location. by iIntros "[[-> _] [-> _]]". Qed.
@@ -96,9 +97,13 @@ Section with_Σ.
     - do 3 red. intros * [??]. by split; symmetry.
     - do 3 red. intros * [??] [??]. by split; etrans.
   Qed.
+  Global Instance _loc_eval_proper : Proper ((≡) ==> (=)) _loc_eval.
+  Proof. solve_proper. Qed.
+  Global Instance _valid_loc_proper : Proper ((≡) ==> (≡)) _valid_loc.
+  Proof. solve_proper. Qed.
 
-  Global Instance _location_proper : Proper ((≡) ==> eq ==> (≡)) _location.
-  Proof. rewrite /_location. intros ?? [-> ValEq] ??->. by rewrite ValEq. Qed.
+  Global Instance _location_proper : Proper ((≡) ==> eq ==> (⊣⊢)) _location.
+  Proof. rewrite /_location. intros ?? E ?? ->. by rewrite E. Qed.
   Global Instance _location_mono : Proper ((≡) ==> eq ==> (⊢)) _location.
   Proof. intros l1 l2 HL p1 p2 ->. by rewrite HL. Qed.
   Global Instance _location_flip_mono : Proper ((≡) ==> eq ==> flip (⊢)) _location.
@@ -109,8 +114,7 @@ Section with_Σ.
     [| _loc_eval l1 = _loc_eval l2 |] ** □ (_valid_loc l1 -* _valid_loc l2).
 
   Global Instance Loc_impl_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_impl.
-  Proof. Admitted.
-    (* solve_proper. Qed. *)
+  Proof. rewrite /Loc_impl => x y Heq ??->. by rewrite Heq. Qed.
   Global Instance Loc_impl_persistent l1 l2 : Persistent (Loc_impl l1 l2).
   Proof. apply _. Qed.
   Global Instance Loc_impl_affine l1 l2 : Affine (Loc_impl l1 l2).
@@ -118,13 +122,16 @@ Section with_Σ.
   Global Instance Loc_impl_timeless l1 l2 : Timeless (Loc_impl l1 l2).
   Proof. apply _. Qed.
 
+  Definition Loc_impl_location l1 l2 p :
+    Loc_impl l1 l2 |-- _location l1 p -* _location l2 p.
+  Proof. rewrite /_location. iIntros "[-> #H] [$ ?]". by iApply "H". Qed.
+
   (* [mpred] equivalence of [Loc] *)
   Definition Loc_equiv (l1 l2 : Loc) : mpred :=
     [| _loc_eval l1 = _loc_eval l2 |] ** □ (_valid_loc l1 ∗-∗ _valid_loc l2).
 
   Global Instance Loc_equiv_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_equiv.
-  Proof. Admitted.
-    (* solve_proper. Qed. *)
+  Proof. rewrite /Loc_equiv => x y Heq ??->. by rewrite Heq. Qed.
   Global Instance Loc_equiv_persistent l1 l2 : Persistent (Loc_equiv l1 l2).
   Proof. apply _. Qed.
   Global Instance Loc_equiv_affine l1 l2 : Affine (Loc_equiv l1 l2).
@@ -317,15 +324,21 @@ Section with_Σ.
   Definition _id_eq : @_id = _ := _id_aux.(seal_eq).
 
   (** path composition *)
-  Definition compose_offsets (o1 o2 : Offset) : option Z :=
-    z1 ← _offset_eval o1; z2 ← _offset_eval o2; Some (z1 + z2)%Z.
+  Definition raw_compose_offsets (o1 o2 : raw_ptr_offset) : raw_ptr_offset :=
+    z1 ← o1; z2 ← o2; Some (z1 + z2)%Z.
+  Definition compose_offsets (o1 o2 : Offset) : raw_ptr_offset :=
+    raw_compose_offsets (_offset_eval o1) (_offset_eval o2).
   Definition Offset_ptr o p := raw_offset_ptr_ (_offset_eval o) p.
+  (* XXX lift up. *)
+  Global Arguments compose_offsets _ _ /.
+  Global Arguments Offset_ptr !_ /.
 
+  (* We have a monoid action? Argh. *)
   Lemma raw_offset_ptr_compose_offsets o1 o2 p :
     raw_offset_ptr_ (compose_offsets o1 o2) p =
     Offset_ptr o2 (Offset_ptr o1 p).
   Proof.
-    rewrite /compose_offsets/=/Offset_ptr.
+    rewrite /Offset_ptr/=.
     case: (_offset_eval o1) => [z1| ] /=; first last.
     by rewrite raw_offset_invalid_ptr.
     case: (_offset_eval o2) => [z2| ] //=.
@@ -415,21 +428,18 @@ Section with_Σ.
     rewrite !raw_offset_ptr_compose_offsets /_dot_def /=.
     by rewrite assoc.
   Qed.
+  Global Instance: Assoc eq raw_compose_offsets.
+  Proof. move=> [x| ] [y| ] [z| ] //=. f_equiv. lia. Qed.
 
   Lemma _dot_dot (o1 o2 l: Offset) :
       _dot o2 (_dot o1 l) -|- _dot (_dot o2 o1) l.
   Proof.
-    rewrite /equiv /Offset_Equiv _dot_eq /=. split => /=.
-    admit. (* associativity of composition. *)
-    intros p.
-    rewrite -assoc.
-    f_equiv.
-    f_equiv.
-    f_equiv.
-    admit.
-  Admitted.
+    rewrite /equiv /Offset_Equiv _dot_eq/= -assoc.
+    split => [//|p].
+    by rewrite raw_offset_ptr_compose_offsets -assoc.
+  Qed.
 
-  Global Arguments _location !_ /.
+  (* Global Arguments _location !_ /. *)
   (* XXX Fix Loc_equiv to match Loc_Equiv. And without rewriting it properly! *)
   Lemma _offsetL_Loc_impl : forall l1 l2 o,
       Loc_equiv l1 l2 |-- Loc_equiv (_offsetL o l1) (_offsetL o l2).
