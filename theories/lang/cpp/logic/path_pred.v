@@ -102,7 +102,7 @@ Section with_Σ.
   Global Instance: Params _valid_loc 3 := {}.
 End with_Σ.
 
-Typeclasses Opaque _offset.
+(* Typeclasses Opaque _offset. *)
 (* Not Loc_impl Loc_equiv. *)
 (* Not _location, it's hidden outside. *)
 
