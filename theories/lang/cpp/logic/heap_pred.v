@@ -149,7 +149,7 @@ Section with_cpp.
   Qed.
 
   Definition _at_def (base : Loc) (P : Rep) : mpred :=
-    Exists a, base &~ a ** P a.
+    _valid_loc base ** P (_loc_eval base).
   Definition _at_aux : seal (@_at_def). Proof. by eexists. Qed.
   Definition _at := _at_aux.(unseal).
   Definition _at_eq : @_at = _ := _at_aux.(seal_eq).
@@ -162,7 +162,7 @@ Section with_cpp.
   Proof. rewrite _at_eq. solve_proper. Qed.
   Global Instance _at_flip_mono : Proper ((≡) ==> flip (⊢) ==> flip (⊢)) _at.
   Proof.
-    rewrite _at_eq/_at_def=>l1 l2 HL r1 r2 HR/=. f_equiv=>a. by rewrite HL HR.
+    rewrite /flip _at_eq/_at_def=>l1 l2 HL r1 r2 HR/=. by rewrite HL HR.
   Qed.
 
   Global Instance _at_persistent : Persistent P -> Persistent (_at base P).
@@ -172,21 +172,18 @@ Section with_cpp.
   Global Instance _at_timeless : Timeless P -> Timeless (_at base P).
   Proof. rewrite _at_eq. apply _. Qed.
 
-  Lemma _at_valid_loc : forall (l : Loc) R,
+  Lemma _at_valid_loc (l : Loc) R :
       _at l R -|- _at l R ** valid_loc l.
   Proof.
-    split'; last by iIntros "[$ _]".
-    rewrite _at_eq /_at_def valid_loc_eq /valid_loc_def addr_of_eq /addr_of_def /=.
-    iDestruct 1 as (a) "[#L R]". auto.
+    rewrite _at_eq /_at_def; iSplit; last by iIntros "[$ _]".
+    iIntros "[#$ $]". by rewrite valid_loc_eq.
   Qed.
 
-  Lemma _at_loc_rw : forall (l1 l2 : Loc) (R : Rep),
+  Lemma _at_loc_rw (l1 l2 : Loc) (R : Rep) :
       Loc_impl l1 l2 ** _at l1 R |-- _at l2 R.
   Proof.
-    intros. rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
-    iIntros "[#H L]"; iDestruct "L" as (l) "[L R]".
-    iExists _; iFrame "#∗".
-    iApply (Loc_impl_location with "H L").
+    rewrite /Loc_impl _at_eq /_at_def; iIntros "[[-> #H] [#L1 $]]".
+    by iApply "H".
   Qed.
 
   Lemma _at_loc_rwe (l1 l2 : Loc) (R : Rep) :
@@ -195,55 +192,56 @@ Section with_cpp.
     rewrite Loc_equiv_impl; iIntros "#[??]".
     by iSplit; iIntros "B"; iApply _at_loc_rw; iFrame.
   Qed.
+  Lemma _location_loc_eval l : valid_loc l -∗ _location l (_loc_eval l).
+  Proof. rewrite valid_loc_eq /valid_loc_def; by iIntros "$". Qed.
 
-  Lemma _at_loc_materialize : forall (l : Loc) (r : Rep),
-      _at l r -|- Exists a, l &~ a ** r a.
+  Lemma _at_loc_materialize (l : Loc) (r : Rep) :
+    _at l r -|- Exists a, l &~ a ** r a.
   Proof.
-    intros. by rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
+    rewrite _at_eq /_at_def addr_of_eq /addr_of_def; iSplit. {
+      iIntros "[L R]". iExists (_loc_eval l). by iFrame.
+    }
+    by iDestruct 1 as (p) "[#[-> L] $]".
   Qed.
 
-  Lemma addr_of_valid_loc : forall l a,
-      l &~ a |-- valid_loc l.
-  Proof. intros. rewrite valid_loc_eq /valid_loc_def. eauto. Qed.
+  Lemma addr_of_valid_loc l a : l &~ a |-- valid_loc l.
+  Proof. rewrite addr_of_eq valid_loc_eq; by iIntros "[_ ?]". Qed.
 
-  Lemma valid_loc_equiv : forall l, valid_loc l -|- Exists p, l &~ p.
-  Proof. by rewrite valid_loc_eq. Qed.
+  Lemma valid_loc_equiv l : valid_loc l -|- Exists p, l &~ p.
+  Proof. by rewrite -valid_loc_alt_equiv. Qed.
 
-  Lemma _at_emp : forall l, _at l emp -|- valid_loc l.
+  Lemma _at_emp l : _at l emp -|- valid_loc l.
   Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv.
-    setoid_rewrite monPred_at_emp.
-    by setoid_rewrite bi.sep_emp.
+    rewrite _at_loc_materialize valid_loc_equiv; f_equiv=> p.
+    by rewrite monPred_at_emp bi.sep_emp.
   Qed.
 
-  Lemma _at_exists : forall (l : Loc) T (P : T -> Rep),
+  Lemma _at_exists (l : Loc) T (P : T -> Rep) :
       _at l (Exists v : T, P v) -|- Exists v, _at l (P v).
   Proof.
-    intros. rewrite _at_eq /_at_def /=.
-    setoid_rewrite monPred_at_exist. setoid_rewrite bi.sep_exist_l.
-    by rewrite exist_comm.
+    rewrite _at_eq /_at_def /=.
+    setoid_rewrite monPred_at_exist. by rewrite bi.sep_exist_l.
   Qed.
 
-  Lemma _at_forall : forall (l : Loc) T (P : T -> Rep),
+  Lemma _at_forall (l : Loc) T (P : T -> Rep) :
     _at l (Forall x, P x) |-- Forall x, _at l (P x).
   Proof.
-    intros. rewrite _at_eq /_at_def /=.
-    setoid_rewrite monPred_at_forall. setoid_rewrite bi.sep_forall_l.
-    by rewrite exist_forall_comm.
+    rewrite _at_eq /_at_def /=.
+    setoid_rewrite monPred_at_forall. by rewrite bi.sep_forall_l.
   Qed.
 
-  Lemma _at_only_provable : forall (l : Loc) (P : Prop),
-      _at l [| P |] -|- [| P |] ** valid_loc l.
+  Lemma _at_only_provable (l : Loc) (P : Prop) :
+    _at l [| P |] -|- [| P |] ** valid_loc l.
   Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
+    rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
     setoid_rewrite monPred_at_only_provable.
     by setoid_rewrite bi.sep_comm at 1.
   Qed.
 
-  Lemma _at_pure : forall (l : Loc) (P : Prop),
-      _at l (bi_pure P) -|- bi_pure P ** valid_loc l.
+  Lemma _at_pure (l : Loc) (P : Prop) :
+    _at l (bi_pure P) -|- bi_pure P ** valid_loc l.
   Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
+    rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
     setoid_rewrite monPred_at_pure.
     by setoid_rewrite bi.sep_comm at 1.
   Qed.
@@ -286,7 +284,8 @@ Section with_cpp.
             /addr_of_def /_offsetR_def /=.
     rewrite _offsetL_eq /_offsetL_def /_location /=.
     split'.
-    { iDestruct 1 as (a) "[#[-> L] X]". iDestruct "X" as (to) "[[%Heq O] R]".
+    { iDestruct 1 as (a) "[#[-> L] X]".
+      iDestruct "X" as (to) "[[%Heq O] R]".
       iExists to; rewrite -!assoc. by iFrame "#∗". }
     { iDestruct 1 as (a) "[[-> [L X]] R]".
       iExists _. iFrame. eauto. }
@@ -312,10 +311,11 @@ Section with_cpp.
     r |-- r ** [| P |] →
     _at l r |-- _at l r ** [| P |].
   Proof.
-    move=>/monPred_in_entails Hobs. rewrite _at_eq/_at_def.
-    iDestruct 1 as (p) "[Hl Hp]". iDestruct (Hobs with "Hp") as "Hp".
+    rewrite _at_eq/_at_def =>/monPred_in_entails Hobs.
+    rewrite -assoc.
+    iDestruct 1 as "[$ Hp]". iDestruct (Hobs with "Hp") as "Hp".
     rewrite monPred_at_sep monPred_at_only_provable.
-    iDestruct "Hp" as "[Hp $]". auto.
+    iDestruct "Hp" as "[$ $]".
   Qed.
 
 
