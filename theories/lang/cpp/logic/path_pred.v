@@ -145,10 +145,10 @@ Section with_Σ.
   XXX In principle, these instances are needed. In practice, they make typeclass search much slower!
   Maybe we'd want a preorder on Locs (Loc_Impl, based on Loc_impl) as premise?
   *)
-  (* Global Instance _valid_loc_mono : Proper ((≡) ==> (⊢)) _valid_loc.
+  Global Instance _valid_loc_mono : Proper ((≡) ==> (⊢)) _valid_loc.
   Proof. by intros ??->. Qed.
   Global Instance _valid_loc_flip_mono : Proper ((≡) ==> flip (⊢)) _valid_loc.
-  Proof. by intros ??<-. Qed. *)
+  Proof. by intros ??<-. Qed.
 
   Global Instance _location_proper : Proper ((≡) ==> eq ==> (⊣⊢)) _location.
   Proof. rewrite /_location. intros ?? E ?? ->. by rewrite E. Qed.
@@ -159,7 +159,8 @@ Section with_Σ.
   Proof. intros l1 l2 HL p1 p2 ->. by rewrite -HL. Qed.
 
   Global Instance Loc_impl_proper : Proper ((≡) ==> (≡) ==> (≡)) Loc_impl.
-  Proof. rewrite /Loc_impl => x y Heq ??->. by rewrite Heq. Qed.
+  Proof. rewrite /Loc_impl => x y [A B] ?? [-> ->]. by rewrite A B. Qed.
+  (* Proof. rewrite /Loc_impl => x y Heq ??->. by rewrite Heq. Qed. *)
 
   Lemma Loc_impl_location l1 l2 p :
     Loc_impl l1 l2 |-- _location l1 p -* _location l2 p.
