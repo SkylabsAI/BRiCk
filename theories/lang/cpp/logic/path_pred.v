@@ -431,7 +431,6 @@ Section with_Σ.
   Definition _offsetL := _offsetL_aux.(unseal).
   Definition _offsetL_eq : @_offsetL = _ := _offsetL_aux.(seal_eq).
 
-  (* XXX NOTE: This lemma requires the equivalences to become more intensional. *)
   Global Instance _offsetL_proper : Proper ((≡) ==> (≡) ==> (≡)) _offsetL.
   Proof.
     move =>o1 o2 [Hoe Hove] l1 l2 [Hle Hlve].
@@ -442,9 +441,8 @@ Section with_Σ.
     by rewrite Hlve Hle Hove.
   Qed.
 
-  Global Arguments Offset_ptr !_ /. (* XXX *)
   Lemma _offsetL_dot (o1 o2 : Offset) (l : Loc) :
-      _offsetL o2 (_offsetL o1 l) ≡ _offsetL (_dot o1 o2) l.
+      _offsetL o2 (_offsetL o1 l) -|- _offsetL (_dot o1 o2) l.
   Proof.
     rewrite /equiv /Loc_Equiv _offsetL_eq _dot_eq/=.
     split; last by rewrite assoc.
