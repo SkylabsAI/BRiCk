@@ -415,6 +415,8 @@ Module SimpleCPP.
         | Tvoid
         | Tarray _ _
         | Tnamed _ => False (* not directly encoded in memory *)
+        | Tvar _ => False (** XXX **)
+        | Tspecialize _ _ => False (** XXX **)
         end.
       Definition encodes (t : type) (v : val) (vs : list runtime_val) : mpred :=
         [| pure_encodes t v vs |].

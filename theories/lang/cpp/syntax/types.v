@@ -71,10 +71,7 @@ Defined.
 Existing Class calling_conv.
 Existing Instance CC_C.
 
-Variant template_arg : Set :=
-  (* to implement this we need to make types and terms mutually inductive *)
-  .
-
+(** * Unary operators *)
 Variant UnOp : Set :=
 | Uminus
 | Unot
@@ -83,6 +80,7 @@ Variant UnOp : Set :=
 Instance: EqDecision UnOp.
 Proof. solve_decision. Defined.
 
+(** * Binary operators *)
 Variant BinOp : Set :=
 | Badd
 | Band (* & *)
@@ -107,16 +105,7 @@ Variant BinOp : Set :=
 Instance: EqDecision BinOp.
 Proof. solve_decision. Defined.
 
-Variant VarRef : Set :=
-| Lname (_ : localname)
-| Gname (_ : globname).
-Instance: EqDecision VarRef.
-Proof. solve_decision. Defined.
-
-Variant ValCat : Set := Lvalue | Rvalue | Xvalue.
-Instance: EqDecision ValCat.
-Proof. solve_decision. Defined.
-
+(** * Atomic operations *)
 Variant AtomicOp : Set :=
 | AO__atomic_load
 | AO__atomic_load_n
@@ -142,6 +131,7 @@ Variant AtomicOp : Set :=
 Instance: EqDecision AtomicOp.
 Proof. solve_decision. Defined.
 
+(** * Builtin functions *)
 Variant BuiltinFn : Set :=
 | Bin_alloca
 | Bin_alloca_with_align
@@ -165,34 +155,26 @@ Variant BuiltinFn : Set :=
 | Bin_popcount
 | Bin_popcountl
 | Bin_unknown (_ : bs)
+| Bin_launder
 .
 Instance: EqDecision BuiltinFn.
 Proof. solve_decision. Defined.
+
+(** * Value Categories *)
+Variant ValCat : Set := Lvalue | Rvalue | Xvalue.
+Instance: EqDecision ValCat.
+Proof. solve_decision. Defined.
+
 
 Variant call_type : Set := Virtual | Direct.
 Instance: EqDecision call_type.
 Proof. solve_decision. Defined.
 
-
-Variant PrimCast : Set :=
-| Cdependent (* this doesn't have any semantics *)
-| Cbitcast
-| Clvaluebitcast
-| Cl2r
-| Cnoop
-| Carray2pointer
-| Cfunction2pointer
-| Cint2pointer
-| Cpointer2int
-| Cptr2bool
-| Cderived2base
-| Cintegral
-| Cint2bool
-| Cnull2ptr
-| Cbuiltin2function
-| Cconstructorconversion
-| C2void.
-Instance PrimCast_eq: EqDecision PrimCast.
+(** * References *)
+Variant VarRef : Set :=
+| Lname (_ : localname)
+| Gname (_ : globname).
+Instance: EqDecision VarRef.
 Proof. solve_decision. Defined.
 
 
@@ -222,7 +204,7 @@ with Expr : Set :=
 | Econst_ref (_ : VarRef) (_ : type)
   (* ^ these are different because they do not have addresses *)
 | Evar     (_ : VarRef) (_ : type)
-  (* ^ local variable reference *)
+  (* ^ local and global variable references *)
 
 | Echar    (_ : Z) (_ : type)
 | Estring  (_ : bs) (_ : type)
@@ -236,10 +218,10 @@ with Expr : Set :=
   * operator shows up as a function call, not a `Eunop` or `Ebinop`.
   * this includes the assignment operator for classes.
   *)
-| Ederef (_ : Expr) (_ : type)
-| Eaddrof (_ : Expr) (_ : type)
-| Eassign (_ _ : Expr) (_ : type)
-| Eassign_op (_ : BinOp) (_ _ : Expr) (_ : type)
+| Ederef (_ : Expr) (_ : type) (* XXX type = strip pointer from (type_of e) *)
+| Eaddrof (_ : Expr)
+| Eassign (e1 _ : Expr) (_ : type) (* type = type_of e1, if not dependent *)
+| Eassign_op (_ : BinOp) (e1 _ : Expr) (_ : type) (* type = type_of e1, if not dependent *)
   (* ^ these are specialized because they are common *)
 
 | Epreinc (_ : Expr) (_ : type)
@@ -250,14 +232,15 @@ with Expr : Set :=
 
 | Eseqand (_ _ : Expr) (_ : type)
 | Eseqor  (_ _ : Expr) (_ : type)
-| Ecomma (vc : ValCat) (_ _ : Expr) (_ : type)
+| Ecomma (vc : ValCat) (e1 e2 : Expr) (* type = type_of e2 *)
   (* ^ these are specialized because they have special control flow semantics *)
 
 | Ecall    (_ : Expr) (_ : list (ValCat * Expr)) (_ : type)
 | Ecast    (_ : Cast) (_ : ValCat * Expr) (_ : type)
 
-| Emember  (obj : Expr) (_ : field) (_ : type)
-| Emember_call (method : (obj_name * call_type) + Expr) (obj : Expr) (_ : list (ValCat * Expr)) (_ : type)
+| Emember  (_ : ValCat) (obj : Expr) (_ : field) (_ : type)
+  (* TODO: maybe replace the left branch use [Expr] here? *)
+| Emember_call (method : (obj_name * call_type * type) + Expr) (_ : ValCat) (obj : Expr) (_ : list (ValCat * Expr)) (_ : type)
 (* ^ in (globname * bool), bool = true when method being called is virtual *)
 
 | Esubscript (_ : Expr) (_ : Expr) (_ : type)
@@ -272,8 +255,11 @@ with Expr : Set :=
 | Enull
 | Einitlist (_ : list Expr) (_ : option Expr) (_ : type)
 
-| Enew (_ : option globname) (array_size : option Expr) (init : option Expr) (_ : type)
-| Edelete (is_array : bool) (_ : option globname) (_ : Expr) (_ : type)
+| Enew (new_fn : option (obj_name * type)) (new_args : list (ValCat * Expr))
+       (alloc_ty : type)
+       (array_size : option Expr) (init : option Expr) (_ : type)
+| Edelete (is_array : bool) (delete_fn : option (obj_name * type)) (arg : Expr)
+          (deleted_type : type) (dtor : option obj_name) (_ : type)
 
 | Eandclean (_ : Expr) (_ : type)
 | Ematerialize_temp (_ : Expr) (_ : type)
@@ -290,12 +276,29 @@ with Expr : Set :=
 | Eunresolved_symbol (_ : bs) (_ : type)
 
 with Cast : Set :=
-| CCcast       (_ : PrimCast)
+| Cdependent (* this doesn't have any semantics *)
+| Cbitcast
+| Clvaluebitcast
+| Cl2r
+| Cnoop
+| Carray2pointer
+| Cfunction2pointer
+| Cint2pointer
+| Cpointer2int
+| Cptr2bool
+| Cderived2base
+| Cbase2derived
+| Cintegral
+| Cint2bool
+| Cnull2ptr
+| Cbuiltin2function
+| Cconstructorconversion
+| C2void
 | Cuser        (conversion_function : obj_name)
 | Creinterpret (_ : type)
 | Cstatic      (from to : globname)
 | Cdynamic     (from to : globname)
-| Cconst       (_ : type)
+| Cconst       (_ : type).
 
 with template_arg : Set :=
 | template_type (_ : type)
@@ -442,6 +445,8 @@ Section type_countable.
   Defined.
 End type_countable.
 Global Instance type_eq: EqDecision type := type_eq_dec.
+Global Instance expr_eq : EqDecision Expr.
+Proof. Admitted. (* TODO *)
 
 Notation Tpointer := Tptr (only parsing).
 Notation Treference := Tref (only parsing).

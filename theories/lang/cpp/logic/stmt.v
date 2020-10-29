@@ -166,6 +166,8 @@ Module Type Stmt.
         end
       | Tfloat _ => UNSUPPORTED "floating point declarations" (* not supportd *)
       | Tarch _ _ => UNSUPPORTED "architecure specific declarations" (* not supported *)
+      | Tvar _ => False
+      | Tspecialize _ _ => False
       end.
 
     Lemma decl_prim (x : ident) (ρ ρ_init : region) (init : option Expr) (ty : type)

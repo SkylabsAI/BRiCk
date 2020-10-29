@@ -52,6 +52,9 @@ Fixpoint type_of (e : Expr) : type :=
   | Earrayloop_init _ _ _ _ _ t => t
   | Earrayloop_index _ t => t
   | Eopaque_ref _ t => t
+  | Eunresolved_ctor _ _ => Tvar "?"
+  | Eunresolved_member _ _ _ => Tvar "?"
+  | Eunresolved_symbol _ _ => Tvar "?"
   | Eunsupported _ t => t
   end.
 
@@ -77,6 +80,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr
   | Tarch sz nm => Tarch sz nm
+  | Tspecialize _ _ => t
   | Tvar _ => t
   end.
 

@@ -85,6 +85,38 @@ Module Type Init.
       iModIntro. iIntros (???). iApply IHty.
     Qed.
 
+    (*
+    Variant type_class : Set :=
+    | Cprimitive
+    | Caggregate
+    | Creference.
+    Fixpoint classify_type (ty : type) : option (type_qualifiers * type_class) :=
+      match ty with
+      | Tpointer _
+      | Tmember_pointer _ _
+      | Tbool
+      | Tint _ _
+      | Tnullptr
+      | Tvoid
+      | Tfloat _ => Some (QM, Cprimitive)
+      | Tqualified q t =>
+        classify_type t ≫= fun '(q',c) => (merge_tq q q', c)
+      | Treference _
+      | Trv_reference _ => Some (QM, Creference)
+      | Tarray _ _
+      | Tnamed _ => None (QM, Caggregate)
+      | Tvar _ => None
+      | Tspecialize _ _ => None
+      end.
+     *)
+
+    Fixpoint is_primitive (ty : type) : bool :=
+      match erase_qualifiers ty with
+      | Tpointer _ | Tmember_pointer _ _ | Tbool | Tint _ _ | Tnullptr => true
+      | _ => false
+      end.
+
+
     (* [wp_initialize] provides "constructor" semantics for types.
      * For aggregates, simply delegates to [wp_init], but for primitives,
      * the semantics is to evaluate the primitive and initialize the location
@@ -96,8 +128,9 @@ Module Type Init.
      * NOTE this assumes that the memory has *not* yet been given to the C++ abstract machine.
      * TODO make this consistent with [default_initialize].
      *)
-    Definition wp_initialize (ty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
-      match drop_qualifiers ty with
+    Fixpoint wp_initialize (ty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred)
+             {struct ty} : mpred :=
+      match ty with
       | Tvoid => False
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
@@ -121,6 +154,10 @@ Module Type Init.
       | Tnullptr => False (* nullptr fields are not supported *)
       | Tarch _ _ => False (* vendor-specific types are not supported *)
       | Tfloat _ => False (* floating point numbers are not supported *)
+      | Tarch _ _ => False (* vendor-specific types are not supported *)
+      | Tfloat _ => False (* floating point numbers are not supported *)
+      | Tvar _ => False (* no rule *)
+      | Tspecialize _ _ => False (* no rule *)
       end.
 
     Lemma wp_initialize_frame obj ty e Q Q' :
