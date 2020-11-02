@@ -139,6 +139,15 @@ Module Type Init.
            else False)
       |-- wp_prval (Einitlist (e :: nil) None t) Q.
 
+    (* `Eimplicit_init` corresponds to the clang AST node `clang::ImplicitValueInitExpr`;
+       the documentation <https://clang.llvm.org/doxygen/classclang_1_1ImplicitValueInitExpr.html#details>
+       states that this AST node "represents an implicitly-generated value initialization
+       of an object of a given type."
+
+       The C++ standard defines `value-initialization` <http://eel.is/c++draft/dcl.init.general#8>
+       to be `zero-initialization` <http://eel.is/c++draft/dcl.init.general#6> when the value is
+       not a class or array type <http://eel.is/c++draft/dcl.init.general#8.3>.
+     *)
     Axiom wp_init_implicit_init_int : forall ty addr sz sgn Q,
         drop_qualifiers ty = Tint sz sgn ->
           _at (_eqv addr) (anyR (erase_qualifiers ty) 1) **
