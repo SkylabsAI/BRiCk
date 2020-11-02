@@ -99,9 +99,12 @@ Module Type Init.
           Some (List.combine (List.map Z.of_nat (seq 0 sz))
                              (List.app es (map (fun _ => f) (seq (List.length es) (sz - 1)))))
         end
-      else
-        Some (List.combine (List.map Z.of_nat (seq 0 sz))
-                           (firstn sz es)).
+      (* <http://eel.is/c++draft/dcl.init.general#16.5>
+
+         Programs which contain more initializer expressions than
+         array-members are ill-formed.
+       *)
+      else None.
 
     Fixpoint wp_array_init (ety : type) (base : val) (es : list (Z * Expr)) (Q : mpred -> mpred) : mpred :=
       match es with
