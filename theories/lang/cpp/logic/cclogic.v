@@ -11,308 +11,275 @@ From iris.proofmode Require Import tactics.
 
 From bedrock.lang.cpp Require Import logic.pred.
 
-
 Set Default Proof Using "Type".
-Set Suggest Proof Using.
 
-Section with_Σ.
-  Context `{Σ : cpp_logic ti}.
+(** This file exports the mpred version of own, inv and cinv. *)
+(* Right now, they simply shadow Iris' own, inv and cinv, because mpred is still
+  iProp. In the future, this will change, and mpred can become abstract, with
+  own/inv/cinv as features of the logic, not specifically tied to iProp.
+  TODO: this should be upstreamed in Iris---see cpp2v-core#185. *)
 
-  Section with_own.
-    Context `{!inG Σ A}.
+(* own *)
+Definition own `{Σ : cpp_logic} `{!inG Σ A} : gname → A → mpred :=
+  λ γ a, ⎡ own.own γ a ⎤%I.
+(* TODO: I'll leave sealing for later MRs. *)
+(* Local Definition own_def `{Σ : cpp_logic} `{!inG Σ A}
+  : gname → A → mpred := own.own.
+Local Definition own_aux : seal (@own_def). Proof. by eexists. Qed.
+Definition own := own_aux.(unseal).
+Local Definition own_eq : @own = @own_def := own_aux.(seal_eq). *)
+Arguments own {_ Σ A _} γ a.
+Instance: Params (@own) 5 := {}.
 
-    Definition own (γ : gname) (a : A) : mpred :=  ⎡ own.own γ a ⎤.
+(* inv *)
+Definition inv `{Σ : cpp_logic} `{!invG Σ}
+  : namespace → mpred → mpred := 
+  λ N P, ⎡ invariants.inv N (∀ i, P i) ⎤%I.
+(* Local Definition inv_def `{Σ : cpp_logic} `{!invG Σ}
+  : namespace → mpred → mpred := invariants.inv.
+Local Definition inv_aux : seal (@inv_def). Proof. by eexists. Qed.
+Definition inv := inv_aux.(unseal).
+Local Definition inv_eq : @inv = @inv_def := inv_aux.(seal_eq). *)
+Arguments inv {_ Σ _} N P.
+Instance: Params (@inv) 4 := {}.
 
-    Lemma own_alloc : forall (a : A), ✓ a → |-- |==> ∃ γ, own γ a.
-    Proof.
-      intros a Va. iStartProof. iMod (own_alloc a Va) as (γ) "?". eauto.
-    Qed.
+(* cinv *)
+Definition cinv_own `{Σ : cpp_logic} `{!invG Σ, !cinvG Σ}
+  : gname → frac → mpred :=
+  λ γ q, ⎡ cancelable_invariants.cinv_own γ q ⎤%I. 
+Arguments cinv_own {_ Σ _ _ } γ a.
+Instance: Params (@cinv_own) 5 := {}.
 
-    Lemma own_alloc_frame (R : A) : forall P Q,
-        ✓ R ->
-        (forall (γ : gname), P ** own γ R |-- Q) ->
-        P |-- |==> Q.
-    Proof.
-      intros ?? HR HQ.
-      iIntros "HP".
-      iMod (own_alloc R) as (γ) "H"; first done.
-      iModIntro.
-      iApply HQ.
-      iFrame.
-    Qed.
+Definition cinv `{Σ : cpp_logic} `{!invG Σ, !cinvG Σ}
+  : namespace → gname → mpred → mpred :=
+  λ N γ P, ⎡ cancelable_invariants.cinv N γ (∀ i, P i) ⎤%I.
+(* Local Definition cinv_def `{Σ : cpp_logic} `{!invG Σ, !cinvG Σ}
+  : namespace → gname → mpred → mpred := cancelable_invariants.cinv.
+Local Definition cinv_aux : seal (@cinv_def). Proof. by eexists. Qed.
+Definition cinv := cinv_aux.(unseal).
+Local Definition cinv_eq : @cinv = @cinv_def := cinv_aux.(seal_eq). *)
+Arguments cinv {_ Σ _ _} N P.
+Instance: Params (@cinv) 6 := {}.
 
-  End with_own.
+(* the names of invariants *)
+Definition iname : Set := namespace.
 
-  Example viewshift_example (P Q : mpred) (N : namespace) :
-    (P -* |={ ⊤ ∖ ↑N, ⊤  }=> Q) ** (|={⊤, ⊤ ∖ ↑N}=> P) |-- |={⊤}=> Q.
-  Proof using .
-    (* Introduce hypotheses into context by destructing separation conjunct *)
-    iIntros "[HPQ HP]".
-    (* Construct hypothesis granularity *)
-    iMod "HP".
-    (* Resolve second shift *)
-    iApply "HPQ".
-    (* Resolve first shift *)
-    iApply "HP".
+Local Ltac clear_objectively :=
+  iNext; rewrite monPred_objectively_unfold; by iFrame.
+
+(* TODO: more to be ported *)
+Section own_properties.
+  Context `{Σ : cpp_logic, !inG Σ A}.
+  Implicit Type (a : A).
+
+  Lemma own_alloc a : ✓ a → |-- |==> Exists γ, own γ a.
+  Proof. intros. rewrite -embed_exist -embed_bupd -own.own_alloc; eauto. Qed.
+
+  Lemma own_alloc_frame a P Q :
+    ✓ a ->
+    (∀ γ, P ** own γ a |-- Q) ->
+    P |-- |==> Q.
+  Proof.
+    iIntros (VL HQ) "HP".
+    iMod (own_alloc a) as (γ) "H"; first done.
+    iModIntro. iApply HQ. by iFrame.
   Qed.
 
-  Local Ltac clear_objectively :=
-    iNext; rewrite monPred_objectively_unfold; by iFrame.
+  Lemma own_op γ a1 a2 : own γ (a1 ⋅ a2) -|- own γ a1 ** own γ a2.
+  Proof. by rewrite -embed_sep -own.own_op. Qed.
+  Lemma own_mono γ a1 a2 : a2 ≼ a1 → own γ a1 |-- own γ a2.
+  Proof. intros. by rewrite /own own.own_mono. Qed.
 
-  Section with_invG.
-    Context `{!invG Σ}.
-    Implicit Type (P: mpred).
-    (* the names of invariants *)
-    Definition iname : Set := namespace.
+  #[global] Instance own_mono' γ : Proper (flip (≼) ==> (⊢)) (@own _ Σ A _ γ).
+  Proof. intros ???. by rewrite /own own.own_mono'. Qed.
+  #[global] Instance own_timeless γ a : Discrete a → Timeless (own γ a) := _.
+  #[global] Instance own_core_persistent γ a : CoreId a → Persistent (own γ a) := _.
 
-    Bind Scope string_scope with iname.
+  (* TODO: overload uPred_cmra_valid as well *)
+  Lemma own_valid γ a : own γ a |-- ⎡ ✓ a ⎤.
+  Proof. by rewrite /own own.own_valid. Qed.
+  Lemma own_valid_2 γ a1 a2 : own γ a1 -∗ own γ a2 -* ⎡ ✓ (a1 ⋅ a2) ⎤.
+  Proof. by rewrite /own -embed_wand own.own_valid_2. Qed.
+  Lemma own_valid_3 γ a1 a2 a3 :
+    own γ a1 -∗ own γ a2 -∗ own γ a3 -* ⎡ ✓ (a1 ⋅ a2 ⋅ a3) ⎤.
+  Proof. by rewrite /own -!embed_wand own.own_valid_3. Qed.
+  Lemma own_valid_r γ a : own γ a |-- own γ a ** ⎡ ✓ a ⎤.
+  Proof. by rewrite /own -embed_sep -own.own_valid_r. Qed.
+  Lemma own_valid_l γ a : own γ a |-- ⎡ ✓ a ⎤** own γ a.
+  Proof. by rewrite /own -embed_sep -own.own_valid_l. Qed.
 
-    (* named invariants *)
-    (* mpred version of [inv]: s/inv/Inv;s/iProp Σ/mpred *)
-    Definition Inv : namespace → mpred → mpred := λ N P, ⎡ inv N (∀ i, P i) ⎤%I.
+  Lemma own_update γ a a' : a ~~> a' → own γ a |-- |==> own γ a'.
+  Proof. intros. rewrite /own -embed_bupd -own.own_update; eauto. Qed.
+  Lemma own_update_2 γ a1 a2 a' :
+    a1 ⋅ a2 ~~> a' → own γ a1 |-- own γ a2 -* |==> own γ a'.
+  Proof. intros. rewrite /own -embed_bupd -embed_wand -own.own_update_2; eauto. Qed.
+  Lemma own_update_3 γ a1 a2 a3 a' :
+    a1 ⋅ a2 ⋅ a3 ~~> a' → own γ a1 |-- own γ a2 -* own γ a3 -* |==> own γ a'.
+  Proof. intros. rewrite /own -embed_bupd -!embed_wand -own.own_update_3; eauto. Qed.
+End own_properties.
 
-    Lemma Inv_alloc N E P : |> <obj> P |-- |={E}=> Inv N P.
-    Proof.
-      intros. iIntros "I".
-      iMod (inv_alloc with "[I]") as "$"; last done.
-      clear_objectively.
-    Qed.
+(* TODO: more to be ported *)
+Section inv_properties.
+  Context `{Σ : cpp_logic, !invG Σ}.
+  Implicit Types (P Q : mpred) (γ : gname) (N : namespace) (E : coPset).
 
-    Lemma Inv_alloc_objective N P `{!Objective P} :
-      |> P |-- |={⊤}=> Inv N P.
-    Proof.
-      rewrite -Inv_alloc. iIntros "P !>". by iApply objective_objectively.
-    Qed.
+  Lemma inv_alloc' N E P :
+    |> <obj> P |-- |={E}=> inv N P.
+  Proof.
+    rewrite /inv -embed_fupd -invariants.inv_alloc
+            monPred_objectively_unfold -embed_later. eauto.
+  Qed.
+  Lemma inv_alloc N E P `{!Objective P}:
+    |> P |-- |={E}=> inv N P.
+  Proof. by rewrite -inv_alloc' -objective_objectively. Qed.
 
-    Lemma Inv_acc E N P :
-      ↑N ⊆ E → Inv N P |-- |={E,E∖↑N}=> |> <obj> P ∗ (|> <obj> P ={E∖↑N,E}=∗ emp).
-    Proof.
-      iIntros (SN) "I".
-      iMod (inv_acc with "I") as "[I C]"; first done.
-      iModIntro. iSplitL "I"; first clear_objectively.
-      iIntros "I". iMod ("C" with "[I]"); last done.
-      clear_objectively.
-    Qed.
+  #[global] Instance inv_contractive N : Contractive (inv N).
+  Proof. rewrite /inv. solve_contractive. Qed.
+  #[global] Instance inv_ne N : NonExpansive (inv N) := _.
+  #[global] Instance inv_proper N : Proper (equiv ==> equiv) (inv N) := _.
+  #[global] Instance inv_persistent N P : Persistent (inv N P) := _.
+  #[global] Instance inv_affine N P : Affine (inv N P) := _.
+End inv_properties.
 
-    Lemma Inv_acc_objective E N P `{!Objective P} :
-      ↑N ⊆ E → Inv N P |-- |={E,E∖↑N}=> |> P ∗ (|> P ={E∖↑N,E}=∗ emp).
-    Proof.
-      iIntros (SN) "I". iMod (Inv_acc with "I") as "[I C]"; first done.
-      iModIntro. iSplitL "I".
-      - iNext. by iApply monPred_objectively_elim.
-      - iIntros "I". iApply ("C" with "[I]").
-        iNext. by iApply objective_objectively.
-    Qed.
+Section cinv_properties.
+  Context `{Σ : cpp_logic, !invG Σ, !cinvG Σ}.
+  Implicit Types (P Q : mpred) (γ : gname) (N : namespace) (E : coPset).
 
-    Global Instance Inv_contractive N : Contractive (Inv N).
-    Proof. solve_contractive. Qed.
+  #[global] Instance cinv_own_timeless γ p : Timeless (cinv_own γ p) := _.
+  #[global] Instance cinv_contractive N γ : Contractive (cinv N γ).
+  Proof. rewrite /cinv. solve_contractive. Qed.
+  #[global] Instance cinv_ne N γ : NonExpansive (cinv N γ) := _.
+  #[global] Instance cinv_proper N γ : Proper ((≡) ==> (≡)) (cinv N γ) := _.
+  #[global] Instance cinv_persistent N γ P : Persistent (cinv N γ P) := _.
+  #[global] Instance cinv_affine N γ P : Affine (cinv N γ P) := _.
+  #[global] Instance cinv_own_fractional γ : Fractional (cinv_own γ).
+  Proof. intros ??. by rewrite -embed_sep -fractional. Qed.
+  #[global] Instance cinv_own_as_fractional γ q :
+    AsFractional (cinv_own γ q) (cinv_own γ) q.
+  Proof. constructor; eauto. apply _. Qed.
 
-    Global Instance Inv_ne N : NonExpansive (Inv N) := _.
 
-    Global Instance Inv_proper N : Proper (equiv ==> equiv) (Inv N) := _.
+  Lemma cinv_alloc' E N P :
+    |> <obj> P |-- |={E}=> Exists γ, cinv N γ P ** cinv_own γ 1.
+  Proof.
+    rewrite /cinv. setoid_rewrite <-embed_sep. setoid_rewrite <-embed_exist.
+    rewrite -embed_fupd -cancelable_invariants.cinv_alloc
+            monPred_objectively_unfold -embed_later. eauto.
+  Qed.
+  Lemma cinv_alloc E N P `{!Objective P} :
+    |> P |-- |={E}=> Exists γ, cinv N γ P ** cinv_own γ 1.
+  Proof. by rewrite -cinv_alloc' -objective_objectively. Qed.
 
-    Global Instance Inv_persistent : Persistent (Inv n P) := _.
+  Lemma cinv_cancel' E N γ P :
+    ↑N ⊆ E →
+    cinv N γ P |-- cinv_own γ 1 -* |={E}=> |> <obj> P.
+  Proof.
+    intros.
+    by rewrite monPred_objectively_unfold -embed_later -embed_fupd -embed_wand
+               -cancelable_invariants.cinv_cancel.
+  Qed.
 
-    Global Instance Inv_affine : Affine (Inv n P) := _.
+  Lemma cinv_cancel E N γ P :
+    ↑N ⊆ E →
+    cinv N γ P |-- cinv_own γ 1 -* |={E}=> |> P.
+  Proof. intros. by rewrite cinv_cancel' // monPred_objectively_elim. Qed.
 
-    Global Instance into_acc_Inv N P E:
-    IntoAcc (X := unit) (Inv N P)
-            (↑N ⊆ E) True (fupd E (E ∖ ↑N)) (fupd (E ∖ ↑N) E)
-            (λ _ : (), (▷ <obj> P)%I) (λ _ : (), (▷ <obj> P)%I) (λ _ : (), None).
-    Proof.
-      rewrite /IntoAcc /accessor bi.exist_unit /=.
-      iIntros (?) "Hinv _".
-      by iApply (Inv_acc with "Hinv").
-    Qed.
-  End with_invG.
+  Lemma cinv_alloc_cofinite' (G: gset gname) E N :
+    |-- |={E}=> Exists γ, ⌜ γ ∉ G ⌝ ** cinv_own γ 1%Qp **
+                          ∀ P, |> <obj> P ={E}=∗ cinv N γ P.
+  Proof.
+    rewrite /cinv monPred_objectively_unfold.
+    iMod (cancelable_invariants.cinv_alloc_cofinite G E N)
+      as (γ) "(NIn & Inv & New)".
+    iIntros "!>". iExists γ. rewrite embed_pure. iFrame.
+    iIntros (P) "P".
+    rewrite embed_forall. setoid_rewrite embed_wand.
+    setoid_rewrite embed_fupd. setoid_rewrite embed_later.
+    by iApply ("New" with "P").
+  Qed.
 
-  Section with_cinvG.
-    Context `{!cinvG Σ}.
-    Implicit Types (P I : mpred).
-    (* mpred version of [cinv]: s/cinv/TInv;s/iProp Σ/mpred *)
-    Definition TInv : namespace → gname → mpred → mpred
-      := λ N γ P, ⎡ cinv N γ (∀ i, P i) ⎤%I.
+  Lemma cinv_alloc_cofinite (G: gset gname) E N :
+    |-- |={E}=> Exists γ, ⌜ γ ∉ G ⌝ ** cinv_own γ 1%Qp **
+                          ∀ P, ⌜ Objective P ⌝ → |> P ={E}=∗ cinv N γ P.
+  Proof.
+    iMod (cinv_alloc_cofinite' G E N) as (γ) "(NIn & Inv & New)".
+    iIntros "!>". iExists γ. iFrame. iIntros (P OB).
+    iSpecialize ("New" $! P). by rewrite -objective_objectively.
+  Qed.
 
-    Definition TInv_own : gname → frac → mpred
-      := λ γ q, ⎡ cinv_own γ q ⎤%I.
+  (* Stronger allocation rule: stronger constraints on γ can be picked.
+    Also see cinv_alloc_strong_open, the invariant can be allocated but
+    establishing its content can be delayed. It can be added when needed. *)
+  Lemma cinv_alloc_strong' (I : gname → Prop) E N :
+    pred_infinite I →
+    |-- |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗ ∀ P, |> <obj> P ={E}=∗ cinv N γ P.
+  Proof.
+    intros IN.
+    rewrite /cinv monPred_objectively_unfold.
+    iMod (cancelable_invariants.cinv_alloc_strong _ E N IN)
+      as (γ) "(NIn & Inv & New)".
+    iIntros "!>". iExists γ. rewrite embed_pure. iFrame.
+    iIntros (P) "P".
+    rewrite embed_forall. setoid_rewrite embed_wand.
+    setoid_rewrite embed_fupd. setoid_rewrite embed_later.
+    by iApply ("New" with "P").
+  Qed.
+  Lemma cinv_alloc_strong (I : gname → Prop) E N :
+    pred_infinite I →
+    |-- |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗
+                      ∀ P, ⌜ Objective P ⌝ → |> P ={E}=∗ cinv N γ P.
+  Proof.
+    intros IN.
+    iMod (cinv_alloc_strong' _ E N IN) as (γ) "(NIn & Inv & New)".
+    iIntros "!>". iExists γ. iFrame. iIntros (P OB).
+    iSpecialize ("New" $! P). by rewrite -objective_objectively.
+  Qed.
 
-    (* a stronger invariant allocation lemma. This allows one to:
-      - pick the ghost name γ to be outside of a set G (γ ∉ G)
-      - delay picking the invariant I until γ is allocated, so that I can
-        depend on γ. Notably, one can put the invariant token TInv_own γ q
-        inside the invariant I. *)
-    Lemma TInv_alloc_cofinite : forall (G: gset gname) M N,
-      |-- |={M}=> Exists γ, ⌜ γ ∉ G ⌝ ** TInv_own γ 1%Qp **
-                            ∀ I, ▷ <obj> I ={M}=∗ TInv N γ I.
-    Proof.
-      intros.
-      iMod (cinv_alloc_cofinite G M N) as (γ Fγ) "[O FI]".
-      iModIntro. iExists γ. iFrame (Fγ) "O".
-      iIntros (I) "I". iMod ("FI" with "[I]") as "$"; last done.
-      clear_objectively.
-    Qed.
+  Corollary cinv_alloc_ghost_named_inv' E N (I : gname → mpred) :
+    (∀ γ , |> <obj> I γ) |--
+    |={E}=> Exists γ, cinv N γ (I γ) ** cinv_own γ 1.
+  Proof.
+    iIntros "I".
+    iMod (cinv_alloc_cofinite' empty E N) as (γ ?) "[HO HI]".
+    iSpecialize ("I" $! γ).
+    iMod ("HI" $! (I γ) with "[$I]") as "HI".
+    iIntros "!>". eauto with iFrame.
+  Qed.
 
-    (* Even stronger: stronger constraints on γ can be picked
-      Also see cinv_alloc_strong_open, the invariant can be allocated but
-      establishing its content can be delayed. It can be added when needed. *)
-    Lemma TInv_alloc_strong : forall (F : gname → Prop) M N,
-      pred_infinite F →
-      |-- |={M}=> ∃ γ, ⌜ F γ ⌝ ∗ TInv_own γ 1 ∗ ∀ I, ▷ <obj> I ={M}=∗ TInv N γ I.
-    Proof.
-      intros F M N PF.
-      iMod (cinv_alloc_strong F M N PF) as (γ Fγ) "[O FI]".
-      iModIntro. iExists γ. iFrame (Fγ) "O".
-      iIntros (I) "I". iMod ("FI" with "[I]") as "$"; last done.
-      clear_objectively.
-    Qed.
+  Corollary cinv_alloc_ghost_named_inv E N (I : gname → mpred)
+    `{!∀ γ, Objective (I γ)} :
+    (∀ γ , |> I γ) |--
+    |={E}=> Exists γ, cinv N γ (I γ) ** cinv_own γ 1.
+  Proof.
+    rewrite -cinv_alloc_ghost_named_inv'.
+    iIntros "P" (γ). iSpecialize ("P" $! γ). by rewrite -objective_objectively.
+  Qed.
 
-    Corollary TInv_alloc_ghost_named_inv : forall M N (I : _ -> mpred),
-      (∀ γ : gname, <obj> I γ) |--
-      |={M}=> Exists γ, TInv N γ (I γ) ** TInv_own γ 1%Qp.
-    Proof.
-      intros. iIntros "I".
-      iMod (TInv_alloc_cofinite empty M N) as (γ ?) "[HO HI]".
-      iSpecialize ("I" $! γ).
-      iMod ("HI" $! (I γ) with "[$I]") as "HI".
-      iIntros "!>". eauto with iFrame.
-    Qed.
+  Lemma cinv_acc_strong' E N γ p P :
+    ↑N ⊆ E →
+    cinv N γ P |-- (cinv_own γ p ={E,E∖↑N}=∗
+                          (|> <obj> P ** cinv_own γ p **
+                          (Forall (E' : coPset),
+                            ((|> <obj> P \\// cinv_own γ 1) ={E',↑N ∪ E'}=∗ True)))).
+  Proof.
+    iIntros (SUB) "Inv own". rewrite monPred_objectively_unfold.
+    iMod (cancelable_invariants.cinv_acc_strong with "Inv own")
+      as "(P & own & Close)"; first done.
+    iIntros "!>". rewrite embed_later. iFrame. iIntros (E') "P".
+    iMod ("Close" with "[P]"); last done. rewrite /cinv embed_or -embed_later.
+    by iFrame.
+  Qed.
 
-    Lemma TInv_alloc : forall M N I,
-      |> <obj> I |-- |={M}=> Exists γ, TInv N γ I ** TInv_own γ 1%Qp.
-    Proof.
-      intros. iIntros "I".
-      iMod (cinv_alloc with "[I]") as (γ) "[I O]"; last by eauto.
-      clear_objectively.
-    Qed.
-
-    Lemma TInv_alloc_objective : forall M N I `{!Objective I},
-      |> I |-- |={M}=> Exists γ, TInv N γ I ** TInv_own γ 1%Qp.
-    Proof.
-      intros. rewrite -TInv_alloc. iIntros "I !>". by iApply objective_objectively.
-    Qed.
-
-    Lemma TInv_acc E N γ (q: frac) P :
-      ↑N ⊆ E →
-      TInv N γ P |-- TInv_own γ q -*
-        |={E,E∖↑N}=> |> <obj> P ∗ TInv_own γ q ∗ (|> <obj> P ={E∖↑N,E}=∗ emp).
-    Proof.
-      iIntros (?) "#Hinv Hγ".
-      iMod (cinv_acc with "Hinv Hγ") as "(I & $ & H)"; first done.
-      iIntros "!>". iSplitL "I"; first clear_objectively.
-      iIntros "I". iMod ("H" with "[I]"); last done.
-      clear_objectively.
-    Qed.
-
-    Lemma TInv_acc_objective E N γ (q: frac) P `{!Objective P} :
-      ↑N ⊆ E →
-      TInv N γ P |-- TInv_own γ q -*
-        |={E,E∖↑N}=> |> P ∗ TInv_own γ q ∗ (|> P ={E∖↑N,E}=∗ emp).
-    Proof.
-      iIntros (?) "#Hinv Hγ".
-      iMod (TInv_acc with "Hinv Hγ") as "(I & $ & C)"; first done.
-      iIntros "!>". iSplitL "I".
-      - iNext. by iApply monPred_objectively_elim.
-      - iIntros "I". iApply "C". iNext. by iApply objective_objectively.
-    Qed.
-
-    Global Instance TInv_own_timeless γ q : Timeless (TInv_own γ q) := _.
-
-    Global Instance TInv_contractive N γ : Contractive (TInv N γ).
-    Proof. solve_contractive. Qed.
-    Global Instance TInv_ne N γ : NonExpansive (TInv N γ) := _.
-    Global Instance TInv_proper N γ : Proper ((≡) ==> (≡)) (TInv N γ) := _.
-
-    Global Instance TInv_persistent : Persistent (TInv Ns γ P) := _.
-
-    Global Instance TInv_affine : Affine (TInv Ns γ P) := _.
-
-    Global Instance TInv_own_fractional γ : Fractional (TInv_own γ).
-    Proof. intros ??. by rewrite -embed_sep -fractional. Qed.
-    Global Instance TInv_own_as_fractional γ q :
-      AsFractional (TInv_own γ q) (TInv_own γ) q.
-    Proof. split; [done|apply _]. Qed.
-
-    Lemma TInv_cancel M N γ I :
-      ↑N ⊆ M ->
-      TInv N γ I |-- TInv_own γ 1%Qp -* |={M}=> |> <obj> I.
-    Proof.
-      iIntros (SN) "TI O".
-      iMod (cinv_cancel with "[$TI] [$O]") as "I"; first done.
-      iModIntro. clear_objectively.
-    Qed.
-
-    Lemma TInv_cancel_objective M N γ I `{!Objective I}:
-      ↑N ⊆ M ->
-      TInv N γ I |-- TInv_own γ 1%Qp -* |={M}=> |> I.
-    Proof.
-      iIntros (SN) "I O".
-      iMod (TInv_cancel with "I O") as "I"; first done.
-      iIntros "!> !>". by iApply monPred_objectively_elim.
-    Qed.
-
-    #[deprecated(since="20200824", note="Use TInv_cancel instead")]
-    Lemma TInv_delete M N γ I :
-      ↑N ⊆ M ->
-      TInv N γ I ** TInv_own γ 1%Qp |-- |={M}=> |> <obj> I.
-    Proof. intros. iIntros "[#? ?]". iApply TInv_cancel; eauto. Qed.
-
-(*
-    Lemma cinv_open_stronger E N γ p P :
-      ↑N ⊆ E →
-      cinv N γ P ⊢ (cinv_own γ p ={E,E∖↑N}=∗
-                    ((|>P) ** cinv_own γ p ** (Forall (E' : coPset), ((|>(P ∨ cinv_own γ 1)) ={E',↑N ∪ E'}=∗ True)))).
-    Proof.
-      iIntros (?) "Hinv Hown".
-      unfold cinv. (* iDestruct "Hinv" as (P') "[#HP' Hinv]". *)
-      iPoseProof (inv_acc (↑ N) N _ with "Hinv") as "H"; first done.
-      rewrite difference_diag_L.
-      iPoseProof (fupd_mask_frame_r _ _ (E ∖ ↑ N) with "H") as "H"; first set_solver.
-      rewrite left_id_L -union_difference_L //. iMod "H" as "[[HP | >HP] H]".
-      - iModIntro. iFrame. iDestruct ("HP'" with "HP") as "HP". iFrame. iModIntro.
-        iIntros (E') "HP".
-        iPoseProof (fupd_mask_frame_r _ _ E' with "(H [HP])") as "H"; first set_solver.
-        { iDestruct "HP" as "[HP | >Hown]".
-          iLeft. by iApply "HP'".
-          eauto.
-        }
-          by rewrite left_id_L.
-      - iDestruct (cinv_own_1_l with "HP Hown") as %[].
-    Qed.
-*)
-
-    Lemma TInv_acc_strong E N γ p P :
-      ↑N ⊆ E →
-      TInv N γ P |-- (TInv_own γ p ={E,E∖↑N}=∗
-                            (|> <obj> P) ** TInv_own γ p **
-                            (Forall (E' : coPset),
-                              ((|> <obj> P ∨ TInv_own γ 1) ={E',↑N ∪ E'}=∗ True))).
-    Proof.
-      iIntros (SN) "TI O".
-      iMod (cinv_acc_strong with "[$TI] [$O]") as "(I & $ & FI)"; first done.
-      iModIntro. iSplitL "I"; first clear_objectively.
-      iIntros (E') "PO". iMod ("FI" with "[PO]"); last done.
-      iDestruct "PO" as "[P|O]"; last (iRight; by iFrame).
-      iLeft. clear_objectively.
-    Qed.
-
-    (* for proofmode's iInv *)
-    Global Instance into_acc_TInv E N γ P q :
-      IntoAcc (X:=unit) (TInv N γ P)
-              (↑N ⊆ E) (TInv_own γ q) (fupd E (E∖↑N)) (fupd (E∖↑N) E)
-              (λ _, |> <obj> P ∗ TInv_own γ q)%I (λ _, |> <obj> P)%I (λ _, None)%I.
-    Proof.
-      rewrite /IntoAcc /accessor bi.exist_unit -assoc.
-      iIntros (?) "#Hinv Hown".
-      by iApply (TInv_acc with "Hinv Hown").
-    Qed.
-  End with_cinvG.
-End with_Σ.
-
-#[deprecated(since="20200824", note="Use Inv_alloc instead")]
-Notation Inv_new := Inv_alloc (only parsing).
-
-#[deprecated(since="20200824", note="Use TInv_alloc instead")]
-Notation TInv_new := TInv_alloc (only parsing).
-
-#[deprecated(since="20200824", note="Use TInv_acc_strong instead")]
-Notation Tinv_open_strong := TInv_acc_strong (only parsing).
+  Lemma cinv_acc_strong E N γ p P `{!Objective P}:
+    ↑N ⊆ E →
+    cinv N γ P |-- (cinv_own γ p ={E,E∖↑N}=∗
+                          (|> P ** cinv_own γ p **
+                          (Forall (E' : coPset),
+                            ((|> P \\// cinv_own γ 1) ={E',↑N ∪ E'}=∗ True)))).
+  Proof.
+    iIntros (SUB) "Inv own".
+    iMod (cinv_acc_strong' with "Inv own") as "(P & $ & Close)"; first done.
+    iIntros "!>". iSplitL "P"; first by rewrite monPred_objectively_elim.
+    iIntros (E'). iSpecialize ("Close" $! E'). by rewrite -objective_objectively.
+  Qed.
+End cinv_properties.

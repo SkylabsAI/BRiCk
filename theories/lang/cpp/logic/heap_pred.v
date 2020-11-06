@@ -25,16 +25,6 @@ Definition RepI `{Σ : cpp_logic} := monPredI ptr_bi_index mpredI.
 Bind Scope bi_scope with Rep.
 Bind Scope bi_scope with RepI.
 
-(* MOVE to Iris *)
-Lemma exist_comm {PROP : bi} {A B} (Φ : A → B → PROP) :
-  (∃ a b, Φ a b) -|- (∃ b a, Φ a b).
-Proof. iSplit; iDestruct 1 as (??) "H"; eauto. Qed.
-
-Lemma exist_forall_comm {PROP : bi} {A B} (Φ : A → B → PROP) :
-  (∃ a, ∀ b, Φ a b) |-- (∀ b, ∃ a, Φ a b).
-Proof. iDestruct 1 as (a) "H". iIntros (b). iExists a. by iApply "H". Qed.
-(* END MOVE *)
-
 Section with_cpp.
   Context `{Σ : cpp_logic}.
 
@@ -223,7 +213,7 @@ Section with_cpp.
   Proof.
     intros. rewrite _at_eq /_at_def /=.
     setoid_rewrite monPred_at_exist. setoid_rewrite bi.sep_exist_l.
-    by rewrite exist_comm.
+    by rewrite bi.exist_exist.
   Qed.
 
   Lemma _at_forall : forall (l : Loc) T (P : T -> Rep),
@@ -231,7 +221,7 @@ Section with_cpp.
   Proof.
     intros. rewrite _at_eq /_at_def /=.
     setoid_rewrite monPred_at_forall. setoid_rewrite bi.sep_forall_l.
-    by rewrite exist_forall_comm.
+    by rewrite bi.exist_forall.
   Qed.
 
   Lemma _at_only_provable : forall (l : Loc) (P : Prop),
@@ -243,7 +233,7 @@ Section with_cpp.
   Qed.
 
   Lemma _at_pure : forall (l : Loc) (P : Prop),
-      _at l (bi_pure P) -|- bi_pure P ** valid_loc l.
+      _at l ([! P !]) -|- [! P !] ** valid_loc l.
   Proof.
     intros. rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
     setoid_rewrite monPred_at_pure.
@@ -576,15 +566,3 @@ Arguments cptr {_ Σ resolve} _ : rename.
 
 Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} nm s :
   Persistent (_at (Σ:=Σ) (_global (resolve:=resolve) nm) (cptr (resolve:=resolve) s)) := _.
-
-#[deprecated(since="20200728", note="Use the constructor tactic instead")]
-Notation Rep_lequiv := Rep_ext (only parsing).
-
-#[deprecated(since="20200728", note="Use _offsetR_mono or the f_equiv tactic instead")]
-Notation Proper__offsetR_entails := _offsetR_mono_old (only parsing).
-
-#[deprecated(since="20200728", note="Use primR_mono or the f_equiv tactic instead")]
-Notation Proper_primR_entails := primR_mono (only parsing).
-
-#[deprecated(since="20200728", note="Use refR_eq instead")]
-Notation tref_eq := refR_eq (only parsing).

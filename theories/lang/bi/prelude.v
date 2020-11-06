@@ -5,7 +5,7 @@
  *)
 From iris.bi Require Import bi.
 From iris.proofmode Require Import tactics.
-Require Export bedrock.lang.bi.only_provable.
+From bedrock.lang.bi Require Export only_provable derived_laws.
 
 Set Default Proof Using "Type".
 
@@ -22,8 +22,8 @@ Notation "'funI' x .. y => t" := (fun x => .. (fun y => t%I) ..)
 
 Global Notation lentails := (bi_entails) (only parsing).
 Global Notation lequiv := (≡) (only parsing).
-Global Notation ltrue := (bi_pure True) (only parsing).
-Global Notation lfalse := (bi_pure False) (only parsing).
+Global Notation ltrue := (True%I) (only parsing).
+Global Notation lfalse := (False%I) (only parsing).
 Global Notation land := (bi_and) (only parsing).
 Global Notation lor := (bi_or) (only parsing).
 Global Notation limpl := (bi_impl) (only parsing).
@@ -35,7 +35,8 @@ Global Notation sepSP := (bi_sep) (only parsing).
 Global Notation wandSP := (bi_wand) (only parsing).
 Global Notation illater := (bi_later) (only parsing).
 
-Global Notation embed := (bi_pure) (only parsing).
+Global Notation "[! P !]" := (bi_pure P).
+
 Ltac split' := intros; apply (anti_symm (⊢)).
 
 (* Charge notation levels *)
@@ -70,23 +71,3 @@ Module ChargeNotation.
     (at level 85, no associativity, only parsing).
 
 End ChargeNotation.
-
-Section with_PROP.
-Context {PROP : bi}.
-
-Import ChargeNotation.
-Lemma wandSP_only_provableL : forall (P : Prop) (Q R : PROP),
-    P ->
-    Q |-- R ->
-    [| P |] -* Q |-- R.
-Proof.
-  iIntros (???? HQR) "HPQ". iApply HQR. by iApply "HPQ".
-Qed.
-
-Lemma wandSP_only_provableR : forall (A : Prop) (B C : PROP),
-    (A -> B |-- C) ->
-    B |-- [| A |] -* C.
-Proof.
-  iIntros (??? HC) "HB %". by iApply (HC with "HB").
-Qed.
-End with_PROP.

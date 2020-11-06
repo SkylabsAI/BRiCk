@@ -130,7 +130,7 @@ Section monpred.
 End monpred.
 
 Lemma embed_only_provable `{BiEmbedEmp PROP1 PROP2} (P : Prop) :
-  embedding.embed [| P |] ⊣⊢@{PROP2} [| P |].
+  embed [| P |] ⊣⊢@{PROP2} [| P |].
 Proof. by rewrite embed_affinely embed_pure. Qed.
 
 Section proofmode.
@@ -143,7 +143,7 @@ Section proofmode.
    *
    * - [@IntoAbsorbingly PROP ⌜P⌝ [| P |]]
    *
-   * as they would interact proorly with, e.g., [iSplit], changing
+   * as they would interact poorly with, e.g., [iSplit], changing
    * goals like [[| P |] ** Q] into subgoals involving [bi_pure]
    * rather than [only_provable].
    *)
