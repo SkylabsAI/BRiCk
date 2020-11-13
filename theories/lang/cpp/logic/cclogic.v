@@ -90,6 +90,11 @@ Section own_properties.
   Lemma own_mono γ a1 a2 : a2 ≼ a1 → own γ a1 |-- own γ a2.
   Proof. intros. by rewrite /own own.own_mono. Qed.
 
+  #[global] Instance own_ne γ : NonExpansive (@own _ Σ A _ γ).
+  Proof. solve_proper. Qed.
+  #[global] Instance own_proper γ :
+    Proper ((≡) ==> (⊣⊢)) (@own _ Σ A _ γ) := ne_proper _.
+
   #[global] Instance own_mono' γ : Proper (flip (≼) ==> (⊢)) (@own _ Σ A _ γ).
   Proof. intros ???. by rewrite /own own.own_mono'. Qed.
   #[global] Instance own_timeless γ a : Discrete a → Timeless (own γ a) := _.
