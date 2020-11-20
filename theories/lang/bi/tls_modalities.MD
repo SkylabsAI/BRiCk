@@ -1,6 +1,6 @@
 # Thread-local-state modalities
 The main theory to work with TLS is in
-[modalities.v](modalities.v).
+[tls_modalities.v](tls_modalities.v).
 This theory provides general modalities that work as guards on assertions in
 order to preserve soundness. Normally they are invisible (implicit) if you only
 work "thread-locally", in the sense that you only work on a single and not
