@@ -18,6 +18,7 @@ theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
 theories/lang/bi/derived_laws.v
 theories/lang/bi/prelude.v
+theories/lang/bi/tls_modalities.v
 theories/lang/bi/IrisBridge.v
 theories/lang/bi/ChargeCompat.v
 
