@@ -6,109 +6,26 @@
 From iris.bi Require Import bi monpred.
 From iris.proofmode Require Import tactics.
 
+Require Import bedrock.lang.bi.mlens.
+
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
 
-Implicit Types (I J K : biIndex) (PROP : bi).
-
-Structure MLens {I J : biIndex} : Type := MLensMake {
-  mlens_get : I -> J ;
-  mlens_set : J -> I -> I ;
-  mlens_get_mono : Proper (sqsubseteq ==> sqsubseteq) mlens_get ;
-  mlens_set_mono : Proper (sqsubseteq ==> sqsubseteq ==> sqsubseteq) mlens_set ;
-  mlens_get_set : forall i j, mlens_get (mlens_set j i) = j ;
-  mlens_set_get : forall i, mlens_set (mlens_get i) i = i ;
-  mlens_set_set : forall i j1 j2, mlens_set j1 (mlens_set j2 i) = mlens_set j1 i ;
-}.
-
-Arguments MLens : clear implicits.
-
-Notation "i '.=' ( L , j )" := (mlens_set L j i) (at level 50, format "i  .=  ( L ,  j )") : stdpp_scope.
-Notation "i '.^' L " := (mlens_get L i) (at level 49, format "i .^ L") : stdpp_scope.
-
-(* TODO: is this canonical? *)
-(* Lj <= Lk *)
-Record mlens_le {I J K} (Lj: MLens I J) (Lk: MLens I K) := mkMLensLe {
-  mlens_le_get i1 i2 : i1.^Lk = i2.^Lk -> i1.^Lj = i2.^Lj ;
-  (* set_K (get_K (set_J j i)) i = set_J j i *)
-  mlens_le_set_inner i j : i .= (Lk, (i .= (Lj, j)).^Lk) = i .= (Lj, j);
-  (* set outer overwrites: set_K k (set_J j i) = set_K k i *)
-  mlens_le_set_outer i j k : (i .= (Lj, j)) .= (Lk, k) = i .= (Lk, k);
-}.
-
-Definition mlens_equiv {I J K} (Lj: MLens I J) (Lk: MLens I K) :=
-  mlens_le Lj Lk /\ mlens_le Lk Lj.
-
-Definition mlens_disjoint {I J K} (Lj: MLens I J) (Lk: MLens I K) :=
-  forall i j k, (i .= (Lj, j)) .= (Lk, k) = (i .= (Lk, k)) .= (Lj, j).
-
-Infix ".<=" := mlens_le (at level 90) : stdpp_scope.
-Infix ".≡"  := mlens_equiv (at level 90) : stdpp_scope.
-Infix ".##" := mlens_disjoint (at level 90) : stdpp_scope.
-
-
-Lemma mlens_le_reflexive {I J} (L: MLens I J): L .<= L.
-Proof.
-  constructor.
-  - done.
-  - intros. by rewrite mlens_get_set.
-  - intros. by rewrite mlens_set_set.
-Qed.
-
-Lemma mlens_le_transitive {I J K H}
-  (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
-  Lj .<= Lk -> Lk .<= Lh -> Lj .<= Lh.
-Proof.
-  intros Le1 Le2. constructor.
-  - intros. by apply Le1, Le2.
-  - intros. by rewrite -(mlens_le_set_inner _ _ Le1) (mlens_le_set_inner _ _ Le2).
-  - intros i j h.
-    by rewrite -(mlens_le_set_inner _ _ Le1) (mlens_le_set_outer _ _ Le2).
-Qed.
-
-Lemma mlens_equiv_reflexive {I J} (L: MLens I J): mlens_equiv L L.
-Proof. split; apply mlens_le_reflexive. Qed.
-
-Lemma mlens_equiv_symmetric {I J K} (Lj : MLens I J) (Lk : MLens I K) :
-  mlens_equiv Lj Lk <-> mlens_equiv Lk Lj.
-Proof. rewrite /mlens_equiv. intuition. Qed.
-
-Lemma mlens_equiv_transitive {I J K H}
-  (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
-  mlens_equiv Lj Lk -> mlens_equiv Lk Lh -> mlens_equiv Lj Lh.
-Proof. intros [Le1 Le2] [Le3 Le4]. split; eapply mlens_le_transitive; eauto. Qed.
-
-Lemma mlens_disjoint_symmetric {I J K} (Lj: MLens I J) (Lk: MLens I K) :
-  Lj .## Lk <-> Lk .## Lj.
-Proof. split; intros DISJ ???; by rewrite DISJ. Qed.
-
-Lemma mlens_disjoint_get_set {I J K} (Lj: MLens I J) (Lk: MLens I K)
-  (DISJ: Lj .## Lk ) :
-  forall i j, (i .= (Lj, j)).^Lk = i.^Lk.
-Proof.
-  intros i j. by rewrite -{1}(mlens_set_get Lk i) -DISJ mlens_get_set.
-Qed.
-
-Lemma mlens_set_reset_order {I J} (L: MLens I J) i i' j :
-  i .= (L, j) ⊑ i' -> i ⊑ i' .= (L, i.^L).
-Proof.
-  intros Le. rewrite -{1}(mlens_set_get L i)-(mlens_set_set _ i _ j).
-  apply mlens_set_mono; auto.
-Qed.
+Bind Scope bi_scope with monPred.
 
 Section Bi.
   Context {I J : biIndex} {PROP : bi}.
   Notation monPred := (monPred I PROP).
   Implicit Type (P Q : monPred) (L : MLens I J).
 
-  (* @(ml,j) P *)
+  (* @(L,j) P *)
   Program Definition monPred_exactly_at L (j : J) P :=
-    MonPred (λ i, P (i .= (L, j)))%I _.
+    MonPred (λ i, P (i .= (L, j))) _.
   Next Obligation. intros ?? P ???. rewrite mlens_set_mono; eauto. Qed.
 
-  (* <obj>_{ml} P *)
+  (* <obj>_{L} P *)
   Definition monPred_objectively_with L P : monPred :=
-    (∀ j : J, monPred_exactly_at L j P)%I.
+    (∀ j : J, monPred_exactly_at L j P).
 
   Program Definition monPred2_embed L (P : monpred.monPred J PROP) : monPred :=
     MonPred (λ i, P (i.^L))%I _.
@@ -118,7 +35,7 @@ Section Bi.
     monPred2_embed L (monPred_in j).
 End Bi.
 
-(* TODO: ml should be TC-searched using the type I and J *)
+(* TODO: L should be TC-searched using the type I and J *)
 (** @j P
     <obj>_J P *)
 Notation "'@(' L , j ')' P" := (monPred_exactly_at L j P)
@@ -139,40 +56,24 @@ Hint Mode ObjectiveWith ! ! + + ! : typeclass_instances.
 Instance: Params (@ObjectiveWith) 3 := {}.
 
 
-Program Definition Lid {I} : MLens I I := {|
-  mlens_get := fun i => i;
-  mlens_set := fun j i => j;
-|}.
-Next Obligation. by intros ??? L ???. Qed.
-Next Obligation. done. Qed.
-Next Obligation. done. Qed.
-Next Obligation. done. Qed.
+Section MLid_properties.
+  Context {I : biIndex} {PROP : bi}.
+  Implicit Types (P : monPred I PROP).
 
-Section Lid_properties.
-  Context {I}.
+  Lemma monPred_objectively_with_id_objectively P :
+    <obj> P ⊣⊢ <obj>_{MLid} P.
+  Proof.
+    constructor => i. by rewrite /= monPred_at_forall monPred_at_objectively.
+  Qed.
 
-  Lemma mlens_le_Lid {J} (L: MLens I J): L .<= Lid.
-  Proof. constructor; try done. by move => ?? /= ->. Qed.
+  Lemma objective_with_id_objective P :
+    Objective P <-> ObjectiveWith MLid P.
+  Proof. done. Qed.
 
-  Section with_PROP.
-    Context {PROP : bi}.
-    Implicit Types (P : monPred I PROP).
-
-    Lemma monPred_objectively_with_id_objectively P :
-      <obj> P ⊣⊢ <obj>_{Lid} P.
-    Proof.
-      constructor => i. by rewrite /= monPred_at_forall monPred_at_objectively.
-    Qed.
-
-    Lemma objective_with_id_objective P :
-      Objective P <-> ObjectiveWith Lid P.
-    Proof. done. Qed.
-
-    Global Instance objective_with_id_objective_1 P
-      `{!ObjectiveWith Lid P}: Objective P.
-    Proof. intros. by apply objective_with_id_objective. Qed.
-  End with_PROP.
-End Lid_properties.
+  Global Instance objective_with_id_objective_1 P
+    `{!ObjectiveWith MLid P}: Objective P.
+  Proof. intros. by apply objective_with_id_objective. Qed.
+End MLid_properties.
 
 
 (** ObjectiveWith *)
@@ -180,15 +81,11 @@ Lemma objective_with_lens_mono {I J K} {PROP}
   (Lj : MLens I J) (Lk : MLens I K) (P : monPred I PROP)
   `{!ObjectiveWith Lk P} :
   Lj .<= Lk -> ObjectiveWith Lj P.
-Proof.
-  intros Le i.
-  setoid_rewrite <-(mlens_le_set_inner _ Lk); last done.
-  setoid_rewrite <-(objective_with Lk); eauto.
-Qed.
+Proof. intros Le i j. by rewrite -(mlens_le_set_inner _ Lk) //. Qed.
 
 Lemma objective_with_lens_equiv {I J K} {PROP}
   (Lj : MLens I J) (Lk : MLens I K) (P : monPred I PROP) :
-  mlens_equiv Lj Lk ->
+  Lj .≡ Lk ->
   ObjectiveWith Lj P <-> ObjectiveWith Lk P.
 Proof. intros []. split; intros; eapply objective_with_lens_mono; eauto. Qed.
 
@@ -199,7 +96,7 @@ Section objectivelyWith.
   Notation monPred := (monPred I PROP).
   Implicit Type (P Q : monPred) (L : MLens I J).
 
-  Global Instance monPred2_embed_proper L :
+  Global Instance monPred2_embed_mono L :
     Proper (bi_entails ==> bi_entails) (monPred2_embed (PROP:=PROP) L).
   Proof. intros P Q Eq. constructor. solve_proper. Qed.
 
@@ -290,11 +187,11 @@ Proof.  intros Le i j. by rewrite /= mlens_le_set_outer. Qed.
 Lemma monPred_exactly_at_objective_with_disjoint {I J K PROP}
   (Lj : MLens I J) (Lk : MLens I K) (P : monPred I PROP) k
   `{OBJ : !ObjectiveWith Lj P} :
-  mlens_disjoint Lj Lk -> ObjectiveWith Lj (@(Lk,k) P).
+  MLens_disjoint Lj Lk -> ObjectiveWith Lj (@(Lk,k) P).
 Proof.  intros DISJ i j. by rewrite /= DISJ -objective_with. Qed.
 
 Section exactlyAt.
-  Context {I J} {PROP}.
+  Context {I J : biIndex} {PROP : bi}.
   Implicit Types (P Q: monPred I PROP) (L : MLens I J) (j : J).
   Global Instance monPred_exactly_at_mono L :
     Proper (sqsubseteq ==> bi_entails ==> bi_entails)
@@ -342,181 +239,52 @@ Section exactlyAt.
   Proof. intros i j'. by rewrite /= mlens_set_set. Qed.
 End exactlyAt.
 
-(* TODO: this one is so hard, maybe my characterization of mlens_le is too weak. *)
-Lemma mlens_disjoint_le {I J K J1 K1}
-  (Lj : MLens I J) (Lk : MLens I K)
-  (Lj1 : MLens I J1) (Lk1 : MLens I K1) :
-  Lj .## Lk -> Lj1 .<= Lj -> Lk1 .<= Lk -> Lj1 .## Lk1.
-Proof.
-Abort.
-
-Program Definition biIndex_prod (I J : biIndex) : biIndex := {|
-  bi_index_type := I * J ;
-  bi_index_rel  := prod_relation (⊑) (⊑);
-|}.
-Next Obligation.
-  intros. constructor.
-  - done.
-  - apply prod_relation_trans; apply _.
-Qed.
-
-Infix "*i" := biIndex_prod (at level 120, right associativity): stdpp_scope.
-
-Program Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J :=
-{|
-  mlens_get := fun i => (i.^L).1 ;
-  mlens_set := fun j i => i .= (L, (j, (i.^L).2)) ;
-|}.
-Next Obligation. intros ??? L ???. by rewrite mlens_get_mono; eauto. Qed.
-Next Obligation.
-  intros ??? L ??? ???. rewrite mlens_set_mono; eauto.
-  split; [done|simpl].
-  rewrite mlens_get_mono; eauto.
-Qed.
-Next Obligation. intros ??? L ??. by rewrite /= mlens_get_set. Qed.
-Next Obligation.
-  simpl. intros ??? L i.
-  rewrite (_: ((i.^L).1, (i.^L).2) = i.^L).
-  - by rewrite mlens_set_get.
-  - by destruct (mlens_get L i).
-Qed.
-Next Obligation. intros ??? L ???. rewrite /= mlens_get_set mlens_set_set //. Qed.
-
-Program Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K :=
-{|
-  mlens_get := fun i => (i.^L).2 ;
-  mlens_set := fun k i => i .= (L, ((i.^L).1, k)) ;
-|}.
-Next Obligation. intros ??? L ???. by rewrite mlens_get_mono; eauto. Qed.
-Next Obligation.
-  intros ??? L ??? ???. rewrite mlens_set_mono; eauto.
-  split; [simpl|done].
-  rewrite mlens_get_mono; eauto.
-Qed.
-Next Obligation. intros ??? L ??. by rewrite /= mlens_get_set. Qed.
-Next Obligation.
-  simpl. intros ??? L i.
-  rewrite (_: ((i.^L).1, (i.^L).2) = i.^L).
-  - by rewrite mlens_set_get.
-  - by destruct (mlens_get L i).
-Qed.
-Next Obligation. intros ??? L ???. rewrite /= mlens_get_set mlens_set_set //. Qed.
-
-Notation "L '.l'" := (MLens_left L)
-  (at level 61, left associativity, format "L .l"): stdpp_scope.
-Notation "L '.r'" := (MLens_right L)
-  (at level 61, left associativity, format "L .r"): stdpp_scope.
-
-
-Program Definition MLens_join {I J K}
-  (Lj: MLens I J) (Lk: MLens I K) (DISJ: mlens_disjoint Lj Lk)
-  : MLens I (J *i K) := {|
-    mlens_get := fun i => (i.^Lj, i.^Lk);
-    mlens_set := fun jk i => (i .= (Lj, jk.1)) .= (Lk, jk.2);
-  |}.
-Next Obligation. intros ??? ?? ?. split; simpl; by apply mlens_get_mono. Qed.
-Next Obligation. intros ??? ??? [] [] [] ???. do 2 (apply mlens_set_mono; auto). Qed.
-Next Obligation.
-  intros ??? ??? ? []. by rewrite /= mlens_get_set DISJ mlens_get_set. Qed.
-Next Obligation. intros ??? ??? ?. by rewrite /= !mlens_set_get. Qed.
-Next Obligation.
-  intros ??? ???? [][]. by rewrite /= DISJ mlens_set_set DISJ mlens_set_set DISJ. Qed.
-
-Notation "Lj '.+_{' D '}' Lk" := (MLens_join Lj Lk D)
-  (at level 65, format "Lj  .+_{ D }  Lk"): stdpp_scope.
-
 Section mlens_prod.
-  Context {I J K : biIndex}.
-  Implicit Types (L : MLens I (J *i K)).
+  Context {I J K : biIndex} {PROP : bi}.
+  Implicit Types (L : MLens I (J *i K))
+                 (P : monPred I PROP) (Lj : MLens I J) (Lk : MLens I K).
 
-  Lemma mlens_le_left L : L.l .<= L.
+  Lemma monPred_exactly_at_objective_with_disjoint_left Lj Lk P j
+    `{!ObjectiveWith Lk P}
+    (D: Lj .## Lk) :
+    ObjectiveWith (Lj .+_{D} Lk) (@(Lj, j) P).
+  Proof. intros jk1 jk2. by rewrite /= D mlens_set_set -D -objective_with. Qed.
+
+  Lemma monPred_exactly_at_objective_with_disjoint_right Lj Lk P j
+    `{!ObjectiveWith Lk P}
+    (D: Lk .## Lj) :
+    ObjectiveWith (Lk .+_{D} Lj) (@(Lj, j) P).
+  Proof. intros jk1 jk2. by rewrite /= mlens_set_set D -objective_with. Qed.
+
+  Lemma monPred_objectively_with_objective_with_disjoint_left Lj Lk P
+    `{!ObjectiveWith Lk P}
+    (D: Lj .## Lk) :
+    ObjectiveWith (Lj .+_{D} Lk) (<obj>_{Lj} P).
   Proof.
-    constructor.
-    - by move => ?? /= ->.
-    - intros. by rewrite mlens_get_set.
-    - intros. by rewrite mlens_set_set.
+    intros i [j k]. rewrite !monPred_at_forall /=.
+    setoid_rewrite D.
+    setoid_rewrite mlens_set_set.
+    setoid_rewrite <-D.
+    setoid_rewrite <-(objective_with Lk _ _ k). eauto.
   Qed.
 
-  Lemma mlens_le_right L : L.r .<= L.
+  Lemma monPred_objectively_with_objective_with_disjoint_right Lj Lk P
+    `{!ObjectiveWith Lk P}
+    (D: Lk .## Lj) :
+    ObjectiveWith (Lk .+_{D} Lj) (<obj>_{Lj} P).
   Proof.
-    constructor.
-    - by move => ?? /= ->.
-    - intros. by rewrite mlens_get_set.
-    - intros. by rewrite mlens_set_set.
+    intros i [k j]. rewrite !monPred_at_forall /=.
+    setoid_rewrite mlens_set_set.
+    setoid_rewrite D.
+    setoid_rewrite <-(objective_with Lk _ _ k). eauto.
   Qed.
 
-  Lemma mlens_disjoint_prod L : L.l .## L.r.
-  Proof.
-    rewrite /mlens_disjoint. intros.
-    by rewrite /= !mlens_get_set /= !mlens_set_set.
-  Qed.
-
-  Lemma mlens_equiv_split_join L :
-    L .≡ L.l .+_{mlens_disjoint_prod L} L.r.
-  Proof.
-    split; constructor; simpl.
-    - intros. by destruct (i1.^L), (i2.^L).
-    - intros i [j k]. by rewrite /= !mlens_get_set !mlens_set_set.
-    - intros i [j1 k1] [j2 k2]. by rewrite /= !mlens_get_set !mlens_set_set.
-    - intros. by destruct (i1.^L), (i2.^L).
-    - intros i [j k]. by rewrite /= !mlens_get_set !mlens_set_set.
-    - intros i [j1 k1] [j2 k2]. by rewrite /= !mlens_get_set !mlens_set_set.
-  Qed.
-
-  Section with_PROP.
-    Context {PROP : bi}.
-    Implicit Types (P : monPred I PROP) (Lj : MLens I J) (Lk : MLens I K).
-
-    Lemma monPred_exactly_at_objective_with_disjoint_left Lj Lk P j
-      `{!ObjectiveWith Lk P}
-      (D: Lj .## Lk) :
-      ObjectiveWith (Lj .+_{D} Lk) (@(Lj, j) P).
-    Proof. intros jk1 jk2. by rewrite /= D mlens_set_set -D -objective_with. Qed.
-
-    Lemma monPred_exactly_at_objective_with_disjoint_right Lj Lk P j
-      `{!ObjectiveWith Lk P}
-      (D: Lk .## Lj) :
-      ObjectiveWith (Lk .+_{D} Lj) (@(Lj, j) P).
-    Proof. intros jk1 jk2. by rewrite /= mlens_set_set D -objective_with. Qed.
-
-    Lemma monPred_objectively_with_objective_with_disjoint_left Lj Lk P
-      `{!ObjectiveWith Lk P}
-      (D: Lj .## Lk) :
-      ObjectiveWith (Lj .+_{D} Lk) (<obj>_{Lj} P).
-    Proof.
-      intros i [j k]. rewrite !monPred_at_forall /=.
-      setoid_rewrite D.
-      setoid_rewrite mlens_set_set.
-      setoid_rewrite <-D.
-      setoid_rewrite <-(objective_with Lk _ _ k). eauto.
-    Qed.
-
-    Lemma monPred_objectively_with_objective_with_disjoint_right Lj Lk P
-      `{!ObjectiveWith Lk P}
-      (D: Lk .## Lj) :
-      ObjectiveWith (Lk .+_{D} Lj) (<obj>_{Lj} P).
-    Proof.
-      intros i [k j]. rewrite !monPred_at_forall /=.
-      setoid_rewrite mlens_set_set.
-      setoid_rewrite D.
-      setoid_rewrite <-(objective_with Lk _ _ k). eauto.
-    Qed.
-
-    Lemma objective_with_join Lj Lk P
-      `{!ObjectiveWith Lj P, !ObjectiveWith Lk P}
-      (D: Lj .## Lk) :
-      ObjectiveWith (Lj .+_{D} Lk) P.
-    Proof. intros i [j k]. by rewrite /= -!objective_with. Qed.
-  End with_PROP.
+  Lemma objective_with_join Lj Lk P
+    `{!ObjectiveWith Lj P, !ObjectiveWith Lk P}
+    (D: Lj .## Lk) :
+    ObjectiveWith (Lj .+_{D} Lk) P.
+  Proof. intros i [j k]. by rewrite /= -!objective_with. Qed.
 End mlens_prod.
-
-(* Stupid non-general lemma because I can't prove mlens_disjoint_le *)
-Lemma mlens_disjoint_prod_l_rl {I J K H}
-  (L : MLens I (J *i K *i H)) : L.l .## L.r.l.
-Proof.
-  rewrite /mlens_disjoint. intros.
-  by rewrite /= !mlens_get_set /= !mlens_set_set.
-Qed.
 
 Section bi_prod.
   Context {I J K : biIndex} {PROP : bi}.
@@ -526,51 +294,57 @@ Section bi_prod.
     `{!ObjectiveWith (L.r) P} :
     ObjectiveWith L (@(L.l, j) P).
   Proof.
-    by apply (objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L))
-            , monPred_exactly_at_objective_with_disjoint_left.
+    eapply objective_with_lens_equiv; last eapply
+      monPred_exactly_at_objective_with_disjoint_left; last eauto.
+    by apply is_subrelation, mlens_eq_split_join.
   Qed.
 
   Global Instance monPred_exactly_with_objective_with_right L P k
     `{!ObjectiveWith (L.l) P} :
     ObjectiveWith L (@(L.r, k) P).
   Proof.
-    by apply (objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L))
-            , monPred_exactly_at_objective_with_disjoint_right.
+    eapply objective_with_lens_equiv; last eapply
+      monPred_exactly_at_objective_with_disjoint_right; last eauto.
+    by apply is_subrelation, mlens_eq_split_join.
   Qed.
 
   Global Instance monPred_objectively_with_objective_with_left L P
     `{!ObjectiveWith (L.r) P} :
     ObjectiveWith L (<obj>_{L.l} P).
   Proof.
-    by apply (objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L))
-            , monPred_objectively_with_objective_with_disjoint_left.
+    eapply objective_with_lens_equiv; last eapply
+      monPred_objectively_with_objective_with_disjoint_left; last eauto.
+    by apply is_subrelation, mlens_eq_split_join.
   Qed.
 
   Global Instance monPred_objectively_with_objective_with_right L P
     `{!ObjectiveWith (L.l) P} :
     ObjectiveWith L (<obj>_{L.r} P).
   Proof.
-    by apply (objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L))
-            , monPred_objectively_with_objective_with_disjoint_right.
+    eapply objective_with_lens_equiv; last eapply
+      monPred_objectively_with_objective_with_disjoint_right; last eauto.
+    by apply is_subrelation, mlens_eq_split_join.
   Qed.
 
   Lemma objective_with_join_lr L P
     `{!ObjectiveWith (L.l) P, !ObjectiveWith (L.r) P} :
     ObjectiveWith L P.
   Proof.
-    by apply (objective_with_lens_equiv _ _ _ (mlens_equiv_split_join L))
-            , objective_with_join.
+    eapply objective_with_lens_equiv; last eapply
+      objective_with_join.
+    by apply is_subrelation, mlens_eq_split_join.
+    eauto. eauto.
   Qed.
 
   Global Instance objective_with_split_l L P
     `{!ObjectiveWith L P} :
     ObjectiveWith (L.l) P.
-  Proof. apply (objective_with_lens_mono _ L). apply _. apply mlens_le_left. Qed.
+  Proof. apply : (objective_with_lens_mono _ L). apply mlens_le_left. Qed.
 
   Global Instance objective_with_split_r L P
     `{!ObjectiveWith L P} :
     ObjectiveWith (L.r) P.
-  Proof. apply (objective_with_lens_mono _ L). apply _. apply mlens_le_right. Qed.
+  Proof. apply : (objective_with_lens_mono _ L). apply mlens_le_right. Qed.
 
   Global Instance monPred2_embed_objective_with_left L (P : monPred K PROP) :
     ObjectiveWith (L.l) (|| P ||_{L.r}).
