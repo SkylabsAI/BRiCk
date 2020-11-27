@@ -178,6 +178,7 @@ Proof. exists L. by apply mlens_compose_id_r. Qed.
 Instance mlens_eq_le_proper {I J K} :
   Proper ((@MLens_eq I J) ==> (@MLens_eq I K) ==> (impl)) (@MLens_le I J K).
 Proof. intros ?? Eqj ?? Eqk [Lj Eq]. exists Lj. by rewrite -Eqj Eq Eqk. Qed.
+(* le is not Proper w.r.t compose *)
 
 (* MLens_le is a Pre-Order. *)
 Instance mlens_le_reflexive {I J} : Reflexive (@MLens_le I J J).
@@ -205,7 +206,6 @@ Lemma mlens_le_set_outer {I J K} (Lj: MLens I J) (Lk: MLens I K) i j k :
 Proof. intros [Lm [Eq1 Eq2]]. by rewrite Eq2 mlens_set_set. Qed.
 
 (* MLens_equiv *)
-
 (* MLens_equiv is an equivalence *)
 Instance mlens_equiv_reflexive {I J} : Reflexive (@MLens_equiv I J J).
 Proof. done. Qed.
@@ -215,6 +215,7 @@ Lemma mlens_equiv_symmetric {I J K} (Lj : MLens I J) (Lk : MLens I K) :
   Lj .≡ Lk <-> Lk .≡ Lj.
 Proof. rewrite /MLens_equiv. intuition. Qed.
 
+(* Can't state as a Transitive instance *)
 Lemma mlens_equiv_transitive {I J K H}
   (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
   Lj .≡ Lk -> Lk .≡ Lh -> Lj .≡ Lh.
@@ -235,7 +236,7 @@ Lemma mlens_disjoint_symmetric {I J K} (Lj: MLens I J) (Lk: MLens I K) :
 Proof. split; intros DISJ ???; by rewrite DISJ. Qed.
 
 Lemma mlens_disjoint_get_set {I J K} (Lj: MLens I J) (Lk: MLens I K)
-  (DISJ: Lj .## Lk ) :
+  (DISJ: Lj .## Lk) :
   forall i j, (i .= (Lj, j)).^Lk = i.^Lk.
 Proof.
   intros i j. by rewrite -{1}(mlens_set_get Lk i) -DISJ mlens_get_set.
@@ -248,7 +249,6 @@ Proof.
   apply mlens_set_mono; auto.
 Qed.
 
-(* MLens_disjoint *)
 Instance mlens_disjoint_eq_proper {I J K}:
   Proper ((@MLens_eq I J) ==> (@MLens_eq I K) ==> (impl)) (@MLens_disjoint I J K).
 Proof.
@@ -257,39 +257,34 @@ Proof.
   by rewrite -Eqj2 -Eqk2 DISJ Eqj2 Eqk2.
 Qed.
 
-Section mlens_prod.
-Context {I J K : biIndex}.
-Implicit Types (L : MLens I (J *i K)).
+(* TODO: this one doesn't seem to hold, probably because the characterization of
+  MLens_le/MLens_disjoint is too weak. *)
+(* This can't be stated as a Proper instance, because all the lenses are of
+  different types. *)
+Lemma mlens_disjoint_le {I J K J1 K1}
+  (Lj : MLens I J) (Lk : MLens I K) (Lj1 : MLens I J1) (Lk1 : MLens I K1) :
+  Lj .## Lk -> Lj1 .<= Lj -> Lk1 .<= Lk -> Lj1 .## Lk1.
+Abort.
 
-Lemma mlens_le_left L : L.l .<= L.
+Lemma mlens_le_left {I J K} (L : MLens I (J *i K)) : L.l .<= L.
 Proof. by eexists. Qed.
 
-Lemma mlens_le_right L : L.r .<= L.
+Lemma mlens_le_right {I J K} (L : MLens I (J *i K)) : L.r .<= L.
 Proof. by eexists. Qed.
 
-Lemma mlens_disjoint_prod L : L.l .## L.r.
+Lemma mlens_disjoint_prod {I J K} (L : MLens I (J *i K)) :
+  L.l .## L.r.
 Proof. intros i j k. by rewrite /= !mlens_get_set /= !mlens_set_set. Qed.
 
-Lemma mlens_eq_split_join L :
+Lemma mlens_eq_split_join {I J K} (L : MLens I (J *i K)) :
   L .== L.l .+_{mlens_disjoint_prod L} L.r.
 Proof.
   constructor; simpl.
   - intros i. by destruct (i.^L).
   - intros i [j k]. by rewrite /= !mlens_get_set !mlens_set_set.
 Qed.
-End mlens_prod.
-
-(* TODO: this one doesn't seem to hold, probably because the characterization of
-  MLens_le/MLens_disjoint is too weak. *)
-(* This can't be stated as a Proper instance, because all the lenses are of
-  different types. *)
-Lemma mlens_disjoint_le {I J K J1 K1}
-  (Lj : MLens I J) (Lk : MLens I K)
-  (Lj1 : MLens I J1) (Lk1 : MLens I K1) :
-  Lj .## Lk -> Lj1 .<= Lj -> Lk1 .<= Lk -> Lj1 .## Lk1.
-Abort.
 
 (* Stupid non-general lemma because I can't prove mlens_disjoint_le *)
-Lemma mlens_disjoint_prod_l_rl {I J K H}
-  (L : MLens I (J *i K *i H)) : L.l .## L.r.l.
+Lemma mlens_disjoint_prod_l_rl {I J K H} (L : MLens I (J *i K *i H)) :
+  L.l .## L.r.l.
 Proof. intros i j k. by rewrite /= !mlens_get_set /= !mlens_set_set. Qed.
