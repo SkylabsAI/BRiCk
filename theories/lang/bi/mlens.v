@@ -14,8 +14,8 @@ Implicit Types (I J K : biIndex) (PROP : bi).
 Structure MLens {I J : biIndex} : Type := MLensMake {
   mlens_get : I -> J ;
   mlens_set : J -> I -> I ;
-  mlens_get_mono : Proper (sqsubseteq ==> sqsubseteq) mlens_get ;
-  mlens_set_mono : Proper (sqsubseteq ==> sqsubseteq ==> sqsubseteq) mlens_set ;
+  mlens_get_mono : Proper ((⊑) ==> (⊑)) mlens_get ;
+  mlens_set_mono : Proper ((⊑) ==> (⊑) ==> (⊑)) mlens_set ;
   mlens_get_set : forall i j, mlens_get (mlens_set j i) = j ;
   mlens_set_get : forall i, mlens_set (mlens_get i) i = i ;
   mlens_set_set : forall i j1 j2, mlens_set j1 (mlens_set j2 i) = mlens_set j1 i ;
@@ -148,6 +148,13 @@ Proof.
     + intros. by rewrite ES1 ES2.
 Qed.
 
+Instance mlens_eq_get_proper {I J} :
+  Proper ((.==) ==> (=) ==> (=)) (@mlens_get I J).
+Proof. intros L1 L2 [Eq1 Eq2] i1 i2 ->. by rewrite Eq1. Qed.
+Instance mlens_eq_set_proper {I J} :
+  Proper ((.==) ==> (=) ==> (=) ==> (=)) (@mlens_set I J).
+Proof. intros L1 L2 [Eq1 Eq2] i1 i2 -> j1 j2 ->. by rewrite Eq2. Qed.
+
 (* MLens_compose *)
 (* We would like instances here, like LeftId, RightId, Assoc, but the types of
   lenses do not fit into `relation A` of the same `A` *)
@@ -214,12 +221,18 @@ Proof. done. Qed.
 Lemma mlens_equiv_symmetric {I J K} (Lj : MLens I J) (Lk : MLens I K) :
   Lj .≡ Lk <-> Lk .≡ Lj.
 Proof. rewrite /MLens_equiv. intuition. Qed.
+(* Weaker instance where J = K *)
+Instance mlens_equiv_symmetric' {I J} : Symmetric (@MLens_equiv I J J).
+Proof. intros ??. by apply mlens_equiv_symmetric. Qed.
 
 (* Can't state as a Transitive instance *)
 Lemma mlens_equiv_transitive {I J K H}
   (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
   Lj .≡ Lk -> Lk .≡ Lh -> Lj .≡ Lh.
 Proof. intros [Le1 Le2] [Le3 Le4]. split; eapply mlens_le_transitive; eauto. Qed.
+(* Weaker instance where J = K *)
+Instance mlens_equiv_transitive' {I J} : Transitive (@MLens_equiv I J J).
+Proof. intros ???. by apply mlens_equiv_transitive. Qed.
 
 Instance mlens_eq_equiv_sub {I J} : subrelation (@MLens_eq I J) (@MLens_equiv I J J).
 Proof. intros ?? Eq. split; by rewrite Eq. Qed.
