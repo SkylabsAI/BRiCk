@@ -8,6 +8,7 @@
 
 From iris.bi Require Import monpred.
 From iris.proofmode Require Import tactics monpred.
+From iris.algebra Require Import lib.excl_auth.
 From iris.base_logic Require Import invariants.
 
 Set Default Proof Using "Type".
@@ -149,6 +150,55 @@ Proof.
   iPoseProof (inv_split_r with "H") as "$".
 Qed.
 End inv_properties.
+
+Class minvG (I : biIndex) Σ :=
+  minvG_inG :> inG Σ (excl_authR (leibnizO I)).
+
+Definition minvΣ (I : biIndex) : gFunctors := #[ GFunctor (excl_authR (leibnizO I)) ].
+
+Instance minvG_minvΣ {I : biIndex} Σ : subG (minvΣ I) Σ → minvG I Σ.
+Proof. solve_inG. Qed.
+
+Section internal_model.
+Context {I : biIndex} `{Equiv I} `{!LeibnizEquiv I}.
+Context `{!invG Σ} `{!minvG I Σ}.
+Notation monPred := (monPred I (iPropI Σ)).
+Implicit Types (i j : I) (γ : gname) (P Q R : monPred).
+
+(** ** Internal model of invariants *)
+(* See https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/invariants.v#L27 *)
+(* I was trying to duplicate this proof using ownI, and then I thought it
+  wouldn't make a difference : [ownI i P] is a persistent (agreement) ghost
+  ownership saying that the global state stores P at i in some global invariant
+  map. If we want P to be tied to a local state that can change , then
+  [ownI i P] cannot be persistent.
+  Duplicating ownI is not necessary to demonstrate this.
+  Below is a model that keeps P at a view j' : we need some ghost state ●E to
+  prevent  *)
+Definition own_inv (N : namespace) P : monPred :=
+  (∃ γ (j : I),
+    monPred_in j ∧ (* >> this says the current local state is at least j *)
+    ⎡ own γ (●E (j : leibnizO I)) ∧
+      invariants.inv N (∃ (j' : I), own γ (◯E (j' : leibnizO I)) ∗ P j') ⎤)%I.
+                                          (* ^^ this gives j' = j *)
+(* we can prove:
+  ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ own_inv N P).
+  But the problem is that own_inv is not persistent, so it cannot be used to
+  allocate [inv]. *)
+Lemma own_inv_acc E N P :
+  ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ True).
+Proof.
+  intros SUB. constructor => i.
+  iDestruct 1 as (γ j Inj) "[OE INV]".
+  iInv N as "I" "Close".
+  iDestruct "I" as (j') "[>Oe P]".
+  iDestruct (own_valid_2 with "OE Oe") as %<-%excl_auth_agreeL.
+  iIntros "!>". iFrame "P".
+  iIntros (i' Lei) "P".
+  iMod (own_update_2 with "OE Oe") as "[OE Oe]".
+  { apply excl_auth_update. }
+Abort.
+End internal_model.
 
 (* inv for monPred *)
 Section minv.
