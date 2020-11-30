@@ -3,12 +3,14 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-From iris.bi Require Import bi monpred.
+Require Import Coq.ssr.ssreflect.
+Require Import stdpp.prelude.
+Require Import iris.bi.monpred. (* ==> for biIndex only. *)
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
 
-Implicit Types (I J K : biIndex) (PROP : bi).
+Implicit Types (I J K : biIndex).
 
 (* Monotone lens from I to J. Get and Set are required to preserve monotonicity. *)
 Structure MLens {I J : biIndex} : Type := MLensMake {
