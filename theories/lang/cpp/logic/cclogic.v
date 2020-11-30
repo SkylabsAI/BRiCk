@@ -14,9 +14,9 @@ From bedrock.lang.cpp Require Import logic.pred.
 Set Default Proof Using "Type".
 
 (** This file exports the mpred version of own, inv and cinv. *)
-(* Right now, they simply shadow Iris' own, inv and cinv, because mpred is still
-  iProp. In the future, this will change, and mpred can become abstract, with
-  own/inv/cinv as features of the logic, not specifically tied to iProp.
+(* Right now, they shadow Iris' own, inv and cinv. In the future, this will
+  change, and mpred can become abstract, with own/inv/cinv as features of the
+  logic, not specifically tied to iProp.
   TODO: this should be upstreamed in Iris---see cpp2v-core#185. *)
 
 (* own *)
