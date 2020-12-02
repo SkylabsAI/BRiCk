@@ -97,6 +97,9 @@ test_latest:
   extends: .test
   dependencies:
     - build_latest
+  # needs: attribute is here to avoid waiting for cpp2v build
+  needs:
+    - build_latest
   variables:
     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
 
@@ -152,6 +155,9 @@ prepare_pages:
   stage: prepare_pages
   dependencies:
     - test_latest
+  # needs: attribute is here to avoid waiting for cpp2v build
+  needs:
+    - test_latest
   script:
     # Clone the Alectryon submodule, but only in the pages jobs
     - git submodule update --init
@@ -169,6 +175,9 @@ pages:
   image: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
   stage: pages
   dependencies:
+    - prepare_pages
+  # needs: attribute is here to avoid waiting for cpp2v build
+  needs:
     - prepare_pages
   script:
     # Clone the Alectryon submodule, but only in the pages jobs
