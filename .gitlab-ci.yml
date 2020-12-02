@@ -36,6 +36,7 @@ stages:
   - build
   - test
   - release
+  - check_artifact_version
   - trigger-cpp2v-build
   - prepare_pages
   - pages
@@ -134,18 +135,32 @@ release_latest:
 #   variables:
 #     LLVM_MAJ_VER: ${LLVM_PREV_MAJ_VER}
 
+check_artifact_version:
+  stage: check_artifact_version
+  needs:
+    - build_latest
+  script:
+    - 'curl --location --output artifacts.zip --header "JOB-TOKEN: $CI_JOB_TOKEN" "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/download?job=build_latest"'
+    - mkdir -p checking
+    - unzip artifacts.zip -d checking
+    - cat checking/build/gitshas.txt
+  only:
+    - master
+    - merge_requests
+
 # This provides new changes in cpp2v-core:master to the consumers of
 # cpp2v-$(LLVM_MAJ_VER).zip.
 trigger-cpp2v-build:
   stage: trigger-cpp2v-build
   needs:
-    - build_latest
+    - check_artifact_version
   trigger:
     project: bedrocksystems/cpp2v
     branch: master
     strategy: depend
   only:
     - master
+    - merge_requests
 
 prepare_pages:
   image: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
