@@ -26,7 +26,7 @@ Section with_Σ.
 
   Local Notation glob_def := (glob_def resolve) (only parsing).
   Local Notation eval_unop := (@eval_unop resolve) (only parsing).
-  Local Notation eval_binop := (@eval_binop resolve) (only parsing).
+  Local Notation eval_binop_pure := (@eval_binop_pure resolve) (only parsing).
   Local Notation size_of := (@size_of resolve) (only parsing).
   Local Notation align_of := (@align_of resolve) (only parsing).
   Local Notation primR := (@primR _ _ resolve) (only parsing).
@@ -288,8 +288,6 @@ Section with_Σ.
     let r := op n1 n2 in
     if sgn is Signed then to_signed sz r else to_unsigned sz r.
 
-  Local Notation Unfold x tm :=
-    ltac:(let H := eval unfold x in tm in exact H) (only parsing).
   Local Notation at_eval sz sgn op n1 n2 :=
     (Unfold atomic_eval (atomic_eval sz sgn op n1 n2)) (only parsing).
 
