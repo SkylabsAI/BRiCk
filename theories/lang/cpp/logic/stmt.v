@@ -38,7 +38,6 @@ Module Type Stmt.
     Local Notation _global := (@_global resolve) (only parsing).
     Local Notation _field := (@_field resolve) (only parsing).
     Local Notation _sub := (@_sub resolve) (only parsing).
-    Local Notation _super := (@_super resolve) (only parsing).
     Local Notation size_of := (@size_of resolve) (only parsing).
     Local Notation align_of := (@align_of resolve) (only parsing).
     Local Notation primR := (primR (resolve:=resolve)) (only parsing).
@@ -80,7 +79,7 @@ Module Type Stmt.
     (* evaluate an expression but ignore the result *)
     Definition wpAny_ignore (ρ : region) (vc : ValCat) (e : Expr) (Q : FreeTemps -> mpred) : mpred :=
       match vc with
-      | Rvalue => wp_prval ρ e (fun _ => Q)
+      | Prvalue => wp_prval ρ e (fun _ => Q)
       | Lvalue => wp_lval ρ e (fun _ => Q)
       | Xvalue => wp_xval ρ e (fun _ => Q)
       end.
