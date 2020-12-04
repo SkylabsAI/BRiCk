@@ -151,56 +151,84 @@ Proof.
 Qed.
 End inv_properties.
 
-Class minvG (I : biIndex) Σ :=
-  minvG_inG :> inG Σ (excl_authR (leibnizO I)).
+(*** Invariants for monPred **)
+(* WeaklyObjective *)
+Class WeaklyObjective {I} {PROP} (P: monPred I PROP) :=
+  weakly_objective i j : j ⊑ i → P i -∗ P j.
+Arguments WeaklyObjective {_ _} _%I.
+Arguments weakly_objective {_ _} _%I {_}.
+Hint Mode WeaklyObjective ! + ! : typeclass_instances.
+Instance: Params (@WeaklyObjective) 2 := {}.
 
-Definition minvΣ (I : biIndex) : gFunctors := #[ GFunctor (excl_authR (leibnizO I)) ].
-
-Instance minvG_minvΣ {I : biIndex} Σ : subG (minvΣ I) Σ → minvG I Σ.
-Proof. solve_inG. Qed.
+Bind Scope bi_scope with monPred.
 
 Section internal_model.
-Context {I : biIndex} `{Equiv I} `{!LeibnizEquiv I}.
-Context `{!invG Σ} `{!minvG I Σ}.
+Context {I : biIndex} `{!invG Σ}.
 Notation monPred := (monPred I (iPropI Σ)).
 Implicit Types (i j : I) (γ : gname) (P Q R : monPred).
 
 (** ** Internal model of invariants *)
-(* See https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/invariants.v#L27 *)
-(* I was trying to duplicate this proof using ownI, and then I thought it
-  wouldn't make a difference : [ownI i P] is a persistent (agreement) ghost
-  ownership saying that the global state stores P at i in some global invariant
-  map. If we want P to be tied to a local state that can change , then
-  [ownI i P] cannot be persistent.
-  Duplicating ownI is not necessary to demonstrate this.
-  Below is a model that keeps P at a view j' : we need some ghost state ●E to
-  prevent  *)
-Definition own_inv (N : namespace) P : monPred :=
-  (∃ γ (j : I),
-    monPred_in j ∧ (* >> this says the current local state is at least j *)
-    ⎡ own γ (●E (j : leibnizO I)) ∧
-      invariants.inv N (∃ (j' : I), own γ (◯E (j' : leibnizO I)) ∗ P j') ⎤)%I.
-                                          (* ^^ this gives j' = j *)
-(* we can prove:
-  ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ own_inv N P).
-  But the problem is that own_inv is not persistent, so it cannot be used to
-  allocate [inv]. *)
-Lemma own_inv_acc E N P :
+#[local] Definition own_inv (N : namespace) P : monPred :=
+  ⌜WeaklyObjective P⌝ ∧
+  ∃ i, monPred_in i ∧ (* >> this says the current local state is at least j *)
+    ⎡ lib.invariants.inv N (P i) ⎤.
+
+#[local] Lemma own_inv_acc E N P :
   ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ True).
 Proof.
-  intros SUB. constructor => i.
-  iDestruct 1 as (γ j Inj) "[OE INV]".
-  iInv N as "I" "Close".
-  iDestruct "I" as (j') "[>Oe P]".
-  iDestruct (own_valid_2 with "OE Oe") as %<-%excl_auth_agreeL.
+  intros SUB. constructor => j.
+  iDestruct 1 as (WK i Le) "INV".
+  iInv N as "P" "Close".
   iIntros "!>". iFrame "P".
   iIntros (i' Lei) "P".
-  iMod (own_update_2 with "OE Oe") as "[OE Oe]".
-  { apply excl_auth_update. }
-Abort.
+  iMod ("Close" with "[P]"); last done.
+  rewrite weakly_objective. iFrame. by etrans.
+Qed.
+
+#[local] Lemma own_inv_alloc N E P {WK: WeaklyObjective P} :
+  ▷ P ={E}=∗ own_inv N P.
+Proof.
+  iIntros "P". iDestruct (monPred_in_intro with "P") as (i) "[In P]".
+  iFrame (WK). iExists i. iFrame "In".
+  iMod (lib.invariants.inv_alloc _ _ (P i) with "[P]") as "$"; last done.
+  rewrite monPred_at_later. by iFrame.
+Qed.
+
+(* This does not imply [own_inv_alloc] due to the extra assumption [↑N ⊆ E]. *)
+#[local] Lemma own_inv_alloc_open N E P {WK: WeaklyObjective P} :
+  ↑N ⊆ E → ⊢ |={E, E∖↑N}=> own_inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
+Proof.
+  intros Sub. iStartProof.
+  iDestruct (monPred_in_intro True with "[//]") as (i) "[Ini _]".
+  iMod (lib.invariants.inv_alloc_open N E (P i)) as "[Inv Close]"; [done|].
+  iIntros "!>". iFrame (WK). iSplit.
+  - iExists i. by iFrame "#∗".
+  - iIntros "P". iMod ("Close" with "[P]"); last done.
+    iCombine "Ini" "P" as "Pi".
+    iDestruct (monPred_in_intro with "Pi") as (j) "(_ & % & P)".
+    by rewrite weakly_objective.
+Qed.
+
+#[local] Lemma own_inv_to_inv M P: own_inv M P -∗ inv M P.
+Proof.
+  iIntros "#I". rewrite inv_eq. iIntros (E H).
+  iPoseProof (own_inv_acc with "I") as "H"; eauto.
+Qed.
+
+Lemma inv_alloc N E P `{!WeaklyObjective P}: ▷ P ={E}=∗ inv N P.
+Proof.
+  iIntros "HP". iApply own_inv_to_inv.
+  iApply (own_inv_alloc N E with "HP").
+Qed.
+
+Lemma inv_alloc_open N E P `{!WeaklyObjective P}:
+  ↑N ⊆ E → ⊢ |={E, E∖↑N}=> inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
+Proof.
+  iIntros (?). iMod own_inv_alloc_open as "[HI $]"; first done.
+  iApply own_inv_to_inv. done.
+Qed.
 End internal_model.
 
-(* inv for monPred *)
 Section minv.
 Context {I : biIndex} `{!BiFUpd PROP}.
 
@@ -226,19 +254,19 @@ Lemma inv_obj_obj_inv' N (P : monPred I PROP) :
 Proof. apply inv_obj_obj_inv, _. Qed.
 End minv.
 
-(* This establish the equivalence between invariants.inv and inv for monPred. *)
+(* This establish the equivalence between lib.invariants.inv and inv for monPred. *)
 Section oinv.
 Context {I : biIndex} `{!invG Σ}.
 #[local] Notation monPred := (monPred I (iPropI Σ)).
 
 Implicit Type (P : monPred).
-Definition oinv N P : monPred := ⎡ invariants.inv N (∀ i, P i) ⎤%I.
+Definition oinv N P : monPred := ⎡ lib.invariants.inv N (∀ i, P i) ⎤%I.
 
 Lemma inv_obj_oinv N P `{Objective I _ P} : <obj> inv N P ⊣⊢ oinv N P.
 Proof.
   constructor => i.
   rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
-  rewrite invariants.inv_eq /invariants.inv_def.
+  rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
   iSplit.
   - iIntros "#INV !>" (E NE).
     iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
@@ -259,7 +287,7 @@ Lemma inv_obj_oinv' N P : <obj> inv N (<obj> P) ⊣⊢ oinv N P.
 Proof.
   constructor => i.
   rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
-  rewrite invariants.inv_eq /invariants.inv_def.
+  rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
   iSplit.
   - iIntros "#INV !>" (E NE).
     iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
