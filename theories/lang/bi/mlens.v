@@ -81,7 +81,9 @@ Definition MLens_disjoint {I J K} (Lj: MLens I J) (Lk: MLens I K) :=
   ∀ i j k, (i .= (Lj, j)) .= (Lk, k) = (i .= (Lk, k)) .= (Lj, j).
 Infix ".##" := MLens_disjoint (at level 70) : stdpp_scope.
 Notation "(.##)" := MLens_disjoint (only parsing) : stdpp_scope.
-
+(* TODO suggested by Paolo :
+  This swap law should strengthen to "sublenses" of Lj and Lk by
+  definition: MLens_disjoint Lj Lk := ∀ Lj1 Lk2, Lj1 .<= Lj -> Lk1 .<= Lj -> ... *)
 
 Program Definition biIndex_prod (I J : biIndex) : biIndex := {|
   bi_index_type := I * J ;
@@ -156,6 +158,8 @@ Proof. intros L1 L2 [Eq1 Eq2] i1 i2 ->. by rewrite Eq1. Qed.
 Instance mlens_eq_set_proper {I J} :
   Proper ((.==) ==> (=) ==> (=) ==> (=)) (@mlens_set I J).
 Proof. intros L1 L2 [Eq1 Eq2] i1 i2 -> j1 j2 ->. by rewrite Eq2. Qed.
+Instance : Params (@mlens_get) 2 := {}.
+Instance : Params (@mlens_set) 2 := {}.
 
 (* MLens_compose *)
 (* We would like instances here, like LeftId, RightId, Assoc, but the types of
@@ -178,6 +182,7 @@ Proof.
   - by rewrite /= Eqj1 Eqk1.
   - by rewrite /= Eqj2 Eqk2 Eqj1.
 Qed.
+Instance : Params (@MLens_compose) 3 := {}.
 
 (* MLens_le *)
 
@@ -188,6 +193,7 @@ Instance mlens_eq_le_proper {I J K} :
   Proper ((@MLens_eq I J) ==> (@MLens_eq I K) ==> (impl)) (@MLens_le I J K).
 Proof. intros ?? Eqj ?? Eqk [Lj Eq]. exists Lj. by rewrite -Eqj Eq Eqk. Qed.
 (* le is not Proper w.r.t compose *)
+Instance : Params (@MLens_le) 3 := {}.
 
 (* MLens_le is a Pre-Order. *)
 Instance mlens_le_reflexive {I J} : Reflexive (@MLens_le I J J).
@@ -271,6 +277,7 @@ Proof.
   rewrite /MLens_disjoint => DISJ i j k.
   by rewrite -Eqj2 -Eqk2 DISJ Eqj2 Eqk2.
 Qed.
+Instance : Params (@MLens_disjoint) 3 := {}.
 
 (* TODO: this one doesn't seem to hold, probably because the characterization of
   MLens_le/MLens_disjoint is too weak. *)
