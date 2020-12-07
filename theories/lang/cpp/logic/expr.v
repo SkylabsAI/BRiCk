@@ -503,8 +503,8 @@ Module Type Expr.
     Axiom wp_lval_cast_derived2base : forall e ty Q,
       wp_lval e (fun addr free => Exists addr',
         match drop_qualifiers (type_of e), drop_qualifiers ty with
-        | Tnamed from, Tnamed to => (*<-- is this the only case here?*)
-          (_offsetL (_base from to) (_eq addr) &~ addr' ** True) //\\
+        | Tnamed derived , Tnamed base => (*<-- is this the only case here?*)
+          (Exists path : @class_derives resolve derived base, _offsetL (derived_to_base path) (_eq addr) &~ addr' ** True) //\\
           Q addr' free
         | _, _ => False
         end)
@@ -513,8 +513,8 @@ Module Type Expr.
     Axiom wp_xval_cast_derived2base : forall e ty Q,
       wp_xval e (fun addr free => Exists addr',
         match drop_qualifiers (type_of e), drop_qualifiers ty with
-        | Tnamed from, Tnamed to => (*<-- is this the only case here?*)
-          (_offsetL (_base from to) (_eq addr) &~ addr' ** True) //\\
+        | Tnamed derived , Tnamed base => (*<-- is this the only case here?*)
+          (Exists path : @class_derives resolve derived base, _offsetL (derived_to_base path) (_eq addr) &~ addr' ** True) //\\
           Q addr' free
         | _, _ => False
         end)
@@ -523,8 +523,8 @@ Module Type Expr.
     Axiom wp_prval_cast_derived2base : forall e ty Q,
       wp_prval e (fun addr free => Exists addr',
         match erase_qualifiers (type_of e), erase_qualifiers ty with
-        | Tpointer (Tnamed from), Tpointer (Tnamed to) =>
-          (_offsetL (_base from to) (_eqv addr) &~ addr' ** True) //\\
+        | Tpointer (Tnamed derived), Tpointer (Tnamed base) =>
+          (Exists path : @class_derives resolve derived base, _offsetL (derived_to_base path) (_eqv addr) &~ addr' ** True) //\\
           Q (Vptr addr') free
         | _, _ => False
         end)
@@ -535,8 +535,8 @@ Module Type Expr.
     Axiom wp_lval_cast_base2derived : forall e ty Q,
       wp_lval e (fun addr free => Exists addr',
         match erase_qualifiers (type_of e), erase_qualifiers ty with
-        | Tnamed from, Tnamed to => (*<-- is this the only case here?*)
-          (_offsetL (_derived from to) (_eq addr) &~ addr' ** True) //\\
+        | Tnamed base, Tnamed derived => (*<-- is this the only case here?*)
+          (Exists path : @class_derives resolve derived base, _offsetL (base_to_derived path) (_eq addr) &~ addr' ** True) //\\
           Q addr' free
         | _, _ => False
         end)
@@ -545,8 +545,8 @@ Module Type Expr.
     Axiom wp_xval_cast_base2derived : forall e ty Q,
       wp_xval e (fun addr free => Exists addr',
         match erase_qualifiers (type_of e), erase_qualifiers ty with
-        | Tnamed from, Tnamed to => (*<-- is this the only case here?*)
-          (_offsetL (_derived from to) (_eq addr) &~ addr' ** True) //\\
+        | Tnamed base, Tnamed derived => (*<-- is this the only case here?*)
+          (Exists path : @class_derives resolve derived base, _offsetL (base_to_derived path) (_eq addr) &~ addr' ** True) //\\
           Q addr' free
         | _, _ => False
         end)
@@ -555,8 +555,8 @@ Module Type Expr.
     Axiom wp_prval_cast_base2derived : forall e ty Q,
       wp_prval e (fun addr free => Exists addr',
         match erase_qualifiers (type_of e), erase_qualifiers ty with
-        | Tpointer (Tnamed from), Tpointer (Tnamed to) =>
-          (_offsetL (_derived from to) (_eqv addr) &~ addr' ** True) //\\
+        | Tpointer (Tnamed base), Tpointer (Tnamed derived) =>
+          (Exists path : @class_derives resolve derived base, _offsetL (base_to_derived path) (_eqv addr) &~ addr' ** True) //\\
           Q (Vptr addr') free
         | _, _ => False
         end)
