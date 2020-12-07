@@ -110,13 +110,13 @@ Module Type Stmt.
           _at (_eq a) (uninitR (erase_qualifiers ty) 1) -* continue
         | Some init =>
           wp_prval ρ init (fun v free => free **
-              _at (_eq a) (primR (erase_qualifiers ty) 1 v) -* continue)
+              (_at (_eq a) (primR (erase_qualifiers ty) 1 v) -* continue))
         end
 
       | Tnamed cls =>
         Forall a, _at (_eq a) (tblockR (σ:=resolve) ty) -*
                   let destroy P :=
-                      destruct_val ty a dtor (_at (_eq a) (anyR ty 1) ** P)
+                      destruct_val ty a dtor (_at (_eq a) (tblockR (σ:=resolve) ty) ** P)
                   in
                   let continue :=
                       k (Rbind x a ρ) (Kat_exit destroy Q)
@@ -166,7 +166,7 @@ Module Type Stmt.
           _at (_eq a) (primR Tnullptr 1 (Vptr nullptr)) -* continue
         | Some init =>
           wp_prval ρ init (fun v free => free **
-                  _at (_eq a) (primR (erase_qualifiers ty) 1 v) -* continue)
+                  (_at (_eq a) (primR (erase_qualifiers ty) 1 v) -* continue))
         end
       | Tfloat _ => False (* not supportd *)
       | Tarch _ _ => False (* not supported *)
