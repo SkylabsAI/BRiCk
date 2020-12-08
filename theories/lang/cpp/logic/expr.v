@@ -37,6 +37,11 @@ Module Type Expr.
    * an issue.
    *)
 
+  (**
+   * Value category information on various expression forms can be found here:
+   * https://en.cppreference.com/w/cpp/language/value_category
+   *)
+
   Section with_resolve.
     Context `{Σ : cpp_logic thread_info} {resolve:genv}.
     Variables (M : coPset) (ti : thread_info) (ρ : region).
@@ -106,41 +111,39 @@ Module Type Expr.
         Exists a, (_global x &~ a ** True) //\\ Q a emp
         |-- wp_lval (Evar (Gname x) ty) Q.
 
-    (* [Emember a f ty] is an lvalue by default except when
+    (** [Emember vc a m ty] computes the address of field [m] on object [a].
+     *
+     * it is an lvalue by default except when
      * - where [m] is a member enumerator or a non-static member function, or
      * - where [a] is an rvalue and [m] is a non-static data member of non-reference type
      *
-     * NOTE We need [vc] in order to distinguish the two forms of [rvalue], [xvalue] and [prvalue]
+     * NOTE We use [vc] to distinguish the two forms of [glvalue], [xvalue] and [lvalue],
      *)
     Axiom wp_lval_member : forall ty vc a m Q,
         match vc with
-        | Prvalue => False
         | Lvalue =>
           wp_lval a (fun base free =>
                        Exists addr, (_offsetL (_field m) (_eq base) &~ addr ** True) //\\ Q addr free)
         | Xvalue => False
           (* NOTE If the object is a temporary, then the field access will also be a
              temporary. Being conservative is sensible in our semantic style.
-          *)
+           *)
+        | Prvalue => False
         end
       |-- wp_lval (Emember vc a m ty) Q.
 
-
-    (* [Emember a m ty] is a prvalue if
+    (** [Emember vc a m ty] is a prvalue if
      * - [a] is a member enumerator or non-static member function, or
      * - [a] is an rvalue and [m] is non-static data of non-reference type
+     *
+     * NOTE this rule doesn't seem to be useful to us since our syntax features
+     * explicit [Cl2r] casts.
      *)
     Axiom wp_prval_member : forall ty vc a m Q,
-        match vc with
-        | Prvalue => False
-          (* As above, this doesn't seem to exist because our AST explicitly contains
-             [Cl2r] casts.
-           *)
-        | _ => False
-        end
+          False
       |-- wp_prval (Emember vc a m ty) Q.
 
-    (* [Emember a m ty] is an xvalue if
+    (** [Emember vc a m ty] is an xvalue if
      * - [a] is an rvalue and [m] is a non-static data member of non-reference type
      *)
     Axiom wp_xval_member : forall ty vc a m Q,
@@ -258,7 +261,7 @@ Module Type Expr.
               _at (_eq a) (primR (erase_qualifiers ty) 1 v') **
               (eval_binop Badd (erase_qualifiers (type_of e)) cty (erase_qualifiers ty) v' (Vint 1) v'' **
               (_at (_eq a) (primR (erase_qualifiers ty) 1 v'') -* Q v' free)))
-        | None => lfalse
+        | None => False
         end
         |-- wp_prval (Epostinc e ty) Q.
 
@@ -269,7 +272,7 @@ Module Type Expr.
               _at (_eq a) (primR (erase_qualifiers ty) 1 v') **
               (eval_binop Bsub (erase_qualifiers (type_of e)) cty (erase_qualifiers ty) v' (Vint 1) v'' **
                (_at (_eq a) (primR (erase_qualifiers ty) 1 v'') -* Q v' free)))
-        | None => lfalse
+        | None => False
         end
         |-- wp_prval (Epostdec e ty) Q.
 
@@ -284,10 +287,17 @@ Module Type Expr.
                  Q v' (free1 ** free2))
         |-- wp_prval (Ebinop o e1 e2 ty) Q.
 
-    (* NOTE the right operand is sequenced before the left operand in C++20,
+    (* [Eassign l r ty] sets the value of [l] (an lvalue) to [r].
+       NOTE that this axiom assumes that the type is a primitive because assignment of non-primitives
+       is represented by function calls to overloaded operators.
+
+       NOTE In C++20, the right operand is sequenced before the left operand, we should
        check when this started. (cppreference.com doesn't seem to have this information)
+       For now, we simply specify non-deterministic evaluation order.
+
      *)
     Axiom wp_lval_assign : forall ty l r Q,
+        (* is_aggregate ty = false -> *)
         (Exists Ql Qr,
          wp_lval l Ql ** wp_prval r Qr **
          Forall la free1 rv free2, Ql la free1 -* Qr rv free2 -*
@@ -297,6 +307,7 @@ Module Type Expr.
 
     (* Assignemnt operators are *almost* like regular assignments except that they guarantee to evalute the
        left hand side *exactly* once (rather than twice which is what would come from the standard desugaring)
+       See https://eel.is/c++draft/expr.ass#6
      *)
     Axiom wp_lval_bop_assign : forall ty o l r Q,
         (Exists Ql Qr,
@@ -307,8 +318,12 @@ Module Type Expr.
                  (_at (_eq la) (primR (erase_qualifiers ty) 1 v') -* Q la (free1 ** free2)))))
         |-- wp_lval (Eassign_op o l r ty) Q.
 
-    (* The comma operator can be both an lvalue and a prvalue
-     * depending on what the second expression is.
+    (* [Ecomma vc e1 e2 ty] The comma operator evaluates the first operand, discards the value, and
+       then evaluates the second.
+
+       The value category of a comma expression is the value category of the second expression.
+       Because of the different types of the semantics ([wp_xxx]), we need to break this down into
+       multiple axioms even though they are all (essentially) the same.
      *)
     Axiom wp_lval_comma : forall {vc} ty e1 e2 Q,
         wpe vc e1 (fun _ free1 => wp_lval e2 (fun val free2 => Q val (free1 ** free2)))
@@ -358,8 +373,10 @@ Module Type Expr.
         |-- wp_prval (Eseqor e1 e2 ty) Q.
 
     (** * Casts
-        Casts apply exclusively to primitive types, all other casts in C++
-        are represented as overloaded functions.
+
+        Casts apply exclusively to primitive types, all other casts in our AST
+        are represented as overloaded functions. We can do this because our syntax
+        tree is already typed and overloaded are already resolved.
      *)
 
     (** [Cl2r] represents reads of locations. *)
@@ -418,6 +435,8 @@ Module Type Expr.
      * end up with two cases
      * - in C, function names are Rvalues, and
      * - in C++, function names are Lvalues
+
+       See https://eel.is/c++draft/conv.func
      *)
     Axiom wp_prval_cast_function2pointer_c : forall ty ty' g Q,
         wp_lval (Evar (Gname g) ty') (fun v => Q (Vptr v))
@@ -426,7 +445,10 @@ Module Type Expr.
         wp_lval (Evar (Gname g) ty') (fun v => Q (Vptr v))
         |-- wp_prval (Ecast Cfunction2pointer (Lvalue, Evar (Gname g) ty') ty) Q.
 
-    (** Known places that bitcasts occur
+    (** Bitcasts are not part of the C++ standard, they are an implementation
+        detail of Clang.
+
+        Known places that bitcasts occur
         - casting between [void*] and [T*] for some [T].
      *)
     Axiom wp_prval_cast_bitcast : forall e t Q,
@@ -437,6 +459,8 @@ Module Type Expr.
         - [int] -> [short]
         - [short] -> [long]
         - [int] -> [unsigned int]
+
+        See https://eel.is/c++draft/conv.integral
      *)
     Axiom wp_prval_cast_integral : forall e t Q,
         wp_prval e (fun v free =>
@@ -455,11 +479,16 @@ Module Type Expr.
         |-- wp_prval (Ecast (Cuser Z) (Prvalue, e) ty) Q.
 
 
-    (** TODO there is a lot of subtlety around [reinterpret_cast]
+    (** TODO there is a lot of subtlety around [reinterpret_cast].
+        For now, we do not supply semantics.
+
+        https://eel.is/c++draft/expr.reinterpret.cast
      *)
+    (*
     Axiom wp_prval_cast_reinterpret : forall q e ty Q,
         wp_prval e Q
         |-- wp_prval (Ecast (Creinterpret q) (Prvalue, e) ty) Q.
+     *)
 
     (* [Cstatic from to] represents a static cast from [from] to
      * [to].
@@ -484,6 +513,10 @@ Module Type Expr.
           wpe vc e (fun _ free => Q (Vint 0) free)
       |-- wp_prval (Ecast C2void (vc, e) Tvoid) Q.
 
+    (** [Carray2pointer] converts a pointer to an array.
+
+        https://eel.is/c++draft/conv.array
+     *)
     Axiom wp_prval_cast_array2pointer : forall e t Q,
         wp_lval e (fun p => Q (Vptr p))
         |-- wp_prval (Ecast Carray2pointer (Lvalue, e) t) Q.
@@ -519,9 +552,6 @@ Module Type Expr.
      * class. Casting is only permitted on pointers and references
      * - references occur with lvalues and xvalues
      * - pointers occur with prvalues
-     *
-     * TODO [_base] only supports casting up a single level of the
-     * heirarchy at a time, so we need to construct a full path.
      *)
     Axiom wp_lval_cast_derived2base : forall e ty Q,
       wp_lval e (fun addr free => Exists addr',
@@ -547,6 +577,7 @@ Module Type Expr.
       wp_prval e (fun addr free => Exists addr',
         match erase_qualifiers (type_of e), erase_qualifiers ty with
         | Tpointer (Tnamed derived), Tpointer (Tnamed base) =>
+          (* note: we use [erase_qualifiers] above because we need to match multiple levels of syntax. *)
           (Exists path : @class_derives resolve derived base, _offsetL (derived_to_base path) (_eqv addr) &~ addr' ** True) //\\
           Q (Vptr addr') free
         | _, _ => False
@@ -589,6 +620,8 @@ Module Type Expr.
      * of the "then" and "else" expressions (which must be the same).
      * We express this with 4 rules, one for each of [wp_lval],
      * [wp_prval], [wp_xval], and [wp_init].
+     *
+     * https://eel.is/c++draft/expr.cond
      *)
     Definition wp_cond {T} wp : Prop :=
       forall ty tst th el (Q : T -> FreeTemps -> mpred),
@@ -619,7 +652,10 @@ Module Type Expr.
     Axiom wp_prval_implicit: forall  e Q ty,
         wp_prval e Q |-- wp_prval (Eimplicit e ty) Q.
 
-    (** [sizeof] and [alignof] do not evaluate their arguments *)
+    (** [sizeof] and [alignof] do not evaluate their arguments
+        https://eel.is/c++draft/expr.sizeof#1
+        https://eel.is/c++draft/expr.alignof#1
+     *)
     Axiom wp_prval_sizeof : forall ty' ty Q,
         Exists sz, [| size_of ty = Some sz |]  ** Q (Vint (Z.of_N sz)) emp
         |-- wp_prval (Esize_of (inl ty) ty') Q.
@@ -659,7 +695,10 @@ Module Type Expr.
            match unptr (type_of f) with
            | Some fty =>
              wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                                                      |> fspec fty ti f vs (fun v => Q v (free ** free_f))))
+                                                    |> fspec fty ti f vs (fun v => Q v (free ** free_f))))
+             (* The type of [f] is a function pointer, it isn't clear that it can be an xvalue, so we
+                opt to evaluate it as a prvalue.
+              *)
            | _ => False
            end)
         |-- wp_prval (Ecall f es ty) Q.

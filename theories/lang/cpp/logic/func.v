@@ -21,6 +21,10 @@ Local Set Universe Polymorphism.
 Section with_cpp.
   Context `{Σ : cpp_logic thread_info} {resolve:genv}.
 
+  (* Note that in the below definitions, the universe annotation [@{X Z Y}]
+     prevents Coq from unifying some of the universes that occur in these terms.
+   *)
+
   (* Hoare triple for a function. *)
   Definition TSFunction@{X Z Y} {cc : calling_conv} (ret : type) (targs : list type)
              (PQ : thread_info -> WithPrePost@{X Z Y} mpredI)
@@ -249,6 +253,10 @@ Section with_cpp.
       | Field _
       | Indirect _ _ =>
         this |-> init_identity cls (wpi_members ti ρ cls this inits Q)
+        (* Now that we've finished initializing the base classes, we can start
+           initializing the members. Note that we need to initialize this member as well,
+           so we pass [inits] rather than [is'] here.
+         *)
       | This =>
         (* this is a delegating constructor *)
         [| is' = nil |] **

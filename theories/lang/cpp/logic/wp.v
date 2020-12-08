@@ -68,6 +68,12 @@ Section with_cpp.
    *   http://eel.is/c++draft/expr.prop#basic.lval-1.4
    * - "An rvalue is a prvalue or an xvalue."
    *   http://eel.is/c++draft/expr.prop#basic.lval-1.5
+   *
+   * Each of these gives rise to a [wp_xxx] that represents the weakest pre-condition
+   * semantics for evaluating the expression as the given value category.
+   * Note that the value category of an expression is unique, but sometimes determining
+   * it is non-local, e.g. it might depend on the type of a function, which is why we
+   * sometimes annotate it in the AST directly.
    *)
 
   (** lvalues *)
@@ -136,11 +142,12 @@ Section with_cpp.
   (** prvalue *)
   (*
    * there are two distinct weakest pre-conditions for this corresponding to the
-   * stndard text:
+   * standard text:
    * "A prvalue is an expression whose evaluation...
    * 1. initializes an object, or
    * 2. computes the value of an operand of an operator,
    * as specified by the context in which it appears,..."
+   * See http://eel.is/c++draft/expr.prop#basic.lval-1.2
    *)
 
   (* evaluate a prvalue that "initializes an object"
@@ -206,13 +213,16 @@ Section with_cpp.
   End wp_init.
 
   (* evaluate a prvalue that "computes the value of an operand of an operator"
+   * See top comment.
+   *
+   * NOTE that prvalue expressions can not really return aggregates (those are
+   * handled by [wp_init] in like with the standard text "or initializes an object")
+   * so the returned [val] represents a primitive value, e.g. an integer or pointer.
    *)
   Parameter wp_prval
     : forall {resolve:genv}, coPset -> thread_info -> region ->
         Expr ->
         (val -> FreeTemps -> epred) -> (* result -> free -> post *)
-        (* ^^ TODO the biggest question is what does this [val] represent
-         *)
         mpred. (* pre-condition *)
 
   Axiom wp_prval_shift : forall σ M ti ρ e Q,
@@ -387,7 +397,15 @@ Section with_cpp.
 
   (** rvalues *)
   (* evaluate an expression as an rvalue
-   * TODO this doesn't capture initializing prvalues
+   *
+   * NOTE This does *not* permit [wp_init] because of the fact that initialization does not fit
+   * into this type. It might make sense to do something like:
+   * [[
+   *   Forall p, p |-> tblockR ... -* wp_init ... p e (Q (Vptr p))
+   * ]]
+   * but we can't express that at this level of abstraction since many of these concepts have not
+   * yet been defined.
+   * TODO do we want to do this?
    *)
   Definition wp_rval {resolve} M ti (r : region) e (Q : ptr + val -> FreeTemps -> mpred) :=
     @wp_prval resolve M ti r e (fun v => Q (inr v)) \\// @wp_xval resolve M ti r e (fun p => Q (inl p)).
@@ -512,7 +530,9 @@ Section with_cpp.
   Qed.
 
   (** initializers *)
-  (* TODO this seems unnecessary *)
+  (* TODO the semantics of initializers and de-initializers are both defined by a single rule
+   * because of this we don't really need [Parameter]s here. We should remove these.
+   *)
   Parameter wpi
     : forall {resolve:genv} (M : coPset) (ti : thread_info) (ρ : region)
         (cls : globname) (this : ptr) (init : Initializer)

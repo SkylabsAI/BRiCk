@@ -61,7 +61,7 @@ Module Type Init.
       | Trv_reference t => False (* reference fields are not supported *)
       | Tfunction _ _ => False (* functions not supported *)
 
-      | Tqualified _ ty => False (* unreachable *)
+      | Tqualified _ ty => False (* unreachable because qualifiers are already dropped *)
       | Tnullptr => False (* nullptr fields are not supported *)
       | Tarch _ _ => False (* vendor-specific types are not supported *)
       | Tfloat _ => False (* floating point numbers are not supported *)
