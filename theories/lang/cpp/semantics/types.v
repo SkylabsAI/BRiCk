@@ -60,6 +60,9 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tnullptr => Some (pointer_size resolve)
   | Tfloat sz => Some (bytesN sz)
   | Tarch sz _ => bytesN <$> sz
+
+  | Tvar _ => None
+  | Tspecialize _ _ => None
   end%N.
 
 Global Instance Proper_size_of

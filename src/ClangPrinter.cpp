@@ -423,10 +423,9 @@ ClangPrinter::printValCat(const Expr *d, CoqPrinter &print) {
         print.output() << "Xvalue";
     } else if (d->isLValue()) {
         print.output() << "Lvalue";
-    } else if (d->isPRValue()) {
-        print.output() << "Rvalue";
+    } else if (d->isRValue()) {
+        print.output() << "Prvalue";
     }
-
 #if 0
     if (not d->isTypeDependent()) {
 
@@ -436,17 +435,17 @@ ClangPrinter::printValCat(const Expr *d, CoqPrinter &print) {
         } else if (Class.isXValue()) {
             print.output() << "Xvalue";
         } else if (Class.isRValue()) {
-            print.output() << "Rvalue";
+            print.output() << "Prvalue";
         } else {
             assert(false);
             //fatal("unknown value category");
         }
-    } else {
-        llvm::errs() << d->isLValue() << d->isXValue() << d->isRValue()
-                     << "\n";
-        print.output() << "?value";
     }
 #endif
+    else {
+        llvm::errs() << d->isLValue() << d->isXValue() << d->isRValue() << "\n";
+        print.output() << "?value";
+    }
 }
 
 void

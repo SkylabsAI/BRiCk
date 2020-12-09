@@ -489,7 +489,6 @@ Definition tqualified (q : type_qualifiers) (t : type) : type :=
   | _ => Tqualified q t
   end.
 
-
 (** normalization of types
     - compresses adjacent [Tqualified] constructors
     - drops (irrelevant) qualifiers on function arguments and return types
