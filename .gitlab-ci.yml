@@ -115,6 +115,8 @@ test_latest:
 
 build_proof_cpp2v:
   stage: build_proofs_downstream
+  needs:
+    - build_latest
   trigger:
     project: bedrocksystems/cpp2v
     branch: master
@@ -157,6 +159,8 @@ prepare_pages:
   image: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
   stage: prepare_pages
   dependencies:
+    - test_latest
+  needs:
     - test_latest
   script:
     # Clone the Alectryon submodule, but only in the pages jobs
