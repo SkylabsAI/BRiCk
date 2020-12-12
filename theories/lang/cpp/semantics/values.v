@@ -198,6 +198,11 @@ one is [PTRS_IMPL].
   *)
   Parameter nullptr : ptr.
 
+  (**
+    [offset_nonnull] does not seem to be mandated by the standard.
+   *)
+  Axiom offset_nonnull : forall p o, (p .., o)%ptr <> nullptr -> p <> nullptr.
+
   (** An invalid pointer, included as a sentinel value. Other pointers might
   be invalid as well; see [_valid_ptr]. *)
   Parameter invalid_ptr : ptr.
@@ -263,6 +268,11 @@ one is [PTRS_IMPL].
     offset_ptr_ 0 b = b.
   #[deprecated(since="2020-12-08", note="Use structured offsets instead.")]
   Notation offset_ptr_0_ := offset_ptr_0__.
+
+  Axiom offset_ptr_nonnull__ : forall o p,
+    offset_ptr_ o p <> nullptr → p <> nullptr.
+  #[deprecated(since="2020-12-12", note="Use structured offsets instead.")]
+  Notation offset_ptr_nonnull_ := offset_ptr_nonnull__.
 
   (** Map pointers to allocation IDs; total on valid pointers thanks to
   [valid_ptr_alloc_id]. *)

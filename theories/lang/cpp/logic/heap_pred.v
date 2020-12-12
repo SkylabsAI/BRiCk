@@ -731,6 +731,15 @@ Section with_cpp.
   Proof.
     rewrite is_nonnull_eq uninitR_eq. apply monPred_observe=>p /=. apply _.
   Qed.
+  Global Instance offsetR_nonnull o (R : Rep) :
+    Observe is_nonnull R → Observe is_nonnull (_offsetR o R).
+  Proof.
+    move=>/observe_monPred_at HR.
+    rewrite _offsetR_eq/_offsetR_def. apply monPred_observe=>p /=.
+    iDestruct 1 as (to) "[#O R]". iDestruct (HR with "R") as "#N /=".
+    rewrite is_nonnull_eq /is_nonnull_def /=. iDestruct "N" as %?.
+    iModIntro. by iApply _off_nonnull.
+  Qed.
 
   Lemma null_nonnull (R : Rep) : is_null |-- is_nonnull -* R.
   Proof.

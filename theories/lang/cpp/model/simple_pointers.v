@@ -210,6 +210,8 @@ Module SIMPLE_PTRS_IMPL : PTRS.
 
   Lemma offset_ptr_0__ p : offset_ptr_ 0 p = p.
   Proof. by case: p => [[a p]|]. Qed.
+  Lemma offset_ptr_nonnull__ o p : offset_ptr_ o p <> nullptr → p <> nullptr.
+  Admitted.
 
   Lemma offset_ptr_combine {p o o'} :
     offset_ptr_ o p <> invalid_ptr ->
@@ -248,6 +250,9 @@ Module SIMPLE_PTRS_IMPL : PTRS.
   Lemma offset_ptr_dot p o1 o2 :
     (p .., (o1 .., o2) = p .., o1 .., o2)%ptr.
   Proof. apply foldr_app. Qed.
+
+  Lemma offset_nonnull p o : (p .., o)%ptr <> nullptr -> p <> nullptr.
+  Admitted.
 
   Local Lemma ptr_alloc_id_offset_single {p oz} :
     let p' := _offset_ptr_single oz p in
@@ -842,6 +847,9 @@ Module PTRS_IMPL : PTRS.
     by rewrite Heqr in WF2.
   Admitted.
 
+  Lemma offset_nonnull p o : (p .., o)%ptr <> nullptr -> p <> nullptr.
+  Admitted.
+
   Definition offset_ptr__ (z : Z) (p : ptr) : ptr :=
     (* _offset_ptr p [o_num_ z] *)
     if decide (z = 0)%Z
@@ -849,6 +857,8 @@ Module PTRS_IMPL : PTRS.
     else _offset_ptr p (o_num z).
   Notation offset_ptr_ := offset_ptr__.
   Definition offset_ptr_0__ b : offset_ptr_ 0 b = b := reflexivity _.
+  Lemma offset_ptr_nonnull__ o p : offset_ptr_ o p <> nullptr → p <> nullptr.
+  Admitted.
   Lemma offset_ptr_combine p o o' :
     offset_ptr_ o p <> invalid_ptr ->
     offset_ptr_ o' (offset_ptr_ o p) = offset_ptr_ (o + o') p.

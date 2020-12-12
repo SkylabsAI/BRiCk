@@ -253,6 +253,7 @@ Section with_Σ.
   ; _off_persist : forall p1 p2, Persistent (_offset p1 p2)
   ; _off_affine : forall p1 p2, Affine (_offset p1 p2)
   ; _off_timeless : forall p1 p2, Timeless (_offset p1 p2)
+  ; _off_nonnull : forall p1 p2, p2 <> nullptr → _offset p1 p2 |-- [| p1 <> nullptr |];
   }.
 
   Global Existing Instances _off_persist _off_affine _off_timeless.
@@ -268,23 +269,27 @@ Section with_Σ.
     - do 3 red. intros. etrans; eauto.
   Qed.
 
-  Local Definition invalidO : Offset.
-  refine {| _offset _ _ := lfalse |}.
-  abstract (intros; iIntros "[_ []]").
-  abstract (intros; iIntros "[_ []]").
-  Defined.
+  Local Program Definition invalidO : Offset := {| _offset _ _ := False%I |}.
+  Next Obligation. intros. iIntros "[_ []]". Qed.
+  Next Obligation. intros. iIntros "[_ []]". Qed.
+  Next Obligation. auto. Qed.
 
   Program Definition offset2Offset (o : offset) : Offset :=
     {| _offset from to := [| to = from .., o |]%ptr ** □ (valid_ptr from -∗ valid_ptr to) |}.
   Next Obligation. by iIntros (????) "[[#H _] [-> _]]". Qed.
   Next Obligation. iIntros (???) "[A [-> #C]]". by iApply "C". Qed.
+  Next Obligation. 
+    intros. iIntros "[-> _] /=". iPureIntro. exact: offset_nonnull.
+  Qed.
 End with_Σ.
 
 Program Definition _offsetO `{has_cpp : cpp_logic} (o : Z) : Offset :=
   {| _offset from to := [| to = offset_ptr_ o from |] ** valid_ptr to |}.
 Next Obligation. intros. by iIntros "[[#H _] [-> _]]". Qed.
 Next Obligation. intros. by iIntros "[_ [_ $]]". Qed.
-
+Next Obligation.
+  intros. iIntros "[-> _] /=". iPureIntro. exact: offset_ptr_nonnull__.
+Qed.
 #[deprecated(since="2020-11-17",
 note="Use higher-level APIs, or _sub on arrays of unsigned char.")]
 Notation offsetO := _offsetO.
@@ -293,33 +298,38 @@ Section with_Σ.
 
   (* TODO easy to switch next? *)
   (** the identity [Offset] *)
-  Definition _id_def : Offset.
-   refine {| _offset from to := [| from = to |] |}.
-   abstract (intros; iIntros "[-> #H]"; iFrame "#").
-   abstract (intros; iIntros "[H <-]"; iFrame).
-  Defined.
+  Program Definition _id_def : Offset := {| _offset from to := [| from = to |] |}.
+  Next Obligation. intros. iIntros "[-> $]". Qed.
+  Next Obligation. intros. iIntros "[V <-]". iFrame "V". Qed.
+  Next Obligation. intros. by iIntros "->". Qed.
   Definition _id_aux : seal (@_id_def). Proof. by eexists. Qed.
   Definition _id := _id_aux.(unseal).
   Definition _id_eq : @_id = _ := _id_aux.(seal_eq).
 
   (** path composition *)
-  Definition _dot_def (o1 o2 : Offset) : Offset.
-  refine {| _offset from to :=
-              Exists mid, _offset o1 from mid ** _offset o2 mid to |}.
-  { intros.
+  Program Definition _dot_def (o1 o2 : Offset) : Offset :=
+    {| _offset from to := Exists mid, _offset o1 from mid ** _offset o2 mid to |}.
+  Next Obligation.
+    intros.
     iIntros "[H1 H2]".
     iDestruct "H1" as (m1) "[A A']".
     iDestruct "H2" as (m2) "[B B']".
-    iDestruct (_off_functional with "[A B]") as %X. iFrame.
+    iDestruct (_off_functional with "[A B]") as %?; first by iFrame.
     subst.
-    iDestruct ((_off_functional o2) with "[A' B']") as %Y. iFrame.
-    by iPureIntro. }
-  { intros.
+    iDestruct ((_off_functional o2) with "[A' B']") as %?. by iFrame. done.
+  Qed.
+  Next Obligation.
+    intros.
     iIntros "[H H']".
     iDestruct "H'" as (m) "[H1 H2]".
     iApply _off_valid. iFrame.
-    iApply _off_valid. iFrame. }
-  Defined.
+    iApply _off_valid. iFrame.
+  Qed.
+  Next Obligation.
+    intros. iDestruct 1 as (m) "[O1 O2]".
+    iDestruct (_off_nonnull with "O2") as %?; first done.
+    by iApply (_off_nonnull with "O1").
+  Qed.
   Definition _dot_aux : seal (@_dot_def). Proof. by eexists. Qed.
   Definition _dot := _dot_aux.(unseal).
   Definition _dot_eq : @_dot = _ := _dot_aux.(seal_eq).
@@ -456,4 +466,3 @@ Arguments _global {_ Σ} {resolve} _ : rename.
 
 #[deprecated(since="2020-12-03",note="use _base instead")]
 Notation _super := _base (only parsing).
-
