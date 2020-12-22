@@ -31,6 +31,7 @@ Section proofs.
           `{!HasOwn PROP fracR} `{!HasOwnValid PROP fracR}.
   Local Set Default Proof Using "Type*".
 
+  (* Duplicates from cancellable_invariants. This is not tied to iProp *)
   Global Instance cinv_own_timeless γ p : Timeless (cinv_own γ p).
   Proof. rewrite /cinv_own; apply _. Qed.
 
@@ -120,6 +121,7 @@ End proofs.
 
 Require Import iris.bi.monpred.
 
+(* Allocation rules for monPred that are tied to iProp. *)
 Section allocation.
   Context {K : biIndex} `{!invG Σ, !cinvG Σ}.
 

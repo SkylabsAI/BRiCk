@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
 
-(* TODO: LICENSE for Iris. This is inspired by Iris's model of invariants. *)
+(* TODO: LICENSE for Iris. *)
+
+(** Extraction of invariants that doesn't depend on iProp. *)
 
 From iris.bi Require Import monpred.
 From iris.proofmode Require Import tactics monpred.
@@ -17,40 +19,41 @@ Set Suggest Proof Using.
 Implicit Types (N : namespace).
 
 Section defs.
-Context `{!BiFUpd PROP}.
+  Context `{!BiFUpd PROP}.
 
-Definition inv_def N (P : PROP) : PROP :=
-  (□ ∀ E : coPset, ⌜↑N ⊆ E⌝ → |={E,E ∖ ↑N}=> ▷ P ∗ (▷ P ={E ∖ ↑N,E}=∗ True))%I.
-Local Definition inv_aux : seal (@inv_def). Proof. by eexists. Qed.
-Definition inv := inv_aux.(unseal).
-Definition inv_eq : @inv = @inv_def := inv_aux.(seal_eq).
+  (* Duplicates from Iris, but more general. *)
+  Definition inv_def N (P : PROP) : PROP :=
+    (□ ∀ E : coPset, ⌜↑N ⊆ E⌝ → |={E,E ∖ ↑N}=> ▷ P ∗ (▷ P ={E ∖ ↑N,E}=∗ True))%I.
+  Local Definition inv_aux : seal (@inv_def). Proof. by eexists. Qed.
+  Definition inv := inv_aux.(unseal).
+  Definition inv_eq : @inv = @inv_def := inv_aux.(seal_eq).
 
-Section instances.
-  Context `{CON: BiLaterContractive PROP}.
-  Global Instance inv_contractive N : Contractive (inv N).
-  Proof using CON. rewrite inv_eq. solve_contractive. Qed.
+  Section instances.
+    Context `{CON: BiLaterContractive PROP}.
+    Global Instance inv_contractive N : Contractive (inv N).
+    Proof using CON. rewrite inv_eq. solve_contractive. Qed.
 
-  Global Instance inv_ne `{BiLaterContractive PROP} N : NonExpansive (inv N).
-  Proof using CON. apply contractive_ne, _. Qed.
+    Global Instance inv_ne `{BiLaterContractive PROP} N : NonExpansive (inv N).
+    Proof using CON. apply contractive_ne, _. Qed.
 
-  Global Instance inv_proper N : Proper (equiv ==> equiv) (inv N).
-  Proof using CON. apply ne_proper, _. Qed.
-  End instances.
+    Global Instance inv_proper N : Proper (equiv ==> equiv) (inv N).
+    Proof using CON. apply ne_proper, _. Qed.
+    End instances.
 
-Global Instance inv_persistent N P : Persistent (inv N P).
-Proof. rewrite inv_eq. apply _. Qed.
+  Global Instance inv_persistent N P : Persistent (inv N P).
+  Proof. rewrite inv_eq. apply _. Qed.
 End defs.
 
 Arguments inv {_ _} N P%I.
 Instance : Params (@inv) 3 := {}. 
 
-(* This section's proofs are adapted from the origin semnatics model of iProp
-  invariants iProp. *)
 Section inv_properties.
 Context `{!BiFUpd PROP}.
 
 Implicit Types (P Q : PROP) (E : coPset).
 
+(* Duplicates from Iris, but do not tie to iProp *)
+(* These statements (and probably proofs) are exactly the same. *)
 Lemma inv_alter `{BiAffine PROP} N P Q :
   inv N P -∗ ▷ □ (P -∗ Q ∗ (Q -∗ P)) -∗ inv N Q.
 Proof.
@@ -163,169 +166,173 @@ Instance: Params (@WeaklyObjective) 2 := {}.
 Bind Scope bi_scope with monPred.
 
 Section weakly_obj.
-Context {I : biIndex} {PROP : bi}.
-Notation monPred := (monPred I PROP).
-Implicit Types (P Q : monPred).
-#[global] Instance weakly_objective_proper :
-  Proper (equiv ==> iff) (@WeaklyObjective I PROP).
-Proof.
-  intros P Q EQ. split; intros OBJ i j Lei.
-  - by rewrite -EQ weakly_objective.
-  - by rewrite EQ weakly_objective.
-Qed.
+  Context {I : biIndex} {PROP : bi}.
+  Notation monPred := (monPred I PROP).
+  Implicit Types (P Q : monPred).
+  #[global] Instance weakly_objective_proper :
+    Proper (equiv ==> iff) (@WeaklyObjective I PROP).
+  Proof.
+    intros P Q EQ. split; intros OBJ i j Lei.
+    - by rewrite -EQ weakly_objective.
+    - by rewrite EQ weakly_objective.
+  Qed.
 
-#[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.
-Proof. intros ??. by rewrite !monPred_at_embed. Qed.
+  (* TODO: more instances *)
+  #[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.
+  Proof. intros ??. by rewrite !monPred_at_embed. Qed.
 
-#[global] Instance and_weakly_objective P Q
-  `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∧ Q).
-Proof. intros i j Lej. by rewrite !monPred_at_and -!(weakly_objective _ i). Qed.
-#[global] Instance or_weakly_objective P Q
-  `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∨ Q).
-Proof. intros i j Lej. by rewrite !monPred_at_or !(weakly_objective _ i). Qed.
+  #[global] Instance and_weakly_objective P Q
+    `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∧ Q).
+  Proof. intros i j Lej. by rewrite !monPred_at_and -!(weakly_objective _ i). Qed.
+  #[global] Instance or_weakly_objective P Q
+    `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∨ Q).
+  Proof. intros i j Lej. by rewrite !monPred_at_or !(weakly_objective _ i). Qed.
 End weakly_obj.
 
+(* Allocations are not general for arbitrary BI. This one here is developed for
+  monPred, basing on iProp. *)
 Section allocation.
-Context {I : biIndex} `{!invG Σ}.
-Notation monPred := (monPred I (iPropI Σ)).
-Implicit Types (i j : I) (γ : gname) (P Q R : monPred).
+  Context {I : biIndex} `{!invG Σ}.
+  Notation monPred := (monPred I (iPropI Σ)).
+  Implicit Types (i j : I) (γ : gname) (P Q R : monPred).
 
-(** ** Internal model of invariants *)
-#[local] Definition own_inv (N : namespace) P : monPred :=
-  ⌜WeaklyObjective P⌝ ∧
-  ∃ i, monPred_in i ∧ (* >> this says the current local state is at least j *)
-    ⎡ lib.invariants.inv N (P i) ⎤.
+  (** ** Internal model of invariants *)
+  #[local] Definition own_inv (N : namespace) P : monPred :=
+    ⌜WeaklyObjective P⌝ ∧
+    ∃ i, monPred_in i ∧ (* >> this says the current local state is at least j *)
+      ⎡ lib.invariants.inv N (P i) ⎤.
 
-#[local] Lemma own_inv_acc E N P :
-  ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ True).
-Proof.
-  intros SUB. constructor => j.
-  iDestruct 1 as (WK i Le) "INV".
-  iInv N as "P" "Close".
-  iIntros "!>". iFrame "P".
-  iIntros (i' Lei) "P".
-  iMod ("Close" with "[P]"); last done.
-  rewrite weakly_objective. iFrame. by etrans.
-Qed.
+  #[local] Lemma own_inv_acc E N P :
+    ↑N ⊆ E → own_inv N P ={E,E∖↑N}=∗ ▷ P ∗ (▷ P ={E∖↑N,E}=∗ True).
+  Proof.
+    intros SUB. constructor => j.
+    iDestruct 1 as (WK i Le) "INV".
+    iInv N as "P" "Close".
+    iIntros "!>". iFrame "P".
+    iIntros (i' Lei) "P".
+    iMod ("Close" with "[P]"); last done.
+    rewrite weakly_objective. iFrame. by etrans.
+  Qed.
 
-#[local] Lemma own_inv_alloc N E P {WK: WeaklyObjective P} :
-  ▷ P ={E}=∗ own_inv N P.
-Proof.
-  iIntros "P". iDestruct (monPred_in_intro with "P") as (i) "[In P]".
-  iFrame (WK). iExists i. iFrame "In".
-  iMod (lib.invariants.inv_alloc _ _ (P i) with "[P]") as "$"; last done.
-  rewrite monPred_at_later. by iFrame.
-Qed.
+  #[local] Lemma own_inv_alloc N E P {WK: WeaklyObjective P} :
+    ▷ P ={E}=∗ own_inv N P.
+  Proof.
+    iIntros "P". iDestruct (monPred_in_intro with "P") as (i) "[In P]".
+    iFrame (WK). iExists i. iFrame "In".
+    iMod (lib.invariants.inv_alloc _ _ (P i) with "[P]") as "$"; last done.
+    rewrite monPred_at_later. by iFrame.
+  Qed.
 
-(* This does not imply [own_inv_alloc] due to the extra assumption [↑N ⊆ E]. *)
-#[local] Lemma own_inv_alloc_open N E P {WK: WeaklyObjective P} :
-  ↑N ⊆ E → ⊢ |={E, E∖↑N}=> own_inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
-Proof.
-  intros Sub. iStartProof.
-  iDestruct (monPred_in_intro True with "[//]") as (i) "[Ini _]".
-  iMod (lib.invariants.inv_alloc_open N E (P i)) as "[Inv Close]"; [done|].
-  iIntros "!>". iFrame (WK). iSplit.
-  - iExists i. by iFrame "#∗".
-  - iIntros "P". iMod ("Close" with "[P]"); last done.
-    iCombine "Ini" "P" as "Pi".
-    iDestruct (monPred_in_intro with "Pi") as (j) "(_ & % & P)".
-    by rewrite weakly_objective.
-Qed.
+  (* This does not imply [own_inv_alloc] due to the extra assumption [↑N ⊆ E]. *)
+  #[local] Lemma own_inv_alloc_open N E P {WK: WeaklyObjective P} :
+    ↑N ⊆ E → ⊢ |={E, E∖↑N}=> own_inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
+  Proof.
+    intros Sub. iStartProof.
+    iDestruct (monPred_in_intro True with "[//]") as (i) "[Ini _]".
+    iMod (lib.invariants.inv_alloc_open N E (P i)) as "[Inv Close]"; [done|].
+    iIntros "!>". iFrame (WK). iSplit.
+    - iExists i. by iFrame "#∗".
+    - iIntros "P". iMod ("Close" with "[P]"); last done.
+      iCombine "Ini" "P" as "Pi".
+      iDestruct (monPred_in_intro with "Pi") as (j) "(_ & % & P)".
+      by rewrite weakly_objective.
+  Qed.
 
-#[local] Lemma own_inv_to_inv M P: own_inv M P -∗ inv M P.
-Proof.
-  iIntros "#I". rewrite inv_eq. iIntros (E H).
-  iPoseProof (own_inv_acc with "I") as "H"; eauto.
-Qed.
+  #[local] Lemma own_inv_to_inv M P: own_inv M P -∗ inv M P.
+  Proof.
+    iIntros "#I". rewrite inv_eq. iIntros (E H).
+    iPoseProof (own_inv_acc with "I") as "H"; eauto.
+  Qed.
 
-Lemma inv_alloc N E P `{!WeaklyObjective P} : ▷ P ={E}=∗ inv N P.
-Proof.
-  iIntros "HP". iApply own_inv_to_inv.
-  iApply (own_inv_alloc N E with "HP").
-Qed.
+  Lemma inv_alloc N E P `{!WeaklyObjective P} : ▷ P ={E}=∗ inv N P.
+  Proof.
+    iIntros "HP". iApply own_inv_to_inv.
+    iApply (own_inv_alloc N E with "HP").
+  Qed.
 
-Lemma inv_alloc_open N E P `{!WeaklyObjective P} :
-  ↑N ⊆ E → ⊢ |={E, E∖↑N}=> inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
-Proof.
-  iIntros (?). iMod own_inv_alloc_open as "[HI $]"; first done.
-  iApply own_inv_to_inv. done.
-Qed.
+  Lemma inv_alloc_open N E P `{!WeaklyObjective P} :
+    ↑N ⊆ E → ⊢ |={E, E∖↑N}=> inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
+  Proof.
+    iIntros (?). iMod own_inv_alloc_open as "[HI $]"; first done.
+    iApply own_inv_to_inv. done.
+  Qed.
 End allocation.
 
+(* A proof that inv is objective if its content is objective. *)
 Section minv.
-Context {I : biIndex} `{!BiFUpd PROP}.
+  Context {I : biIndex} `{!BiFUpd PROP}.
 
-Lemma inv_obj_obj_inv N (P : monPred I PROP) `{Objective I PROP P} :
-  inv N P ⊣⊢ <obj> inv N P.
-Proof.
-  constructor => i. rewrite inv_eq /inv_def monPred_at_objectively. iSplit.
-  - iIntros "#INV" (j) "!>". iIntros (E j1 Lej1 NE).
-    iMod ("INV" $! E NE) as "[P Close]". iClear "INV".
-    iIntros "!>". rewrite objective_at. iFrame "P".
-    iIntros (??) "P".
-    iMod ("Close" with "[P]"); last done. by rewrite objective_at.
-  - iIntros "#INV !>" (E ?? NE).
-    iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
-    iMod ("INV" $! E NE) as "[P Close]".
-    iIntros "!>". rewrite objective_at. iFrame "P".
-    iIntros (??) "P".
-    iMod ("Close" with "[P]"); last done. by rewrite objective_at.
-Qed.
+  Lemma inv_obj_obj_inv N (P : monPred I PROP) `{Objective I PROP P} :
+    inv N P ⊣⊢ <obj> inv N P.
+  Proof.
+    constructor => i. rewrite inv_eq /inv_def monPred_at_objectively. iSplit.
+    - iIntros "#INV" (j) "!>". iIntros (E j1 Lej1 NE).
+      iMod ("INV" $! E NE) as "[P Close]". iClear "INV".
+      iIntros "!>". rewrite objective_at. iFrame "P".
+      iIntros (??) "P".
+      iMod ("Close" with "[P]"); last done. by rewrite objective_at.
+    - iIntros "#INV !>" (E ?? NE).
+      iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
+      iMod ("INV" $! E NE) as "[P Close]".
+      iIntros "!>". rewrite objective_at. iFrame "P".
+      iIntros (??) "P".
+      iMod ("Close" with "[P]"); last done. by rewrite objective_at.
+  Qed.
 
-Lemma inv_obj_obj_inv' N (P : monPred I PROP) :
-  inv N (<obj> P) ⊣⊢ <obj> inv N (<obj> P).
-Proof. apply inv_obj_obj_inv, _. Qed.
+  Lemma inv_obj_obj_inv' N (P : monPred I PROP) :
+    inv N (<obj> P) ⊣⊢ <obj> inv N (<obj> P).
+  Proof. apply inv_obj_obj_inv, _. Qed.
 End minv.
 
 (* This establish the equivalence between lib.invariants.inv and inv for monPred. *)
 Section oinv.
-Context {I : biIndex} `{!invG Σ}.
-#[local] Notation monPred := (monPred I (iPropI Σ)).
+  Context {I : biIndex} `{!invG Σ}.
+  #[local] Notation monPred := (monPred I (iPropI Σ)).
 
-Implicit Type (P : monPred).
-Definition oinv N P : monPred := ⎡ lib.invariants.inv N (∀ i, P i) ⎤%I.
+  Implicit Type (P : monPred).
+  Definition oinv N P : monPred := ⎡ lib.invariants.inv N (∀ i, P i) ⎤%I.
 
-Lemma inv_obj_oinv N P `{Objective I _ P} : <obj> inv N P ⊣⊢ oinv N P.
-Proof.
-  constructor => i.
-  rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
-  rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
-  iSplit.
-  - iIntros "#INV !>" (E NE).
-    iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
-    iMod ("INV" $! E NE) as "[P Close]".
-    iIntros "!>". iSplitL "P".
-    + iIntros (i'). by rewrite objective_at.
-    + iIntros "P". iMod ("Close" with "[P]"); last done.
-      iIntros "!>". by iApply "P".
-  - iIntros "#INV" (j) "!>". iIntros (E j1 ? NE).
-    iMod ("INV" $! E NE) as "[P Close]".
-    iIntros "!>". iSplitL "P".
-    + iNext. by iApply "P".
-    + iIntros (j2 ?) "P". iMod ("Close" with "[P]"); last done.
-      iIntros "!>" (j3). by rewrite objective_at.
-Qed.
+  Lemma inv_obj_oinv N P `{Objective I _ P} : <obj> inv N P ⊣⊢ oinv N P.
+  Proof.
+    constructor => i.
+    rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
+    rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
+    iSplit.
+    - iIntros "#INV !>" (E NE).
+      iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
+      iMod ("INV" $! E NE) as "[P Close]".
+      iIntros "!>". iSplitL "P".
+      + iIntros (i'). by rewrite objective_at.
+      + iIntros "P". iMod ("Close" with "[P]"); last done.
+        iIntros "!>". by iApply "P".
+    - iIntros "#INV" (j) "!>". iIntros (E j1 ? NE).
+      iMod ("INV" $! E NE) as "[P Close]".
+      iIntros "!>". iSplitL "P".
+      + iNext. by iApply "P".
+      + iIntros (j2 ?) "P". iMod ("Close" with "[P]"); last done.
+        iIntros "!>" (j3). by rewrite objective_at.
+  Qed.
 
-Lemma inv_obj_oinv' N P : <obj> inv N (<obj> P) ⊣⊢ oinv N P.
-Proof.
-  constructor => i.
-  rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
-  rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
-  iSplit.
-  - iIntros "#INV !>" (E NE).
-    iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
-    iMod ("INV" $! E NE) as "[P Close]".
-    iIntros "!>". iSplitL "P".
-    + iIntros (i'). rewrite monPred_at_objectively.
-      iNext. by iApply "P".
-    + iIntros "P". iMod ("Close" with "[P]"); last done.
-      iIntros "!>". rewrite monPred_at_objectively. by iApply "P".
-  - iIntros "#INV" (j) "!>". iIntros (E j1 ? NE).
-    iMod ("INV" $! E NE) as "[P Close]".
-    iIntros "!>". iSplitL "P".
-    + iNext. rewrite monPred_at_objectively. by iApply "P".
-    + iIntros (j2 ?) "P". iMod ("Close" with "[P]"); last done.
-      iIntros "!>" (j3). rewrite monPred_at_objectively.
-      by iApply "P".
-Qed.
+  Lemma inv_obj_oinv' N P : <obj> inv N (<obj> P) ⊣⊢ oinv N P.
+  Proof.
+    constructor => i.
+    rewrite inv_eq /inv_def /oinv monPred_at_embed monPred_at_objectively.
+    rewrite lib.invariants.inv_eq /lib.invariants.inv_def.
+    iSplit.
+    - iIntros "#INV !>" (E NE).
+      iSpecialize ("INV" $! i). iDestruct "INV" as "#INV".
+      iMod ("INV" $! E NE) as "[P Close]".
+      iIntros "!>". iSplitL "P".
+      + iIntros (i'). rewrite monPred_at_objectively.
+        iNext. by iApply "P".
+      + iIntros "P". iMod ("Close" with "[P]"); last done.
+        iIntros "!>". rewrite monPred_at_objectively. by iApply "P".
+    - iIntros "#INV" (j) "!>". iIntros (E j1 ? NE).
+      iMod ("INV" $! E NE) as "[P Close]".
+      iIntros "!>". iSplitL "P".
+      + iNext. rewrite monPred_at_objectively. by iApply "P".
+      + iIntros (j2 ?) "P". iMod ("Close" with "[P]"); last done.
+        iIntros "!>" (j3). rewrite monPred_at_objectively.
+        by iApply "P".
+  Qed.
 End oinv.
