@@ -18,6 +18,8 @@ theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
 theories/lang/bi/derived_laws.v
 theories/lang/bi/invariants.v
+theories/lang/bi/own.v
+theories/lang/bi/cancellable_invariants.v
 theories/lang/bi/prelude.v
 theories/lang/bi/IrisBridge.v
 theories/lang/bi/ChargeCompat.v

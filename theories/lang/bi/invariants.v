@@ -9,7 +9,7 @@
 From iris.bi Require Import monpred.
 From iris.proofmode Require Import tactics monpred.
 From iris.algebra Require Import lib.excl_auth.
-From iris.base_logic Require Import invariants.
+From iris.base_logic.lib Require Import invariants.
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
@@ -162,7 +162,30 @@ Instance: Params (@WeaklyObjective) 2 := {}.
 
 Bind Scope bi_scope with monPred.
 
-Section internal_model.
+Section weakly_obj.
+Context {I : biIndex} {PROP : bi}.
+Notation monPred := (monPred I PROP).
+Implicit Types (P Q : monPred).
+#[global] Instance weakly_objective_proper :
+  Proper (equiv ==> iff) (@WeaklyObjective I PROP).
+Proof.
+  intros P Q EQ. split; intros OBJ i j Lei.
+  - by rewrite -EQ weakly_objective.
+  - by rewrite EQ weakly_objective.
+Qed.
+
+#[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.
+Proof. intros ??. by rewrite !monPred_at_embed. Qed.
+
+#[global] Instance and_weakly_objective P Q
+  `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∧ Q).
+Proof. intros i j Lej. by rewrite !monPred_at_and -!(weakly_objective _ i). Qed.
+#[global] Instance or_weakly_objective P Q
+  `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∨ Q).
+Proof. intros i j Lej. by rewrite !monPred_at_or !(weakly_objective _ i). Qed.
+End weakly_obj.
+
+Section allocation.
 Context {I : biIndex} `{!invG Σ}.
 Notation monPred := (monPred I (iPropI Σ)).
 Implicit Types (i j : I) (γ : gname) (P Q R : monPred).
@@ -215,19 +238,19 @@ Proof.
   iPoseProof (own_inv_acc with "I") as "H"; eauto.
 Qed.
 
-Lemma inv_alloc N E P `{!WeaklyObjective P}: ▷ P ={E}=∗ inv N P.
+Lemma inv_alloc N E P `{!WeaklyObjective P} : ▷ P ={E}=∗ inv N P.
 Proof.
   iIntros "HP". iApply own_inv_to_inv.
   iApply (own_inv_alloc N E with "HP").
 Qed.
 
-Lemma inv_alloc_open N E P `{!WeaklyObjective P}:
+Lemma inv_alloc_open N E P `{!WeaklyObjective P} :
   ↑N ⊆ E → ⊢ |={E, E∖↑N}=> inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
 Proof.
   iIntros (?). iMod own_inv_alloc_open as "[HI $]"; first done.
   iApply own_inv_to_inv. done.
 Qed.
-End internal_model.
+End allocation.
 
 Section minv.
 Context {I : biIndex} `{!BiFUpd PROP}.
