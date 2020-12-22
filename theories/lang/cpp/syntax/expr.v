@@ -46,7 +46,7 @@ Variant VarRef : Set :=
 Instance: EqDecision VarRef.
 Proof. solve_decision. Defined.
 
-Variant ValCat : Set := Lvalue | Rvalue | Xvalue.
+Variant ValCat : Set := Lvalue | Prvalue | Xvalue.
 Instance: EqDecision ValCat.
 Proof. solve_decision. Defined.
 
@@ -174,6 +174,11 @@ Inductive Expr : Set :=
 | Eatomic (_ : AtomicOp) (_ : list (ValCat * Expr)) (_ : type)
 | Eva_arg (_ : Expr) (_ : type)
 | Epseudo_destructor (_ : type) (_ : Expr) (* type void *)
+
+| Earrayloop_init (oname : N) (src : Expr) (level : N) (length : N) (init : Expr) (_ : type)
+| Earrayloop_index (level : N) (_ : type)
+| Eopaque_ref (name : N) (_ : type)
+
 | Eunsupported (_ : bs) (_ : type).
 Instance Expr_eq_dec : EqDecision Expr.
 Proof.

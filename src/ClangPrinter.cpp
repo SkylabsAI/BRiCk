@@ -16,14 +16,15 @@
 
 using namespace clang;
 
-ClangPrinter::ClangPrinter(clang::CompilerInstance *compiler, clang::ASTContext *context)
-    : compiler_(compiler),
-      context_(context), engine_(IntrusiveRefCntPtr<DiagnosticIDs>(),
-                                 IntrusiveRefCntPtr<DiagnosticOptions>()) {
+ClangPrinter::ClangPrinter(clang::CompilerInstance *compiler,
+                           clang::ASTContext *context)
+    : compiler_(compiler), context_(context),
+      engine_(IntrusiveRefCntPtr<DiagnosticIDs>(),
+              IntrusiveRefCntPtr<DiagnosticOptions>()) {
     mangleContext_ = ItaniumMangleContext::create(*context, engine_);
 }
 
-clang::Sema&
+clang::Sema &
 ClangPrinter::getSema() const {
     return this->compiler_->getSema();
 }
@@ -116,8 +117,8 @@ ClangPrinter::printValCat(const Expr *d, CoqPrinter &print) {
         print.output() << "Lvalue";
     } else if (Class.isXValue()) {
         print.output() << "Xvalue";
-    } else if (Class.isRValue()) {
-        print.output() << "Rvalue";
+    } else if (Class.isPRValue()) {
+        print.output() << "Prvalue";
     } else {
         assert(false);
         //fatal("unknown value category");
@@ -131,6 +132,18 @@ ClangPrinter::printExprAndValCat(const Expr *d, CoqPrinter &print) {
     printValCat(d, print);
     print.output() << "," << fmt::nbsp;
     printExpr(d, print);
+    print.output() << fmt::rparen;
+    assert(depth == print.output().get_depth());
+}
+
+void
+ClangPrinter::printExprAndValCat(const Expr *d, CoqPrinter &print,
+                                 OpaqueNames &li) {
+    auto depth = print.output().get_depth();
+    print.output() << fmt::lparen;
+    printValCat(d, print);
+    print.output() << "," << fmt::nbsp;
+    printExpr(d, print, li);
     print.output() << fmt::rparen;
     assert(depth == print.output().get_depth());
 }

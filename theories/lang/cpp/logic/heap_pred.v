@@ -3,11 +3,12 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-Require Import bedrock.lang.prelude.base.
-
 From iris.bi Require Export monpred.
 From iris.proofmode Require Import tactics monpred.
 Require Import iris.bi.lib.fractional.
+From iris_string_ident Require Import ltac2_string_ident.
+
+Require Import bedrock.lang.prelude.base.
 
 From bedrock.lang.cpp Require Import
      semantics logic.pred logic.path_pred ast logic.wp.
@@ -226,7 +227,7 @@ Section with_cpp.
   Lemma _at_loc_materialize : forall (l : Loc) (r : Rep),
       _at l r -|- Exists a, l &~ a ** r a.
   Proof.
-    intros. by rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
+    intros. by rewrite _at_eq /_at_def.
   Qed.
 
   Lemma addr_of_valid_loc : forall l a,
@@ -279,18 +280,26 @@ Section with_cpp.
     by setoid_rewrite bi.sep_comm at 1.
   Qed.
 
+  Lemma _at_and l (R1 R2 : Rep) : _at l (R1 //\\ R2) ⊣⊢ _at l R1 //\\ _at l R2.
+  Proof.
+    rewrite _at_eq/_at_def -bi.exist_and_agree.
+    { f_equiv=> p. by rewrite monPred_at_and. }
+    apply path_pred.addr_of_precise.
+  Qed.
+
   Lemma _at_sep (l : Loc) (P Q : Rep) :
       _at l (P ** Q) -|- _at l P ** _at l Q.
   Proof.
-    rewrite !_at_loc_materialize.
-    setoid_rewrite monPred_at_sep.
-    split'.
-    { iDestruct 1 as (p) "[#X [L R]]". iSplitL "L"; eauto. }
-    { iIntros "[A B]"; iDestruct "A" as (p) "[#LA A]"; iDestruct "B" as (p') "[#LB B]".
-      iExists _; iFrame "#∗".
-      iDestruct (addr_of_precise with "[LA LB]") as %H;
-        [ iSplit; [ iApply "LA" | iApply "LB" ] | ].
-      subst; eauto. }
+    rewrite _at_eq/_at_def -bi.exist_sep_agree.
+    { f_equiv=> p. by rewrite monPred_at_sep. }
+    apply path_pred.addr_of_precise.
+  Qed.
+
+  Lemma _at_or (l : Loc) (P Q : Rep) : _at l (P \\// Q) -|- _at l P \\// _at l Q.
+  Proof.
+    rewrite _at_eq /_at_def /=.
+    rewrite -bi.or_exist; f_equiv=> p.
+    by rewrite monPred_at_or -bi.sep_or_l.
   Qed.
 
   Lemma _at_wand (l : Loc) (P Q : Rep) :
@@ -513,43 +522,43 @@ Section with_cpp.
   (**
   [uninitR]: the argument pointer points to an uninitialized value [Vundef] of C++ type [ty].
   Unlike [primR], does not imply [has_type]. *)
-  Definition uninit_def {resolve:genv} (ty : type) (q : Qp) : Rep :=
+  Definition uninitR_def {resolve:genv} (ty : type) (q : Qp) : Rep :=
     as_Rep (fun addr => @tptsto _ _ resolve ty q addr Vundef).
-  Definition uninit_aux : seal (@uninit_def). Proof. by eexists. Qed.
-  Definition uninitR := uninit_aux.(unseal).
-  Definition uninit_eq : @uninitR = _ := uninit_aux.(seal_eq).
+  Definition uninitR_aux : seal (@uninitR_def). Proof. by eexists. Qed.
+  Definition uninitR := uninitR_aux.(unseal).
+  Definition uninitR_eq : @uninitR = _ := uninitR_aux.(seal_eq).
   Arguments uninitR {resolve} ty q : rename.
 
   Global Instance uninitR_proper
     : Proper (genv_eq ==> (=) ==> (=) ==> (=) ==> lequiv) (@uninitR).
   Proof.
     intros σ1 σ2 Hσ ??-> ??-> ??->.
-    rewrite uninit_eq/uninit_def. by setoid_rewrite Hσ.
+    rewrite uninitR_eq/uninitR_def. by setoid_rewrite Hσ.
   Qed.
   Global Instance uninitR_mono
     : Proper (genv_leq ==> (=) ==> (=) ==> (=) ==> lentails) (@uninitR).
   Proof.
     intros σ1 σ2 Hσ ??-> ??-> ??->.
-    rewrite uninit_eq/uninit_def. by setoid_rewrite Hσ.
+    rewrite uninitR_eq/uninitR_def. by setoid_rewrite Hσ.
   Qed.
 
   Global Instance uninitR_affine resolve ty q
     : Affine (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+  Proof. rewrite uninitR_eq. apply _. Qed.
   Global Instance uninitR_timeless resolve ty q
     : Timeless (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+  Proof. rewrite uninitR_eq. apply _. Qed.
 
   Global Instance uninitR_fractional resolve ty :
     Fractional (uninitR (resolve:=resolve) ty).
-  Proof. rewrite uninit_eq. apply _. Qed.
+  Proof. rewrite uninitR_eq. apply _. Qed.
   Global Instance unintR_as_fractional resolve ty q :
     AsFractional (uninitR (resolve:=resolve) ty q) (uninitR (resolve:=resolve) ty) q.
   Proof. constructor. done. apply _. Qed.
 
   Global Instance uninitR_observe_frac_valid resolve ty (q : Qp) :
     Observe [| q ≤ 1 |]%Qc (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+  Proof. rewrite uninitR_eq. apply _. Qed.
 
   (** This seems odd, but it's relevant to proof that [anyR] is fractional. *)
   Lemma primR_uninitR {resolve} ty q1 q2 v :
@@ -557,7 +566,7 @@ Section with_cpp.
     uninitR (resolve:=resolve) ty q2 -*
     primR (resolve:=resolve) ty (q1 + q2) Vundef.
   Proof.
-    rewrite primR_eq/primR_def uninit_eq/uninit_def. constructor=>p /=.
+    rewrite primR_eq/primR_def uninitR_eq/uninitR_def. constructor=>p /=.
     rewrite monPred_at_wand. iIntros "[T1 %]" (? <-%ptr_rel_elim) "/= T2".
     iDestruct (observe_2 [|v = Vundef|] with "T1 T2") as %->. iFrame "T1 T2 %".
   Qed.
@@ -632,9 +641,50 @@ Section with_cpp.
   Definition cptr := cptr_aux.(unseal).
   Definition cptr_eq : @cptr = _ := cptr_aux.(seal_eq).
 
-  Global Instance cptr_persistent {resolve} : Persistent (cptr resolve s).
+  #[global] Instance cptr_persistent {resolve} : Persistent (cptr resolve s).
   Proof. rewrite cptr_eq. apply _. Qed.
 
+  (* TODO: Proper wrt [genv_leq]. *)
+  #[global] Instance cptr_mono {resolve} : Proper (flip fs_entails ==> (⊢)) (@cptr resolve).
+  Proof.
+    intros ??; rewrite /flip /fs_entails /fs_impl cptr_eq/cptr_def; intros Heq.
+    constructor => p /=.
+    f_equiv=>ti; f_equiv; f_equiv => vs; f_equiv => Q.
+    iIntros "Hcptr -> Hy".
+    iDestruct Heq as "(%Hspec & #Hyx)"; rewrite Hspec.
+    iApply ("Hcptr" with "[%] (Hyx Hy)").
+    exact: length_type_of_spec.
+  Qed.
+
+  #[global] Instance cptr_flip_mono {resolve} : Proper (fs_entails ==> flip (⊢)) (@cptr resolve).
+  Proof. by intros ?? <-. Qed.
+
+  #[global] Instance cptr_proper {resolve} : Proper ((≡) ==> (⊣⊢)) (@cptr resolve).
+  Proof.
+    intros ? ? [H1 H2]%function_spec_equiv_split; iSplit; iIntros.
+    - by rewrite -H2.
+    - by rewrite -H1.
+  Qed.
+End with_cpp.
+Global Instance: Params (@cptr) 3 := {}.
+
+Instance: Params (@as_Rep) 2 := {}.
+Instance: Params (@_offsetR) 3 := {}.
+Instance: Params (@pureR) 2 := {}.
+
+Global Opaque _at _offsetR primR.
+
+Typeclasses Opaque pureR.
+Typeclasses Opaque as_Rep.
+
+Arguments anyR {_ Σ resolve} ty q : rename.
+Arguments uninitR {_ Σ resolve} ty q : rename.
+Arguments primR {_ Σ resolve} ty q v : rename.
+Arguments refR {_ Σ} ty v : rename.
+Arguments cptr {_ Σ resolve} _ : rename.
+
+Section with_cpp.
+  Context `{Σ : cpp_logic}.
   (** object identity *)
   Definition _identity (σ : genv) (cls : globname) (mdc : option globname)
              (q : Qp) : Rep :=
@@ -679,6 +729,17 @@ Section with_cpp.
   Global Instance is_nonnull_timeless : Timeless is_nonnull.
   Proof. rewrite is_nonnull_eq. apply _. Qed.
 
+  Global Instance primR_nonnull {σ} ty q v :
+    Observe is_nonnull (primR (resolve:=σ) ty q v).
+  Proof.
+    rewrite is_nonnull_eq primR_eq. apply monPred_observe=>p /=. apply _.
+  Qed.
+  Global Instance uninitR_nonnull {σ} ty q :
+    Observe is_nonnull (uninitR (resolve:=σ) ty q).
+  Proof.
+    rewrite is_nonnull_eq uninitR_eq. apply monPred_observe=>p /=. apply _.
+  Qed.
+
   Lemma null_nonnull (R : Rep) : is_null |-- is_nonnull -* R.
   Proof.
     rewrite is_null_eq /is_null_def is_nonnull_eq /is_nonnull_def.
@@ -695,22 +756,9 @@ Section with_cpp.
       _offsetR (_sub (resolve:=σ) T_uint8 (Z.of_nat i)) (anyR (resolve:=σ) T_uint8 1).
 
 End with_cpp.
-Instance: Params (@as_Rep) 2 := {}.
-Instance: Params (@_offsetR) 3 := {}.
-Instance: Params (@pureR) 2 := {}.
 
-Global Opaque _at _offsetR primR.
-
-Typeclasses Opaque pureR.
-Typeclasses Opaque as_Rep.
 Typeclasses Opaque _identity.
 Typeclasses Opaque _type_ptr.
-
-Arguments anyR {_ Σ resolve} ty q : rename.
-Arguments uninitR {_ Σ resolve} ty q : rename.
-Arguments primR {_ Σ resolve} ty q v : rename.
-Arguments refR {_ Σ} ty v : rename.
-Arguments cptr {_ Σ resolve} _ : rename.
 
 Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} nm s :
   Persistent (_at (Σ:=Σ) (_global (resolve:=resolve) nm) (cptr (resolve:=resolve) s)) := _.
