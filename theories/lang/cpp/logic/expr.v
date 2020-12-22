@@ -67,31 +67,6 @@ Module Type Expr.
     Local Notation blockR := (blockR (σ:=resolve)) (only parsing).
 
     (* constants are rvalues *)
-    Axiom wp_prval_constant : forall ty cnst e Q,
-      glob_def cnst = Some (Gconstant ty (Some e)) ->
-      wp_prval e Q
-      |-- wp_prval (Econst_ref (Gname cnst) ty) Q.
-
-    (* integer literals are prvalues *)
-    Axiom wp_prval_int : forall n ty Q,
-      [! has_type (Vint n) (drop_qualifiers ty) !] //\\ Q (Vint n) emp
-      |-- wp_prval (Eint n ty) Q.
-
-    (* note that `char` is actually `byte` *)
-    Axiom wp_prval_char : forall c ty Q,
-      [! has_type (Vint c) (drop_qualifiers ty) !] //\\ Q (Vint c) emp
-      |-- wp_prval (Echar c ty) Q.
-
-    (* boolean literals are prvalues *)
-    Axiom wp_prval_bool : forall (b : bool) Q,
-      Q (Vbool b) emp
-      |-- wp_prval (Ebool b) Q.
-
-    (* `this` is a prvalue *)
-    Axiom wp_prval_this : forall ty Q,
-          valid_ptr (_this ρ) ** Q (Vptr $ _this ρ) emp
-      |-- wp_prval (Ethis ty) Q.
-
 
     (* variables are lvalues *)
     Axiom wp_lval_lvar : forall ty x Q,
