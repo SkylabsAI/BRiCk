@@ -1,0 +1,221 @@
+(*
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
+ *)
+
+(* TODO: LICENSE for Iris. *)
+
+(** Own instances for iProp and monPred **)
+
+Require Import iris.bi.bi.
+Require Import iris.algebra.cmra.
+Require Import iris.bi.embedding.
+Require Import iris.si_logic.siprop.
+Require Export iris.si_logic.bi.
+
+Require Import iris.proofmode.classes.
+
+Require Import iris.base_logic.lib.iprop.
+Require Import iris.base_logic.lib.own.
+
+Require Import iris.bi.monpred.
+
+Require Export bedrock.lang.bi.own.
+
+(* Instances for iProp *)
+
+(* Embedding of si in iProp. It seems that such an embedding doesn't exist
+  upstream yet. *)
+Section si_embedding.
+  Context {Σ : gFunctors}.
+
+  #[local] Arguments siProp_holds !_ _ /.
+  #[local] Arguments uPred_holds !_ _ _ /.
+
+  Notation iPropI := (iPropI Σ).
+  Notation iProp  := (iProp Σ).
+
+  #[global] Program Instance si_embed : Embed siPropI iPropI :=
+    λ P, {| uPred_holds n x := P n |}.
+  Solve Obligations with naive_solver eauto using siProp_closed.
+
+  #[global] Instance si_embed_mono : Proper ((⊢) ==> (⊢)) (@embed siPropI _ _).
+  Proof. intros ?? PQ. constructor => ??? /=. by apply PQ. Qed.
+
+  #[global] Instance si_embed_ne : NonExpansive (@embed siPropI _ _).
+  Proof. intros ??? EQ. constructor => ???? /=. by apply EQ. Qed.
+
+  Program Definition si_unembed (P : iProp) : siProp :=
+    {| siProp_holds n := P n ε |}.
+  Next Obligation. simpl. intros P n1 n2 ??. by eapply uPred_mono; eauto. Qed.
+  Instance si_unembed_ne : NonExpansive si_unembed.
+  Proof. intros ??? EQ. constructor => ??. rewrite /=. by apply EQ. Qed.
+
+  Lemma si_embed_unembed (P : siProp) : si_unembed (embed P) ≡ P.
+  Proof. by constructor. Qed.
+
+  Definition siProp_embedding_mixin : BiEmbedMixin siPropI iPropI si_embed.
+  Proof.
+    split; try apply _.
+    - intros P [EP]. constructor => ??. apply (EP _ ε). done.
+      by rewrite /bi_emp /= /uPred_emp /= uPred_pure_eq /=.
+    - intros PROP' IN P Q.
+      rewrite -{2}(si_embed_unembed P) -{2}(si_embed_unembed Q).
+      apply (f_equivI si_unembed).
+    - constructor => ?? /= ??.
+      by rewrite /bi_emp /= /siProp_emp /= siProp_pure_eq /=.
+    - intros P Q.
+      constructor => ? x ? /=.
+      rewrite /bi_impl /= uPred_impl_eq /bi_impl /= siProp_impl_eq /= => PQ ??.
+      apply (PQ _ x); [done|done|by eapply cmra_validN_le].
+    - intros A Φ. constructor => ??? /=.
+      by rewrite /bi_forall /= uPred_forall_eq /= /bi_forall /= siProp_forall_eq /=.
+    - intros A Φ. constructor => ??? /=.
+      by rewrite /bi_exist /= siProp_exist_eq /bi_exist /= uPred_exist_eq /=.
+    - intros P Q. constructor => ? x ?.
+      rewrite /bi_sep /= /siProp_sep siProp_and_eq /bi_sep /= uPred_sep_eq /=.
+      split; last naive_solver.
+      intros []. exists ε, x. by rewrite left_id.
+    - intros P Q. constructor => ? x ?.
+      rewrite /bi_wand /= uPred_wand_eq /bi_wand /= /siProp_wand siProp_impl_eq /=
+        => PQ ??.
+      apply (PQ _ ε); [done|rewrite right_id; by eapply cmra_validN_le].
+    - intros P. constructor => ? x ?.
+      by rewrite /bi_persistently /= /siProp_persistently /bi_persistently /=
+                  uPred_persistently_eq.
+  Qed.
+  #[global] Instance siProp_bi_embed : BiEmbed siPropI iPropI :=
+    {| bi_embed_mixin := siProp_embedding_mixin |}.
+  #[global] Instance siProp_bi_embed_emp : BiEmbedEmp siPropI iPropI.
+  Proof. constructor. intros. by rewrite /bi_emp /= /uPred_emp uPred_pure_eq. Qed.
+End si_embedding.
+
+Section iprop_instances.
+  Context `{Hin: inG Σ A}.
+
+  Notation iPropI := (iPropI Σ).
+
+  #[global] Instance has_own_iprop : HasOwn iPropI A := {|
+    own := base_logic.lib.own.own ;
+    own_op := base_logic.lib.own.own_op ;
+    own_mono := base_logic.lib.own.own_mono ;
+    own_ne := base_logic.lib.own.own_ne ;
+    own_timeless := base_logic.lib.own.own_timeless ;
+    own_core_persistent := base_logic.lib.own.own_core_persistent ;
+  |}.
+
+  #[local] Arguments siProp_holds !_ _ /.
+  #[local] Arguments uPred_holds !_ _ _ /.
+
+  Lemma uPred_cmra_valid_prop_valid (a : A) :
+    (uPred_cmra_valid a) ⊣⊢@{iPropI} si_valid a.
+  Proof. constructor => n x ? /=. by rewrite uPred_cmra_valid_eq. Qed.
+
+  #[global] Instance has_own_valid_iprop : HasOwnValid iPropI A.
+  Proof.
+    constructor. intros. rewrite -uPred_cmra_valid_prop_valid.
+    by rewrite /own /= base_logic.lib.own.own_valid.
+  Qed.
+
+  #[global] Instance has_own_update_iprop : HasOwnUpd iPropI A.
+  Proof.
+    constructor; rewrite /own /=.
+    - by apply base_logic.lib.own.own_update.
+    - by apply base_logic.lib.own.own_alloc_strong_dep.
+  Qed.
+End iprop_instances.
+
+Instance has_own_unit_iprop {Σ} {A : ucmraT} `{Hin: inG Σ A} :
+  HasOwnUnit (iPropI Σ) A.
+Proof. constructor; rewrite /own /=. by apply base_logic.lib.own.own_unit. Qed.
+
+
+(* Instances for monpred *)
+
+Section si_monpred_embedding.
+  Context {I : biIndex} {Σ : gFunctors}.
+
+  Notation monPred  := (monPred I (iPropI Σ)).
+  Notation monPredI := (monPredI I (iPropI Σ)).
+
+  #[local] Arguments siProp_holds !_ _ /.
+  #[local] Arguments uPred_holds !_ _ _ /.
+
+  #[global] Instance si_monpred_embed : Embed siPropI monPredI :=
+    λ P, embed (embed P).
+
+  #[local] Ltac un_membed := rewrite /embed /si_monpred_embed /=.
+
+  #[global] Instance si_monpred_embed_mono :
+    Proper ((⊢) ==> (⊢)) (@embed siPropI monPredI _).
+  Proof. intros ?? PQ. un_membed. by rewrite PQ. Qed.
+
+  #[global] Instance si_monpred_embed_ne : NonExpansive (@embed siPropI monPredI _).
+  Proof. un_membed. solve_proper. Qed.
+
+  (* TODO: generalize to embedding of embedding *)
+  Definition siProp_monpred_embedding_mixin :
+    BiEmbedMixin siPropI monPredI si_monpred_embed.
+  Proof.
+    split; try apply _; un_membed.
+    - intros P ?%bi_embed_mixin_emp_valid_inj%bi_embed_mixin_emp_valid_inj;
+        [done|apply siProp_embedding_mixin|apply bi_embed_mixin].
+    - intros PROP' IN P Q.
+      rewrite embed_interal_inj; by apply siProp_embedding_mixin.
+    - rewrite -embed_emp. apply bi_embed_mixin, siProp_embedding_mixin.
+    - intros P Q. rewrite -embed_impl. apply bi_embed_mixin, siProp_embedding_mixin.
+    - intros A Φ. rewrite -embed_forall. apply bi_embed_mixin, siProp_embedding_mixin.
+    - intros A Φ. rewrite -embed_exist. apply bi_embed_mixin, siProp_embedding_mixin.
+    - intros P Q.
+      rewrite !bi_embed_mixin_sep;
+        [done|apply bi_embed_mixin|apply siProp_embedding_mixin].
+    - intros P Q. rewrite -embed_wand. apply bi_embed_mixin, siProp_embedding_mixin.
+    - intros P. rewrite -embed_persistently.
+      apply embed_proper, siProp_embedding_mixin.
+  Qed.
+
+  #[global] Instance siProp_bi_monpred_embed : BiEmbed siPropI monPredI :=
+    {| bi_embed_mixin := siProp_monpred_embedding_mixin |}.
+  #[global] Instance siProp_bi_monpred_embed_emp : BiEmbedEmp siPropI monPredI.
+  Proof.
+    rewrite /BiEmbedEmp {1}/embed /bi_embed_embed /= /si_monpred_embed /=.
+    rewrite -embed_emp_1. apply embed_mono. by rewrite -embed_emp_1.
+  Qed.
+End si_monpred_embedding.
+
+Section monpred_instances.
+  Context {I : biIndex} `{Hin: inG Σ A}.
+
+  Notation iPropI   := (iPropI Σ).
+  Notation monPred  := (monPred I iPropI).
+  Notation monPredI := (monPredI I iPropI).
+
+  #[global] Program Instance has_own_monpred : HasOwn monPredI A := {|
+    own := λ γ a , ⎡ own γ a ⎤%I |}.
+  Next Obligation. intros. by rewrite -embed_sep -own_op. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+
+  #[local] Ltac unseal_monpred :=
+    constructor; intros; rewrite /own; red; rewrite /has_own_monpred.
+
+  #[global] Instance has_own_valid_monpred: HasOwnValid monPredI A.
+  Proof. unseal_monpred. by rewrite own_valid. Qed.
+
+  #[global] Instance has_own_update_monpred : HasOwnUpd monPredI A.
+  Proof.
+    unseal_monpred.
+    - by rewrite -embed_bupd own_update.
+    - setoid_rewrite <-(@embed_pure iPropI). setoid_rewrite <-(@embed_and iPropI).
+      setoid_rewrite <-embed_exist. rewrite -embed_bupd -(@embed_emp iPropI).
+      by rewrite -own_alloc_strong_dep.
+  Qed.
+End monpred_instances.
+
+Instance has_own_unit_monpred {I : biIndex} {Σ} {A : ucmraT} `{Hin: inG Σ A} :
+  HasOwnUnit (monPredI I (iPropI Σ)) A.
+Proof.
+  constructor; intros; rewrite /own; red; rewrite /has_own_monpred.
+  by rewrite -(@embed_emp (iPropI _)) -embed_bupd own_unit.
+Qed.

@@ -1,17 +1,18 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 
 (* TODO: LICENSE for Iris. *)
 
 (** Extraction of invariants that doesn't depend on iProp. *)
 
-From iris.bi Require Import monpred.
+Require Import iris.bi.monpred.
+Require Import iris.algebra.lib.excl_auth.
+Require Import iris.base_logic.lib.invariants.
+
 From iris.proofmode Require Import tactics monpred.
-From iris.algebra Require Import lib.excl_auth.
-From iris.base_logic.lib Require Import invariants.
 
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
@@ -38,7 +39,7 @@ Section defs.
 
     Global Instance inv_proper N : Proper (equiv ==> equiv) (inv N).
     Proof using CON. apply ne_proper, _. Qed.
-    End instances.
+  End instances.
 
   Global Instance inv_persistent N P : Persistent (inv N P).
   Proof. rewrite inv_eq. apply _. Qed.
@@ -163,6 +164,7 @@ Arguments weakly_objective {_ _} _%I {_}.
 Hint Mode WeaklyObjective ! + ! : typeclass_instances.
 Instance: Params (@WeaklyObjective) 2 := {}.
 
+(* TODO: upstream *)
 Bind Scope bi_scope with monPred.
 
 Section weakly_obj.
@@ -199,7 +201,7 @@ Section allocation.
   (** ** Internal model of invariants *)
   #[local] Definition own_inv (N : namespace) P : monPred :=
     ⌜WeaklyObjective P⌝ ∧
-    ∃ i, monPred_in i ∧ (* >> this says the current local state is at least j *)
+    ∃ i, monPred_in i ∧ (* >> this says the current local state is at least i *)
       ⎡ lib.invariants.inv N (P i) ⎤.
 
   #[local] Lemma own_inv_acc E N P :
@@ -227,7 +229,7 @@ Section allocation.
   #[local] Lemma own_inv_alloc_open N E P {WK: WeaklyObjective P} :
     ↑N ⊆ E → ⊢ |={E, E∖↑N}=> own_inv N P ∗ (▷P ={E∖↑N, E}=∗ True).
   Proof.
-    intros Sub. iStartProof.
+    intros Sub.
     iDestruct (monPred_in_intro True with "[//]") as (i) "[Ini _]".
     iMod (lib.invariants.inv_alloc_open N E (P i)) as "[Inv Close]"; [done|].
     iIntros "!>". iFrame (WK). iSplit.
