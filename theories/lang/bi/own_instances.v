@@ -109,8 +109,8 @@ Section iprop_instances.
   #[local] Arguments uPred_holds !_ _ _ /.
 
   Lemma uPred_cmra_valid_prop_valid (a : A) :
-    (uPred_cmra_valid a) ⊣⊢@{iPropI} si_valid a.
-  Proof. constructor => n x ? /=. by rewrite uPred_cmra_valid_eq. Qed.
+    (uPred_cmra_valid a) ⊣⊢@{iPropI} prop_cmra_valid a.
+  Proof. constructor => n x ? /=. by rewrite si_cmra_valid_eq uPred_cmra_valid_eq. Qed.
 
   #[global] Instance has_own_valid_iprop : HasOwnValid iPropI A.
   Proof.
