@@ -21,20 +21,28 @@ Require Import iris.proofmode.classes.
 Require Import iris.base_logic.lib.iprop.
 
 (* Step-indexed Validity *)
-(* This would be a little bit simpler if cmra_validN was actually an [siProp] *)
-Program Definition si_valid
+Program Definition si_cmra_valid_def {A : cmraT} (a : A) : siProp :=
+  {| siProp_holds n := ✓{n} a |}.
+Solve Obligations with naive_solver eauto using cmra_validN_le.
+Definition si_cmra_valid_aux : seal (@si_cmra_valid_def). Proof. by eexists. Qed.
+Definition si_cmra_valid {A} := si_cmra_valid_aux.(unseal) A.
+Definition si_cmra_valid_eq :
+  @si_cmra_valid = @si_cmra_valid_def := si_cmra_valid_aux.(seal_eq).
+
+(* Validity for arbitrary PROP, assuming an embedding of siProp.
+  This subsumes uPred_cmra_valid. *)
+Definition prop_cmra_valid
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) : PROP :=
-  embed {| siProp_holds n := ✓{n} a |}.
-Next Obligation. simpl. intros. by eapply cmra_validN_le. Qed.
+  embed (si_cmra_valid a).
 
-Notation "✓ x" := (si_valid x) (at level 20) : bi_scope.
+Notation "✓ x" := (prop_cmra_valid x) (at level 20) : bi_scope.
 
-Instance si_valid_plain
+Instance prop_valid_plain
   {PROP : bi} `{!BiEmbed siPropI PROP} `{BiPlainly PROP}
   {BEP : BiEmbedPlainly siPropI PROP} {A : cmraT} (a : A) :
   Plain (✓ a) := _.
 
-Instance si_valid_persistent
+Instance prop_valid_persistent
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) :
   Persistent (✓ a) := _.
 
@@ -85,7 +93,7 @@ Section valid.
 
   Local Ltac unseal :=
     constructor => n /=;
-      rewrite /bi_pure /bi_and /bi_forall /=
+      rewrite /bi_pure /bi_and /bi_forall /= si_cmra_valid_eq
               ?siProp_pure_eq ?siProp_and_eq ?siProp_forall_eq /=.
 
   (* Duplicates from Iris's base_logic.upred, but more general. *)
