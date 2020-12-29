@@ -55,36 +55,36 @@ Section si_embedding.
   Lemma si_embed_unembed (P : siProp) : si_unembed (embed P) ≡ P.
   Proof. by constructor. Qed.
 
+  #[local] Ltac unseal :=
+    rewrite /bi_emp /= /uPred_emp /= ?uPred_pure_eq /=
+            /bi_emp /= /siProp_emp /= ?siProp_pure_eq /=
+            /bi_impl /= ?uPred_impl_eq /bi_impl /= ?siProp_impl_eq /=
+            /bi_forall /= ?uPred_forall_eq /= /bi_forall /= ?siProp_forall_eq /=
+            /bi_exist /= ?siProp_exist_eq /bi_exist /= ?uPred_exist_eq /=
+            /bi_sep /= /siProp_sep ?siProp_and_eq /bi_sep /= ?uPred_sep_eq /=
+            /bi_wand /= ?uPred_wand_eq /bi_wand /= /siProp_wand ?siProp_impl_eq /=
+            /bi_persistently /= /siProp_persistently /bi_persistently /=
+            ?uPred_persistently_eq.
+  #[local] Ltac unseal' := constructor => ???; unseal.
+
   Definition siProp_embedding_mixin : BiEmbedMixin siPropI iPropI si_embed.
   Proof.
     split; try apply _.
-    - intros P [EP]. constructor => ??. apply (EP _ ε). done.
-      by rewrite /bi_emp /= /uPred_emp /= uPred_pure_eq /=.
+    - intros P [EP]. constructor => ??. apply (EP _ ε). done. by unseal.
     - intros PROP' IN P Q.
       rewrite -{2}(si_embed_unembed P) -{2}(si_embed_unembed Q).
       apply (f_equivI si_unembed).
-    - constructor => ?? /= ??.
-      by rewrite /bi_emp /= /siProp_emp /= siProp_pure_eq /=.
-    - intros P Q.
-      constructor => ? x ? /=.
-      rewrite /bi_impl /= uPred_impl_eq /bi_impl /= siProp_impl_eq /= => PQ ??.
-      apply (PQ _ x); [done|done|by eapply cmra_validN_le].
-    - intros A Φ. constructor => ??? /=.
-      by rewrite /bi_forall /= uPred_forall_eq /= /bi_forall /= siProp_forall_eq /=.
-    - intros A Φ. constructor => ??? /=.
-      by rewrite /bi_exist /= siProp_exist_eq /bi_exist /= uPred_exist_eq /=.
-    - intros P Q. constructor => ? x ?.
-      rewrite /bi_sep /= /siProp_sep siProp_and_eq /bi_sep /= uPred_sep_eq /=.
-      split; last naive_solver.
-      intros []. exists ε, x. by rewrite left_id.
-    - intros P Q. constructor => ? x ?.
-      rewrite /bi_wand /= uPred_wand_eq /bi_wand /= /siProp_wand siProp_impl_eq /=
-        => PQ ??.
+    - by unseal'.
+    - intros ??. unseal' => PQ ??. eapply PQ; [done..|by eapply cmra_validN_le].
+    - intros A Φ. by unseal'.
+    - intros A Φ. by unseal'.
+    - intros P Q. unseal'. split; last naive_solver.
+      intros []. exists ε. eexists. by rewrite left_id.
+    - intros P Q. unseal' => PQ ??.
       apply (PQ _ ε); [done|rewrite right_id; by eapply cmra_validN_le].
-    - intros P. constructor => ? x ?.
-      by rewrite /bi_persistently /= /siProp_persistently /bi_persistently /=
-                  uPred_persistently_eq.
+    - intros P. by unseal'.
   Qed.
+
   #[global] Instance siProp_bi_embed : BiEmbed siPropI iPropI :=
     {| bi_embed_mixin := siProp_embedding_mixin |}.
   #[global] Instance siProp_bi_embed_emp : BiEmbedEmp siPropI iPropI.
@@ -159,18 +159,15 @@ Section si_monpred_embedding.
     BiEmbedMixin siPropI monPredI si_monpred_embed.
   Proof.
     split; try apply _; un_membed.
-    - intros P ?%bi_embed_mixin_emp_valid_inj%bi_embed_mixin_emp_valid_inj;
-        [done|apply siProp_embedding_mixin|apply bi_embed_mixin].
+    - intros P. rewrite embed_emp_valid. apply siProp_embedding_mixin.
     - intros PROP' IN P Q.
       rewrite embed_interal_inj; by apply siProp_embedding_mixin.
-    - rewrite -embed_emp. apply bi_embed_mixin, siProp_embedding_mixin.
-    - intros P Q. rewrite -embed_impl. apply bi_embed_mixin, siProp_embedding_mixin.
-    - intros A Φ. rewrite -embed_forall. apply bi_embed_mixin, siProp_embedding_mixin.
-    - intros A Φ. rewrite -embed_exist. apply bi_embed_mixin, siProp_embedding_mixin.
-    - intros P Q.
-      rewrite !bi_embed_mixin_sep;
-        [done|apply bi_embed_mixin|apply siProp_embedding_mixin].
-    - intros P Q. rewrite -embed_wand. apply bi_embed_mixin, siProp_embedding_mixin.
+    - rewrite -embed_emp. apply embed_mono, siProp_embedding_mixin.
+    - intros P Q. rewrite -embed_impl. apply embed_mono, siProp_embedding_mixin.
+    - intros A Φ. rewrite -embed_forall. apply embed_mono, siProp_embedding_mixin.
+    - intros A Φ. rewrite -embed_exist. apply embed_mono, siProp_embedding_mixin.
+    - intros P Q. rewrite -embed_sep. apply embed_proper, siProp_embedding_mixin.
+    - intros P Q. rewrite -embed_wand. apply embed_mono, siProp_embedding_mixin.
     - intros P. rewrite -embed_persistently.
       apply embed_proper, siProp_embedding_mixin.
   Qed.
@@ -179,8 +176,8 @@ Section si_monpred_embedding.
     {| bi_embed_mixin := siProp_monpred_embedding_mixin |}.
   #[global] Instance siProp_bi_monpred_embed_emp : BiEmbedEmp siPropI monPredI.
   Proof.
-    rewrite /BiEmbedEmp {1}/embed /bi_embed_embed /= /si_monpred_embed /=.
-    rewrite -embed_emp_1. apply embed_mono. by rewrite -embed_emp_1.
+    rewrite /BiEmbedEmp /bi_embed_embed /si_monpred_embed /=.
+    rewrite -embed_emp. apply embed_mono. by rewrite -embed_emp_1.
   Qed.
 End si_monpred_embedding.
 
