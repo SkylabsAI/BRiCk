@@ -108,11 +108,11 @@ Global Instance into_inv_inv N P : IntoInv (inv N P) N := {}.
 
 Global Instance into_acc_inv `{BiAffine PROP} N P E:
   IntoAcc (X := unit) (inv N P)
-          (↑N ⊆ E) True (fupd E (E ∖ ↑N)) (fupd (E ∖ ↑N) E)
+          (↑N ⊆ E) emp (fupd E (E ∖ ↑N)) (fupd (E ∖ ↑N) E)
           (λ _ : (), (▷ P)%I) (λ _ : (), (▷ P)%I) (λ _ : (), None).
 Proof.
   rewrite inv_eq /IntoAcc /accessor bi.exist_unit.
-  iIntros (?) "#Hinv _". iMod ("Hinv" $! E with "[%//]") as "[$ Close]".
+  iIntros (?) "Hinv _". iMod ("Hinv" $! E with "[%//]") as "[$ Close]".
   iIntros "!> P". by iMod ("Close" with "P") as "_".
 Qed.
 
@@ -156,21 +156,29 @@ Qed.
 End inv_properties.
 
 (*** Invariants for monPred **)
-(* WeaklyObjective *)
+
+(** WeaklyObjective *)
+(** General monPreds are only monotone w.r.t one direction of ⊑. WeaklyObjective
+  also says that the monPred P is also monotone w.r.t. to the other direction.
+  Effectively, P holds the same for each equivalent class of bi-indexes.
+  WeaklyObjective is weaker than Objective, where it is required that P holds
+  the same everywhere (recall that the bi-indexes only have a partial order). *)
 Class WeaklyObjective {I} {PROP} (P: monPred I PROP) :=
   weakly_objective i j : j ⊑ i → P i -∗ P j.
 Arguments WeaklyObjective {_ _} _%I.
 Arguments weakly_objective {_ _} _%I {_}.
 Hint Mode WeaklyObjective ! + ! : typeclass_instances.
-Instance: Params (@WeaklyObjective) 2 := {}.
+Instance : Params (@WeaklyObjective) 2 := {}.
 
 (* TODO: upstream *)
 Bind Scope bi_scope with monPred.
 
 Section weakly_obj.
   Context {I : biIndex} {PROP : bi}.
+
   Notation monPred := (monPred I PROP).
   Implicit Types (P Q : monPred).
+
   #[global] Instance weakly_objective_proper :
     Proper (equiv ==> iff) (@WeaklyObjective I PROP).
   Proof.
@@ -178,6 +186,10 @@ Section weakly_obj.
     - by rewrite -EQ weakly_objective.
     - by rewrite EQ weakly_objective.
   Qed.
+
+  #[global] Instance objective_weakly_objective P :
+    Objective P → WeaklyObjective P.
+  Proof. intros ????. by rewrite objective_at. Qed.
 
   (* TODO: more instances *)
   #[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.

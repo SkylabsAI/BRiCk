@@ -24,7 +24,7 @@ Require Import iris.base_logic.lib.iprop.
 Program Definition si_cmra_valid_def {A : cmraT} (a : A) : siProp :=
   {| siProp_holds n := ✓{n} a |}.
 Solve Obligations with naive_solver eauto using cmra_validN_le.
-Definition si_cmra_valid_aux : seal (@si_cmra_valid_def). Proof. by eexists. Qed.
+#[local] Definition si_cmra_valid_aux : seal (@si_cmra_valid_def). Proof. by eexists. Qed.
 Definition si_cmra_valid {A} := si_cmra_valid_aux.(unseal) A.
 Definition si_cmra_valid_eq :
   @si_cmra_valid = @si_cmra_valid_def := si_cmra_valid_aux.(seal_eq).
