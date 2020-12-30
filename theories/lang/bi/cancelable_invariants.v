@@ -6,7 +6,7 @@
 
 (* TODO: LICENSE for Iris. *)
 
-(** Extraction of cancellable invariants that is general w.r.t HasOwn. **)
+(** Extraction of cancelable invariants that is general w.r.t HasOwn. **)
 
 From iris.bi.lib Require Import fractional.
 From iris.proofmode Require Import tactics.
@@ -22,9 +22,9 @@ Require Export bedrock.lang.bi.own_instances.
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
 
-(** Duplicates from cancellable_invariants. This one is not tied to iProp. *)
+(** Duplicates from cancelable_invariants. This one is not tied to iProp. *)
 (* The statements and (most of) the proofs should stay the same as those of
-  iProp's cancellable invariants. *)
+  iProp's cancelable invariants. *)
 Section defs.
   Context `{!BiFUpd PROP} `{!HasOwn PROP fracR}.
 
