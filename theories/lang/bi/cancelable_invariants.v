@@ -38,7 +38,7 @@ Instance: Params (@cinv) 5 := {}.
 
 Section proofs.
   (* TODO: too many ... *)
-  Context `{!BiEmbed siPropI PROP} `{!BiAffine PROP}
+  Context `{!BiEmbed siPropI PROP}
           `{!BiBUpd PROP} `{!BiFUpd PROP} `{!BiBUpdFUpd PROP}
           `{!BiLaterContractive PROP}
           `{!HasOwn PROP fracR} `{!HasOwnValid PROP fracR}.
@@ -73,10 +73,10 @@ Section proofs.
     iDestruct (cinv_own_valid with "H1 H2") as %[]%(exclusive_l 1%Qp).
   Qed.
 
-  Lemma cinv_iff N γ P Q : cinv N γ P -∗ ▷ □ (P ↔ Q) -∗ cinv N γ Q.
+  Lemma cinv_iff N γ P Q : cinv N γ P -∗ □ ▷ (P ∗-∗ Q) -∗ cinv N γ Q.
   Proof.
     iIntros "HI #HPQ". iApply (inv_iff with "HI"). iIntros "!> !>".
-    iSplit; iIntros "[?|$]"; iLeft; by iApply "HPQ".
+    iSplit; try iIntros "[?|?]"; by [iRight | iLeft; iApply "HPQ" ].
   Qed.
 
   (*** Accessors *)
@@ -109,12 +109,12 @@ Section proofs.
   Qed.
 
   (*** Other *)
-  Lemma cinv_cancel E N γ P : ↑N ⊆ E → cinv N γ P -∗ cinv_own γ 1 ={E}=∗ ▷ P.
+  Lemma cinv_cancel E N γ P : ↑N ⊆ E → cinv N γ P -∗ cinv_own γ 1 ={E}=∗ <absorb> ▷ P.
   Proof.
     iIntros (?) "#Hinv Hγ".
     iMod (cinv_acc_strong with "Hinv Hγ") as "($ & Hγ & H)"; first done.
     rewrite {2}(union_difference_L (↑N) E)=> //.
-    iApply "H". by iRight.
+    iMod ("H" with "[Hγ]"); last done. by iRight.
   Qed.
 
   Global Instance into_inv_cinv N γ P : IntoInv (cinv N γ P) N := {}.
@@ -122,7 +122,7 @@ Section proofs.
   Global Instance into_acc_cinv E N γ P p :
     IntoAcc (X:=unit) (cinv N γ P)
             (↑N ⊆ E) (cinv_own γ p) (fupd E (E∖↑N)) (fupd (E∖↑N) E)
-            (λ _, ▷ P ∗ cinv_own γ p)%I (λ _, ▷ P)%I (λ _, None)%I.
+            (λ _, ▷ P ∗ cinv_own γ p)%I (λ _, ▷ P)%I (λ _, Some True)%I.
   Proof.
     rewrite /IntoAcc /accessor. iIntros (?) "#Hinv Hown".
     rewrite exist_unit -assoc.
