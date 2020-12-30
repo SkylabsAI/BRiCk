@@ -14,13 +14,12 @@
 Require Import bedrock.lang.prelude.base.
 Require Export bedrock.lang.prelude.addr.
 
-From iris.base_logic.lib Require Export iprop.
 Require Import iris.bi.monpred.
 From iris.bi.lib Require Import fractional.
 From iris.proofmode Require Import tactics.
-Require Import iris.base_logic.lib.fancy_updates.
-Require Import iris.base_logic.lib.own.
-Require Import iris.base_logic.lib.cancelable_invariants.
+From iris.base_logic.lib Require Import wsat. (* only for invG *)
+From iris.base_logic.lib Require Import own. (* only for inG *)
+From iris.base_logic.lib Require Import cancelable_invariants. (* only for cinvG *)
 
 Require Export bedrock.lang.bi.prelude.
 Require Export bedrock.lang.bi.observe.
@@ -60,28 +59,45 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
   Global Existing Instance has_cppG.
 
   Section with_cpp.
-    Context `{cpp_logic}.
+    Context `{cpp_logic ti}.
 
-    Definition mpred := iProp _Σ.
+    Definition mpredI : bi := monPredI ti (iPropI _Σ).
+    Definition mpred := bi_car mpredI.
     Canonical Structure mpredO : ofeT
-      := OfeT mpred (ofe_mixin (iPropO _Σ)).
-    Canonical Structure mpredI : bi :=
-    {|
-      bi_car := mpred ;
-      bi_ofe_mixin := bi_ofe_mixin (iPropI _Σ);
-      bi_bi_mixin := bi_bi_mixin (iPropI _Σ);
-      bi_bi_later_mixin := bi_bi_later_mixin (iPropI _Σ);
-    |}.
+      := OfeT mpred (ofe_mixin (monPredO ti (iPropI _Σ))).
 
-    Definition mPrePredO : ofeT := iPrePropO _Σ.
+    (* TODO: mPrePredO no longer needed once we bump Iris. See iris!530 *)
+    Definition mPrePredO : ofeT := ti -d> iPrePropO _Σ.
 
-    Definition mpred_unfold : mpredO -n> mPrePredO := iProp_unfold.
-    Definition mpred_fold : mPrePredO -n> mpredO := iProp_fold.
+    Definition mpred_unfold_base (P : mpred) : mPrePredO :=
+      fun i => iProp_unfold (P i).
+    Instance mpred_unfold_base_ne : NonExpansive mpred_unfold_base.
+    Proof. solve_contractive. Qed.
+    Definition mpred_unfold : mpredO -n> mPrePredO :=
+      OfeMor mpred_unfold_base.
+
+    (* TODO: fold-ing requires monotonicity of mPrePredO. This should be gone
+      once mPrePredO is gone (see the above TODO).
+    Program Definition mpred_fold_base (P : mPrePredO)
+       : mpredO :=
+      MonPred (fun i => iProp_fold (P i)) _.
+    Next Obligation.
+      intros i1 i2 Le.
+    Abort.
+
+    Instance mpred_fold_base_ne : NonExpansive mpred_fold_base.
+    Proof. solve_contractive. Qed.
+    Definition mpred_fold : mPrePredO -n> mPredO :=
+      OfeMor mpred_fold_base.
 
     Definition mpred_fold_unfold :
-      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P := iProp_fold_unfold.
+      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P.
+    Abort.
+
     Definition mpred_unfold_fold :
-      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P := iProp_unfold_fold.
+      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P.
+    Abort. *)
+
 
     (* TODO: generalize to a telescope version of -d> *)
     (* With something like -td> below:

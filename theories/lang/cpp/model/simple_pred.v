@@ -7,11 +7,16 @@ From iris.algebra Require Import excl gmap.
 From iris.algebra.lib Require Import frac_auth.
 From iris.bi Require Import monpred.
 From iris.bi.lib Require Import fractional.
-From iris.base_logic.lib Require Export iprop.
-From iris.base_logic.lib Require Import fancy_updates own.
-From iris.base_logic.lib Require Import cancelable_invariants.
+From iris.base_logic.lib Require Import wsat. (* only for invG *)
+From iris.base_logic.lib Require Import own. (* only for inG *)
+From iris.base_logic.lib Require Import cancelable_invariants. (* only for cinvG *)
 From iris.proofmode Require Import tactics.
 From iris_string_ident Require Import ltac2_string_ident.
+
+(* overloading own/inv/cinv *)
+From bedrock.lang.bi Require Import own_instances.
+From bedrock.lang.bi Require Import invariants.
+From bedrock.lang.bi Require Import cancelable_invariants.
 
 From bedrock.lang.prelude Require Import base option.
 From bedrock.lang.cpp Require Import ast semantics.
@@ -34,7 +39,9 @@ Lemma frac_valid {A : Type} {q1 q2} {v1 v2 : A} :
 Proof. by move /pair_valid => /= []? /agree_op_invL'. Qed.
 
 Section fractional.
-  Context {K V : Type} `{Countable K} `{inG Σ (gmapR K (fractionalR V))}.
+  Context {K V : Type} `{Countable K}.
+  Let gmapFracR := (gmapR K (fractionalR V)).
+  Context `{!HasOwn PROP gmapFracR}.
 
   Let gmap_own γ q k v :=
     own (A := gmapR K (fractionalR V)) γ {[ k := frac q v ]}.
@@ -46,20 +53,23 @@ Section fractional.
     AsFractional (gmap_own γ q k v) (λ q, gmap_own γ q k v) q.
   Proof. exact: Build_AsFractional. Qed.
 
-  Global Instance gmap_own_agree :
+  Global Instance gmap_own_agree
+    `{!BiAffine PROP} `{!BiEmbed siPropI PROP} `{!HasOwnValid PROP gmapFracR} :
     Observe2 [| v1 = v2 |] (gmap_own γ q1 k v1) (gmap_own γ q2 k v2).
   Proof.
     intros. apply: observe_2_intro_persistent.
     apply bi.wand_intro_r; rewrite /gmap_own -own_op singleton_op.
-    rewrite own_valid uPred.discrete_valid singleton_valid.
+    rewrite own_valid discrete_valid singleton_valid.
     by iIntros "!%" => /frac_valid [].
   Qed.
 
-  Global Instance gmap_own_frac_valid γ (q : Qp) k v :
+  Global Instance gmap_own_frac_valid
+    `{!BiAffine PROP} `{!BiEmbed siPropI PROP} `{!HasOwnValid PROP gmapFracR}
+    γ (q : Qp) k v :
     Observe [| q ≤ 1 |]%Qc (gmap_own γ q k v).
   Proof.
     apply: observe_intro_persistent.
-    rewrite /gmap_own own_valid !uPred.discrete_valid singleton_valid.
+    rewrite /gmap_own own_valid !discrete_valid singleton_valid.
     by iIntros "!%" => /pair_valid [? _].
   Qed.
 End fractional.
@@ -616,7 +626,7 @@ Module SimpleCPP.
     Proof.
       apply /observe_2_intro_persistent /bi.wand_intro_r.
       rewrite -own_op singleton_op.
-      rewrite own_valid uPred.discrete_valid singleton_valid.
+      rewrite own_valid discrete_valid singleton_valid.
       by iIntros "!%" => /= /agree_op_invL'.
     Qed.
 
