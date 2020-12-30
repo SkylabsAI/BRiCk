@@ -14,6 +14,7 @@
 Require Import bedrock.lang.prelude.base.
 Require Export bedrock.lang.prelude.addr.
 
+Require Export iris.bi.bi.
 Require Import iris.bi.monpred.
 From iris.bi.lib Require Import fractional.
 From iris.proofmode Require Import tactics.
