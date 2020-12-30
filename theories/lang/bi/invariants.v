@@ -46,7 +46,7 @@ Section defs.
 End defs.
 
 Arguments inv {_ _} N P%I.
-Instance : Params (@inv) 3 := {}. 
+Instance : Params (@inv) 3 := {}.
 
 Section inv_properties.
 Context `{!BiFUpd PROP}.
