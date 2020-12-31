@@ -43,6 +43,8 @@ Section defs.
 
   Global Instance inv_persistent N P : Persistent (inv N P).
   Proof. rewrite inv_eq. apply _. Qed.
+  Global Instance inv_affine N P : Affine (inv N P).
+  Proof. rewrite inv_eq. apply _. Qed.
 End defs.
 
 Arguments inv {_ _} N P%I.
@@ -54,9 +56,10 @@ Context `{!BiFUpd PROP}.
 Implicit Types (P Q : PROP) (E : coPset).
 
 (* Duplicates from Iris, but do not tie to iProp *)
-(* These statements (and probably proofs) are exactly the same. *)
-Lemma inv_alter `{BiAffine PROP} N P Q :
-  inv N P -∗ ▷ □ (P -∗ Q ∗ (Q -∗ P)) -∗ inv N Q.
+(* These statements (and probably proofs) are the same, except where required
+for linearity. *)
+Lemma inv_alter N P Q :
+  inv N P -∗ □ ▷ (P -∗ Q ∗ (Q -∗ P)) -∗ inv N Q.
 Proof.
   rewrite inv_eq. iIntros "#HI #HPQ !>" (E SUB).
   iMod ("HI" $! E SUB) as "[HP Hclose]".
@@ -64,7 +67,7 @@ Proof.
   iIntros "!> HQ". iApply "Hclose". iApply "HQP". done.
 Qed.
 
-Lemma inv_iff N P Q `{BiAffine PROP} : inv N P -∗ ▷ □ (P ↔ Q) -∗ inv N Q.
+Lemma inv_iff N P Q : inv N P -∗ □ ▷ (P ∗-∗ Q) -∗ inv N Q.
 Proof.
   iIntros "#HI #HPQ". iApply (inv_alter with "HI").
   iIntros "!> !> HP". iSplitL "HP".
@@ -78,7 +81,7 @@ Proof.
   rewrite inv_eq /inv_def; iIntros (?) "HI". by iApply ("HI" $! E with "[%//]").
 Qed.
 
-Lemma inv_combine `{BiAffine PROP} N1 N2 N P Q :
+Lemma inv_combine N1 N2 N P Q :
   N1 ## N2 →
   ↑N1 ∪ ↑N2 ⊆@{coPset} ↑N →
   inv N1 P -∗ inv N2 Q -∗ inv N (P ∗ Q).
@@ -88,32 +91,32 @@ Proof.
   iMod ("HinvQ" with "[%]") as "[$ HcloseQ]"; first set_solver.
   iMod (fupd_intro_mask' _ (E ∖ ↑N)) as "Hclose"; first set_solver.
   iIntros "!> [HP HQ]".
-  iMod "Hclose" as "_". iMod ("HcloseQ" with "HQ") as %_. by iApply "HcloseP".
+  iMod "Hclose" as "_". iMod ("HcloseQ" with "HQ") as "?". by iMod ("HcloseP" with "HP").
 Qed.
 
-Lemma inv_combine_dup_l `{BiAffine PROP} N P Q :
+Lemma inv_combine_dup_l N P Q :
   □ (P -∗ P ∗ P) -∗
   inv N P -∗ inv N Q -∗ inv N (P ∗ Q).
 Proof.
-  rewrite inv_eq. iIntros "#HPdup #HinvP #HinvQ !>" (E ?).
-  iMod ("HinvP" with "[//]") as "[HP HcloseP]".
+  rewrite inv_eq. iIntros "#HPdup #HinvP #HinvQ !>" (E SUB).
+  iMod ("HinvP" with "[%//]") as "[HP HcloseP]".
   iDestruct ("HPdup" with "HP") as "[$ HP]".
-  iMod ("HcloseP" with "HP") as %_.
-  iMod ("HinvQ" with "[//]") as "[$ HcloseQ]".
-  iIntros "!> [HP HQ]". by iApply "HcloseQ".
+  iMod ("HcloseP" with "HP") as "?".
+  iMod ("HinvQ" with "[%//]") as "[$ HcloseQ]".
+  iIntros "!> [HP HQ]". by iMod ("HcloseQ" with "HQ").
 Qed.
 
 (** ** Proof mode integration *)
 Global Instance into_inv_inv N P : IntoInv (inv N P) N := {}.
 
-Global Instance into_acc_inv `{BiAffine PROP} N P E:
+Global Instance into_acc_inv N P E:
   IntoAcc (X := unit) (inv N P)
           (↑N ⊆ E) emp (fupd E (E ∖ ↑N)) (fupd (E ∖ ↑N) E)
-          (λ _ : (), (▷ P)%I) (λ _ : (), (▷ P)%I) (λ _ : (), None).
+          (λ _ : (), (▷ P)%I) (λ _ : (), (▷ P)%I) (λ _ : (), Some True%I).
 Proof.
   rewrite inv_eq /IntoAcc /accessor bi.exist_unit.
   iIntros (?) "Hinv _". iMod ("Hinv" $! E with "[%//]") as "[$ Close]".
-  iIntros "!> P". by iMod ("Close" with "P") as "_".
+  iIntros "!> P /=". by iMod ("Close" with "P") as "?".
 Qed.
 
 (** ** Derived properties *)
@@ -137,17 +140,17 @@ Proof.
   iIntros "!> {$HP} HP". iApply "Hclose"; auto.
 Qed.
 
-Lemma inv_split_l `{BiAffine PROP} N P Q : inv N (P ∗ Q) -∗ inv N P.
+Lemma inv_split_l N P Q : inv N (P ∗ Q) -∗ inv N P.
 Proof.
   iIntros "#HI". iApply inv_alter; eauto.
   iIntros "!> !> [$ $] $".
 Qed.
-Lemma inv_split_r `{BiAffine PROP} N P Q : inv N (P ∗ Q) -∗ inv N Q.
+Lemma inv_split_r N P Q : inv N (P ∗ Q) -∗ inv N Q.
 Proof.
   iIntros "#HI". iApply inv_alter; eauto.
   iIntros "!> !> [$ $] $".
 Qed.
-Lemma inv_split `{BiAffine PROP} N P Q : inv N (P ∗ Q) -∗ inv N P ∗ inv N Q.
+Lemma inv_split N P Q : inv N (P ∗ Q) -∗ inv N P ∗ inv N Q.
 Proof.
   iIntros "#H".
   iPoseProof (inv_split_l with "H") as "$".
