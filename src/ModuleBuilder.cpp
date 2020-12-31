@@ -275,11 +275,11 @@ build_module(clang::TranslationUnitDecl *tu, ::Module &mod, Filter &filter,
              bool elaborate) {
     auto &ctxt = tu->getASTContext();
 
-    BuildModule(mod, filter, &ctxt, specs, ci, elaborate)
+    BuildModule(mod, filter, &ctxt, specs, ci, false /*elaborate*/)
         .VisitTranslationUnitDecl(tu, false);
     // Once we are done visiting the AST, we run all the actions that
     // are pending in the translation unit.
-    ci->getSema().ActOnEndOfTranslationUnit();
+    //ci->getSema().ActOnEndOfTranslationUnit();
 }
 
 void ::Module::add_definition(clang::NamedDecl *d, bool opaque) {
