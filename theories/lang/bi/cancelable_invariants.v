@@ -37,7 +37,8 @@ End defs.
 Instance: Params (@cinv) 5 := {}.
 
 Section proofs.
-  (* TODO: too many ... *)
+  (* TODO: too many ... Also, not all lemmas need all of these (which may affect
+    performance). *)
   Context `{!BiEmbed siPropI PROP}
           `{!BiBUpd PROP} `{!BiFUpd PROP} `{!BiBUpdFUpd PROP}
           `{!BiLaterContractive PROP}

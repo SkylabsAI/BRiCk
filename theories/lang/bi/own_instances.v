@@ -108,13 +108,13 @@ Section iprop_instances.
   #[local] Arguments siProp_holds !_ _ /.
   #[local] Arguments uPred_holds !_ _ _ /.
 
-  Lemma uPred_cmra_valid_prop_valid (a : A) :
-    (uPred_cmra_valid a) ⊣⊢@{iPropI} prop_cmra_valid a.
+  Lemma uPred_cmra_valid_bi_cmra_valid (a : A) :
+    (uPred_cmra_valid a) ⊣⊢@{iPropI} bi_cmra_valid a.
   Proof. constructor => n x ? /=. by rewrite si_cmra_valid_eq uPred_cmra_valid_eq. Qed.
 
   #[global] Instance has_own_valid_iprop : HasOwnValid iPropI A.
   Proof.
-    constructor. intros. rewrite -uPred_cmra_valid_prop_valid.
+    constructor. intros. rewrite -uPred_cmra_valid_bi_cmra_valid.
     by rewrite /own /= base_logic.lib.own.own_valid.
   Qed.
 
