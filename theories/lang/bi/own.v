@@ -14,6 +14,7 @@ Require Import iris.bi.embedding.
 Require Import iris.si_logic.siprop.
 Require Export iris.si_logic.bi.
 
+Require Import iris.algebra.proofmode_classes.
 Require Import iris.proofmode.classes.
 
 (* Needed for gname *)
@@ -200,3 +201,78 @@ Section update.
     a1 ⋅ a2 ⋅ a3 ~~> a' → own γ a1 -∗ own γ a2 -∗ own γ a3 ==∗ own γ a'.
   Proof. intros. do 2 apply wand_intro_r. rewrite -!own_op. by apply own_update. Qed.
 End update.
+
+(** Big op class instances *)
+Section big_op_instances.
+  Context `{!BiBUpd PROP} {A : ucmraT}.
+  Context `{!HasOwn PROP A} `{!HasOwnUnit PROP A}.
+
+  Global Instance own_cmra_sep_homomorphism :
+    WeakMonoidHomomorphism op bi_sep (≡) (own γ).
+  Proof. split; try apply _. apply own_op. Qed.
+
+  Lemma big_opL_own {B} γ (f : nat → B → A) (l : list B) :
+    l ≠ [] →
+    own γ ([^op list] k↦x ∈ l, f k x) ⊣⊢ [∗ list] k↦x ∈ l, own γ (f k x).
+  Proof. apply (big_opL_commute1 _). Qed.
+  Lemma big_opM_own `{Countable K} {B} γ (g : K → B → A) (m : gmap K B) :
+    m ≠ ∅ →
+    own γ ([^op map] k↦x ∈ m, g k x) ⊣⊢ [∗ map] k↦x ∈ m, own γ (g k x).
+  Proof. apply (big_opM_commute1 _). Qed.
+  Lemma big_opS_own `{Countable B} γ (g : B → A) (X : gset B) :
+    X ≠ ∅ →
+    own γ ([^op set] x ∈ X, g x) ⊣⊢ [∗ set] x ∈ X, own γ (g x).
+  Proof. apply (big_opS_commute1 _). Qed.
+  Lemma big_opMS_own `{Countable B} γ (g : B → A) (X : gmultiset B) :
+    X ≠ ∅ →
+    own γ ([^op mset] x ∈ X, g x) ⊣⊢ [∗ mset] x ∈ X, own γ (g x).
+  Proof. apply (big_opMS_commute1 _). Qed.
+
+  Section affine.
+    Context `{!BiAffine PROP}. (* <== we actually only need ∀ γ, Affine (own γ ε) *)
+    Global Instance own_cmra_sep_entails_homomorphism :
+      MonoidHomomorphism op bi_sep (⊢) (own γ).
+    Proof.
+      split; [split|]; try apply _.
+      - intros. by rewrite own_op.
+      - apply (affine _).
+    Qed.
+
+    Lemma big_opL_own_1 {B} γ (f : nat → B → A) (l : list B) :
+      own γ ([^op list] k↦x ∈ l, f k x) ⊢ [∗ list] k↦x ∈ l, own γ (f k x).
+    Proof. apply (big_opL_commute _). Qed.
+    Lemma big_opM_own_1 `{Countable K, B} γ (g : K → B → A) (m : gmap K B) :
+      own γ ([^op map] k↦x ∈ m, g k x) ⊢ [∗ map] k↦x ∈ m, own γ (g k x).
+    Proof. apply (big_opM_commute _). Qed.
+    Lemma big_opS_own_1 `{Countable B} γ (g : B → A) (X : gset B) :
+      own γ ([^op set] x ∈ X, g x) ⊢ [∗ set] x ∈ X, own γ (g x).
+    Proof. apply (big_opS_commute _). Qed.
+    Lemma big_opMS_own_1 `{Countable B} γ (g : B → A) (X : gmultiset B) :
+      own γ ([^op mset] x ∈ X, g x) ⊢ [∗ mset] x ∈ X, own γ (g x).
+    Proof. apply (big_opMS_commute _). Qed.
+  End affine.
+End big_op_instances.
+
+(** Proofmode class instances *)
+Section proofmode_instances.
+  Context `{!HasOwn PROP A}.
+  Implicit Types a b : A.
+
+  Global Instance into_sep_own γ a b1 b2 :
+    IsOp a b1 b2 → IntoSep (own γ a) (own γ b1) (own γ b2).
+  Proof. intros. by rewrite /IntoSep (is_op a) own_op. Qed.
+  Global Instance into_and_own `{!BiAffine PROP} p γ a b1 b2 :
+    IsOp a b1 b2 → IntoAnd p (own γ a) (own γ b1) (own γ b2).
+  Proof. intros. by rewrite /IntoAnd (is_op a) own_op sep_and. Qed.
+
+  Global Instance from_sep_own γ a b1 b2 :
+    IsOp a b1 b2 → FromSep (own γ a) (own γ b1) (own γ b2).
+  Proof. intros. by rewrite /FromSep -own_op -is_op. Qed.
+  Global Instance from_and_own_persistent `{!BiAffine PROP} γ a b1 b2 :
+    IsOp a b1 b2 → TCOr (CoreId b1) (CoreId b2) →
+    FromAnd (own γ a) (own γ b1) (own γ b2).
+  Proof.
+    intros ? Hb. rewrite /FromAnd (is_op a) own_op.
+    destruct Hb; by rewrite persistent_and_sep.
+  Qed.
+End proofmode_instances.
