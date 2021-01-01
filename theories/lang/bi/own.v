@@ -1,4 +1,3 @@
-
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
@@ -31,11 +30,11 @@ Definition si_cmra_valid_eq :
 
 (* Validity for arbitrary PROP, assuming an embedding of siProp.
   This subsumes uPred_cmra_valid. *)
-Definition prop_cmra_valid
+Definition bi_cmra_valid
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) : PROP :=
   embed (si_cmra_valid a).
 
-Notation "✓ x" := (prop_cmra_valid x) (at level 20) : bi_scope.
+Notation "✓ x" := (bi_cmra_valid x) (at level 20) : bi_scope.
 
 Instance prop_valid_plain
   {PROP : bi} `{!BiEmbed siPropI PROP} `{BiPlainly PROP}
@@ -70,20 +69,18 @@ Class HasOwnValid `{!BiEmbed siPropI PROP} `{!HasOwn PROP A} : Type := {
 Arguments HasOwnValid _ {_} _{_}.
 
 (* own_update and own_alloc *)
-Class HasOwnUpd
-  `{!BiEmbed siPropI PROP} `{!BiBUpd PROP} `{!HasOwn PROP A} : Type := {
+Class HasOwnUpd `{!BiBUpd PROP} `{!HasOwn PROP A} : Type := {
   (* TODO: we might need own_updateP *)
   own_update γ (a a' : A) : a ~~> a' -> own γ a ==∗ own γ a' ;
   own_alloc_strong_dep (f : gname → A) (P : gname → Prop) :
     pred_infinite P → (∀ γ, P γ → ✓ (f γ)) → ⊢ |==> ∃ γ, ⌜P γ⌝ ∧ own γ (f γ)
 }.
-Arguments HasOwnUpd _ {_ _} _ {_}.
+Arguments HasOwnUpd _ {_} _ {_}.
 
-Class HasOwnUnit
-  `{!BiEmbed siPropI PROP} `{!BiBUpd PROP} {A : ucmraT} `{!HasOwn PROP A} : Type := {
+Class HasOwnUnit `{!BiBUpd PROP} {A : ucmraT} `{!HasOwn PROP A} : Type := {
   own_unit γ : ⊢ |==> own γ (ε:A)
 }.
-Arguments HasOwnUnit _ {_ _} _ {_}.
+Arguments HasOwnUnit _ {_} _ {_}.
 
 Section valid.
   Context `{BE: !BiEmbed siPropI PROP} {A : cmraT}.
@@ -166,7 +163,7 @@ End own_valid.
 Import derived_laws.bi.
 
 Section update.
-  Context `{!BiEmbed siPropI PROP} `{!BiBUpd PROP} `{!HasOwn PROP A} `{!HasOwnUpd PROP A}.
+  Context `{!BiBUpd PROP} `{!HasOwn PROP A} `{!HasOwnUpd PROP A}.
   Implicit Type (a : A).
 
   (* Duplicates from base_logic.lib.own. *)
