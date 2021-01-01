@@ -18,9 +18,9 @@ Require Export iris.bi.bi.
 Require Import iris.bi.monpred.
 From iris.bi.lib Require Import fractional.
 From iris.proofmode Require Import tactics.
-From iris.base_logic.lib Require Import wsat. (* only for invG *)
-From iris.base_logic.lib Require Import own. (* only for inG *)
-From iris.base_logic.lib Require Import cancelable_invariants. (* only for cinvG *)
+From iris.base_logic.lib Require Import wsat. (* only for [invG] *)
+From iris.base_logic.lib Require Import own. (* only for [inG] *)
+From iris.base_logic.lib Require Import cancelable_invariants. (* only for [cinvG] *)
 
 Require Export bedrock.lang.bi.prelude.
 Require Export bedrock.lang.bi.observe.
