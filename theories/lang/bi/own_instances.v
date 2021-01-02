@@ -20,7 +20,7 @@ Require Import iris.base_logic.lib.iprop.
 Require Import iris.base_logic.lib.own.
 
 Require Import iris.bi.monpred.
-
+Require Import bedrock.lang.bi.invariants.
 Require Export bedrock.lang.bi.own.
 
 (* Instances for iProp *)
@@ -96,7 +96,7 @@ Section iprop_instances.
 
   Notation iPropI := (iPropI Σ).
 
-  #[global] Instance has_own_iprop : HasOwn iPropI A := {|
+  Definition has_own_iprop_def : HasOwn iPropI A := {|
     own := base_logic.lib.own.own ;
     own_op := base_logic.lib.own.own_op ;
     own_mono := base_logic.lib.own.own_mono ;
@@ -104,6 +104,10 @@ Section iprop_instances.
     own_timeless := base_logic.lib.own.own_timeless ;
     own_core_persistent := base_logic.lib.own.own_core_persistent ;
   |}.
+  #[local] Definition has_own_iprop_aux : seal (@has_own_iprop_def). Proof. by eexists. Qed.
+  #[global] Instance has_own_iprop : HasOwn iPropI A := has_own_iprop_aux.(unseal).
+  Definition has_own_iprop_eq :
+    @has_own_iprop = @has_own_iprop_def := has_own_iprop_aux.(seal_eq).
 
   #[local] Arguments siProp_holds !_ _ /.
   #[local] Arguments uPred_holds !_ _ _ /.
@@ -115,12 +119,12 @@ Section iprop_instances.
   #[global] Instance has_own_valid_iprop : HasOwnValid iPropI A.
   Proof.
     constructor. intros. rewrite -uPred_cmra_valid_bi_cmra_valid.
-    by rewrite /own /= base_logic.lib.own.own_valid.
+    by rewrite has_own_iprop_eq /= base_logic.lib.own.own_valid.
   Qed.
 
   #[global] Instance has_own_update_iprop : HasOwnUpd iPropI A.
   Proof.
-    constructor; rewrite /own /=.
+    constructor; rewrite has_own_iprop_eq /=.
     - by apply base_logic.lib.own.own_update.
     - by apply base_logic.lib.own.own_alloc_strong_dep.
   Qed.
@@ -128,7 +132,7 @@ End iprop_instances.
 
 Instance has_own_unit_iprop {Σ} {A : ucmraT} `{Hin: inG Σ A} :
   HasOwnUnit (iPropI Σ) A.
-Proof. constructor; rewrite /own /=. by apply base_logic.lib.own.own_unit. Qed.
+Proof. constructor; rewrite has_own_iprop_eq /=. by apply base_logic.lib.own.own_unit. Qed.
 
 
 (* Instances for monpred *)
@@ -188,14 +192,20 @@ Section monpred_instances.
   Notation monPred  := (monPred I iPropI).
   Notation monPredI := (monPredI I iPropI).
 
-  #[global] Program Instance has_own_monpred : HasOwn monPredI A := {|
+  (* sealing here should boost performance, but it requires us to re-export
+    properties of embedding. *)
+  Program Definition has_own_monpred_def : HasOwn monPredI A := {|
     own := λ γ a , ⎡ own γ a ⎤%I |}.
   Next Obligation. intros. by rewrite -embed_sep -own_op. Qed.
   Next Obligation. solve_proper. Qed.
   Next Obligation. solve_proper. Qed.
+  #[local] Definition has_own_monpred_aux : seal (@has_own_monpred_def). Proof. by eexists. Qed.
+  #[global] Instance has_own_monpred : HasOwn monPredI A := has_own_monpred_aux.(unseal).
+  Definition has_own_monpred_eq :
+    @has_own_monpred = @has_own_monpred_def := has_own_monpred_aux.(seal_eq).
 
   #[local] Ltac unseal_monpred :=
-    constructor; intros; rewrite /own; red; rewrite /has_own_monpred.
+    constructor; intros; rewrite /own has_own_monpred_eq /has_own_monpred_def; red.
 
   #[global] Instance has_own_valid_monpred: HasOwnValid monPredI A.
   Proof. unseal_monpred. by rewrite own_valid. Qed.
@@ -208,11 +218,19 @@ Section monpred_instances.
       setoid_rewrite <-embed_exist. rewrite -embed_bupd -(@embed_emp iPropI).
       by rewrite -own_alloc_strong_dep.
   Qed.
+
+  (* some re-exporting of embedding properties *)
+  #[global] Instance monPred_own_weakly_objective γ (a : A) :
+    WeaklyObjective (own γ a).
+  Proof. rewrite has_own_monpred_eq. apply _. Qed.
+  #[global] Instance monPred_own_objective γ (a : A) :
+    Objective (own γ a).
+  Proof. rewrite has_own_monpred_eq. apply _. Qed.
 End monpred_instances.
 
 Instance has_own_unit_monpred {I : biIndex} {Σ} {A : ucmraT} `{Hin: inG Σ A} :
   HasOwnUnit (monPredI I (iPropI Σ)) A.
 Proof.
-  constructor; intros; rewrite /own; red; rewrite /has_own_monpred.
+  constructor; intros; rewrite /own has_own_monpred_eq /has_own_monpred_def; red.
   by rewrite -(@embed_emp (iPropI _)) -embed_bupd own_unit.
 Qed.
