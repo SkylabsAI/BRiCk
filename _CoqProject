@@ -21,6 +21,7 @@ theories/lang/bi/big_op.v
 theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
 theories/lang/bi/derived_laws.v
+theories/lang/bi/weakly_objective.v
 theories/lang/bi/invariants.v
 theories/lang/bi/own.v
 theories/lang/bi/own_instances.v
