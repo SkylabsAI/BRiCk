@@ -14,6 +14,8 @@ Require Import iris.base_logic.lib.invariants.
 
 From iris.proofmode Require Import tactics monpred.
 
+Require Export bedrock.lang.bi.weakly_objective.
+
 Set Default Proof Using "Type".
 Set Suggest Proof Using.
 
@@ -159,52 +161,6 @@ Qed.
 End inv_properties.
 
 (*** Invariants for monPred **)
-
-(** WeaklyObjective *)
-(** General monPreds are only monotone w.r.t one direction of ⊑. WeaklyObjective
-  also says that the monPred P is also monotone w.r.t. to the other direction.
-  Effectively, P holds the same for each equivalent class of bi-indexes.
-  WeaklyObjective is weaker than Objective, where it is required that P holds
-  the same everywhere (recall that the bi-indexes only have a partial order). *)
-Class WeaklyObjective {I} {PROP} (P: monPred I PROP) :=
-  weakly_objective i j : j ⊑ i → P i -∗ P j.
-Arguments WeaklyObjective {_ _} _%I.
-Arguments weakly_objective {_ _} _%I {_}.
-Hint Mode WeaklyObjective ! + ! : typeclass_instances.
-Instance : Params (@WeaklyObjective) 2 := {}.
-
-(* TODO: upstream *)
-Bind Scope bi_scope with monPred.
-
-Section weakly_obj.
-  Context {I : biIndex} {PROP : bi}.
-
-  Notation monPred := (monPred I PROP).
-  Implicit Types (P Q : monPred).
-
-  #[global] Instance weakly_objective_proper :
-    Proper (equiv ==> iff) (@WeaklyObjective I PROP).
-  Proof.
-    intros P Q EQ. split; intros OBJ i j Lei.
-    - by rewrite -EQ weakly_objective.
-    - by rewrite EQ weakly_objective.
-  Qed.
-
-  #[global] Instance objective_weakly_objective P :
-    Objective P → WeaklyObjective P.
-  Proof. intros ????. by rewrite objective_at. Qed.
-
-  (* TODO: more instances *)
-  #[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.
-  Proof. intros ??. by rewrite !monPred_at_embed. Qed.
-
-  #[global] Instance and_weakly_objective P Q
-    `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∧ Q).
-  Proof. intros i j Lej. by rewrite !monPred_at_and -!(weakly_objective _ i). Qed.
-  #[global] Instance or_weakly_objective P Q
-    `{!WeaklyObjective P, !WeaklyObjective Q} : WeaklyObjective (P ∨ Q).
-  Proof. intros i j Lej. by rewrite !monPred_at_or !(weakly_objective _ i). Qed.
-End weakly_obj.
 
 (* Allocations are not general for arbitrary BI. This one here is developed for
   monPred, basing on iProp. *)
