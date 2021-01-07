@@ -708,6 +708,12 @@ Module SimpleCPP.
     Axiom method_at_live : forall s f p, @method_at s f p |-- live_ptr p.
     Axiom ctor_at_live   : forall s f p,   @ctor_at s f p |-- live_ptr p.
     Axiom dtor_at_live   : forall s f p,   @dtor_at s f p |-- live_ptr p.
+
+    Axiom code_at_valid   : forall s f p,   @code_at s f p |-- valid_ptr p.
+    Axiom method_at_valid : forall s f p, @method_at s f p |-- valid_ptr p.
+    Axiom ctor_at_valid   : forall s f p,   @ctor_at s f p |-- valid_ptr p.
+    Axiom dtor_at_valid   : forall s f p,   @dtor_at s f p |-- valid_ptr p.
+
     (** physical representation of pointers
      *)
     Definition pinned_ptr (va : N) (p : ptr) : mpred :=
