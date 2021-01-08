@@ -86,8 +86,9 @@ Class HasOwnUpd `{!BiBUpd PROP} `{!HasOwn PROP A} : Type := {
 }.
 Arguments HasOwnUpd _ {_} _ {_}.
 
+(* Separate from [HasOwnUpd] because this is restricted to unital cameras [ucmraT]. *)
 Class HasOwnUnit `{!BiBUpd PROP} {A : ucmraT} `{!HasOwn PROP A} : Type := {
-  own_unit γ : ⊢ |==> own γ (ε:A)
+  own_unit γ : ⊢ |==> own γ (ε : A)
 }.
 Arguments HasOwnUnit _ {_} _ {_}.
 
