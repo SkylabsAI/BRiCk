@@ -229,7 +229,7 @@ Section big_op_instances.
   Proof. apply (big_opMS_commute1 _). Qed.
 
   Section affine.
-    Context `{!BiAffine PROP}. (* <== we actually only need ∀ γ, Affine (own γ ε) *)
+    Context `{!∀ γ, Affine (own γ ε)}.
     Global Instance own_cmra_sep_entails_homomorphism :
       MonoidHomomorphism op bi_sep (⊢) (own γ).
     Proof.

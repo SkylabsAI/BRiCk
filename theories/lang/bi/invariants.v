@@ -24,7 +24,7 @@ Implicit Types (N : namespace).
 Section defs.
   Context `{!BiFUpd PROP}.
 
-  (* Duplicates from Iris, but more general. *)
+  (* Duplicates from Iris, but for general [bi], instead of being tied to [iProp]. *)
   Definition inv_def N (P : PROP) : PROP :=
     (□ ∀ E : coPset, ⌜↑N ⊆ E⌝ → |={E,E ∖ ↑N}=> ▷ P ∗ (▷ P ={E ∖ ↑N,E}=∗ True))%I.
   Local Definition inv_aux : seal (@inv_def). Proof. by eexists. Qed.
