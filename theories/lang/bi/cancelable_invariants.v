@@ -8,7 +8,7 @@
 (** Extraction of cancelable invariants that is general w.r.t HasOwn, and not
   tied to iProp.
 
-  Most proofs in this file generalize those of Iris, see \
+  Most proofs in this file generalize those of Iris, see
   https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/cancelable_invariants.v
   In many cases, the proofs are unchanged and are exact duplicates of those in
   Iris. But their types did change and become more general.
