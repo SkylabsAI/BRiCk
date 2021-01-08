@@ -31,6 +31,14 @@ Section weakly_obj.
   Notation monPred := (monPred I PROP).
   Implicit Types (P Q : monPred).
 
+  #[global] Instance symmetric_weakly_objective P :
+    Symmetric (@sqsubseteq I _) → WeaklyObjective P.
+  Proof. by intros ??? ->. Qed.
+
+  #[global] Instance objective_weakly_objective P :
+    Objective P → WeaklyObjective P.
+  Proof. intros ????. by rewrite objective_at. Qed.
+
   #[global] Instance weakly_objective_proper :
     Proper (equiv ==> iff) (@WeaklyObjective I PROP).
   Proof.
@@ -38,10 +46,6 @@ Section weakly_obj.
     - by rewrite -EQ weakly_objective.
     - by rewrite EQ weakly_objective.
   Qed.
-
-  #[global] Instance objective_weakly_objective P :
-    Objective P → WeaklyObjective P.
-  Proof. intros ????. by rewrite objective_at. Qed.
 
   #[global] Instance embed_weakly_objective (P : PROP) : @WeaklyObjective I PROP ⎡P⎤.
   Proof. intros ??. by rewrite !monPred_at_embed. Qed.
