@@ -46,6 +46,9 @@ Instance prop_valid_persistent
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) :
   Persistent (✓ a) := _.
 
+(* TODO: the fact that various properies of [own] are split across several
+  classes can hinder performance. We may want some bundling---this is best to
+  discuss upstream. *)
 (* own *)
 Class HasOwn {PROP : bi} {A : cmraT} : Type := {
   own           : gname → A → PROP ;
