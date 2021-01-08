@@ -5,8 +5,13 @@
  *)
 
 (* TODO: LICENSE for Iris. *)
+(** Extraction of own that doesn't depend on iProp.
+  Most proofs in this file generalize those of Iris, see
+  https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/own.v
+  In many cases, the proofs are unchanged and are exact duplicates of those in
+  Iris. But their types do change and become more general.
 
-(** Extraction of own that doesn't depend on iProp. **)
+  TODO: These should be upstreamed to Iris's code base. **)
 
 Require Import iris.bi.bi.
 Require Import iris.algebra.cmra.
