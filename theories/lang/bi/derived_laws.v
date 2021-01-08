@@ -1,7 +1,7 @@
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
- * This software is distributed under the terms of the BedRock Open-Source License. 
- * See the LICENSE-BedRock file in the repository root for details. 
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 (** *)
 
@@ -23,6 +23,11 @@ Export iris.bi.bi.bi.
 
 Section derived_laws.
   Context {PROP : bi}.
+
+  Lemma intuitionistically_and_sep P Q : □ (P ∧ Q) ⊣⊢@{PROP} □ P ∗ □ Q.
+  Proof.
+    by rewrite bi.intuitionistically_and bi.and_sep_intuitionistically.
+  Qed.
 
   Lemma exist_pure_eq_sep {A P} v:
     P v ⊢@{PROP} ∃ x : A, ⌜ x = v ⌝ ∗ P x.

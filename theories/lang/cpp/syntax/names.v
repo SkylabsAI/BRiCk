@@ -1,9 +1,10 @@
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
- * This software is distributed under the terms of the BedRock Open-Source License. 
- * See the LICENSE-BedRock file in the repository root for details. 
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From stdpp Require Import countable strings.
+Require Import bedrock.lang.prelude.base.
 Require Export bedrock.lang.prelude.bytestring.
 
 Set Primitive Projections.

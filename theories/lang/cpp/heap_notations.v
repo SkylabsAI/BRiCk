@@ -1,7 +1,7 @@
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
- * This software is distributed under the terms of the BedRock Open-Source License. 
- * See the LICENSE-BedRock file in the repository root for details. 
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import
@@ -71,7 +71,7 @@ End with_cpp.
 (* notations *)
 Local Ltac simple_refine ____x :=
   let x' := eval cbv beta iota delta
-                 [ ____x
+                 [ ____x id
                    AT_lhs AT_rhs AT_result  AT_at
                    mpred_AT Rep_AT mpred_val_AT mpred_ptr_AT Rep_field_AT
                    TO_OFFSET_from  _to_offset

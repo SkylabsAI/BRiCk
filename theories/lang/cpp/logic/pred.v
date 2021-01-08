@@ -1,7 +1,7 @@
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
- * This software is distributed under the terms of the BedRock Open-Source License. 
- * See the LICENSE-BedRock file in the repository root for details. 
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 (** this file defines the core logic (called [mpred]) that we use
     for C++.
@@ -121,7 +121,7 @@ End CPP_LOGIC_CLASS_MIXIN.
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
-  (Import PTR : PTRS_FULL) (PTRI : PTR_INTERNAL PTR).
+  (Import PTR : PTRS_FULL_INTF).
 
   Implicit Types (p : ptr).
 
@@ -324,6 +324,11 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
       Axiom method_at_live : forall f p, method_at f p |-- live_ptr p.
       Axiom ctor_at_live   : forall f p,   ctor_at f p |-- live_ptr p.
       Axiom dtor_at_live   : forall f p,   dtor_at f p |-- live_ptr p.
+
+      Axiom code_at_valid   : forall f p,   code_at f p |-- valid_ptr p.
+      Axiom method_at_valid : forall f p, method_at f p |-- valid_ptr p.
+      Axiom ctor_at_valid   : forall f p,   ctor_at f p |-- valid_ptr p.
+      Axiom dtor_at_valid   : forall f p,   dtor_at f p |-- valid_ptr p.
     End with_genv.
 
     Parameter encodes : forall {σ:genv} (t : type) (v : val) (vs : list runtime_val), mpred.
@@ -375,7 +380,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
                                 |={↑pred_ns}=> @tptsto σ ty 1 p v').
 
     Axiom offset_pinned_ptr : forall resolve o n va p,
-      PTRI.eval_offset resolve o = Some n ->
+      PTR.eval_offset resolve o = Some n ->
       valid_ptr (p .., o) |--
       pinned_ptr va p -* pinned_ptr (Z.to_N (Z.of_N va + n)) (p .., o).
 
@@ -517,7 +522,7 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
 End CPP_LOGIC.
 
 Declare Module LC : CPP_LOGIC_CLASS.
-Declare Module L : CPP_LOGIC LC PTRS_FULL_AXIOM PTR_INTERNAL_AXIOM.
+Declare Module L : CPP_LOGIC LC PTRS_FULL_AXIOM.
 Export LC L.
 
 (* strict validity (not past-the-end) *)

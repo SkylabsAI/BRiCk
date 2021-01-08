@@ -1,7 +1,7 @@
 (*
  * Copyright (c) 2020 BedRock Systems, Inc.
- * This software is distributed under the terms of the BedRock Open-Source License. 
- * See the LICENSE-BedRock file in the repository root for details. 
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import stdpp.telescopes.
 Require Import bedrock.lang.prelude.bytestring.
@@ -48,6 +48,12 @@ Section with_Σ.
   Definition add_require (P : Prop) (wpp : WithPrePost) : WithPrePost :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre := tele_map (fun '(args,X) => (args, [| P |] ** X)) wpp.(wpp_pre)
+     ; wpp_post := wpp.(wpp_post)
+    |}.
+
+  Definition add_persist (P : PROP) (wpp : WithPrePost) : WithPrePost :=
+    {| wpp_with := wpp.(wpp_with)
+     ; wpp_pre := tele_map (fun '(args,X) => (args, □ P ** X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
     |}.
 
@@ -167,7 +173,12 @@ Notation "'\arg{' x .. y } nm v X" :=
 Notation "'\require' pre X" :=
   (@add_require _ pre X%fspec)
   (at level 10, pre at level 200, X at level 200, left associativity,
-   format "'[v' '\require'  pre  '//' X ']'").
+   format "'[v' '[' '\require'  pre ']' '//' X ']'").
+
+Notation "'\persist' pre X" :=
+  (@add_persist _ pre%I X%fspec)
+  (at level 10, pre at level 200, X at level 200, left associativity,
+   format "'[v' '[' '\persist'  pre ']' '//' X ']'").
 
 Notation "'\pre' pre X" :=
   (@add_pre _ pre%I X%fspec)
@@ -259,6 +270,7 @@ refine (
    \let (l,m) := lm
    \require l+m = 3
    \prepost emp
+   \persist emp
    \with (z : nat)
    \arg{(zz : Z)} "foo" (Vint zz)
    \prepost emp
