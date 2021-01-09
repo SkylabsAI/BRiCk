@@ -53,15 +53,13 @@ Section fractional.
     AsFractional (gmap_own γ q k v) (λ q, gmap_own γ q k v) q.
   Proof. exact: Build_AsFractional. Qed.
 
-  Global Instance gmap_own_agree
+  Global Instance gmap_own_agree v1 v2 γ q1 q2 k
     `{!BiEmbed siPropI PROP} `{!HasOwnValid PROP gmapFracR} :
     Observe2 [| v1 = v2 |] (gmap_own γ q1 k v1) (gmap_own γ q2 k v2).
   Proof.
-    intros. apply: observe_2_intro.
-    apply bi.wand_intro_r; rewrite /gmap_own assoc -own_op singleton_op.
-    rewrite -{1}(idemp bi_and (own γ _)) {2}own_valid discrete_valid singleton_valid.
-    rewrite -bi.persistently_pure bi.persistently_and_intuitionistically_sep_r.
-    apply bi.sep_mono_r.
+    rewrite /Observe2. (* apply: observe_2_intro_only_provable. *)
+    apply bi.wand_intro_r; rewrite /gmap_own -own_op singleton_op.
+    rewrite own_valid discrete_valid singleton_valid.
     by iIntros "!%" => /frac_valid [].
   Qed.
 
@@ -70,11 +68,8 @@ Section fractional.
     γ (q : Qp) k v :
     Observe [| q ≤ 1 |]%Qc (gmap_own γ q k v).
   Proof.
-    apply: observe_intro.
-    rewrite /gmap_own.
-    rewrite -{1}(idemp bi_and (own γ _)) {2}own_valid !discrete_valid singleton_valid.
-    rewrite -bi.persistently_pure bi.persistently_and_intuitionistically_sep_r.
-    apply bi.sep_mono_r.
+    rewrite /Observe. (* apply: observe_intro_only_provable. *)
+    rewrite /gmap_own own_valid !discrete_valid singleton_valid.
     by iIntros "!%" => /pair_valid [? _].
   Qed.
 End fractional.
