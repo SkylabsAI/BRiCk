@@ -57,7 +57,7 @@ Section fractional.
     `{!BiEmbed siPropI PROP} `{!HasOwnValid PROP gmapFracR} :
     Observe2 [| v1 = v2 |] (gmap_own γ q1 k v1) (gmap_own γ q2 k v2).
   Proof.
-    rewrite /Observe2. (* apply: observe_2_intro_only_provable. *)
+    apply: observe_2_intro_only_provable.
     apply bi.wand_intro_r; rewrite /gmap_own -own_op singleton_op.
     rewrite own_valid discrete_valid singleton_valid.
     by iIntros "!%" => /frac_valid [].
@@ -68,7 +68,7 @@ Section fractional.
     γ (q : Qp) k v :
     Observe [| q ≤ 1 |]%Qc (gmap_own γ q k v).
   Proof.
-    rewrite /Observe. (* apply: observe_intro_only_provable. *)
+    apply: observe_intro_only_provable.
     rewrite /gmap_own own_valid !discrete_valid singleton_valid.
     by iIntros "!%" => /pair_valid [? _].
   Qed.
