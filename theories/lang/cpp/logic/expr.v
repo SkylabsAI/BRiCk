@@ -666,8 +666,9 @@ Module Type Expr.
          else
            match unptr (type_of f) with
            | Some fty =>
-             wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                                                      |> fspec fty ti f vs (fun v => Q v (free ** free_f))))
+             wp_prval f (fun f free_f =>
+                           wp_args es (fun vs free =>
+                                         |> fspec fty ti f vs (fun v => [| has_type v ty |] ** Q v (free ** free_f))))
            | _ => False
            end)
         |-- wp_prval (Ecall f es ty) Q.
