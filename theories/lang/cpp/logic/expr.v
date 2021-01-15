@@ -57,11 +57,6 @@ Module Type Expr.
     Local Notation destruct_val := (destruct_val (σ:=resolve) ti) (only parsing).
 
     Local Notation glob_def := (glob_def resolve) (only parsing).
-    Local Notation _global := (_global (resolve:=resolve)) (only parsing).
-    Local Notation _field := (o_field resolve) (only parsing).
-    Local Notation _base := (o_base resolve) (only parsing).
-    Local Notation _derived := (o_derived resolve) (only parsing).
-    Local Notation _sub := (o_sub resolve) (only parsing).
     Local Notation eval_unop := (@eval_unop resolve) (only parsing).
     Local Notation eval_binop := (eval_binop (resolve := resolve)) (only parsing).
     Local Notation size_of := (@size_of resolve) (only parsing).
@@ -642,7 +637,7 @@ Module Type Expr.
         |-- wp_prval (Esize_of (inr e) ty') Q.
 
     Axiom wp_prval_alignof : forall ty' ty Q,
-        Exists align, [| align_of ty = Some align |] ** Q (Vint (Z.of_N align)) empSP
+        Exists align, [| align_of ty = Some align |] ** Q (Vint (Z.of_N align)) emp
         |-- wp_prval (Ealign_of (inl ty) ty') Q.
 
     Axiom wp_prval_alignof_e : forall ty' e Q,

@@ -19,12 +19,6 @@ Require Import bedrock.lang.cpp.heap_notations.
 Section with_Σ.
   Context `{Σ : cpp_logic} {resolve:genv}.
 
-  Local Notation _base := (o_base resolve) (only parsing).
-  Local Notation _field := (o_field resolve) (only parsing).
-  Local Notation _sub := (o_sub resolve) (only parsing).
-  Local Notation anyR := (anyR (resolve:=resolve)) (only parsing).
-  Local Notation primR := (primR (resolve:=resolve)) (only parsing).
-
   Axiom struct_padding : genv -> Qp -> globname -> Rep.
   Axiom union_padding : genv -> Qp -> globname -> nat -> Rep.
 
@@ -103,7 +97,7 @@ Section with_Σ.
                        (anyR (erase_qualifiers ty) 1)) **
            (if has_vtable st
             then identityR cls None 1
-            else empSP)
+            else emp)
            ** struct_padding resolve 1 cls.
 
   (** decompose a union into the classical conjunction of the alternatives
