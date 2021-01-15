@@ -329,6 +329,7 @@ Module Type Expr.
         |-- wp_prval (Ecomma vc e1 e2 ty) Q.
 
     Axiom wp_init_comma : forall {vc} ty' ty p e1 e2 Q,
+        normalize_type ty = normalize_type ty' ->
             wpe vc e1 (fun _ free1 => wp_init ty' p e2 (fun free2 => Q (free1 ** free2)))
         |-- wp_init ty' p (Ecomma vc e1 e2 ty) Q.
 
@@ -620,6 +621,7 @@ Module Type Expr.
       ltac:(let v := eval unfold wp_cond in (wp_cond wp_prval) in
                 exact v).
     Axiom wp_init_condition : forall ty ty' addr tst th el Q,
+        normalize_type ty = normalize_type ty' ->
         wp_prval tst (fun v1 free =>
            Exists c : bool, [| is_true v1 = Some c |] **
            if c
@@ -632,18 +634,34 @@ Module Type Expr.
 
     (** [sizeof] and [alignof] do not evaluate their arguments *)
     Axiom wp_prval_sizeof : forall ty' ty Q,
+        match ty' with
+        | Tint _ Unsigned => True
+        | _ => False
+        end ->
         Exists sz, [| size_of ty = Some sz |]  ** Q (Vint (Z.of_N sz)) emp
         |-- wp_prval (Esize_of (inl ty) ty') Q.
 
-    Axiom wp_prval_sizeof_e : forall ty' e Q,
-        wp_prval (Esize_of (inl (type_of e)) ty') Q
-        |-- wp_prval (Esize_of (inr e) ty') Q.
+    Axiom wp_prval_sizeof_e : forall ty e Q,
+        match ty with
+        | Tint _ Unsigned => True
+        | _ => False
+        end ->
+        wp_prval (Esize_of (inl (type_of e)) ty) Q
+        |-- wp_prval (Esize_of (inr e) ty) Q.
 
     Axiom wp_prval_alignof : forall ty' ty Q,
+        match ty' with
+        | Tint _ Unsigned => True
+        | _ => False
+        end ->
         Exists align, [| align_of ty = Some align |] ** Q (Vint (Z.of_N align)) emp
         |-- wp_prval (Ealign_of (inl ty) ty') Q.
 
     Axiom wp_prval_alignof_e : forall ty' e Q,
+        match ty' with
+        | Tint _ Unsigned => True
+        | _ => False
+        end ->
         wp_prval (Ealign_of (inl (type_of e)) ty') Q
         |-- wp_prval (Ealign_of (inr e) ty') Q.
 
@@ -709,6 +727,12 @@ Module Type Expr.
         end
         |-- wp_init ty addr (Ecall f es ty) Q.
 
+    Definition check_return_type (rt ft : type) : Prop :=
+      match ft with
+      | Tfunction ret _ => normalize_type rt = normalize_type ret
+      | _ => False
+      end.
+
     (** member call
         NOTE it is technically not accurate to treat member calls as regular function calls
         where the function takes an extra argument. We could fix this by splitting [fspec]
@@ -720,18 +744,21 @@ Module Type Expr.
         TODO we should add type side-conditions to these axioms.
      *)
     Axiom wp_lval_member_call : forall ty fty f vc obj es Q,
-        wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
+        check_return_type ty fty ->
+            wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+              |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_lval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_xval_member_call : forall ty fty f vc obj es Q,
-        wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
+        check_return_type ty fty ->
+            wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+              |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_xval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_prval_member_call : forall ty fty f vc obj es Q,
+        check_return_type ty fty ->
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q)
          else
@@ -740,8 +767,9 @@ Module Type Expr.
         |-- wp_prval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_init_member_call : forall f fty es addr ty vc obj Q,
-        wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-             |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun res =>
+        check_return_type ty fty ->
+            wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+              |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun res =>
                       [| res = Vptr addr |] -* Q (free_t ** free))))
         (* NOTE as with regular function calls, we use an assumed equation to unify the address
            of the returned object with the location that we are initializing.
@@ -756,6 +784,7 @@ Module Type Expr.
              This is necessary because the function is expecting the correct [this] pointer.
      *)
     Axiom wp_xval_virtual_call : forall ty fty f vc obj es Q,
+      check_return_type fty ty ->
       wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
@@ -767,6 +796,7 @@ Module Type Expr.
       |-- wp_xval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_lval_virtual_call : forall ty fty f vc obj es Q,
+        check_return_type fty ty ->
       wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
@@ -778,6 +808,7 @@ Module Type Expr.
       |-- wp_lval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_prval_virtual_call : forall ty fty f vc obj es Q,
+        check_return_type fty ty ->
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q)
          else
@@ -791,6 +822,7 @@ Module Type Expr.
       |-- wp_prval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall ty fty f vc obj es Q addr,
+        check_return_type fty ty ->
       wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
