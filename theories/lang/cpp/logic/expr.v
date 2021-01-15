@@ -732,6 +732,7 @@ Module Type Expr.
       | Tfunction ret _ => normalize_type rt = normalize_type ret
       | _ => False
       end.
+    Global Arguments check_return_type rt !ft /.
 
     (** member call
         NOTE it is technically not accurate to treat member calls as regular function calls
