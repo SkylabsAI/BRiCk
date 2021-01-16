@@ -675,6 +675,21 @@ Module Type Expr.
            generate the destructors.
      *)
 
+    Definition check_return_type (rt ft : type) : Prop :=
+      match drop_qualifiers ft with
+      | Tfunction ret _ => normalize_type rt = normalize_type ret
+      | _ => False
+      end.
+    #[global] Arguments check_return_type rt !ft /.
+
+    Definition check_return_type_ptr (rt ft : type) : Prop :=
+      match unptr ft with
+      | Some ft => check_return_type rt ft
+      | _ => False
+      end.
+    #[global] Arguments check_return_type_ptr rt !ft /.
+
+
     (** function calls *)
     (**
     The next few axioms rely on the evaluation order specified
@@ -687,6 +702,7 @@ Module Type Expr.
     http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0145r3.pdf
     *)
     Axiom wp_prval_call : forall ty f es Q,
+        check_return_type_ptr ty (type_of f) ->
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Ecall f es ty) Q)
          else
@@ -699,6 +715,7 @@ Module Type Expr.
         |-- wp_prval (Ecall f es ty) Q.
 
     Axiom wp_lval_call : forall f (es : list (ValCat * Expr)) Q (ty : type),
+        check_return_type_ptr ty (type_of f) ->
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
@@ -708,15 +725,17 @@ Module Type Expr.
         |-- wp_lval (Ecall f es ty) Q.
 
     Axiom wp_xval_call : forall ty f es Q,
+        check_return_type_ptr ty (type_of f) ->
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
                            |> fspec fty ti f vs (fun v => Exists p, [| v = Vptr p |] ** Q p (free ** free_f))))
         | _ => False
         end
-      |-- wp_xval (Ecall f es ty) Q.
+        |-- wp_xval (Ecall f es ty) Q.
 
     Axiom wp_init_call : forall f es Q addr ty,
+        check_return_type ty (type_of f) ->
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
@@ -726,13 +745,6 @@ Module Type Expr.
         | _ => False
         end
         |-- wp_init ty addr (Ecall f es ty) Q.
-
-    Definition check_return_type (rt ft : type) : Prop :=
-      match ft with
-      | Tfunction ret _ => normalize_type rt = normalize_type ret
-      | _ => False
-      end.
-    Global Arguments check_return_type rt !ft /.
 
     (** member call
         NOTE it is technically not accurate to treat member calls as regular function calls
@@ -797,7 +809,7 @@ Module Type Expr.
       |-- wp_xval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_lval_virtual_call : forall ty fty f vc obj es Q,
-        check_return_type fty ty ->
+      check_return_type fty ty ->
       wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
@@ -817,14 +829,14 @@ Module Type Expr.
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
-              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v => Q v (free ** free')))
-         | _ => False
+               |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v => Q v (free ** free')))
+          | _ => False
           end)))
       |-- wp_prval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall ty fty f vc obj es Q addr,
         check_return_type fty ty ->
-      wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
+        wp_specific_glval vc obj (fun this free => wp_args es (fun vs free' =>
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
@@ -985,12 +997,15 @@ Module Type Expr.
 
         with [T = int].
 
-        To maintain similarity with the rest of the system, we
+        To maintain similarity with the rest of the system,
         the C++ abstract machine "implements" these destructors as
         (essentially) a function with the specification:
 
            \pre this |-> anyR ty 1
            \post this |-> tblockR ty
+
+        note that this use of [anyR] is safe because pseudo-destructors
+        only apply to primitives.
      *)
     Axiom wp_pseudo_destructor : forall e ty Q,
         wp_prval e (fun v free => (* TODO backwards compat [_at (_eqv v) (anyR ty 1) ** (_at (_eqv v) (tblockR ty) -*] *) Q Vundef free)
