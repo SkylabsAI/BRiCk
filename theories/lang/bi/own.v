@@ -79,7 +79,7 @@ Class HasOwnUpd `{!BiBUpd PROP} `{!HasOwn PROP A} : Type := {
   (* TODO: we might need own_updateP *)
   own_update γ (a a' : A) : a ~~> a' -> own γ a ==∗ own γ a' ;
   own_alloc_strong_dep (f : gname → A) (P : gname → Prop) :
-    pred_infinite P → (∀ γ, P γ → ✓ (f γ)) → ⊢ |==> ∃ γ, ⌜P γ⌝ ∧ own γ (f γ)
+    pred_infinite P → (∀ γ, P γ → ✓ (f γ)) → ⊢ |==> ∃ γ, ⌜P γ⌝ ∗ own γ (f γ)
 }.
 Arguments HasOwnUpd _ {_} _ {_}.
 
@@ -174,7 +174,7 @@ Section update.
 
   (* Duplicates from base_logic.lib.own. *)
   Lemma own_alloc_cofinite_dep (f : gname → A) (G : gset gname) :
-    (∀ γ, γ ∉ G → ✓ (f γ)) → ⊢ |==> ∃ γ, ⌜γ ∉ G⌝ ∧ own γ (f γ).
+    (∀ γ, γ ∉ G → ✓ (f γ)) → ⊢ |==> ∃ γ, ⌜γ ∉ G⌝ ∗ own γ (f γ).
   Proof.
     intros Ha.
     apply (own_alloc_strong_dep f (λ γ, γ ∉ G))=> //.
@@ -186,15 +186,15 @@ Section update.
     (∀ γ, ✓ (f γ)) → ⊢ |==> ∃ γ, own γ (f γ).
   Proof.
     intros Ha. rewrite /bi_emp_valid (own_alloc_cofinite_dep f ∅) //; [].
-    apply bupd_mono, exist_mono=>?. eauto using and_elim_r.
-  Qed.
+    apply bupd_mono, exist_mono=>?. apply : sep_elim_r.
+  Admitted.
 
   Lemma own_alloc_strong a (P : gname → Prop) :
     pred_infinite P →
-    ✓ a → ⊢ |==> ∃ γ, ⌜P γ⌝ ∧ own γ a.
+    ✓ a → ⊢ |==> ∃ γ, ⌜P γ⌝ ∗ own γ a.
   Proof. intros HP Ha. eapply own_alloc_strong_dep with (f := λ _, a); eauto. Qed.
   Lemma own_alloc_cofinite a (G : gset gname) :
-    ✓ a → ⊢ |==> ∃ γ, ⌜γ ∉ G⌝ ∧ own γ a.
+    ✓ a → ⊢ |==> ∃ γ, ⌜γ ∉ G⌝ ∗ own γ a.
   Proof. intros Ha. eapply own_alloc_cofinite_dep with (f := λ _, a); eauto. Qed.
   Lemma own_alloc a : ✓ a → ⊢ |==> ∃ γ, own γ a.
   Proof. intros Ha. eapply own_alloc_dep with (f := λ _, a); eauto. Qed.
@@ -212,7 +212,7 @@ Section big_op_instances.
   Context `{!BiBUpd PROP} {A : ucmraT}.
   Context `{!HasOwn PROP A} `{!HasOwnUnit PROP A}.
 
-  Global Instance own_cmra_sep_homomorphism :
+  Global Instance own_cmra_sep_homomorphism γ :
     WeakMonoidHomomorphism op bi_sep (≡) (own γ).
   Proof. split; try apply _. apply own_op. Qed.
 
@@ -235,7 +235,7 @@ Section big_op_instances.
 
   Section affine.
     Context `{!∀ γ, Affine (own γ ε)}.
-    Global Instance own_cmra_sep_entails_homomorphism :
+    Global Instance own_cmra_sep_entails_homomorphism γ :
       MonoidHomomorphism op bi_sep (⊢) (own γ).
     Proof.
       split; [split|]; try apply _.

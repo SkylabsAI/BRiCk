@@ -109,9 +109,6 @@ Section iprop_instances.
   Definition has_own_iprop_eq :
     @has_own_iprop = @has_own_iprop_def := has_own_iprop_aux.(seal_eq).
 
-  #[local] Arguments siProp_holds !_ _ /.
-  #[local] Arguments uPred_holds !_ _ _ /.
-
   Lemma uPred_cmra_valid_bi_cmra_valid (a : A) :
     (uPred_cmra_valid a) ⊣⊢@{iPropI} bi_cmra_valid a.
   Proof. constructor => n x ? /=. by rewrite si_cmra_valid_eq uPred_cmra_valid_eq. Qed.
@@ -213,8 +210,8 @@ Section monpred_instances.
   #[global] Instance has_own_update_monpred : HasOwnUpd monPredI A.
   Proof.
     unseal_monpred.
-    - by rewrite -embed_bupd own_update.
-    - setoid_rewrite <-(@embed_pure iPropI). setoid_rewrite <-(@embed_and iPropI).
+    - by rewrite -embed_bupd -own_update.
+    - setoid_rewrite <-(@embed_pure iPropI). setoid_rewrite <-(@embed_sep iPropI).
       setoid_rewrite <-embed_exist. rewrite -embed_bupd -(@embed_emp iPropI).
       by rewrite -own_alloc_strong_dep.
   Qed.
