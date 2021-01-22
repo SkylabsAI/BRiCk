@@ -19,7 +19,7 @@ Class WeaklyObjective {I} {PROP} (P: monPred I PROP) :=
   weakly_objective i j : j ⊑ i → P i -∗ P j.
 Arguments WeaklyObjective {_ _} _%I.
 Arguments weakly_objective {_ _} _%I {_}.
-Hint Mode WeaklyObjective ! + ! : typeclass_instances.
+#[global] Hint Mode WeaklyObjective ! + ! : typeclass_instances.
 Instance : Params (@WeaklyObjective) 2 := {}.
 
 (* TODO: upstream *)
