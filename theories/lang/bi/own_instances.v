@@ -123,7 +123,8 @@ Section iprop_instances.
   Proof.
     constructor; rewrite has_own_iprop_eq /=.
     - by apply base_logic.lib.own.own_update.
-    - by apply base_logic.lib.own.own_alloc_strong_dep.
+    - setoid_rewrite (bi.affine_affinely (bi_pure _)).
+      by apply base_logic.lib.own.own_alloc_strong_dep.
   Qed.
 End iprop_instances.
 
@@ -211,7 +212,9 @@ Section monpred_instances.
   Proof.
     unseal_monpred.
     - by rewrite -embed_bupd -own_update.
-    - setoid_rewrite <-(@embed_pure iPropI). setoid_rewrite <-(@embed_sep iPropI).
+    - setoid_rewrite <-(@embed_pure iPropI).
+      setoid_rewrite <-embed_affinely.
+      setoid_rewrite <-(@embed_sep iPropI).
       setoid_rewrite <-embed_exist. rewrite -embed_bupd -(@embed_emp iPropI).
       by rewrite -own_alloc_strong_dep.
   Qed.
