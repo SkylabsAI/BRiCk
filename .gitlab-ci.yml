@@ -1,8 +1,9 @@
-#
-# Copyright (C) BedRock Systems Inc. 2019-2020
-#
-# SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
-#
+##
+## Copyright (c) 2020 BedRock Systems, Inc.
+## This software is distributed under the terms of the BedRock Open-Source License.
+## See the LICENSE-BedRock file in the repository root for details.
+##
+
 ################################################
 # This file configures the cpp2v CI/CD pipelines.
 #
@@ -12,10 +13,12 @@
 #
 #      This builds and tests cpp2v against the current
 #      major version of llvm.
+#      In fact, "latest" does not depend on the latest version, but on the main
+#      supported one.
 #
-#   2. build_previous -> test_previous
+#   2. build_alternate -> test_alternate
 #
-#      This builds cpp2v against the previous major
+#      This builds cpp2v against the alternate major
 #      version of llvm. It tests only the cpp2v
 #      frontend.
 #
@@ -30,7 +33,10 @@
 
 variables:
   LLVM_CUR_MAJ_VER: "10"
-  LLVM_PREV_MAJ_VER: "9"
+  LLVM_ALT_MAJ_VER: "11"
+  cur_main_docker_img: registry.gitlab.com/bedrocksystems/docker-image:cpp2v-llvm${LLVM_CUR_MAJ_VER}-coq813
+  alt_main_docker_img: registry.gitlab.com/bedrocksystems/docker-image:cpp2v-llvm${LLVM_ALT_MAJ_VER}-coq813
+  fm_docs_img: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
 
 stages:
   - build
@@ -38,11 +44,12 @@ stages:
   - release
   - prepare_pages
   - pages
+  - prepare_env_for_downstream
+  - build_proofs_downstream
 
 #This is a template job that's extended below by the real jobs
-# build_cur and build_prev (see, e.g., https://docs.gitlab.com/ee/ci/yaml/#extends).
+# build_cur and build_alt (see, e.g., https://docs.gitlab.com/ee/ci/yaml/#extends).
 .build:
-  image: registry.gitlab.com/bedrocksystems/docker-image:cpp2v-llvm${LLVM_MAJ_VER}
   stage: build
   script:
     - mkdir -p build
@@ -60,7 +67,6 @@ stages:
       - build/bedrock
 
 .test:
-  image: registry.gitlab.com/bedrocksystems/docker-image:cpp2v-llvm${LLVM_MAJ_VER}
   stage: test
   script:
     - coqc -v
@@ -75,36 +81,85 @@ stages:
 
 build_latest:
   extends: .build
+  image: ${cur_main_docker_img}
   rules:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_TAG
     - if: $CI_COMMIT_BRANCH # == $CI_DEFAULT_BRANCH
   variables:
     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
+  after_script:
+    # ARTIFACT_JOB_ID is used for downstream jobs to get artifacts from
+    # this build. The value of CI_JOB_ID is only available in this
+    # build_latest job, so it has to be stored here.
+    - echo "ARTIFACT_JOB_ID=$CI_JOB_ID" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
 
-# build_previous:
+
+# build_alternate:
 #   extends: .build
+#   image: ${alt_main_docker_img}
 #   only:
 #     - schedules
 #     - merge_requests
 #     - tags
 #     - master
 #   variables:
-#     LLVM_MAJ_VER: ${LLVM_PREV_MAJ_VER}
+#     LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
 
 test_latest:
   extends: .test
+  image: ${cur_main_docker_img}
   dependencies:
     - build_latest
   variables:
     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
 
-# test_previous:
+# test_alternate:
 #   extends: .test
+#   image: ${alt_main_docker_img}
 #   dependencies:
-#     - build_previous
+#     - build_alternate
 #   variables:
-#     LLVM_MAJ_VER: ${LLVM_PREV_MAJ_VER}
+#     LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
+
+prepare_env:
+  image: ${cur_main_docker_img}
+  stage: prepare_env_for_downstream
+  needs:
+    - build_latest
+  variables:
+    LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
+  script:
+    # The branch of cpp2v is by default master,
+    # but if CI::cpp2v-same-branch label is specified,
+    # the same branch name as the current MR
+    - if [[ $CI_MERGE_REQUEST_LABELS =~ .*CI::cpp2v-same-branch.* ]]; then echo "CPP2V_BRANCH=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" >> build.env; else echo "CPP2V_BRANCH=master" >> build.env; fi
+    - echo "ARTIFACT_JOB_ID=$ARTIFACT_JOB_ID" >> build.env
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
+  artifacts:
+    reports:
+      dotenv: build.env
+
+build_cpp2v:
+  stage: build_proofs_downstream
+  needs:
+    - prepare_env
+  trigger:
+    project: bedrocksystems/cpp2v
+    # If CPP2V_BRANCH is not master, .gitlab-ci.yml in the cpp2v branch has
+    # to be modified to allow build_latest on branches.
+    branch: $CPP2V_BRANCH
+    # Currently, the whole pipeline succeeds even if the cpp2v build fails
+  variables:
+    UPSTREAM_CPP2V_CORE_JOB_ID: $ARTIFACT_JOB_ID
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
 
 .release:
   stage: release
@@ -121,49 +176,51 @@ test_latest:
 
 release_latest:
   extends: .release
+  image: ${cur_main_docker_img}
   dependencies:
     - build_latest
   variables:
     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
 
-# release_previous:
+# release_alternate:
 #   extends: .release
+#   image: ${alt_main_docker_img}
 #   dependencies:
-#     - build_previous
+#     - build_alternate
 #   variables:
-#     LLVM_MAJ_VER: ${LLVM_PREV_MAJ_VER}
+#     LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
 
-prepare_pages:
-  image: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
-  stage: prepare_pages
-  dependencies:
-    - test_latest
-  script:
-    # Clone the Alectryon submodule, but only in the pages jobs
-    - git submodule update --init
-    # this line refreshes the artifact to avoid rebuilding the coq code
-    - make touch_deps
-    - make public
-  only:
-    - master
-    - merge_requests
-  artifacts:
-    paths:
-      - public
+# prepare_pages:
+#   image: ${fm_docs_img}
+#   stage: prepare_pages
+#   dependencies:
+#     - test_latest
+#   script:
+#     # Clone the Alectryon submodule, but only in the pages jobs
+#     - git submodule update --init
+#     # this line refreshes the artifact to avoid rebuilding the coq code
+#     - make touch_deps
+#     - make public
+#   only:
+#     - master
+#     - merge_requests
+#   artifacts:
+#     paths:
+#       - public
 
-pages:
-  image: registry.gitlab.com/bedrocksystems/docker-image:fm-docs
-  stage: pages
-  dependencies:
-    - prepare_pages
-  script:
-    # Clone the Alectryon submodule, but only in the pages jobs
-    - git submodule update --init
-    # this line refreshes the artifact to avoid rebuilding the coq code
-    - make touch_deps
-    - make public
-  only:
-    - master
-  artifacts:
-    paths:
-      - public
+# pages:
+#   image: ${fm_docs_img}
+#   stage: pages
+#   dependencies:
+#     - prepare_pages
+#   script:
+#     # Clone the Alectryon submodule, but only in the pages jobs
+#     - git submodule update --init
+#     # this line refreshes the artifact to avoid rebuilding the coq code
+#     - make touch_deps
+#     - make public
+#   only:
+#     - master
+#   artifacts:
+#     paths:
+#       - public

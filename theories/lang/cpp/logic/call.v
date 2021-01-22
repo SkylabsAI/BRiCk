@@ -1,12 +1,14 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019-2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
+Require Import iris.proofmode.tactics.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred wp destroy.
+Require Import bedrock.lang.cpp.heap_notations.
 
 Section with_resolve.
   Context `{Σ : cpp_logic} {σ : genv}.
@@ -20,7 +22,7 @@ Section with_resolve.
   Fixpoint wp_args (es : list (ValCat * Expr)) (Q : list val -> FreeTemps -> mpred)
   : mpred :=
     match es with
-    | nil => Q nil empSP
+    | nil => Q nil emp%I
     | (vc,e) :: es =>
       let ty := type_of e in
       match vc with
@@ -28,16 +30,16 @@ Section with_resolve.
         Exists Qarg,
         wp_lval e Qarg **
           wp_args es (fun vs frees => Forall v free,
-                                   Qarg v free -* Q (v :: vs) (free ** frees))
-      | Rvalue =>
+                                   Qarg v free -* Q (Vptr v :: vs) (free ** frees))
+      | Prvalue =>
         if is_aggregate ty then
-          Forall a, _at (_eq a) (anyR (resolve:=σ) (erase_qualifiers ty) 1) -*
+          Forall a : ptr, a |-> anyR (erase_qualifiers ty) 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *) -*
           let (e,dt) := destructor_for e in
           Exists Qarg,
-          wp_init ty (Vptr a) e Qarg **
+          wp_init ty a e Qarg **
             wp_args es (fun vs frees =>
                           Forall free,
-                          Qarg free -* Q (Vptr a :: vs) (destruct_val (σ:=σ) ti ty (Vptr a) dt (_at (_eq a) (anyR (resolve:=σ) (erase_qualifiers ty) 1) ** free) ** frees))
+                          Qarg free -* Q (Vptr a :: vs) (destruct_val (σ:=σ) ti ty a dt (a |-> anyR (erase_qualifiers ty) 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *) ** free) ** frees))
         else
           Exists Qarg,
           wp_prval e Qarg **
@@ -47,8 +49,36 @@ Section with_resolve.
         Exists Qarg,
         wp_xval e Qarg **
             wp_args es (fun vs frees => Forall v free,
-                                     Qarg v free -* Q (v :: vs) (free ** frees))
+                                     Qarg v free -* Q (Vptr v :: vs) (free ** frees))
       end
     end.
+
+  Lemma wp_args_frame : forall es Q Q',
+      (Forall vs free, Q vs free -* Q' vs free) |-- wp_args es Q -* wp_args es Q'.
+  Proof.
+    elim => /=.
+    { iIntros (? ?) "H"; iApply "H". }
+    { iIntros ([vc e] ? IH ? ?) "H".
+      destruct vc.
+      { iIntros "X"; iDestruct "X" as (Qarg) "[He Hes]".
+        iExists Qarg; iFrame.
+        iRevert "Hes"; iApply IH; iIntros (? ?) "X".
+        iIntros (? ?) "Y"; iApply "H"; iApply "X"; iFrame. }
+      { destruct (is_aggregate (type_of e)).
+        { iIntros "X" (a) "B"; iDestruct ("X" with "B") as "X".
+          destruct (destructor_for e).
+          iRevert "X".
+          iIntros "X"; iDestruct "X" as (Qarg) "[He Hes]".
+          iExists Qarg; iFrame; iRevert "Hes"; iApply IH.
+          iIntros (? ?) "Y"; iIntros (?) "Q"; iApply "H"; iApply "Y"; iFrame. }
+        { iIntros "X"; iDestruct "X" as (Qarg) "[He Hes]".
+          iExists Qarg; iFrame.
+          iRevert "Hes"; iApply IH; iIntros (? ?) "X".
+          iIntros (? ?) "Y"; iApply "H"; iApply "X"; iFrame. } }
+      { iIntros "X"; iDestruct "X" as (Qarg) "[He Hes]".
+        iExists Qarg; iFrame.
+        iRevert "Hes"; iApply IH; iIntros (? ?) "X".
+        iIntros (? ?) "Y"; iApply "H"; iApply "X"; iFrame. } }
+  Qed.
 
 End with_resolve.

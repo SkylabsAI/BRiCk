@@ -1,12 +1,17 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019-2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import stdpp.fin_maps.
-From bedrock.lang.prelude Require Import base avl.
-Require Import bedrock.lang.cpp.ast.
+(* Import first, because this overrides [Obligation Tactic]. *)
 Require Import ExtLib.Tactics.
+(* Later modules reset [Obligation Tactic] (by importing stdpp). To ensure
+this reset propagates to clients, we must export one of them; we choose to
+export our [base] module. *)
+Require Import stdpp.fin_maps.
+From bedrock.lang.prelude Require Export base.
+From bedrock.lang.prelude Require Import avl.
+Require Import bedrock.lang.cpp.ast.
 
 Definition require_eq `{EqDecision T} (a b : T) {U} (r : option U) : option U :=
   if decide (a = b) then r else None.
@@ -287,6 +292,17 @@ Section sub_module.
   Global Instance: PreOrder sub_module := {}.
 End sub_module.
 Instance: RewriteRelation sub_module := {}.
+
+Lemma sub_module_lookup_Some_type m1 m2 gn st :
+  sub_module m1 m2 ->
+  m1.(globals) !! gn = Some (Gstruct st) ->
+  m2.(globals) !! gn = Some (Gstruct st).
+Proof.
+  intros [Hg%type_table_le_equiv _ _] Heq.
+  specialize (Hg gn). rewrite {}Heq/= in Hg.
+  destruct (_ !! _) as [g|]; last done. destruct g; simplify_eq/=.
+  apply require_eq_success in Hg. destruct Hg. by simplify_eq.
+Qed.
 
 Instance byte_order_proper : Proper (sub_module ==> eq) byte_order.
 Proof. by destruct 1. Qed.

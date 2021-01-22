@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 
 (** this module provides a denotational/axiomatic semantics to c++ compilation
@@ -21,43 +21,39 @@ Section with_cpp.
 
   Set Default Proof Using "Σ resolve".
 
-  Local Notation _global := (_global (Σ:=Σ) (resolve:=resolve)) (only parsing).
+  Local Notation _global := (_global (resolve:=resolve)) (only parsing).
   Local Notation code_at := (@code_at _ Σ) (only parsing).
   Local Notation method_at := (@method_at _ Σ) (only parsing).
   Local Notation ctor_at := (@ctor_at _ Σ) (only parsing).
   Local Notation dtor_at := (@dtor_at _ Σ) (only parsing).
-  Local Notation _field := (@_field resolve) (only parsing).
-  Local Notation _super := (@_super resolve) (only parsing).
-  Local Notation _sub := (@_sub resolve) (only parsing).
 
   Definition denoteSymbol (n : obj_name) (o : ObjValue) : mpred :=
-    Exists a, _global n &~ a **
-    match o with
-    | Ovar _ e => empSP
-    | Ofunction f =>
-      match f.(f_body) return mpred with
-      | None => empSP
-      | Some body => code_at resolve f a
-      end
-    | Omethod m =>
-      match m.(m_body) return mpred with
-      | None => emp
-      | Some body =>
-        method_at resolve m a
-      end
-    | Oconstructor c =>
-      match c.(c_body) return mpred with
-      | None => empSP
-      | Some body => ctor_at resolve c a
-      end
-    | Odestructor d =>
-      match d.(d_body) return mpred with
-      | None => empSP
-      | Some body => dtor_at resolve d a
-      end
-    end.
+    _at (_global n)
+        match o with
+        | Ovar _ e => emp
+        | Ofunction f =>
+          match f.(f_body) with
+          | None => emp
+          | Some body => as_Rep (code_at resolve f)
+          end
+        | Omethod m =>
+          match m.(m_body) with
+          | None => emp
+          | Some body => as_Rep (method_at resolve m)
+          end
+        | Oconstructor c =>
+          match c.(c_body) with
+          | None => emp
+          | Some body => as_Rep (ctor_at resolve c)
+          end
+        | Odestructor d =>
+          match d.(d_body) with
+          | None => emp
+          | Some body => as_Rep (dtor_at resolve d)
+          end
+        end.
 
-  Global Instance: Persistent (denoteSymbol n o).
+  Global Instance denoteSymbol_persistent {n o} : Persistent (denoteSymbol n o).
   Proof using .
     rewrite /denoteSymbol; destruct o; simpl; red.
     - iIntros "#H"; iModIntro; iFrame "#".
@@ -67,23 +63,23 @@ Section with_cpp.
     - iIntros "#H"; iModIntro; iFrame "#".
   Qed.
 
-  Global Instance: Affine (denoteSymbol n o).
+  Global Instance denoteSymbol_affine {n o} : Affine (denoteSymbol n o).
   Proof using . refine _. Qed.
 
   Definition initSymbol (n : obj_name) (o : ObjValue) : mpred :=
-    Exists a, _global n &~ a **
-    match o with
-    | Ovar t (Some e) =>
-      ltrue (*
+    _at (_global n)
+        match o with
+        | Ovar t (Some e) =>
+          emp (*
       Exists Q : FreeTemps -> mpred,
       □ (_at (_eq a) (uninitR (resolve:=resolve) t 1) -*
-         Forall ρ ti, wp_init (resolve:=resolve) ti ρ t (Vptr a) e Q) ** Q empSP
+         Forall ρ ti, wp_init (resolve:=resolve) ti ρ t (Vptr a) e Q) ** Q emp
 *)
       (* ^^ todo(gmm): static initialization is not yet supported *)
-    | Ovar t None =>
-      _at (_eq a) (uninitR (resolve:=resolve) t 1)
-    | _ => empSP
-    end.
+        | Ovar t None =>
+          uninitR (resolve:=resolve) t 1
+        | _ => emp
+        end.
 
   Definition denoteModule_def (d : translation_unit) : mpred :=
     ([∗list] sv ∈ map_to_list d.(symbols), denoteSymbol sv.1 sv.2) **
@@ -92,14 +88,14 @@ Section with_cpp.
   Definition denoteModule := denoteModule_aux.(unseal).
   Definition denoteModule_eq : @denoteModule = _ := denoteModule_aux.(seal_eq).
 
-  Global Instance: Persistent (denoteModule module).
+  Global Instance denoteModule_persistent {module} : Persistent (denoteModule module).
   Proof.
     red. rewrite denoteModule_eq /denoteModule_def; intros.
     destruct module; simpl.
     iIntros "[#M #H]"; iFrame "#".
   Qed.
 
-  Global Instance: Affine (denoteModule module).
+  Global Instance denoteModule_affine {module} : Affine (denoteModule module).
   Proof using . refine _. Qed.
 
 End with_cpp.

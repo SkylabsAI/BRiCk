@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2020
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 (** *)
 
@@ -23,6 +23,11 @@ Export iris.bi.bi.bi.
 
 Section derived_laws.
   Context {PROP : bi}.
+
+  Lemma intuitionistically_and_sep P Q : □ (P ∧ Q) ⊣⊢@{PROP} □ P ∗ □ Q.
+  Proof.
+    by rewrite bi.intuitionistically_and bi.and_sep_intuitionistically.
+  Qed.
 
   Lemma exist_pure_eq_sep {A P} v:
     P v ⊢@{PROP} ∃ x : A, ⌜ x = v ⌝ ∗ P x.
@@ -170,6 +175,17 @@ Section only_provable_derived_laws.
       iFrame "Ha". iSplit; last by iDestruct "H" as "[_ [_ $]]".
       rewrite and_exist_r. iDestruct "H" as (a1) "[[Ha2 R] _]".
       by iDestruct (Hagree a1 a2 with "[$Ha2]") as "->".
+  Qed.
+
+  Lemma exist_sep_agree {A : Type} (Θ Φ Ψ : A → PROP)
+      `{∀ a, Affine (Θ a), ∀ a, Persistent (Θ a)}
+    (Hagree : ∀ a1 a2, Θ a1 ∗ Θ a2 ⊢ [| a1 = a2 |]) :
+    (∃ a, Θ a ∗ (Φ a ∗ Ψ a)) ⊣⊢ (∃ a, Θ a ∗ Φ a) ∗ (∃ a, Θ a ∗ Ψ a).
+  Proof.
+    rewrite -exist_sep //.
+    - f_equiv => a. exact: persistent_sep_distr_l.
+    - iIntros (??) "[A _] [B _]".
+      by iDestruct (Hagree with "[$A $B]") as %->.
   Qed.
 End only_provable_derived_laws.
 

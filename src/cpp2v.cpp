@@ -1,10 +1,13 @@
 /*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
+ * Copyright (c) 2020 BedRock Systems, Inc.
  *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * This software is distributed under the terms of the BedRock Open-Source License. 
+ * See the LICENSE-BedRock file in the repository root for details. 
  *
  * This file is based on the tutorial here:
  * https://clang.llvm.org/docs/LibASTMatchersTutorial.html
+ * See the LICENSE-LLVM file in the repositroy root for details.
+ *
  */
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -59,7 +62,7 @@ class ToCoqAction : public clang::ASTFrontendAction {
 public:
     virtual std::unique_ptr<clang::ASTConsumer>
     CreateASTConsumer(clang::CompilerInstance &Compiler,
-                      llvm::StringRef InFile) {
+                      llvm::StringRef InFile) override {
 #if 0
 		Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back("with");
 		Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back("internal");

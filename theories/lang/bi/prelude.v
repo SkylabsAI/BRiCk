@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From iris.bi Require Import bi.
 From iris.proofmode Require Import tactics.
@@ -33,10 +33,14 @@ Global Notation limpl := (bi_impl) (only parsing).
 Global Notation lforall := (bi_forall) (only parsing).
 Global Notation lexists := (bi_exist) (only parsing).
 
-Global Notation empSP := (bi_emp) (only parsing).
-Global Notation sepSP := (bi_sep) (only parsing).
-Global Notation wandSP := (bi_wand) (only parsing).
-Global Notation illater := (bi_later) (only parsing).
+#[deprecated(since="2021-01-04",note="use 'emp'"),global]
+Notation empSP := (bi_emp) (only parsing).
+#[deprecated(since="2021-01-04",note="use infix '**' (or 'bi_sep')"),global]
+Notation sepSP := (bi_sep) (only parsing).
+#[deprecated(since="2021-01-04",note="use infix '-*' (or 'bi_wand')"),global]
+Notation wandSP := (bi_wand) (only parsing).
+#[deprecated(since="2021-01-04",note="use prefix '|>'"),global]
+Notation illater := (bi_later) (only parsing).
 
 Ltac split' := intros; apply (anti_symm (⊢)).
 
@@ -62,7 +66,9 @@ Module ChargeNotation.
 
   Notation "P ** Q" := (P ∗ Q)%I (at level 58, right associativity).
   Notation "P -* Q" := (P -∗ Q)%I (at level 60, right associativity).
-  Notation "'sepSPs' ps" := ([∗] ps)%I (at level 20).
+
+  #[deprecated(since="2021-01-04",note="use '[∗]' directly.")]
+  Notation "'sepSPs' ps" := ([∗] ps)%I (at level 20, only parsing).
 
   (* Notation "'|>' P" := (▷  P)%I (at level 71). *)
   Notation "|> P" := (▷  P)%I (at level 20, right associativity).

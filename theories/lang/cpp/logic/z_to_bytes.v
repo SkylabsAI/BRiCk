@@ -1,12 +1,12 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 
 Require Import bedrock.lang.prelude.base.
-From bedrock.lang.cpp Require Import ast operator values.
-From bedrock.lang.cpp.semantics Require builtins.
+From bedrock.lang.cpp.semantics Require Import builtins operator.
+From bedrock.lang.cpp Require Import ast.
 
 Section FromToBytes.
 
@@ -120,7 +120,6 @@ Section FromToBytes.
                 ?andb_false_l //.
         apply Z.ltb_lt in Hn; lia.
       - rewrite Z.testbit_ones_nonneg; try lia.
-        2: apply Z.ltb_ge in Hn; lia.
         destruct (n - 8 * idx <? 8)%Z eqn:Hn';
           rewrite ?andb_false_l ?andb_false_r
                   ?andb_true_l ?andb_true_r //.
@@ -140,7 +139,6 @@ Section FromToBytes.
           apply Z.bits_inj'=> n ?.
           repeat (rewrite ?Z.lor_spec ?Z.shiftl_spec ?Z.land_spec ?Z.shiftr_spec; try lia).
           rewrite Z.bits_0 !Z.testbit_ones; try lia.
-          churn_bits.
         - rewrite /_Z_set_byte.
           apply Z.bits_inj'=> n ?.
           repeat (rewrite ?Z.lor_spec ?Z.shiftl_spec ?Z.land_spec ?Z.shiftr_spec; try lia).

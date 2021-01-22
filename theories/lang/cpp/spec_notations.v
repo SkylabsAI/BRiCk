@@ -1,23 +1,19 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import stdpp.telescopes.
 Require Import bedrock.lang.prelude.bytestring.
 Require Import bedrock.lang.cpp.logic.
+Require Import bedrock.lang.prelude.telescopes.
+Require bedrock.lang.cpp.heap_notations.
+
+Set Universe Polymorphism.
 
 Declare Scope fspec_scope.
 Delimit Scope fspec_scope with fspec.
 Bind Scope fspec_scope with WithPrePost.
-
-Set Universe Polymorphism.
-
-Fixpoint tele_append (t : tele) {struct t}: (t -t> tele) -> tele :=
-  match t as t return (t -t> tele) -> tele with
-  | TeleO => fun x : tele => x
-  | @TeleS T f => fun x => @TeleS T (fun t => tele_append (f t) (x t))
-  end.
 
 Section with_Σ.
   Context `{PROP : bi}.
@@ -55,18 +51,24 @@ Section with_Σ.
      ; wpp_post := wpp.(wpp_post)
     |}.
 
+  Definition add_persist (P : PROP) (wpp : WithPrePost) : WithPrePost :=
+    {| wpp_with := wpp.(wpp_with)
+     ; wpp_pre := tele_map (fun '(args,X) => (args, □ P ** X)) wpp.(wpp_pre)
+     ; wpp_post := wpp.(wpp_post)
+    |}.
+
   Definition add_prepost (P : PROP) (wpp : WithPrePost) : WithPrePost :=
     add_pre P (add_post P wpp).
 
   Definition post_void (t : tele) (Q : t -t> PROP) : WithPrePost :=
     {| wpp_with := TeleO
-     ; wpp_pre := (nil, empSP)
+     ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := t
                     ; we_post := tele_map (fun Q => (Vvoid, Q)) Q |} |}.
 
   Definition post_ret (t : tele) (Q : t -t> val * PROP) : WithPrePost :=
     {| wpp_with := TeleO
-     ; wpp_pre := (nil, empSP)
+     ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := t
                     ; we_post := Q |} |}.
 
@@ -127,7 +129,7 @@ Notation "'\with' x .. y X" :=
    format "'[v' '\with'     '[hv' x  ..  y ']'  '//' X ']'").
 
 Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X))
-  (at level 200, ts ident, X at level 200, right associativity,
+  (at level 200, ts name, X at level 200, right associativity,
    format "'[v' '\withT'     ts <- t  '//' X ']'").
 
 Notation "'\prepost' pp X" :=
@@ -171,7 +173,12 @@ Notation "'\arg{' x .. y } nm v X" :=
 Notation "'\require' pre X" :=
   (@add_require _ pre X%fspec)
   (at level 10, pre at level 200, X at level 200, left associativity,
-   format "'[v' '\require'  pre  '//' X ']'").
+   format "'[v' '[' '\require'  pre ']' '//' X ']'").
+
+Notation "'\persist' pre X" :=
+  (@add_persist _ pre%I X%fspec)
+  (at level 10, pre at level 200, X at level 200, left associativity,
+   format "'[v' '[' '\persist'  pre ']' '//' X ']'").
 
 Notation "'\pre' pre X" :=
   (@add_pre _ pre%I X%fspec)
@@ -216,10 +223,12 @@ Notation "'\exact' wpp" := (exactWpp wpp)
 Section with_Σ.
   Context `{Σ : cpp_logic ti}.
 
+  Import heap_notations.
+
 Goal WithPrePost mpredI.
 refine (
-  \pre empSP
-  \post  empSP
+  \pre emp
+  \post  emp
 ).
 (* Show Proof. *)
 Abort.
@@ -227,16 +236,16 @@ Abort.
 Goal WithPrePost mpredI.
 refine (
    \with (I J : mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
-   \prepost empSP
+   \prepost emp
    \require True
    \arg{n (nn: nat)} "foo" (Vint n)
    \args{a} [Vint (Z.of_nat a)]
    \with (z : nat)
-   \prepost empSP
-   \prepost{q1 q2} _at (_eq p) (R q1 q2 0)
-   \pre{q3 q4} _at (_eq p) (R q3 q4 0)
-   \pre empSP ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post {x} [ Vint x ] empSP).
+   \prepost emp
+   \prepost{q1 q2} p |-> R q1 q2 0
+   \pre{q3 q4} p |-> R q3 q4 0
+   \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
+   \post {x} [ Vint x ] emp).
 (* Show Proof. *)
 Abort.
 
@@ -244,11 +253,11 @@ Goal WithPrePost mpredI.
 refine (
    \with (I J : mpred)
    \with  (a : nat)
-   \prepost empSP
+   \prepost emp
    \with (z : nat)
-   \prepost empSP
-   \pre empSP ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post{r}[ r ] empSP).
+   \prepost emp
+   \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
+   \post{r}[ r ] emp).
 (* Show Proof. *)
 Abort.
 
@@ -260,19 +269,20 @@ refine (
    \with (lm : nat * nat)
    \let (l,m) := lm
    \require l+m = 3
-   \prepost empSP
+   \prepost emp
+   \persist emp
    \with (z : nat)
-   \arg{(zz : Z)} "foo" zz
-   \prepost empSP
-   \pre empSP ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post empSP).
+   \arg{(zz : Z)} "foo" (Vint zz)
+   \prepost emp
+   \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
+   \post emp).
 (* Show Proof. *)
 Abort.
 
 Goal WithPrePost mpredI.
 refine (
-    \pre empSP ** Exists y : nat, [| y = 3 |]
-    \post{} [ Vptr nullptr ] empSP).
+    \pre emp ** Exists y : nat, [| y = 3 |]
+    \post{}[Vptr nullptr] emp).
 (* Show Proof. *)
 Abort.
 
@@ -280,7 +290,7 @@ Abort.
 Goal WithPrePost mpredI.
 refine (
     \pre |==> True ** |={∅,⊤}=> False
-    \post{} [ Vptr nullptr ] empSP).
+    \post{}[Vptr nullptr] emp).
 (* Show Proof. *)
 Abort.
 

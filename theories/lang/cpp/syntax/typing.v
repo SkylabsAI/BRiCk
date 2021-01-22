@@ -1,10 +1,11 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From bedrock.lang.cpp.syntax Require Import names expr types.
 
+(** [type_of e] returns the type of the expression [e]. *)
 Definition type_of (e : Expr) : type :=
   match e with
   | Econst_ref _ t
@@ -37,8 +38,7 @@ Definition type_of (e : Expr) : type :=
   | Eimplicit _ t
   | Eif _ _ _ t
   | Ethis t => t
-  | Enull => Tpointer Tvoid
-  (* todo(gmm): c++ seems to have a special nullptr type *)
+  | Enull => Tnullptr
   | Einitlist _ _ t
   | Eimplicit_init t
   | Enew _ _ _ _ _ t
@@ -50,9 +50,18 @@ Definition type_of (e : Expr) : type :=
   | Eatomic _ _ t => t
   | Eva_arg _ t => t
   | Epseudo_destructor _ _ => Tvoid
+  | Earrayloop_init _ _ _ _ _ t => t
+  | Earrayloop_index _ t => t
+  | Eopaque_ref _ t => t
   | Eunsupported _ t => t
   end.
 
+(** [erase_qualifiers t] erases *all* qualifiers that occur everywhere in the type.
+
+    NOTE we currently use this because we do not track [const]ness in the logic, this
+    is somewhat reasonable because we often opt to express this in separation logic.
+    And the type system also enforces some of the other criteria.
+ *)
 Fixpoint erase_qualifiers (t : type) : type :=
   match t with
   | Tpointer t => Tpointer (erase_qualifiers t)
@@ -71,8 +80,33 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tarch sz nm => Tarch sz nm
   end.
 
+(** [drop_qualifiers t] drops all the *leading* quallifiers of the type [t].
+    e.g. [drop_qualifiers (Qconst (Qmut t)) = t]
+ *)
 Fixpoint drop_qualifiers (t : type) : type :=
   match t with
   | Tqualified _ t => drop_qualifiers t
   | _ => t
   end.
+
+(** [unptr t] returns the type of the object that a value of type [t] points to
+    or [None] if [t] is not a pointer type.
+ *)
+Definition unptr (t : type) : option type :=
+  match drop_qualifiers t with
+  | Tptr p => Some (drop_qualifiers p)
+  | _ => None
+  end.
+
+(** [class_type t] returns the name of the class that this type refers to
+ *)
+Definition class_type (t : type) : option globname :=
+  match drop_qualifiers t with
+  | Tnamed gn => Some gn
+(*  | Tpointer t
+  | Treference t
+  | Trv_reference t => class_type t
+*)
+  | _ => None
+  end.
+

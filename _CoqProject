@@ -2,18 +2,25 @@
 # The Iris  [_CoqProject](https://gitlab.mpi-sws.org/iris/iris/-/blob/master/_CoqProject)
 # explains some of them.
 -arg -w -arg -notation-overridden
--arg -w -arg -redundant-canonical-projection
--arg -w -arg -convert_concl_no_check
 -arg -w -arg -ambiguous-paths
+-arg -w -arg -redundant-canonical-projection
+# Similar to notation warnings.
+-arg -w -arg -custom-entry-overridden
+# Warns about correct usage:
+-arg -w -arg -ssr-search-moved
 
 -Q theories bedrock
 
 # Utility modules
 theories/lang/prelude/base.v
+theories/lang/prelude/option.v
 theories/lang/prelude/addr.v
+theories/lang/prelude/numbers.v
 theories/lang/prelude/notations.v
 theories/lang/prelude/bytestring.v
+theories/lang/prelude/telescopes.v
 theories/lang/prelude/avl.v
+theories/lang/bi/big_op.v
 theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
 theories/lang/bi/derived_laws.v
@@ -61,12 +68,14 @@ theories/lang/cpp/logic/stmt.v
 theories/lang/cpp/logic/func.v
 theories/lang/cpp/logic/translation_unit.v
 theories/lang/cpp/logic/z_to_bytes.v
+theories/lang/cpp/logic/arr.v
 theories/lang/cpp/logic/cclogic.v
 # ^^ This is probably going to be eliminated
 theories/lang/cpp/logic/atomics.v
 theories/lang/cpp/logic/atomics_derived.v
 theories/lang/cpp/logic/builtins.v
 theories/lang/cpp/logic/layout.v
+theories/lang/cpp/logic/vbyte.v
 theories/lang/cpp/logic.v
 
 # Notations

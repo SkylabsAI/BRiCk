@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2020
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.lang.bi.prelude.
 Require Import iris.bi.bi iris.bi.monpred.
@@ -19,7 +19,7 @@ Class Observe {PROP : bi} (Q P : PROP) := observe : P ⊢ <pers> Q.
 Instance: Params (@observe) 4 := {}.
 Arguments observe {_} (_ _)%I {_} : assert.
 Arguments Observe {_} (_ _)%I : simpl never, assert.
-Hint Mode Observe + ! ! : typeclass_instances.
+#[global] Hint Mode Observe + ! ! : typeclass_instances.
 
 (** [Observe Q P1 P2] means we can observe [Q] (persistently) given
 [P1 ** P2]. Such observations do not consume the [P_i]. *)
@@ -27,12 +27,25 @@ Class Observe2 {PROP : bi} (Q P1 P2 : PROP) := observe_2 : P1 ⊢ P2 -∗ <pers>
 Instance: Params (@observe_2) 5 := {}.
 Arguments observe_2 {_} (_ _ _)%I {_} : assert.
 Arguments Observe2 {_} (_ _ _)%I : simpl never, assert.
-Hint Mode Observe2 + ! ! ! : typeclass_instances.
+#[global] Hint Mode Observe2 + ! ! ! : typeclass_instances.
 
-Instance Observe_proper {PROP : bi} :
+#[global] Instance Observe_mono {PROP : bi} :
+  Proper ((⊢) ==> flip (⊢) ==> impl) (@Observe PROP).
+Proof. solve_proper. Qed.
+#[global] Instance Observe_flip_mono {PROP : bi} :
+  Proper (flip (⊢) ==> (⊢) ==> flip impl) (@Observe PROP).
+Proof. solve_proper. Qed.
+#[global] Instance Observe_proper {PROP : bi} :
   Proper ((≡) ==> (≡) ==> (↔)) (@Observe PROP).
 Proof. solve_proper. Qed.
-Instance Observe2_proper {PROP : bi} :
+
+#[global] Instance Observe2_mono {PROP : bi} :
+  Proper ((⊢) ==> flip (⊢) ==> flip (⊢) ==> impl) (@Observe2 PROP).
+Proof. solve_proper. Qed.
+#[global] Instance Observe2_flip_mono {PROP : bi} :
+  Proper (flip (⊢) ==> (⊢) ==> (⊢) ==> flip impl) (@Observe2 PROP).
+Proof. solve_proper. Qed.
+#[global] Instance Observe2_proper {PROP : bi} :
   Proper ((≡) ==> (≡) ==> (≡) ==> (↔)) (@Observe2 PROP).
 Proof. solve_proper. Qed.
 
@@ -93,12 +106,18 @@ Section observe.
   Lemma observe_intro_persistent Q P `{!Persistent Q} : (P ⊢ Q) → Observe Q P.
   Proof. rewrite/Observe=>->. iIntros "#$". Qed.
 
+  Lemma observe_intro_only_provable (Q : Prop) (P : PROP) : (P ⊢ ⌜ Q ⌝) → Observe [| Q |] P.
+  Proof. by rewrite /Observe persistently_only_provable =>->. Qed.
+
   Lemma observe_intro Q P `{!Persistent Q} : (P ⊢ P ∗ Q) → Observe Q P.
   Proof. rewrite/Observe {1}(persistent Q)=>->. iIntros "[_ $]". Qed.
 
   Lemma observe_2_intro_persistent Q P1 P2 `{!Persistent Q} :
     (P1 ⊢ P2 -∗ Q) → Observe2 Q P1 P2.
   Proof. rewrite/Observe2=>->. f_equiv. iIntros "#$". Qed.
+
+  Lemma observe_2_intro_only_provable (Q : Prop) (P1 P2 : PROP) : (P1 ⊢ P2 -∗ ⌜ Q ⌝) → Observe2 [| Q |] P1 P2.
+  Proof. by rewrite /Observe2 persistently_only_provable =>->. Qed.
 
   Lemma observe_2_intro Q P1 P2 `{!Persistent Q} :
     (P1 ⊢ P2 -∗ P1 ∗ P2 ∗ Q) → Observe2 Q P1 P2.
@@ -290,3 +309,47 @@ Proof.
   rewrite -bi.exist_sep; last by intros; exact: observe_2_elim_pure.
   f_equiv=>oa. apply: fractional.
 Qed.
+
+Lemma observe_lhs (p : Prop) {PROP : bi} (P Q : PROP) {o : Observe [| p |] P} :
+  (p -> P ⊢ Q) -> P ⊢ Q.
+Proof.
+  iIntros (HpPQ) "P"; iDestruct (o with "P") as %?. by iApply (HpPQ with "P").
+Qed.
+
+Lemma observe_2_lhs (p : Prop) {PROP : bi} (P1 P2 Q : PROP) {o : Observe2 [| p |] P1 P2} :
+  (p -> P1 ∗ P2 ⊢ Q) -> P1 ∗ P2 ⊢ Q.
+Proof.
+  iIntros (HpPQ) "[P1 P2]"; iDestruct (o with "P1 P2") as %?. by iApply (HpPQ with "[$P1 $P2]").
+Qed.
+
+Lemma observe_both (p : Prop) {PROP : bi} (P Q  : PROP)
+    {_ : Observe [| p |] P} {_ : Observe [| p |] Q} :
+  (p -> P ⊣⊢ Q) -> P ⊣⊢ Q.
+Proof. intros HpPQ. split'; apply: observe_lhs => Hp; by rewrite HpPQ. Qed.
+
+Lemma observe_2_both (p : Prop) {PROP : bi} (P1 P2 Q1 Q2 : PROP)
+    {_ : Observe2 [| p |] P1 P2} {_ : Observe2 [| p |] Q1 Q2} :
+  (p -> P1 ∗ P2 ⊣⊢ Q1 ∗ Q2) -> P1 ∗ P2 ⊣⊢ Q1 ∗ Q2.
+Proof. intros HpPQ. split'; apply: observe_2_lhs => Hp; by rewrite HpPQ. Qed.
+
+
+(**
+  These help deriving observations for [R] from observations for [Q].
+
+  Recommended use:
+  [apply: (observe_derive_only_provable Q_pattern).].
+  [apply: (observe_2_derive_only_provable Q_pattern).].
+  then prove [Q -> R].
+
+  This is almost setoid rewriting, but it does not support rewriting by implication,
+  and those idioms give [Q -> R] as output goal instead of input.
+*)
+Lemma observe_derive_only_provable {PROP : bi} (Q : Prop) {R : Prop} {P : PROP} :
+  (Q -> R) ->
+  Observe [| Q |] P -> Observe [| R |] P.
+Proof. move=> HQR. apply Observe_mono => //. by f_equiv. Qed.
+
+Lemma observe_2_derive_only_provable {PROP : bi} (Q : Prop) {R : Prop} {P1 P2 : PROP} :
+  (Q -> R) ->
+  Observe2 [| Q |] P1 P2 -> Observe2 [| R |] P1 P2.
+Proof. move=> HQR. apply Observe2_mono => //. by f_equiv. Qed.

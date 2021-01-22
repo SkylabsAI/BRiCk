@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import Coq.Lists.List.
 
@@ -67,4 +67,4 @@ Arguments wpp_with {_} _.
 Arguments wpp_pre {_} _.
 Arguments wpp_post {_} _.
 
-Global Arguments WppD !_ / .
+Global Arguments WppD _ !_ _ _ /.

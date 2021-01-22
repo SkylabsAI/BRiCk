@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019-2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From stdpp Require Import fin_maps strings.
 From bedrock.lang.prelude Require Import base bytestring.
@@ -22,7 +22,7 @@ Instance IMR_map : FMap IM.Raw.t := @IM.Raw.map.
 
 Instance IMR_merge : Merge IM.Raw.t := IM.Raw.map2.
 
-Instance IMR_maptolist : FinMapToList bs A (IM.Raw.t A) := IM.Raw.elements.
+Instance IMR_maptolist A : FinMapToList bs A (IM.Raw.t A) := IM.Raw.elements (elt := A).
 
 Instance IMR_singleton {V} : SingletonM bs V (IM.Raw.t V) :=
   fun k v => <[ k := v ]> ∅.
@@ -42,7 +42,7 @@ Instance IM_map : FMap IM.t := @IM.map.
 
 Instance IM_merge : Merge IM.t := IM.map2.
 
-Instance IM_maptolist : FinMapToList bs A (IM.t A) := IM.elements.
+Instance IM_maptolist A : FinMapToList bs A (IM.t A) := IM.elements (elt := A).
 
 Instance IM_singleton {V} : SingletonM bs V (IM.t V) :=
   fun k v => <[ k := v ]> ∅.

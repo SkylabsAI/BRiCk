@@ -1,7 +1,7 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2020 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import
@@ -15,9 +15,9 @@ Section with_cpp.
   (* "points to" *)
   Structure AT : Type :=
   { AT_lhs    : Type
-  ; #[canonical(false)] AT_rhs    : Type
-  ; #[canonical(false)] AT_result : Type
-  ; #[canonical(false)] AT_at     :> AT_lhs -> AT_rhs -> AT_result
+  ; #[canonical=no] AT_rhs    : Type
+  ; #[canonical=no] AT_result : Type
+  ; #[canonical=no] AT_at     :> AT_lhs -> AT_rhs -> AT_result
   }.
   Arguments AT_at {!AT} _ _ : rename.
 
@@ -31,52 +31,53 @@ Section with_cpp.
     {| AT_at v := heap_pred._at (Σ:=Σ) (_eqv v) |}.
 
   Canonical Structure mpred_ptr_AT : AT :=
-    {| AT_at v := heap_pred._at (Σ:=Σ) (_eq v) |}.
+    {| AT_at v := heap_pred._at (Σ:=Σ) v |}.
 
   Canonical Structure Rep_field_AT {σ : genv} : AT :=
-    {| AT_at v := heap_pred._offsetR (Σ:=Σ) (_field (resolve:=σ) v) |}.
+    {| AT_at v := heap_pred._offsetR (Σ:=Σ) (o_field σ v) |}.
 
-  (* coercions to Offset *)
+  (* coercions to [offset] *)
   Structure TO_OFFSET : Type :=
   { TO_OFFSET_from :> Type
-  ; #[canonical(false)] _to_offset : TO_OFFSET_from -> Offset
+  ; #[canonical=no] _to_offset : TO_OFFSET_from -> offset
   }.
   Arguments _to_offset {!TO_OFFSET} _ : rename.
 
-  Canonical Structure TO_OFFSET_field {σ : genv} := {| _to_offset := @_field _ Σ σ |}.
-  Canonical Structure TO_OFFSET_offset := {| _to_offset := @id Offset |}.
+  Canonical Structure TO_OFFSET_field {σ : genv} := {| _to_offset := @o_field σ |}.
+  Canonical Structure TO_OFFSET_offset := {| _to_offset (o : offset) := o |}.
 
   (* paths *)
   Structure DOT : Type :=
   { DOT_from : Type
-  ; #[canonical(false)] DOT_to : Type
-  ; #[canonical(false)] DOT_dot : Offset -> DOT_from -> DOT_to
+  ; #[canonical=no] DOT_to : Type
+  ; #[canonical=no] DOT_dot : offset -> DOT_from -> DOT_to
   }.
   Arguments DOT_dot {!AT} _ _ : rename.
 
   Canonical Structure DOT_offset_loc : DOT :=
-    {| DOT_dot := _offsetL |}.
+    {| DOT_dot o p := _offset_ptr p o |}.
   Canonical Structure DOT_field_offset {σ : genv} : DOT :=
-    {| DOT_dot o f := path_pred._dot (@_field _ Σ σ f) o |}.
+    {| DOT_dot o f := o_dot (o_field σ f) o |}.
   Canonical Structure DOT_offset_offset : DOT :=
-    {| DOT_dot := path_pred._dot |}.
+    {| DOT_dot o1 o2 := o_dot o2 o1 |}. (** TODO confirm this *)
+(*
   Canonical Structure DOT_ptr_offset : DOT :=
-    {| DOT_dot o p := _offsetL o (_eq p) |}.
+    {| DOT_dot o p := _offset_ptr p o |}. *)
   Canonical Structure DOT_val_offset : DOT :=
-    {| DOT_dot o p := _offsetL o (_eqv p) |}.
+    {| DOT_dot o p := _offset_ptr (_eqv p) o |}.
 
 End with_cpp.
 
 (* notations *)
 Local Ltac simple_refine ____x :=
   let x' := eval cbv beta iota delta
-                 [ ____x
+                 [ ____x id
                    AT_lhs AT_rhs AT_result  AT_at
                    mpred_AT Rep_AT mpred_val_AT mpred_ptr_AT Rep_field_AT
                    TO_OFFSET_from  _to_offset
                    TO_OFFSET_field TO_OFFSET_offset
                    DOT_from DOT_to DOT_dot
-                   DOT_offset_loc DOT_field_offset DOT_offset_offset DOT_ptr_offset DOT_val_offset ] in ____x in
+                   DOT_offset_loc DOT_field_offset DOT_offset_offset (* DOT_ptr_offset *) DOT_val_offset ] in ____x in
   exact x'.
 
 Notation "l |-> r" := (match @AT_at _ l r with
@@ -88,36 +89,34 @@ Notation "l |-> r" := (_at l r)
 Notation "l |-> r" := (_offsetR l r)
   (at level 15, r at level 20, right associativity, only printing).
 
-Notation "p ., o" := (match @DOT_dot _ _ _ (@_to_offset _ _ _ o) p with
+Notation "p ., o" := (match @DOT_dot _ (@_to_offset _ o) p with
                       | ____x => ltac:(simple_refine ____x)
                       end)
   (at level 11, left associativity, only parsing).
 
-Notation "p .[ t ! n ]" := (match @DOT_dot _ _ _ (@_sub _ _ _ t n%Z) p with
+Notation "p .[ t ! n ]" := (match @DOT_dot _ (@o_sub _ t n%Z) p with
                             | ____x => ltac:(simple_refine ____x)
                             end)
   (at level 11, left associativity, only parsing).
-Notation ".[ t ! n ]" := ((@_sub _ _ _ t n%Z))
+Notation ".[ t ! n ]" := ((@o_sub _ t n%Z))
   (at level 11, only parsing).
 
-Notation "p ., o" := (_dot o p)
+Notation "p ., o" := (_offset_ptr p o)
   (at level 11, left associativity, only printing,
    format "p  .,  o").
-Notation "p ., o" := (_offsetL o p)
+Notation "p ., o" := (o_dot p o)
   (at level 11, left associativity, only printing,
    format "p  .,  o").
 
-Notation ".[ t ! n ]" := ((@_sub _ _ _ t n))
+Notation ".[ t ! n ]" := ((o_sub _ t n))
   (at level 11, no associativity, only printing, format ".[  t  !  n  ]").
-Notation "p .[ t ! n ]" := (_offsetL (@_sub _ _ _ t n) p)
+Notation "p .[ t ! n ]" := (_offset_ptr (o_sub _ t n) p)
   (at level 11, left associativity, only printing, format "p  .[  t  '!'  n  ]").
-
-Existing Class genv.
 
 (* Test suite *)
 Section test_suite.
 
-  Context {σ : genv} `{Σ : cpp_logic ti} (R : Rep) (f g : field) (o : Offset) (l : Loc) (p : ptr) (v : val).
+  Context {σ : genv} `{Σ : cpp_logic ti} (R : Rep) (f g : field) (o : offset) (l : ptr) (p : ptr) (v : val).
 
   Example _0 := |> l |-> R.
 

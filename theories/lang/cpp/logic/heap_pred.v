@@ -1,17 +1,20 @@
 (*
- * Copyright (C) BedRock Systems Inc. 2019 Gregory Malecha
- *
- * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
+ * Copyright (c) 2020-21 BedRock Systems, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import bedrock.lang.prelude.base.
-
 From iris.bi Require Export monpred.
 From iris.proofmode Require Import tactics monpred.
 Require Import iris.bi.lib.fractional.
+From iris_string_ident Require Import ltac2_string_ident.
+
+Require Import bedrock.lang.prelude.base.
 
 From bedrock.lang.cpp Require Import
      semantics logic.pred logic.path_pred ast logic.wp.
 Require Import bedrock.lang.cpp.logic.spec.
+
+Implicit Types (σ resolve : genv) (p : ptr) (o : offset).
 
 (** representations are predicates over a location, they should be used to
   * assert properties of the heap
@@ -32,15 +35,100 @@ Bind Scope bi_scope with Rep.
 Bind Scope bi_scope with RepI.
 Bind Scope bi_scope with RepO.
 
+Section defs.
+  Context `{Σ : cpp_logic}.
+
+  Definition as_Rep (P : ptr -> mpred) : Rep := MonPred P _.
+
+  (** [_at base R] states that [R base] holds.
+
+      NOTE This is "weakly at"
+   *)
+  Definition _at_def (base : ptr) (R : Rep) : mpred :=
+    R.(monPred_at) base.
+  Definition _at_aux : seal (@_at_def). Proof. by eexists. Qed.
+  Definition _at := _at_aux.(unseal).
+  Definition _at_eq : @_at = _ := _at_aux.(seal_eq).
+
+  Definition _offsetR_def (o : offset) (r : Rep) : Rep :=
+    as_Rep (fun base => r.(monPred_at) (_offset_ptr base o)).
+  Definition _offsetR_aux : seal (@_offsetR_def). Proof. by eexists. Qed.
+  Definition _offsetR := _offsetR_aux.(unseal).
+  Definition _offsetR_eq : @_offsetR = _ := _offsetR_aux.(seal_eq).
+
+  (** object identity *)
+  Definition identityR (σ : genv) (cls : globname) (mdc : option globname)
+             (q : Qp) : Rep :=
+    as_Rep (@identity _ _ σ cls mdc q).
+  (** cpp2v-core#194: [Fractional], [AsFractional], [Timeless]? *)
+  (** cpp2v-core#194: The fraction is valid? Agreement? *)
+
+  Definition validR_def : Rep := as_Rep valid_ptr.
+  Definition validR_aux : seal (@validR_def). Proof. by eexists. Qed.
+  Definition validR := validR_aux.(unseal).
+  Definition validR_eq : @validR = _ := validR_aux.(seal_eq).
+
+  Definition svalidR_def : Rep := as_Rep strict_valid_ptr.
+  Definition svalidR_aux : seal (@svalidR_def). Proof. by eexists. Qed.
+  Definition svalidR := svalidR_aux.(unseal).
+  Definition svalidR_eq : @svalidR = _ := svalidR_aux.(seal_eq).
+
+  Definition type_ptrR_def σ (t : type) : Rep := as_Rep (@type_ptr _ _ σ t).
+  Definition type_ptrR_aux : seal (@type_ptrR_def). Proof. by eexists. Qed.
+  Definition type_ptrR := type_ptrR_aux.(unseal).
+  Definition type_ptrR_eq : @type_ptrR = _ := type_ptrR_aux.(seal_eq).
+
+  Definition refR_def (ty : type) (p : ptr) : Rep :=
+    as_Rep (fun addr => [| addr = p |]).
+  Definition refR_aux : seal (@refR_def). Proof. by eexists. Qed.
+  Definition refR := refR_aux.(unseal).
+  Definition refR_eq : @refR = _ := refR_aux.(seal_eq).
+
+  (* this is the core definition that the program logic will be based on.
+     it is really an assertion about assembly.
+   *)
+  Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
+    as_Rep (fun p =>
+         Forall (ti : thread_info), □ (Forall vs Q,
+         [| List.length vs = List.length fs.(fs_arguments) |] -*
+         fs.(fs_spec) ti vs Q -*
+         fspec resolve.(genv_tu).(globals) (type_of_spec fs) ti (Vptr p) vs Q)).
+  Definition cptrR_aux : seal (@cptrR_def). Proof. by eexists. Qed.
+  Definition cptrR := cptrR_aux.(unseal).
+  Definition cptrR_eq : @cptrR = _ := cptrR_aux.(seal_eq).
+
+  (** Values
+   * These `Rep` predicates wrap `ptsto` facts
+   *)
+  (* todo(gmm): make opaque *)
+  Definition pureR (P : mpred) : Rep :=
+    as_Rep (fun _ => P).
+End defs.
+
+Global Instance: Params (@_at) 3 := {}.
+Global Instance: Params (@cptrR) 3 := {}.
+
+Instance: Params (@as_Rep) 2 := {}.
+Instance: Params (@_offsetR) 3 := {}.
+Instance: Params (@pureR) 2 := {}.
+
+Arguments refR {_ Σ} ty v : rename.
+Arguments cptrR {_ Σ resolve} _ : rename.
+
+#[deprecated(since="2020-01-09", note="Use cptrR")]
+Notation cptr := cptrR (only parsing).
+
+Arguments type_ptrR {_ Σ σ} _%bs.
+Arguments identityR {_ Σ σ} _%bs _%bs _%Qp.
+
 Section with_cpp.
   Context `{Σ : cpp_logic}.
 
+  (** See also [Rep_equiv_at] and [Rep_entails_at]. *)
   Lemma Rep_ext (P Q : Rep) :
       (forall p : ptr, P p -|- Q p) ->
       P -|- Q.
   Proof. by constructor. Qed.
-
-  Definition as_Rep (P : ptr -> mpred) : Rep := MonPred P _.
 
   Global Instance as_Rep_ne n :
     Proper (pointwise_relation _ (dist n) ==> dist n) as_Rep.
@@ -79,15 +167,24 @@ Section with_cpp.
     AsFractional (as_Rep (P q)) (λ q, as_Rep (P q)) q.
   Proof. constructor. done. apply _. Qed.
 
+  Lemma as_Rep_emp : as_Rep (λ p, emp) -|- emp.
+  Proof. constructor => p. by rewrite monPred_at_emp. Qed.
   Lemma as_Rep_sep P Q : as_Rep (λ p, P p ** Q p) -|- as_Rep P ** as_Rep Q.
   Proof. constructor=>p. by rewrite monPred_at_sep. Qed.
 
-  Global Instance as_Rep_observe Q (P : ptr → mpred) :
+  (* NOTE this is not exposed as a hint *)
+  Lemma as_Rep_observe P Q (o : forall p, Observe (P p) (Q p)) : Observe (as_Rep P) (as_Rep Q).
+  Proof. apply monPred_observe =>p; apply o. Qed.
+  Lemma as_Rep_observe_2 P Q R (o : forall p, Observe2 (P p) (Q p) (R p)) :
+    Observe2 (as_Rep P) (as_Rep Q) (as_Rep R).
+  Proof. apply monPred_observe_2=>p. apply o. Qed.
+
+  #[global] Instance as_Rep_only_provable_observe Q (P : ptr → mpred) :
     (∀ p, Observe [| Q |] (P p)) → Observe [| Q |] (as_Rep P).
   Proof.
     intros. apply monPred_observe=>p. by rewrite monPred_at_only_provable.
   Qed.
-  Global Instance as_Rep_observe_2 Q (P1 P2 : ptr → mpred) :
+  #[global] Instance as_Rep_only_provable_observe_2 Q (P1 P2 : ptr → mpred) :
     (∀ p, Observe2 [| Q |] (P1 p) (P2 p)) →
     Observe2 [| Q |] (as_Rep P1) (as_Rep P2).
   Proof.
@@ -98,20 +195,66 @@ Section with_cpp.
     (∀ p, f p |-- f p ** [| P |]) →
     as_Rep f |-- as_Rep f ** [| P |].
   Proof.
-    intros. apply observe_elim, as_Rep_observe=>p. exact: observe_intro.
+    intros. apply observe_elim, as_Rep_only_provable_observe =>p. exact: observe_intro.
   Qed.
+
+  Lemma as_Rep_and P Q : as_Rep (λ p, P p //\\ Q p) -|- as_Rep P //\\ as_Rep Q.
+  Proof. constructor=>p. by rewrite monPred_at_and. Qed.
+
+  Lemma as_Rep_or P Q : as_Rep (λ p, P p \\// Q p) -|- as_Rep P \\// as_Rep Q.
+  Proof. constructor=>p. by rewrite monPred_at_or. Qed.
+
+  Lemma as_Rep_wand P Q : as_Rep (λ p, P p -* Q p) -|- as_Rep P -* as_Rep Q.
+  Proof.
+    constructor=>p /=. split'.
+    - rewrite monPred_at_wand. iIntros "H" (p' ->%ptr_rel_elim) "/= P".
+      iApply ("H" with "P").
+    - apply monPred_wand_force.
+  Qed.
+
+  Lemma as_Rep_exist {T} (P : T -> ptr -> mpred) :
+    as_Rep (λ p, Exists x, P x p) -|- Exists x, as_Rep (P x).
+  Proof. constructor=>p /=. by rewrite monPred_at_exist. Qed.
+
+  Lemma as_Rep_forall {T} (P : T -> ptr -> mpred) :
+    as_Rep (λ p, Forall x, P x p) -|- Forall x, as_Rep (P x).
+  Proof. constructor=>p /=. by rewrite monPred_at_forall. Qed.
+
+  Lemma as_Rep_pers P : as_Rep (λ p, <pers> P p) -|- <pers> (as_Rep P).
+  Proof. constructor=>p /=. by rewrite monPred_at_persistently. Qed.
+
+  Lemma as_Rep_fupd P E1 E2 : as_Rep (λ p, |={E1,E2}=> P p) -|- |={E1,E2}=> as_Rep P.
+  Proof. constructor=>p /=. by rewrite monPred_at_fupd. Qed.
+
+  Lemma as_Rep_intuitionistically P : as_Rep (λ p, □ P p) -|- □ as_Rep P.
+  Proof. constructor=>p /=. by rewrite monPred_at_intuitionistically. Qed.
+
+  Lemma as_Rep_intuitionistically_if b P : as_Rep (λ p, □?b P p) -|- □?b as_Rep P.
+  Proof. constructor=>p /=. by rewrite monPred_at_intuitionistically_if. Qed.
+
+  Lemma as_Rep_except_0 P : as_Rep (λ p, bi_except_0 (P p)) -|- bi_except_0 (as_Rep P).
+  Proof. constructor=>p /=. by rewrite monPred_at_except_0. Qed.
+
+  Lemma as_Rep_affinely P : as_Rep (λ p, <affine> P p) -|- <affine> (as_Rep P).
+  Proof. constructor=>p /=. by rewrite monPred_at_affinely. Qed.
+
+  Lemma as_Rep_affinely_if b P : as_Rep (λ p, <affine>?b P p) -|- <affine>?b (as_Rep P).
+  Proof. constructor=>p /=. by rewrite monPred_at_affinely_if. Qed.
+
+  Lemma as_Rep_big_sepL {T} (l : list T) (F : nat -> T -> ptr -> mpred) :
+    as_Rep (λ p, [∗list] i ↦ x ∈ l, F i x p) -|- [∗list] i ↦ x ∈ l, as_Rep (F i x).
+  Proof. constructor=>p /=. by rewrite monPred_at_big_sepL. Qed.
+
+  Lemma as_Rep_later P : as_Rep (λ p, |> P p) -|- |> as_Rep P.
+  Proof. constructor=>p /=. by rewrite monPred_at_later. Qed.
 
   Lemma Rep_wand_force (R1 R2 : Rep) p : (R1 -* R2) p -|- R1 p -* R2 p.
   Proof. split'. apply monPred_wand_force. by iIntros "a" (? <-%ptr_rel_elim). Qed.
   Lemma Rep_impl_force (R1 R2 : Rep) p : (R1 -->> R2) p -|- R1 p -->> R2 p.
   Proof. split'. apply monPred_impl_force. by iIntros "a" (? <-%ptr_rel_elim). Qed.
-
-  Definition _offsetR_def (o : Offset) (r : Rep) : Rep :=
-    as_Rep (fun base =>
-              Exists to, _offset o base to ** r to).
-  Definition _offsetR_aux : seal (@_offsetR_def). Proof. by eexists. Qed.
-  Definition _offsetR := _offsetR_aux.(unseal).
-  Definition _offsetR_eq : @_offsetR = _ := _offsetR_aux.(seal_eq).
+  Lemma Rep_at_wand_iff (P Q : Rep) p :
+    (P ∗-∗ Q) p ⊣⊢ (P p ∗-∗ Q p).
+  Proof. by rewrite /bi_wand_iff monPred_at_and !Rep_wand_force. Qed.
 
   Global Instance _offsetR_ne o n : Proper (dist n ==> dist n) (_offsetR o).
   Proof. rewrite _offsetR_eq. solve_proper. Qed.
@@ -134,17 +277,94 @@ Section with_cpp.
     Timeless r → Timeless (_offsetR o r).
   Proof. rewrite _offsetR_eq. apply _. Qed.
 
+  Lemma _offsetR_emp o : _offsetR o emp ⊣⊢ emp.
+  Proof.
+    rewrite _offsetR_eq /_offsetR_def.
+    constructor=> p /=. by rewrite !monPred_at_emp.
+  Qed.
   Lemma _offsetR_sep o r1 r2 :
     _offsetR o (r1 ** r2) -|- _offsetR o r1 ** _offsetR o r2.
   Proof.
-    rewrite _offsetR_eq /_offsetR_def. rewrite -as_Rep_sep. f_equiv=>p.
-    apply (anti_symm _).
-    - iDestruct 1 as (to) "[#O [R1 R2]]".
-      iSplitL "R1"; iExists to; by iFrame "O".
-    - iDestruct 1 as "[R1 R2]".
-      iDestruct "R1" as (to1) "[#O1 R1]". iDestruct "R2" as (to2) "[#O2 R2]".
-      iDestruct (_off_functional _ _ to1 to2 with "[$]") as %->.
-      iExists to2. iFrame "O1 R1 R2".
+    rewrite _offsetR_eq /_offsetR_def -as_Rep_sep.
+    constructor=> p /=. by rewrite monPred_at_sep.
+  Qed.
+  Lemma _offsetR_pure (o : offset) (P : Prop) :
+    _offsetR o (bi_pure P) -|- bi_pure P.
+  Proof.
+    rewrite _offsetR_eq/_offsetR_def /=.
+    by constructor=> p/=; rewrite !monPred_at_pure.
+  Qed.
+
+  Lemma _offsetR_only_provable (o : offset) (P : Prop) :
+    _offsetR o [| P |] -|- [| P |].
+  Proof.
+    rewrite _offsetR_eq/_offsetR_def /=.
+    by constructor=> p/=; rewrite !monPred_at_only_provable.
+  Qed.
+
+  Lemma _offsetR_and (o : offset) P Q :
+    _offsetR o (P //\\ Q) -|- _offsetR o P //\\ _offsetR o Q.
+  Proof.
+    rewrite _offsetR_eq/_offsetR_def /=.
+    by constructor=> p/=; rewrite !monPred_at_and.
+  Qed.
+
+  Lemma _offsetR_or (o : offset) P Q :
+    _offsetR o (P \\// Q) -|- _offsetR o P \\// _offsetR o Q.
+  Proof.
+    rewrite _offsetR_eq/_offsetR_def /=.
+    by constructor=> p/=; rewrite !monPred_at_or.
+  Qed.
+
+  Lemma _offsetR_wand o (P Q : Rep) :
+      _offsetR o (P -* Q) -|- _offsetR o P -* _offsetR o Q.
+  Proof.
+    rewrite !_offsetR_eq /_offsetR_def /=.
+    constructor=> p/=. by rewrite !Rep_wand_force.
+  Qed.
+
+  Lemma _offsetR_exists o {T} (P : T -> Rep) :
+      _offsetR o (Exists v : T, P v) -|- Exists v, _offsetR o (P v).
+  Proof. by rewrite _offsetR_eq/_offsetR_def /as_Rep/=; constructor =>p; rewrite /= !monPred_at_exist. Qed.
+
+  Lemma _offsetR_forall o T (P : T -> Rep) :
+    _offsetR o (Forall x, P x) -|- Forall x, _offsetR o (P x).
+  Proof. by rewrite _offsetR_eq/_offsetR_def /as_Rep/=; constructor =>p; rewrite /= !monPred_at_forall. Qed.
+
+  Lemma _offsetR_pers o R : _offsetR o (<pers> R) -|- <pers> _offsetR o R.
+  Proof. by rewrite !_offsetR_eq /_offsetR_def /=; constructor=> p/=; rewrite !monPred_at_persistently. Qed.
+
+  Lemma _offsetR_fupd o R E1 E2 : _offsetR o (|={E1,E2}=> R) -|- |={E1,E2}=> _offsetR o R.
+  Proof. by rewrite _offsetR_eq/_offsetR_def /as_Rep; constructor => p /=; rewrite !monPred_at_fupd. Qed.
+
+  Lemma _offsetR_intuitionistically l (R : Rep) : _offsetR l (□ R) ⊣⊢ □ (_offsetR l R).
+  Proof. by rewrite _offsetR_eq/_offsetR_def; constructor => p /=; rewrite !monPred_at_intuitionistically. Qed.
+
+  Lemma _offsetR_intuitionistically_if o b R : □?b (_offsetR o R) -|- _offsetR o (□?b R).
+  Proof. by destruct b => /= //; rewrite _offsetR_intuitionistically. Qed.
+
+  Lemma _offsetR_except_0 o R : _offsetR o (bi_except_0 R) -|- bi_except_0 (_offsetR o R).
+  Proof. by rewrite _offsetR_eq/_offsetR_def; constructor => p /=; rewrite !monPred_at_except_0. Qed.
+
+  Lemma _offsetR_affinely (o : offset) R : _offsetR o (<affine> R) -|- <affine> _offsetR o R.
+  Proof. by rewrite _offsetR_eq/_offsetR_def /as_Rep; constructor => p/=; rewrite !monPred_at_affinely. Qed.
+
+  Lemma _offsetR_affinely_if b (o : offset) R : _offsetR o (<affine>?b R) -|- <affine>?b _offsetR o R.
+  Proof. by destruct b => //; rewrite _offsetR_affinely. Qed.
+
+
+  Lemma _offsetR_big_sepL (o : offset) {T} (Rs : list T) : forall F,
+    _offsetR o ([∗list] i ↦ x ∈ Rs , F i x) -|- [∗list] i ↦ x ∈ Rs , _offsetR o (F i x).
+  Proof.
+    induction Rs; simpl; intros.
+    - by rewrite _offsetR_emp.
+    - by rewrite _offsetR_sep IHRs.
+  Qed.
+
+  Lemma _offsetR_later o R : _offsetR o (|> R) -|- |> _offsetR o R.
+  Proof.
+    rewrite _offsetR_eq /_offsetR_def.
+    constructor=>p/=. by rewrite !monPred_at_later.
   Qed.
 
   Global Instance _offsetR_fractional o (r : Qp → Rep) :
@@ -154,221 +374,188 @@ Section with_cpp.
     Fractional r → AsFractional (_offsetR o (r q)) (λ q, _offsetR o (r q)) q.
   Proof. constructor. done. apply _. Qed.
 
-  Global Instance _offsetR_observe Q o (R : Rep) :
+  (* TODO: consider making this a global instance, but test performance impact. *)
+  Local Instance _offsetR_observe {o} {Q R : Rep} :
+    Observe Q R ->
+    Observe (_offsetR o Q) (_offsetR o R).
+  Proof. move->. by rewrite /Observe _offsetR_pers. Qed.
+
+  Local Instance _offsetR_observe_2 {o} {Q R1 R2 : Rep} :
+    Observe2 Q R1 R2 ->
+    Observe2 (_offsetR o Q) (_offsetR o R1) (_offsetR o R2).
+  Proof. move->. by rewrite /Observe2 _offsetR_wand _offsetR_pers. Qed.
+
+  Global Instance _offsetR_observe_only_provable Q o (R : Rep) :
     Observe [| Q |] R → Observe [| Q |] (_offsetR o R).
-  Proof. intros. rewrite _offsetR_eq. apply _. Qed.
-  Global Instance _offsetR_observe_2 Q o (R1 R2 : Rep) :
+  Proof. rewrite -{2}_offsetR_only_provable. apply _. Qed.
+  Global Instance _offsetR_observe_2_only_provable Q o (R1 R2 : Rep) :
     Observe2 [| Q |] R1 R2 → Observe2 [| Q |] (_offsetR o R1) (_offsetR o R2).
-  Proof.
-    intros Hobs. apply observe_uncurry. rewrite -_offsetR_sep.
-    apply _offsetR_observe, observe_curry, Hobs.
-  Qed.
+  Proof. rewrite -{2}_offsetR_only_provable. apply _. Qed.
 
   Lemma _offsetR_obs o r P :
     r |-- r ** [| P |] →
     _offsetR o r |-- _offsetR o r ** [| P |].
   Proof.
-    intros. apply observe_elim, _offsetR_observe. exact: observe_intro.
+    intros. apply observe_elim, _offsetR_observe_only_provable. exact: observe_intro.
+  Qed.
+  (* Pulled in from plogic. *)
+  Lemma _offsetR_id (R : Rep) :
+    _offsetR o_id R -|- R.
+  Proof.
+    rewrite _offsetR_eq /_offsetR_def.
+    constructor=>/= p.
+    by rewrite offset_ptr_id.
   Qed.
 
-  Definition _at_def (base : Loc) (P : Rep) : mpred :=
-    Exists a, base &~ a ** P a.
-  Definition _at_aux : seal (@_at_def). Proof. by eexists. Qed.
-  Definition _at := _at_aux.(unseal).
-  Definition _at_eq : @_at = _ := _at_aux.(seal_eq).
+  Lemma _offsetR_dot (o1 o2 : offset) (R : Rep) :
+    _offsetR o1 (_offsetR o2 R) -|- _offsetR (o_dot o1 o2) R.
+  Proof.
+    constructor =>p/=.
+    by rewrite _offsetR_eq/_offsetR_def/= offset_ptr_dot.
+  Qed.
 
-  Global Instance _at_ne l : Proper (dist n ==> dist n) (_at l).
+  Global Instance _at_ne l {n} : Proper (dist n ==> dist n) (_at l).
   Proof. rewrite _at_eq. solve_proper. Qed.
-  Global Instance _at_proper : Proper ((≡) ==> (≡) ==> (≡)) _at.
+  Global Instance _at_proper {p} : Proper ((≡) ==> (≡)) (_at p).
   Proof. rewrite _at_eq. solve_proper. Qed.
-  Global Instance _at_mono : Proper ((≡) ==> (⊢) ==> (⊢)) _at.
+  Global Instance _at_mono {p} : Proper ((⊢) ==> (⊢)) (_at p).
   Proof. rewrite _at_eq. solve_proper. Qed.
-  Global Instance _at_flip_mono : Proper ((≡) ==> flip (⊢) ==> flip (⊢)) _at.
-  Proof.
-    rewrite _at_eq/_at_def=>l1 l2 HL r1 r2 HR/=. f_equiv=>a. by rewrite HL HR.
-  Qed.
+  Global Instance _at_flip_mono {p} : Proper (flip (⊢) ==> flip (⊢)) (_at p).
+  Proof. rewrite _at_eq/_at_def=> r1 r2 HR/=. by rewrite HR. Qed.
 
-  Global Instance _at_persistent : Persistent P -> Persistent (_at base P).
+  Global Instance _at_persistent {P base} : Persistent P -> Persistent (_at base P).
   Proof. rewrite _at_eq. apply _. Qed.
-  Global Instance _at_affine : Affine P -> Affine (_at base P).
+  Global Instance _at_affine {P base} : Affine P -> Affine (_at base P).
   Proof. rewrite _at_eq. apply _. Qed.
-  Global Instance _at_timeless : Timeless P -> Timeless (_at base P).
+  Global Instance _at_timeless {P base} : Timeless P -> Timeless (_at base P).
   Proof. rewrite _at_eq. apply _. Qed.
 
-  Lemma _at_valid_loc : forall (l : Loc) R,
-      _at l R -|- _at l R ** valid_loc l.
-  Proof.
-    split'; last by iIntros "[$ _]".
-    rewrite _at_eq /_at_def valid_loc_eq /valid_loc_def addr_of_eq /addr_of_def /=.
-    iDestruct 1 as (a) "[#L R]". auto.
-  Qed.
-  Global Instance _at_valid_loc_observe l R : Observe (valid_loc l) (_at l R).
-  Proof. apply: observe_intro. by rewrite -_at_valid_loc. Qed.
+  Lemma Rep_equiv_at (P Q : Rep)
+    (HPQ : forall p : ptr, _at p P -|- _at p Q) :
+    P -|- Q.
+  Proof. constructor => p. move: HPQ => /(_ p). by rewrite _at_eq. Qed.
 
-  Lemma _at_loc_rw : forall (l1 l2 : Loc) (R : Rep),
-      Loc_impl l1 l2 ** _at l1 R |-- _at l2 R.
-  Proof.
-    intros. rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
-    iIntros "[#H L]"; iDestruct "L" as (l) "[L R]".
-    iExists _; iFrame "#∗".
-    by iApply "H".
-  Qed.
+  Lemma Rep_entails_at (P Q : Rep)
+    (HPQ : forall p : ptr, _at p P |-- _at p Q) :
+    P |-- Q.
+  Proof. constructor => p. move: HPQ => /(_ p). by rewrite _at_eq. Qed.
 
-  Lemma _at_loc_rwe : forall (l1 l2 : Loc) (R : Rep),
-      Loc_equiv l1 l2 |-- (_at l1 R ∗-∗ _at l2 R).
-  Proof.
-    intros. iIntros "#A".
-    iSplit; iIntros "B";
-      iApply _at_loc_rw; iFrame;
-      iIntros "!>" (l) "H"; by iApply "A".
-  Qed.
+  Lemma _at_as_Rep (l : ptr) (Q : ptr → mpred) : _at l (as_Rep Q) ⊣⊢ Q l.
+  Proof. by rewrite _at_eq/_at_def. Qed.
 
-  Lemma _at_loc_materialize : forall (l : Loc) (r : Rep),
-      _at l r -|- Exists a, l &~ a ** r a.
-  Proof.
-    intros. by rewrite _at_eq /_at_def path_pred.addr_of_eq /addr_of_def.
-  Qed.
+  (* Prefer [_at_as_Rep] *)
+  Lemma _at_loc p R : _at p R -|- R p.
+  Proof. by rewrite _at_eq/_at_def. Qed.
 
-  Lemma addr_of_valid_loc : forall l a,
-      l &~ a |-- valid_loc l.
-  Proof. intros. rewrite valid_loc_eq /valid_loc_def. eauto. Qed.
+  Lemma _at_emp l : _at l emp -|- emp.
+  Proof. by rewrite _at_loc monPred_at_emp. Qed.
 
-  Global Instance addr_of_observe_valid_loc l p :
-    Observe (valid_loc l) (l &~ p).
-  Proof. apply: observe_intro_persistent. apply addr_of_valid_loc. Qed.
-
-  Lemma valid_loc_equiv : forall l, valid_loc l -|- Exists p, l &~ p.
-  Proof. by rewrite valid_loc_eq. Qed.
-
-  Lemma _at_emp : forall l, _at l emp -|- valid_loc l.
-  Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv.
-    setoid_rewrite monPred_at_emp.
-    by setoid_rewrite bi.sep_emp.
-  Qed.
-
-  Lemma _at_exists : forall (l : Loc) T (P : T -> Rep),
+  Lemma _at_exists l {T} (P : T -> Rep) :
       _at l (Exists v : T, P v) -|- Exists v, _at l (P v).
-  Proof.
-    intros. rewrite _at_eq /_at_def /=.
-    setoid_rewrite monPred_at_exist. setoid_rewrite bi.sep_exist_l.
-    by rewrite bi.exist_exist.
-  Qed.
+  Proof. by rewrite _at_loc monPred_at_exist; setoid_rewrite _at_loc. Qed.
 
-  Lemma _at_forall : forall (l : Loc) T (P : T -> Rep),
-    _at l (Forall x, P x) |-- Forall x, _at l (P x).
-  Proof.
-    intros. rewrite _at_eq /_at_def /=.
-    setoid_rewrite monPred_at_forall. setoid_rewrite bi.sep_forall_l.
-    by rewrite bi.exist_forall.
-  Qed.
+  Lemma _at_forall (l : ptr) T (P : T -> Rep) :
+    _at l (Forall x, P x) -|- Forall x, _at l (P x).
+  Proof. by rewrite _at_loc monPred_at_forall; setoid_rewrite _at_loc. Qed.
 
-  Lemma _at_only_provable : forall (l : Loc) (P : Prop),
-      _at l [| P |] -|- [| P |] ** valid_loc l.
-  Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
-    setoid_rewrite monPred_at_only_provable.
-    by setoid_rewrite bi.sep_comm at 1.
-  Qed.
+  Lemma _at_only_provable l P :
+      _at l [| P |] -|- [| P |].
+  Proof. by rewrite _at_loc monPred_at_only_provable. Qed.
 
-  Lemma _at_pure : forall (l : Loc) (P : Prop),
-      _at l ([! P !]) -|- [! P !] ** valid_loc l.
-  Proof.
-    intros. rewrite _at_loc_materialize valid_loc_equiv bi.sep_exist_l.
-    setoid_rewrite monPred_at_pure.
-    by setoid_rewrite bi.sep_comm at 1.
-  Qed.
+  Lemma _at_pure (l : ptr) (P : Prop) :
+      _at l [! P !] -|- [! P !].
+  Proof. by rewrite _at_loc monPred_at_pure. Qed.
 
-  Lemma _at_sep (l : Loc) (P Q : Rep) :
+  Lemma _at_sep (l : ptr) (P Q : Rep) :
       _at l (P ** Q) -|- _at l P ** _at l Q.
+  Proof. by rewrite !_at_loc monPred_at_sep. Qed.
+
+  Lemma _at_and (l : ptr) (P Q : Rep) :
+      _at l (P //\\ Q) -|- _at l P //\\ _at l Q.
+  Proof. by rewrite !_at_loc monPred_at_and. Qed.
+
+  Lemma _at_or (l : ptr) (P Q : Rep) :
+      _at l (P \\// Q) -|- _at l P \\// _at l Q.
+  Proof. by rewrite !_at_loc monPred_at_or. Qed.
+
+  Lemma _at_wand (l : ptr) (P Q : Rep) :
+      _at l (P -* Q) -|- _at l P -* _at l Q.
+  Proof. by rewrite !_at_loc Rep_wand_force. Qed.
+
+  Lemma _at_pers (l : ptr) R : _at l (<pers> R) -|- <pers> _at l R.
+  Proof. by rewrite !_at_loc monPred_at_persistently. Qed.
+
+  Lemma _at_fupd (l : ptr) R E1 E2 : _at l (|={E1,E2}=> R) -|- |={E1,E2}=> _at l R.
+  Proof. by rewrite !_at_loc monPred_at_fupd. Qed.
+
+  Lemma _at_intuitionistically l (R : Rep) : _at l (□ R) ⊣⊢ □ (_at l R).
+  Proof. by rewrite _at_eq/_at_def monPred_at_intuitionistically. Qed.
+  Lemma _at_intuitionistically_if p b R : □?b (_at p R) -|- _at p (□?b R).
+  Proof. destruct b => /= //. by rewrite _at_intuitionistically. Qed.
+
+  Lemma _at_except_0 p R : _at p (bi_except_0 R) -|- bi_except_0 (_at p R).
+  Proof. by rewrite _at_eq/_at_def monPred_at_except_0. Qed.
+
+  Lemma _at_affinely (p : ptr) R : _at p (<affine> R) -|- <affine> _at p R.
+  Proof. by rewrite _at_eq/_at_def monPred_at_affinely. Qed.
+
+  Lemma _at_affinely_if b (p : ptr) R : _at p (<affine>?b R) -|- <affine>?b _at p R.
+  Proof. by destruct b => //; rewrite _at_eq/_at_def monPred_at_affinely. Qed.
+
+  Lemma _at_later p R : _at p (|> R) -|- |> _at p R.
+  Proof. by rewrite _at_eq/_at_def monPred_at_later. Qed.
+
+  Lemma _at_offsetR (l : ptr) (o : offset) (r : Rep) :
+      _at l (_offsetR o r) -|- _at (_offset_ptr l o) r.
+  Proof. by rewrite !_at_loc /flip _offsetR_eq/_offsetR_def /=. Qed.
+
+  Lemma _at_sepSPs l (xs : list Rep) : _at l ([∗] xs) -|- [∗] map (_at l) xs.
   Proof.
-    rewrite !_at_loc_materialize.
-    setoid_rewrite monPred_at_sep.
-    split'.
-    { iDestruct 1 as (p) "[#X [L R]]". iSplitL "L"; eauto. }
-    { iIntros "[A B]"; iDestruct "A" as (p) "[#LA A]"; iDestruct "B" as (p') "[#LB B]".
-      iExists _; iFrame "#∗".
-      iDestruct (addr_of_precise with "[LA LB]") as %H;
-        [ iSplit; [ iApply "LA" | iApply "LB" ] | ].
-      subst; eauto. }
+    induction xs => /=.
+    - by rewrite _at_emp.
+    - by rewrite _at_sep IHxs.
   Qed.
 
-  Lemma _at_wand (l : Loc) (P Q : Rep) :
-      _at l (P -* Q) |-- (_at l P -* _at l Q) ** valid_loc l.
+  Lemma _at_big_sepL A l : forall (xs : list A) (Φ : nat -> A -> Rep),
+      _at l ([∗ list] i↦x∈xs, Φ i x) -|- ([∗ list] i↦x∈xs, _at l (Φ i x)).
   Proof.
-    rewrite !_at_loc_materialize.
-    iDestruct 1 as (a) "[#L X]".
-    rewrite monPred_wand_force.
-    iSplitR "L"; [ | by iApply addr_of_valid_loc ].
-    iDestruct 1 as (aa) "[#L' P]".
-    iExists _.
-    iSplitR.
-    2:{ iApply "X".
-        rewrite path_pred.addr_of_eq.
-        by iDestruct (_loc_unique _ _ aa with "[$L $L']") as %->. }
-    iAssumption.
+    elim => /=.
+    - move => ?; by rewrite _at_emp.
+    - move => x xs IH ?. by rewrite _at_sep IH.
   Qed.
 
-  Lemma _at_pers (l : Loc) R : _at l (<pers> R) |-- <pers> _at l R.
-  Proof.
-    rewrite !_at_loc_materialize.
-    iIntros "z"; iDestruct "z" as (a) "[#b c]"; iExists a; iFrame.
-    rewrite monPred_at_persistently.
-      by iSplitL "b".
-  Qed.
-
-  Lemma _at_fupd (l : Loc) R E1 E2 : _at l (|={E1,E2}=> R) |-- |={E1,E2}=> _at l R.
-  Proof.
-    rewrite _at_eq/_at_def.
-    setoid_rewrite monPred_at_fupd.
-    iIntros "a".
-    iDestruct "a" as (a) "[? >c]".
-    iModIntro; iExists a; iFrame.
-  Qed.
-
-  Lemma _at_offsetL_offsetR (l : Loc) (o : Offset) (r : Rep) :
-      _at l (_offsetR o r) -|- _at (_offsetL o l) r.
-  Proof.
-    rewrite !_at_loc_materialize.
-    rewrite _offsetR_eq _offsetL_eq path_pred.addr_of_eq
-            /addr_of_def /_offsetR_def /_offsetL_def;
-    split'; simpl.
-    { iDestruct 1 as (a) "[#L X]"; iDestruct "X" as (to) "[O R]". eauto. }
-    { iDestruct 1 as (a) "[X R]"; iDestruct "X" as (from) "[#O L]". eauto. }
-  Qed.
-
-  Global Instance _at_fractional (r : Qp → Rep) (l : Loc) `{!Fractional r} :
+  Global Instance _at_fractional (r : Qp → Rep) (l : ptr) `{!Fractional r} :
     Fractional (λ q, _at l (r q)).
   Proof.
-    intros q1 q2.
-    rewrite fractional _at_sep. reflexivity.
+    intros q1 q2; by rewrite fractional _at_sep.
   Qed.
-  Global Instance _at_as_fractional (r : Qp → Rep) q (l : Loc)
+  Global Instance _at_as_fractional (r : Qp → Rep) q (l : ptr)
       `{!AsFractional (r q) r q} :
     AsFractional (_at l (r q)) (λ q, _at l (r q)) q.
   Proof. constructor. done. apply _. Qed.
 
+  (* TODO: consider making this a global instance, but test performance impact. *)
+  Local Instance _at_observe {p} {Q R : Rep} :
+    Observe Q R ->
+    Observe (_at p Q) (_at p R).
+  Proof. move->. by rewrite /Observe _at_pers. Qed.
+
+  Local Instance _at_observe_2 {p} {Q R1 R2 : Rep} :
+    Observe2 Q R1 R2 ->
+    Observe2 (_at p Q) (_at p R1) (_at p R2).
+  Proof. move->. by rewrite /Observe2 _at_wand _at_pers. Qed.
+
   Global Instance _at_observe_only_provable Q l (R : Rep) :
     Observe [| Q |] R → Observe [| Q |] (_at l R).
-  Proof. rewrite _at_eq. apply _. Qed.
+  Proof. rewrite -_at_only_provable. apply _. Qed.
   Global Instance _at_observe_2_only_provable Q l (R1 R2 : Rep) :
     Observe2 [| Q |] R1 R2 → Observe2 [| Q |] (_at l R1) (_at l R2).
-  Proof.
-    intros Hobs. apply observe_uncurry. rewrite -_at_sep.
-    apply _at_observe_only_provable, observe_curry, Hobs.
-  Qed.
+  Proof. rewrite -_at_only_provable. apply _. Qed.
 
-  Lemma _at_obs (l : Loc) (r : Rep) P :
+  Lemma _at_obs (l : ptr) (r : Rep) P :
     r |-- r ** [| P |] →
     _at l r |-- _at l r ** [| P |].
   Proof. intros. apply observe_elim, _at_observe_only_provable. exact: observe_intro. Qed.
-
-  (** Values
-   * These `Rep` predicates wrap `ptsto` facts
-   *)
-  (* todo(gmm): make opaque *)
-  Definition pureR (P : mpred) : Rep :=
-    as_Rep (fun _ => P).
 
   Global Instance pureR_ne : NonExpansive pureR.
   Proof. solve_proper. Qed.
@@ -411,8 +598,55 @@ Section with_cpp.
     - constructor=>p. by rewrite monPred_at_only_provable.
   Qed.
 
+  Lemma pureR_emp : pureR emp -|- emp.
+  Proof. exact: as_Rep_emp. Qed.
   Lemma pureR_sep (P Q : mpred) : pureR (P ** Q) -|- pureR P ** pureR Q.
   Proof. exact: as_Rep_sep. Qed.
+
+  Lemma pureR_and (P Q : mpred) : pureR (P //\\ Q) -|- pureR P //\\ pureR Q.
+  Proof. exact: as_Rep_and. Qed.
+
+  Lemma pureR_or (P Q : mpred) : pureR (P \\// Q) -|- pureR P \\// pureR Q.
+  Proof. exact: as_Rep_or. Qed.
+
+  Lemma pureR_wand (P Q : mpred) : pureR (P -* Q) -|- pureR P -* pureR Q.
+  Proof. exact: as_Rep_wand. Qed.
+
+  Lemma pureR_exist {T} (P : T -> mpred) :
+    pureR (Exists x, P x) -|- Exists x, pureR (P x).
+  Proof. exact: as_Rep_exist. Qed.
+
+  Lemma pureR_forall {T} (P : T -> mpred) :
+    pureR (Forall x, P x) -|- Forall x, pureR (P x).
+  Proof. exact: as_Rep_forall. Qed.
+
+  Lemma pureR_pers (P : mpred) : pureR (<pers> P) -|- <pers> pureR P.
+  Proof. exact: as_Rep_pers. Qed.
+
+  Lemma pureR_fupd (P : mpred) E1 E2 : pureR (|={E1,E2}=> P) -|- |={E1,E2}=> pureR P.
+  Proof. exact: as_Rep_fupd. Qed.
+
+  Lemma pureR_intuitionistically (P : mpred) : pureR (□ P) -|- □ pureR P.
+  Proof. exact: as_Rep_intuitionistically. Qed.
+
+  Lemma pureR_intuitionistically_if b (P : mpred) : pureR (□?b P) -|- □?b pureR P.
+  Proof. exact: as_Rep_intuitionistically_if. Qed.
+
+  Lemma pureR_except_0 (P : mpred) : pureR (bi_except_0 P) -|- bi_except_0 (pureR P).
+  Proof. exact: as_Rep_except_0. Qed.
+
+  Lemma pureR_affinely (P : mpred) : pureR (<affine> P) -|- <affine> pureR P.
+  Proof. exact: as_Rep_affinely. Qed.
+
+  Lemma pureR_affinely_if b (P : mpred) : pureR (<affine>?b P) -|- <affine>?b pureR P.
+  Proof. exact: as_Rep_affinely_if. Qed.
+
+  Lemma pureR_big_sepL {T} (l : list T) F :
+    pureR ([∗list] i ↦ x ∈ l , F i x) -|- [∗list] i ↦ x ∈ l , pureR (F i x).
+  Proof. exact: as_Rep_big_sepL. Qed.
+
+  Lemma pureR_later (P : mpred) : pureR (|> P) -|- |> pureR P.
+  Proof. exact: as_Rep_later. Qed.
 
   Global Instance pureR_observe Q (P : mpred) :
     Observe [| Q |] P → Observe [| Q |] (pureR P).
@@ -437,35 +671,38 @@ Section with_cpp.
   Definition pureR_True : pureR True ⊣⊢ True := pureR_pure _.
   Definition pureR_False : pureR False ⊣⊢ False := pureR_pure _.
 
-  Lemma _at_pureR : forall x (P : mpred),
-      _at x (pureR P) -|- P ** valid_loc x.
-  Proof.
-    intros. rewrite _at_loc_materialize/= valid_loc_equiv bi.sep_exist_l.
-    by setoid_rewrite bi.sep_comm at 1.
-  Qed.
+  Lemma _at_pureR x (P : mpred) : _at x (pureR P) -|- P.
+  Proof. by rewrite !_at_loc /pureR. Qed.
+
+  Lemma _offsetR_pureR o P : _offsetR o (pureR P) -|- pureR P.
+  Proof. by apply Rep_equiv_at => p; rewrite _at_offsetR !_at_pureR. Qed.
 
   (** As this isn't syntax-directed, we conservatively avoid
       registering it as an instance (which could slow down
       observations). It's handy under [Local Existing Instance
       _at_observe_pureR] to project a [pureR Q] conjunct out of
       representation predicates. *)
-  Lemma _at_observe_pureR Q (l : Loc) (R : Rep) :
+  Lemma _at_observe_pureR Q (l : ptr) (R : Rep) :
     Observe (pureR Q) R → Observe Q (_at l R).
   Proof.
-    rewrite /Observe=>->. rewrite -pureR_persistently _at_pureR.
-    exact: bi.sep_elim_l.
+    rewrite /Observe=>->. rewrite -pureR_persistently _at_pureR. done.
   Qed.
 
-  (** [primR]: the argument pointer points to an initialized value [v] of C++ type [ty]. *)
+  (** [primR ty q v]: the argument pointer points to an initialized value [v] of C++ type [ty].
+   *
+   * NOTE [ty] *must* be a primitive type.
+   *)
   Definition primR_def {resolve:genv} (ty : type) (q : Qp) (v : val) : Rep :=
-    as_Rep (fun addr => @tptsto _ _ resolve ty q addr v ** [| has_type v (drop_qualifiers ty) |]).
+    as_Rep (fun addr => tptsto ty q addr v ** [| has_type v (drop_qualifiers ty) |]).
+  (** TODO what is the current status of [has_type] and [Vundef]? Does it have all types? No types?
+   *)
   Definition primR_aux : seal (@primR_def). Proof. by eexists. Qed.
   Definition primR := primR_aux.(unseal).
   Definition primR_eq : @primR = _ := primR_aux.(seal_eq).
-  Arguments primR {resolve} ty q v : rename.
+  Global Arguments primR {resolve} ty q v : rename.
 
   Global Instance primR_proper :
-    Proper (genv_eq ==> (=) ==> (=) ==> (=) ==> lequiv) (@primR).
+    Proper (genv_eq ==> (=) ==> (=) ==> (=) ==> (⊣⊢)) (@primR).
   Proof.
     intros σ1 σ2 Hσ ??-> ??-> ??->.
     rewrite primR_eq/primR_def. by setoid_rewrite Hσ.
@@ -477,32 +714,32 @@ Section with_cpp.
     rewrite primR_eq/primR_def. by setoid_rewrite Hσ.
   Qed.
 
-  Global Instance primR_affine resolve ty q p
-    : Affine (primR (resolve:=resolve) ty q p).
+  Global Instance primR_affine resolve ty q v
+    : Affine (primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
-  Global Instance primR_timeless resolve ty q p
-    : Timeless (primR (resolve:=resolve) ty q p).
+  Global Instance primR_timeless resolve ty q v
+    : Timeless (primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
 
   Global Instance primR_fractional resolve ty v :
-    Fractional (λ q, primR (resolve:=resolve) ty q v).
+    Fractional (λ q, primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
   Global Instance primR_as_fractional resolve ty q v :
-    AsFractional (primR (resolve:=resolve) ty q v) (λ q, primR (resolve:=resolve) ty q v) q.
+    AsFractional (primR ty q v) (λ q, primR ty q v) q.
   Proof. constructor. done. apply _. Qed.
 
   Global Instance primR_observe_frac_valid resolve ty (q : Qp) v :
-    Observe [| q ≤ 1 |]%Qc (primR (resolve:=resolve) ty q v).
+    Observe [| q ≤ 1 |]%Qp (primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
 
   Global Instance primR_observe_agree resolve ty q1 q2 v1 v2 :
     Observe2 [| v1 = v2 |]
-      (primR (resolve:=resolve) ty q1 v1)
-      (primR (resolve:=resolve) ty q2 v2).
+      (primR ty q1 v1)
+      (primR ty q2 v2).
   Proof. rewrite primR_eq. apply _. Qed.
 
   Global Instance primR_observe_has_type resolve ty q v :
-    Observe [| has_type v (drop_qualifiers ty) |] (primR (resolve:=resolve) ty q v).
+    Observe [| has_type v (drop_qualifiers ty) |] (primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
 
   Lemma primR_has_type {σ} ty q v :
@@ -511,106 +748,114 @@ Section with_cpp.
   Proof. apply: observe_elim. Qed.
 
   (**
-  [uninitR]: the argument pointer points to an uninitialized value [Vundef] of C++ type [ty].
-  Unlike [primR], does not imply [has_type]. *)
-  Definition uninit_def {resolve:genv} (ty : type) (q : Qp) : Rep :=
+     [uninitR ty q]: the argument pointer points to an uninitialized value [Vundef] of C++ type [ty].
+     Unlike [primR], does not imply [has_type].
+
+     NOTE the [ty] argument *must* be a primitive type.
+
+     TODO is it possible to generalize this to support aggregate types? structures seem easy enough
+          but unions seem more difficult, possibly we can achieve that through the use of disjunction?
+   *)
+  Definition uninitR_def {resolve:genv} (ty : type) (q : Qp) : Rep :=
     as_Rep (fun addr => @tptsto _ _ resolve ty q addr Vundef).
-  Definition uninit_aux : seal (@uninit_def). Proof. by eexists. Qed.
-  Definition uninitR := uninit_aux.(unseal).
-  Definition uninit_eq : @uninitR = _ := uninit_aux.(seal_eq).
-  Arguments uninitR {resolve} ty q : rename.
+  Definition uninitR_aux : seal (@uninitR_def). Proof. by eexists. Qed.
+  Definition uninitR := uninitR_aux.(unseal).
+  Definition uninitR_eq : @uninitR = _ := uninitR_aux.(seal_eq).
+  Global Arguments uninitR {resolve} ty q : rename.
 
   Global Instance uninitR_proper
     : Proper (genv_eq ==> (=) ==> (=) ==> (=) ==> lequiv) (@uninitR).
   Proof.
     intros σ1 σ2 Hσ ??-> ??-> ??->.
-    rewrite uninit_eq/uninit_def. by setoid_rewrite Hσ.
+    rewrite uninitR_eq/uninitR_def. by setoid_rewrite Hσ.
   Qed.
   Global Instance uninitR_mono
     : Proper (genv_leq ==> (=) ==> (=) ==> (=) ==> lentails) (@uninitR).
   Proof.
     intros σ1 σ2 Hσ ??-> ??-> ??->.
-    rewrite uninit_eq/uninit_def. by setoid_rewrite Hσ.
+    rewrite uninitR_eq/uninitR_def. by setoid_rewrite Hσ.
   Qed.
 
   Global Instance uninitR_affine resolve ty q
-    : Affine (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+    : Affine (uninitR ty q).
+  Proof. rewrite uninitR_eq. apply _. Qed.
   Global Instance uninitR_timeless resolve ty q
-    : Timeless (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+    : Timeless (uninitR ty q).
+  Proof. rewrite uninitR_eq. apply _. Qed.
 
   Global Instance uninitR_fractional resolve ty :
-    Fractional (uninitR (resolve:=resolve) ty).
-  Proof. rewrite uninit_eq. apply _. Qed.
+    Fractional (uninitR ty).
+  Proof. rewrite uninitR_eq. apply _. Qed.
   Global Instance unintR_as_fractional resolve ty q :
-    AsFractional (uninitR (resolve:=resolve) ty q) (uninitR (resolve:=resolve) ty) q.
+    AsFractional (uninitR ty q) (uninitR ty) q.
   Proof. constructor. done. apply _. Qed.
 
   Global Instance uninitR_observe_frac_valid resolve ty (q : Qp) :
-    Observe [| q ≤ 1 |]%Qc (uninitR (resolve:=resolve) ty q).
-  Proof. rewrite uninit_eq. apply _. Qed.
+    Observe [| q ≤ 1 |]%Qp (uninitR ty q).
+  Proof. rewrite uninitR_eq. apply _. Qed.
 
   (** This seems odd, but it's relevant to proof that [anyR] is fractional. *)
   Lemma primR_uninitR {resolve} ty q1 q2 v :
-    primR (resolve:=resolve) ty q1 v |--
-    uninitR (resolve:=resolve) ty q2 -*
-    primR (resolve:=resolve) ty (q1 + q2) Vundef.
+    primR ty q1 v |--
+    uninitR ty q2 -*
+    primR ty (q1 + q2) Vundef.
   Proof.
-    rewrite primR_eq/primR_def uninit_eq/uninit_def. constructor=>p /=.
+    rewrite primR_eq/primR_def uninitR_eq/uninitR_def. constructor=>p /=.
     rewrite monPred_at_wand. iIntros "[T1 %]" (? <-%ptr_rel_elim) "/= T2".
     iDestruct (observe_2 [|v = Vundef|] with "T1 T2") as %->. iFrame "T1 T2 %".
   Qed.
 
   (** [anyR] The argument pointers points to a value of C++ type [ty] that might be
-  uninitialized. *)
+      uninitialized.
+
+      TODO generalize this to support aggregate types
+   *)
   Definition anyR_def {resolve} (ty : type) (q : Qp) : Rep :=
-    as_Rep (fun addr => (Exists v, (primR (resolve:=resolve) ty q v) addr) \\//
-                                 (uninitR (resolve:=resolve) ty q) addr).
+    (Exists v, primR ty q v) \\// uninitR ty q.
   Definition anyR_aux : seal (@anyR_def). Proof. by eexists. Qed.
   Definition anyR := anyR_aux.(unseal).
   Definition anyR_eq : @anyR = _ := anyR_aux.(seal_eq).
-  Arguments anyR {resolve} ty q : rename.
+  Global Arguments anyR {resolve} ty q : rename.
 
-  Global Instance anyR_affine resolve ty q : Affine (anyR (resolve:=resolve) ty q).
+  Global Instance anyR_affine resolve ty q : Affine (anyR ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
-  Global Instance anyR_timeless resolve ty q : Timeless (anyR (resolve:=resolve) ty q).
+  Global Instance anyR_timeless resolve ty q : Timeless (anyR ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
   Global Instance anyR_fractional resolve ty :
-    Fractional (anyR (resolve:=resolve) ty).
+    Fractional (anyR ty).
   Proof.
     rewrite anyR_eq /anyR_def. intros q1 q2.
-    rewrite -as_Rep_sep. f_equiv=>p. split'.
+    apply Rep_equiv_at => p. rewrite !_at_sep !_at_or !_at_exists.
+    split'.
     { iDestruct 1 as "[V|U]".
-      - iDestruct "V" as (v) "[V1 V2]".
-        iSplitL "V1"; iLeft; iExists v; [iFrame "V1"|iFrame "V2"].
+      - rewrite -!bi.or_intro_l.
+        iDestruct "V" as (v) "V".
+        rewrite _at_eq/_at_def.
+        iDestruct "V" as "[V1 V2]".
+        iSplitL "V1"; iExists v; [iFrame "V1"|iFrame "V2"].
       - iDestruct "U" as "[U1 U2]".
         iSplitL "U1"; iRight; [iFrame "U1"|iFrame "U2"]. }
     iDestruct 1 as "[[V1|U1] [V2|U2]]".
     - iDestruct "V1" as (v1) "V1". iDestruct "V2" as (v2) "V2".
       iDestruct (observe_2 [| v1 = v2 |] with "V1 V2") as %->.
-      iLeft. iExists v2. rewrite primR_fractional monPred_at_sep. iFrame "V1 V2".
+      iLeft. iExists v2. rewrite primR_fractional _at_sep. iFrame "V1 V2".
     - iDestruct "V1" as (v) "V1".
+      rewrite _at_eq/_at_def.
       iDestruct (primR_uninitR with "V1 U2") as "V".
       iLeft. iExists _. iFrame "V".
     - iDestruct "V2" as (v) "V2".
+      rewrite _at_eq/_at_def.
       iDestruct (primR_uninitR with "V2 U1") as "V".
       iLeft. iExists _. rewrite comm_L. iFrame "V".
-    - iRight. rewrite uninitR_fractional monPred_at_sep. iFrame "U1 U2".
+    - iRight. rewrite uninitR_fractional _at_sep. iFrame "U1 U2".
   Qed.
   Global Instance anyR_as_fractional resolve ty q :
-    AsFractional (anyR (resolve:=resolve) ty q) (anyR (resolve:=resolve) ty) q.
+    AsFractional (anyR ty q) (anyR ty) q.
   Proof. exact: Build_AsFractional. Qed.
 
   Global Instance anyR_observe_frac_valid resolve ty (q : Qp) :
-    Observe [| q ≤ 1 |]%Qc (anyR (resolve:=resolve) ty q).
+    Observe [| q ≤ 1 |]%Qp (anyR ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
-
-  Definition refR_def (ty : type) (p : ptr) : Rep :=
-    as_Rep (fun addr => [| addr = p |]).
-  Definition refR_aux : seal (@refR_def). Proof. by eexists. Qed.
-  Definition refR := refR_aux.(unseal).
-  Definition refR_eq : @refR = _ := refR_aux.(seal_eq).
 
   Global Instance refR_persistent ty p : Persistent (refR ty p).
   Proof. rewrite refR_eq. apply _. Qed.
@@ -619,35 +864,97 @@ Section with_cpp.
   Global Instance refR_timeless ty p : Timeless (refR ty p).
   Proof. rewrite refR_eq. apply _. Qed.
 
-  (* this is the core definition that everything will be based on.
-     it is really an assertion about assembly
-   *)
-  Definition cptr_def {resolve : genv} (fs : function_spec) : Rep :=
-    as_Rep (fun p =>
-         Forall (ti : thread_info), □ (Forall vs Q,
-         [| List.length vs = List.length fs.(fs_arguments) |] -*
-         fs.(fs_spec) ti vs Q -*
-         fspec resolve.(genv_tu).(globals) (type_of_spec fs) ti (Vptr p) vs Q)).
-  Definition cptr_aux : seal (@cptr_def). Proof. by eexists. Qed.
-  Definition cptr := cptr_aux.(unseal).
-  Definition cptr_eq : @cptr = _ := cptr_aux.(seal_eq).
+  #[global] Instance cptrR_persistent {resolve s} : Persistent (cptrR s).
+  Proof. rewrite cptrR_eq. apply _. Qed.
 
-  Global Instance cptr_persistent {resolve} : Persistent (cptr resolve s).
-  Proof. rewrite cptr_eq. apply _. Qed.
+  (* TODO: Proper wrt [genv_leq]. *)
+  #[global] Instance cptrR_mono {resolve} : Proper (flip fs_entails ==> (⊢)) cptrR.
+  Proof.
+    intros ??; rewrite /flip /fs_entails /fs_impl cptrR_eq/cptrR_def; intros Heq.
+    constructor => p /=.
+    f_equiv=>ti; f_equiv; f_equiv => vs; f_equiv => Q.
+    iIntros "Hcptr -> Hy".
+    iDestruct Heq as "(%Hspec & #Hyx)"; rewrite Hspec.
+    iApply ("Hcptr" with "[%] (Hyx Hy)").
+    exact: length_type_of_spec.
+  Qed.
 
-  (** object identity *)
-  Definition _identity (σ : genv) (cls : globname) (mdc : option globname)
-             (q : Qp) : Rep :=
-    as_Rep (@identity _ _ σ cls mdc q).
-  (** cpp2v-core#194: [Fractional], [AsFractional], [Timeless]? *)
-  (** cpp2v-core#194: The fraction is valid? Agreement? *)
+  #[global] Instance cptrR_flip_mono {resolve} : Proper (fs_entails ==> flip (⊢)) cptrR.
+  Proof. by intros ?? <-. Qed.
 
-  Definition _type_ptr (σ : genv) (ty : type) :=
-    as_Rep (@type_ptr _ _ σ ty).
-  Global Instance _type_ptr_persistent σ ty : Persistent (_type_ptr σ ty).
-  Proof. apply _. Qed.
+  #[global] Instance cptrR_proper {resolve} : Proper ((≡) ==> (⊣⊢)) cptrR.
+  Proof.
+    intros ? ? [H1 H2]%function_spec_equiv_split; iSplit; iIntros.
+    - by rewrite -H2.
+    - by rewrite -H1.
+  Qed.
+End with_cpp.
+
+Typeclasses Opaque _at _offsetR primR.
+Global Opaque _at _offsetR primR.
+
+Typeclasses Opaque pureR.
+Typeclasses Opaque as_Rep.
+
+Section with_cpp.
+  Context `{Σ : cpp_logic}.
 
   (********************* DERIVED CONCEPTS ****************************)
+  #[global] Instance validR_persistent : Persistent validR.
+  Proof. rewrite validR_eq; refine _. Qed.
+  #[global] Instance validR_timeless : Timeless validR.
+  Proof. rewrite validR_eq; refine _. Qed.
+  #[global] Instance validR_affine : Affine validR.
+  Proof. rewrite validR_eq; refine _. Qed.
+
+  Lemma monPred_at_validR p : validR p -|- valid_ptr p.
+  Proof. by rewrite validR_eq. Qed.
+  Lemma _at_validR (p : ptr) : _at p validR -|- valid_ptr p.
+  Proof. by rewrite validR_eq _at_eq. Qed.
+
+  #[global] Instance svalidR_persistent : Persistent svalidR.
+  Proof. rewrite svalidR_eq; refine _. Qed.
+  #[global] Instance svalidR_timeless : Timeless svalidR.
+  Proof. rewrite svalidR_eq; refine _. Qed.
+  #[global] Instance svalidR_affine : Affine svalidR.
+  Proof. rewrite svalidR_eq; refine _. Qed.
+
+  Lemma monPred_at_svalidR p : svalidR p -|- strict_valid_ptr p.
+  Proof. by rewrite svalidR_eq. Qed.
+  Lemma _at_svalidR (p : ptr) : _at p svalidR -|- strict_valid_ptr p.
+  Proof. by rewrite svalidR_eq _at_eq. Qed.
+
+  #[global] Instance type_ptrR_persistent σ t : Persistent (type_ptrR t).
+  Proof. rewrite type_ptrR_eq; refine _. Qed.
+  #[global] Instance type_ptrR_timeless σ t : Timeless (type_ptrR t).
+  Proof. rewrite type_ptrR_eq; refine _. Qed.
+  #[global] Instance type_ptrR_affine σ t : Affine (type_ptrR t).
+  Proof. rewrite type_ptrR_eq; refine _. Qed.
+
+  Lemma monPred_at_type_ptrR ty σ p : type_ptrR ty p -|- type_ptr ty p.
+  Proof. by rewrite type_ptrR_eq. Qed.
+  Lemma _at_type_ptrR σ (p : ptr) ty : _at p (type_ptrR ty) -|- type_ptr ty p.
+  Proof. by rewrite type_ptrR_eq _at_eq. Qed.
+
+
+
+  Lemma svalidR_validR : svalidR |-- validR.
+  Proof.
+    rewrite validR_eq/validR_def svalidR_eq/svalidR_def.
+    constructor =>p /=. by apply strict_valid_valid.
+  Qed.
+  Lemma type_ptrR_svalidR σ ty : type_ptrR ty |-- svalidR.
+  Proof.
+    rewrite type_ptrR_eq/type_ptrR_def svalidR_eq/svalidR_def.
+    constructor =>p /=. by apply type_ptr_strict_valid.
+  Qed.
+  Lemma type_ptrR_validR σ ty : type_ptrR ty |-- validR.
+  Proof. by rewrite type_ptrR_svalidR svalidR_validR. Qed.
+
+  #[global] Instance svalidR_validR_observe : Observe validR svalidR.
+  Proof. rewrite svalidR_validR. red; iIntros "#$". Qed.
+  #[global] Instance type_ptrR_svalidR_observe σ t : Observe svalidR (type_ptrR t).
+  Proof. rewrite type_ptrR_svalidR; red; iIntros "#$". Qed.
 
   Definition is_null_def : Rep :=
     as_Rep (fun addr => [| addr = nullptr |]).
@@ -679,6 +986,28 @@ Section with_cpp.
   Global Instance is_nonnull_timeless : Timeless is_nonnull.
   Proof. rewrite is_nonnull_eq. apply _. Qed.
 
+  Global Instance primR_nonnull {σ} ty q v :
+    Observe is_nonnull (primR (resolve:=σ) ty q v).
+  Proof.
+    rewrite is_nonnull_eq primR_eq. apply monPred_observe=>p /=. apply _.
+  Qed.
+  Global Instance uninitR_nonnull {σ} ty q :
+    Observe is_nonnull (uninitR (resolve:=σ) ty q).
+  Proof.
+    rewrite is_nonnull_eq uninitR_eq. apply monPred_observe=>p /=. apply _.
+  Qed.
+
+  Definition alignedR_def (al : N) : Rep := as_Rep (aligned_ptr al).
+  Definition alignedR_aux : seal (@alignedR_def). Proof. by eexists. Qed.
+  Definition alignedR := alignedR_aux.(unseal).
+  Definition alignedR_eq : @alignedR = _ := alignedR_aux.(seal_eq).
+  #[global] Instance alignedR_persistent {al} : Persistent (alignedR al).
+  Proof. rewrite alignedR_eq. apply _. Qed.
+  #[global] Instance alignedR_affine {al} : Affine (alignedR al).
+  Proof. rewrite alignedR_eq. apply _. Qed.
+  #[global] Instance alignedR_timeless {al} : Timeless (alignedR al).
+  Proof. rewrite alignedR_eq. apply _. Qed.
+
   Lemma null_nonnull (R : Rep) : is_null |-- is_nonnull -* R.
   Proof.
     rewrite is_null_eq /is_null_def is_nonnull_eq /is_nonnull_def.
@@ -686,31 +1015,93 @@ Section with_cpp.
     by iIntros "->" (? <-%ptr_rel_elim) "%".
   Qed.
 
-  (** [blockR sz] is mean to be a contiguous chunk of [sz] bytes *)
+  (** [blockR sz] represents a contiguous chunk of [sz] bytes *)
   Definition blockR {σ} (sz : _) : Rep :=
-    _offsetR (_sub (resolve:=σ) T_uint8 (Z.of_N sz)) (emp) **
-    (* ^ Encodes valid_loc (this .[ T_uint8 ! sz]). This is
+    _offsetR (o_sub σ T_uint8 (Z.of_N sz)) validR **
+    (* ^ Encodes valid_ptr (this .[ T_uint8 ! sz]). This is
     necessary to get [l |-> blockR n -|- l |-> blockR n ** l .[ T_uint8 ! m] |-> blockR 0]. *)
     [∗list] i ∈ seq 0 (N.to_nat sz),
-      _offsetR (_sub (resolve:=σ) T_uint8 (Z.of_nat i)) (anyR (resolve:=σ) T_uint8 1).
+      _offsetR (o_sub σ T_uint8 (Z.of_nat i)) (anyR (resolve:=σ) T_uint8 1).
 
+  (* [tblockR ty] is a [blockR] that is the size of [ty].
+   * it is a convenient short-hand since it happens frequently, but there is nothing
+   * special about it.
+   *)
+  Definition tblockR {σ} (ty : type) : Rep :=
+    match size_of σ ty , align_of ty with
+    | Some sz , Some al => blockR (σ:=σ) sz ** alignedR al
+    | _ , _  => False
+    end.
+
+
+  (** Observing [type_ptr] *)
+  #[global]
+  Instance primR_type_ptr_observe σ ty q v : Observe (type_ptrR ty) (primR ty q v).
+  Proof.
+    red. rewrite primR_eq/primR_def.
+    apply Rep_entails_at => p. rewrite _at_as_Rep _at_pers _at_type_ptrR.
+    apply: observe.
+  Qed.
+  #[global]
+  Instance uninitR_type_ptr_observe σ ty q : Observe (type_ptrR ty) (uninitR ty q).
+  Proof.
+    red. rewrite uninitR_eq/uninitR_def.
+    apply Rep_entails_at => p. rewrite _at_as_Rep _at_pers _at_type_ptrR.
+    apply: observe.
+  Qed.
+
+  #[global]
+  Instance anyR_type_ptr_observe σ ty q : Observe (type_ptrR ty) (anyR ty q).
+  Proof.
+    red. rewrite anyR_eq/anyR_def.
+    apply: observe.
+  Qed.
+
+  (** Observing [valid_ptr] *)
+  #[global]
+  Instance primR_valid_observe {σ : genv} {ty q v} : Observe validR (primR ty q v).
+  Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
+  #[global]
+  Instance anyR_valid_observe {σ : genv} {ty q} : Observe validR (anyR ty q).
+  Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
+  #[global]
+  Instance uninitR_valid_observe {σ : genv} {ty q} : Observe validR (uninitR ty q).
+  Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
+
+  #[global]
+  Instance observe_type_ptr_pointsto σ (p : ptr) ty (R : Rep) :
+    Observe (type_ptrR ty) R -> Observe (type_ptr ty p) (_at p R).
+  Proof. rewrite -_at_type_ptrR. apply _at_observe. Qed.
+
+  Lemma off_validR o
+    (Hv : ∀ p, valid_ptr (p .., o) |-- valid_ptr p) :
+    _offsetR o validR |-- validR.
+  Proof.
+    apply Rep_entails_at => p. by rewrite _at_offsetR !_at_validR.
+  Qed.
+
+  Lemma _field_validR σ f : _offsetR (_field f) validR |-- validR.
+  Proof. apply off_validR => p. apply _valid_ptr_field. Qed.
+
+  Lemma _base_validR σ derived base : _offsetR (_base derived base) validR |-- validR.
+  Proof. apply off_validR => p. apply _valid_ptr_base. Qed.
+
+  Lemma _derived_validR σ base derived : _offsetR (_derived base derived) validR |-- validR.
+  Proof. apply off_validR => p. apply _valid_ptr_derived. Qed.
 End with_cpp.
-Instance: Params (@as_Rep) 2 := {}.
-Instance: Params (@_offsetR) 3 := {}.
-Instance: Params (@pureR) 2 := {}.
 
-Global Opaque _at _offsetR primR.
+#[deprecated(since = "2021-01-09", note = "Use _field_validR")]
+Notation o_field_validR := _field_validR.
+#[deprecated(since = "2021-01-09", note = "Use _base_validR")]
+Notation o_base_validR := _base_validR.
+#[deprecated(since = "2021-01-09", note = "Use _field_validR")]
+Notation o_derived_validR := _derived_validR.
 
-Typeclasses Opaque pureR.
-Typeclasses Opaque as_Rep.
-Typeclasses Opaque _identity.
-Typeclasses Opaque _type_ptr.
-
-Arguments anyR {_ Σ resolve} ty q : rename.
-Arguments uninitR {_ Σ resolve} ty q : rename.
-Arguments primR {_ Σ resolve} ty q v : rename.
-Arguments refR {_ Σ} ty v : rename.
-Arguments cptr {_ Σ resolve} _ : rename.
+Typeclasses Opaque identityR.
+Typeclasses Opaque type_ptrR validR svalidR alignedR.
 
 Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} nm s :
-  Persistent (_at (Σ:=Σ) (_global (resolve:=resolve) nm) (cptr (resolve:=resolve) s)) := _.
+  Persistent (_at (Σ:=Σ) (_global nm) (cptrR s)) := _.
+
+
+#[deprecated(since="2021-01-08",note="use _at_offsetR")] Notation _at_offsetL_offsetR := _at_offsetR (only parsing).
