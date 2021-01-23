@@ -382,7 +382,7 @@ Module SimpleCPP.
         | Treference _
         | Trv_reference _ =>
           match v with
-          | Vptr p =>
+          | Vref p =>
             p <> nullptr /\
             vs = aptr p
           | Vundef => pure_encodes_undef POINTER_BITSZ vs

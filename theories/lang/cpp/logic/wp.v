@@ -446,9 +446,9 @@ Section with_cpp.
 
     Definition wpe (vc : ValCat) (e : Expr) (Q :val -> FreeTemps -> mpred) : mpred :=
       match vc with
-      | Lvalue => @wp_lval resolve M ti ρ e (fun p => Q (Vptr p))
+      | Lvalue => @wp_lval resolve M ti ρ e (fun p => Q (Vref p))
       | Prvalue => @wp_prval resolve M ti ρ e Q
-      | Xvalue => @wp_xval resolve M ti ρ e (fun p => Q (Vptr p))
+      | Xvalue => @wp_xval resolve M ti ρ e (fun p => Q (Vref p))
       end.
 
     Definition wpAny (vce : ValCat * Expr)
@@ -835,11 +835,11 @@ Section with_cpp.
   End fspec.
 
   (* [Tmember_func ty fty] constructs the function type for a
-     member function that takes a [this] parameter of [ty]
+     member function that takes a [this] parameter of [ty].
    *)
   Definition Tmember_func (ty : type) (fty : type) : type :=
     match fty with
-    | @Tfunction cc ret args => Tfunction (cc:=cc) ret (Qconst (Tptr ty) :: args)
+    | @Tfunction cc ret args => Tfunction (cc:=cc) ret (Qconst (Tref ty) :: args)
     | _ => fty
     end.
 

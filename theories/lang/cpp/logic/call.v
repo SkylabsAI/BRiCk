@@ -30,7 +30,7 @@ Section with_resolve.
         Exists Qarg,
         wp_lval e Qarg **
           wp_args es (fun vs frees => Forall v free,
-                                   Qarg v free -* Q (Vptr v :: vs) (free ** frees))
+                                   Qarg v free -* Q (Vref v :: vs) (free ** frees))
       | Prvalue =>
         if is_aggregate ty then
           Forall a : ptr, a |-> anyR (erase_qualifiers ty) 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *) -*
@@ -39,7 +39,7 @@ Section with_resolve.
           wp_init ty a e Qarg **
             wp_args es (fun vs frees =>
                           Forall free,
-                          Qarg free -* Q (Vptr a :: vs) (destruct_val (σ:=σ) ti ty a dt (a |-> anyR (erase_qualifiers ty) 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *) ** free) ** frees))
+                          Qarg free -* Q (Vref a :: vs) (destruct_val (σ:=σ) ti ty a dt (a |-> anyR (erase_qualifiers ty) 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *) ** free) ** frees))
         else
           Exists Qarg,
           wp_prval e Qarg **
@@ -49,7 +49,7 @@ Section with_resolve.
         Exists Qarg,
         wp_xval e Qarg **
             wp_args es (fun vs frees => Forall v free,
-                                     Qarg v free -* Q (Vptr v :: vs) (free ** frees))
+                                     Qarg v free -* Q (Vref v :: vs) (free ** frees))
       end
     end.
 

@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020 BedRock Systems, Inc.
+ * Copyright (c) 2020-2021 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -382,11 +382,13 @@ End PTRS_MIXIN.
 Module Type VAL_MIXIN (Import L : PTRS) (Import R : RAW_BYTES).
 
 (** * Values
-    Primitive abstract C++ runtime values come in two flavors.
-    - pointers (also used for references)
-    - integers (used for everything else)
+    Primitive C++ runtime values include:
+    - integers (used for [char], [short], [int], [long], etc.)
+    - pointers
+    - references (used for references)
     Aggregates are not represented directly, but only by talking about
-    primitive subobjects.
+    primitive subobjects which are represented in the program state
+    (i.e. they are implicitly "materialized").
 
     There is also a distinguished undefined element [Vundef] that
     models uninitialized values (https://eel.is/c++draft/basic.indet).
@@ -397,13 +399,13 @@ Module Type VAL_MIXIN (Import L : PTRS) (Import R : RAW_BYTES).
 Variant val : Set :=
 | Vint (_ : Z)
 | Vptr (_ : ptr)
+| Vref (_ : ptr)
 | Vraw (_ : raw_byte)
 | Vundef
 .
 
-Definition val_dec : forall a b : val, {a = b} + {a <> b}.
+#[global] Instance val_dec : EqDecision val.
 Proof. solve_decision. Defined.
-Instance val_eq_dec : EqDecision val := val_dec.
 Instance val_inhabited : Inhabited val := populate (Vint 0).
 
 End VAL_MIXIN.
@@ -466,11 +468,8 @@ Notation offset_ptr_val := __offset_ptr_val.
 Definition is_true (v : val) : option bool :=
   match v with
   | Vint v => Some (negb (Z.eqb v 0))
-  | Vptr p => Some match ptr_eq_dec p nullptr with
-                  | left _ => false
-                  | right _ => true
-                  end
-  | Vundef | Vraw _ => None
+  | Vptr p => Some (bool_decide (p <> nullptr))
+  | Vref _ | Vundef | Vraw _ => None
   end.
 
 Theorem is_true_int : forall i,
@@ -558,9 +557,9 @@ Axiom has_type_pointer : forall v ty,
 Axiom has_type_nullptr : forall v,
     has_type v Tnullptr -> v = Vptr nullptr.
 Axiom has_type_reference : forall v ty,
-    has_type v (Treference ty) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Treference ty) -> exists p, v = Vref p /\ p <> nullptr.
 Axiom has_type_rv_reference : forall v ty,
-    has_type v (Trv_reference ty) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Trv_reference ty) -> exists p, v = Vref p /\ p <> nullptr.
 Axiom has_type_array : forall v ty n,
     has_type v (Tarray ty n) -> exists p, v = Vptr p /\ p <> nullptr.
 Axiom has_type_function : forall v cc rty args,

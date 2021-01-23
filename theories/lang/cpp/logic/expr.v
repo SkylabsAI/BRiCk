@@ -215,7 +215,7 @@ Module Type Expr.
 
     (* the `&` operator is a prvalue *)
     Axiom wp_prval_addrof : forall ty e Q,
-        wp_lval e (fun p free => Q (Vptr p) free)
+        wp_lval e (fun p free => Q (Vref p) free)
         |-- wp_prval (Eaddrof e ty) Q.
 
     (** * Unary Operators
@@ -651,7 +651,7 @@ Module Type Expr.
       let raw_type := erase_qualifiers ty in
       Forall addr : ptr, addr |-> uninitR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) -*
         wp_init ty addr e (fun free =>
-           Q (Vptr addr) (free ** destruct_val raw_type addr None (addr |-> anyR raw_type 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *)))).
+           Q (Vref addr) (free ** destruct_val raw_type addr None (addr |-> anyR raw_type 1 (* TODO backwards compat [tblockR (erase_qualifiers ty)] *)))).
     (* XXX This use of [Vptr] represents an aggregate.
        XXX The destruction of the value isn't quite correct because we explicitly
            generate the destructors.
@@ -675,7 +675,7 @@ Module Type Expr.
            match unptr (type_of f) with
            | Some fty =>
              wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                                                      |> fspec fty ti f vs (fun v => Q v (free ** free_f))))
+               |> fspec fty ti f vs (fun v => Q v (free ** free_f))))
            | _ => False
            end)
         |-- wp_prval (Ecall f es ty) Q.
@@ -684,7 +684,7 @@ Module Type Expr.
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                        |> fspec fty ti f vs (fun res => Exists p, [| res = Vptr p |] ** Q p (free ** free_f))))
+            |> fspec fty ti f vs (fun res => Exists p, [| res = Vref p |] ** Q p (free ** free_f))))
         | _ => False
         end
         |-- wp_lval (Ecall f es ty) Q.
@@ -693,7 +693,7 @@ Module Type Expr.
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                           |> fspec fty ti f vs (fun v => Exists p, [| v = Vptr p |] ** Q p (free ** free_f))))
+            |> fspec fty ti f vs (fun v => Exists p, [| v = Vref p |] ** Q p (free ** free_f))))
         | _ => False
         end
       |-- wp_xval (Ecall f es ty) Q.
@@ -702,7 +702,7 @@ Module Type Expr.
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>
-                           |> fspec fty ti f vs (fun res => [| res = Vptr addr |] -* Q (free_f ** free))))
+            |> fspec fty ti f vs (fun res => [| res = Vref addr |] -* Q (free_f ** free))))
           (* NOTE We use the assumed equality to mean that the value was constructed immediately into
              the correct place *)
         | _ => False
@@ -719,14 +719,14 @@ Module Type Expr.
      *)
     Axiom wp_lval_member_call : forall ty fty f vc obj es Q,
         wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
-                    Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
+           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vref this :: vs) (fun v =>
+                    Exists p, [| v = Vref p |] ** Q p (free_t ** free))))
         |-- wp_lval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_xval_member_call : forall ty fty f vc obj es Q,
         wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
-                    Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
+           |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vref this :: vs) (fun v =>
+                    Exists p, [| v = Vref p |] ** Q p (free_t ** free))))
         |-- wp_xval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_prval_member_call : forall ty fty f vc obj es Q,
@@ -734,13 +734,13 @@ Module Type Expr.
            Reduce (materialize_into_temp ty (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q)
          else
             wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-              |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun v => Q v (free_t ** free)))))
+              |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vref this :: vs) (fun v => Q v (free_t ** free)))))
         |-- wp_prval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_init_member_call : forall f fty es addr ty vc obj Q,
         wp_specific_glval vc obj (fun this free_t => wp_args es (fun vs free =>
-             |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vptr this :: vs) (fun res =>
-                      [| res = Vptr addr |] -* Q (free_t ** free))))
+             |> mspec (type_of obj) fty ti (Vptr $ _global f) (Vref this :: vs) (fun res =>
+                      [| res = Vref addr |] -* Q (free_t ** free))))
         (* NOTE as with regular function calls, we use an assumed equation to unify the address
            of the returned object with the location that we are initializing.
          *)
@@ -758,8 +758,8 @@ Module Type Expr.
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
-              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v =>
-                       Exists p, [| v = Vptr p |] ** Q p (free ** free')))
+              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vref thisp :: vs) (fun v =>
+                       Exists p, [| v = Vref p |] ** Q p (free ** free')))
           | _ => False
           end))
       |-- wp_xval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
@@ -769,8 +769,8 @@ Module Type Expr.
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
-              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v =>
-                       Exists p, [| v = Vptr p |] ** Q p (free ** free')))
+              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vref thisp :: vs) (fun v =>
+                       Exists p, [| v = Vref p |] ** Q p (free ** free')))
           | _ => False
           end))
       |-- wp_lval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
@@ -783,7 +783,7 @@ Module Type Expr.
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
-              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun v => Q v (free ** free')))
+              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vref thisp :: vs) (fun v => Q v (free ** free')))
          | _ => False
           end)))
       |-- wp_prval (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
@@ -793,7 +793,7 @@ Module Type Expr.
           match class_type (type_of obj) with
           | Some cls =>
             resolve_virtual (σ:=resolve) this cls f (fun fimpl_addr thisp =>
-              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vptr thisp :: vs) (fun res => [| res = Vptr addr |] -* Q (free ** free')))
+              |> mspec (type_of obj) fty ti (Vptr fimpl_addr) (Vref thisp :: vs) (fun res => [| res = Vref addr |] -* Q (free ** free')))
             (* NOTE as with other function calls, we are assuming an equation on the address in order
                to express the fact the the object is constructed in-place.
              *)
@@ -914,7 +914,7 @@ Module Type Expr.
          Forall a : ptr, a |-> uninitR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) -*
                    let '(e,dt) := destructor_for e in
                    wp_init ty a e (fun free =>
-                                     Q (Vptr a) (destruct_val ty a dt (a |-> anyR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) ** free))))
+                                     Q (Vref a) (destruct_val ty a dt (a |-> anyR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) ** free))))
         |-- wp_prval e Q.
 
 
@@ -939,7 +939,7 @@ Module Type Expr.
       let raw_type := erase_qualifiers ty in
       a |-> uninitR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) -*
           wp_init ty a e (fun free =>
-                            Q (Vptr a) (destruct_val ty a (Some dtor) (a |-> uninitR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) ** free))))
+                            Q (Vref a) (destruct_val ty a (Some dtor) (a |-> uninitR raw_type 1 (* TODO backwards compat [tblockR raw_type] *) ** free))))
       |-- wp_prval (Ebind_temp e dtor ty) Q.
 
     (** Pseudo destructors arise from calling the destructor on

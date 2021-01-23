@@ -98,7 +98,7 @@ Section with_cpp.
     SFunction (cc:=cc) ret (Qconst (Tpointer this_type) :: targs)
               {| wpp_with := TeleS (fun this : ptr => (PQ this).(wpp_with))
                ; wpp_pre this :=
-                   tele_map (map_pre (Vptr this)) (PQ this).(wpp_pre)
+                   tele_map (map_pre (Vref this)) (PQ this).(wpp_pre)
                ; wpp_post this := (PQ this).(wpp_post)
                |}.
 
@@ -123,7 +123,7 @@ Section with_cpp.
       | Trv_reference _
       | Tnamed _ =>
         match v with
-        | Vptr p => bind_vars xs vs (Rbind_check x p r) Q
+        | Vref p => bind_vars xs vs (Rbind_check x p r) Q
         | _ => False
         end
       | _              =>
@@ -166,7 +166,7 @@ Section with_cpp.
     | None => lfalse
     | Some body =>
       match args with
-      | Vptr thisp :: rest_vals =>
+      | Vref thisp :: rest_vals =>
         bind_base_this (Some thisp) m.(m_return) (fun ρ =>
         bind_vars m.(m_params) rest_vals ρ (fun ρ frees =>
         |> if is_void m.(m_return) then
@@ -282,7 +282,7 @@ Section with_cpp.
       (* ^ defaulted constructors are not supported yet *)
     | Some (UserDefined (inits, body)) =>
       match args with
-      | Vptr thisp :: rest_vals =>
+      | Vref thisp :: rest_vals =>
         let ty := Tnamed ctor.(c_class) in
         (* TODO backwards compat [thisp |-> tblockR ty **] *)
         (* ^ this requires that you give up the *entire* block of memory that the object
@@ -359,7 +359,7 @@ Section with_cpp.
       (* ^ defaulted constructors are not supported *)
     | Some (UserDefined (body, deinit)) =>
       match args with
-      | Vptr thisp :: rest_vals =>
+      | Vref thisp :: rest_vals =>
         bind_base_this (Some thisp) Tvoid (fun ρ =>
           |> wp (resolve:=resolve) ⊤ ti ρ body
                (void_return (wpd_members ti ρ dtor.(d_class) thisp deinit
