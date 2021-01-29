@@ -7,9 +7,6 @@ From iris.algebra Require Import excl gmap.
 From iris.algebra.lib Require Import frac_auth.
 From iris.bi Require Import monpred.
 From iris.bi.lib Require Import fractional.
-From iris.base_logic.lib Require Import wsat. (* only for [invG] *)
-From iris.base_logic.lib Require Import own. (* only for [inG] *)
-From iris.base_logic.lib Require Import cancelable_invariants. (* only for [cinvG] *)
 From iris.proofmode Require Import tactics.
 From iris_string_ident Require Import ltac2_string_ident.
 
