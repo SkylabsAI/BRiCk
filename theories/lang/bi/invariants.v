@@ -15,7 +15,7 @@
 
 Require Import iris.bi.monpred.
 Require Import iris.algebra.lib.excl_auth.
-Require Import iris.base_logic.lib.invariants.
+Require Export iris.base_logic.lib.invariants. (* << export [invG] *)
 
 From iris.proofmode Require Import tactics monpred.
 

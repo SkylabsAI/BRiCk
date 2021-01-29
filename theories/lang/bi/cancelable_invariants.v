@@ -15,13 +15,15 @@
 
   TODO: These should be upstreamed to Iris's code base. **)
 
-From iris.bi.lib Require Import fractional.
-From iris.proofmode Require Import tactics.
-From iris.algebra Require Export frac.
-From iris.base_logic.lib Require Import cancelable_invariants.
+Require Import iris.bi.lib.fractional.
+Require Export iris.algebra.frac.
+Require Export iris.base_logic.lib.cancelable_invariants. (* << exporting [cinvG] *)
 
 Require Import iris.bi.derived_laws.
 Import bi.
+
+Require Import iris.bi.monpred.
+Require Import iris.proofmode.tactics.
 
 Require Export bedrock.lang.bi.invariants.
 Require Export bedrock.lang.bi.own_instances.
@@ -138,8 +140,6 @@ Section proofs.
     iIntros "!> P". by iMod ("Close" with "P").
   Qed.
 End proofs.
-
-Require Import iris.bi.monpred.
 
 (* Allocation rules for monPred that are tied specifically to iProp. *)
 Section allocation.
