@@ -17,7 +17,7 @@ Require Export iris.si_logic.bi.
 Require Import iris.proofmode.classes.
 
 Require Import iris.base_logic.lib.iprop.
-Require Import iris.base_logic.lib.own.
+Require Export iris.base_logic.lib.own. (* << exporting [inG] and [gFunctors] *)
 
 Require Import iris.bi.monpred.
 Require Import bedrock.lang.bi.invariants.
