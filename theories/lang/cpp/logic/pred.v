@@ -62,8 +62,9 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
   Section with_cpp.
     Context `{cpp_logic ti}.
 
-    Canonical Structure mpredI : bi := monPredI ti (iPropI _Σ).
+    Definition mpredI : bi := monPredI ti (iPropI _Σ).
     Definition mpred := bi_car mpredI.
+
     Canonical Structure mpredO : ofeT
       := OfeT mpred (ofe_mixin (monPredO ti (iPropI _Σ))). (* TODO: make opaque. *)
   End with_cpp.
