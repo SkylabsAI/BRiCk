@@ -62,55 +62,10 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
   Section with_cpp.
     Context `{cpp_logic ti}.
 
-    Definition mpredI : bi := monPredI ti (iPropI _Σ).
+    Canonical Structure mpredI : bi := monPredI ti (iPropI _Σ).
     Definition mpred := bi_car mpredI.
     Canonical Structure mpredO : ofeT
-      := OfeT mpred (ofe_mixin (monPredO ti (iPropI _Σ))).
-
-    (* TODO: mPrePredO no longer needed once we bump Iris. See iris!530 *)
-    Definition mPrePredO : ofeT := ti -d> iPrePropO _Σ.
-
-    Definition mpred_unfold_base (P : mpred) : mPrePredO :=
-      fun i => iProp_unfold (P i).
-    Instance mpred_unfold_base_ne : NonExpansive mpred_unfold_base.
-    Proof. solve_contractive. Qed.
-    Definition mpred_unfold : mpredO -n> mPrePredO :=
-      OfeMor mpred_unfold_base.
-
-    (* TODO: fold-ing requires monotonicity of mPrePredO. This should be gone
-      once mPrePredO is gone (see the above TODO).
-    Program Definition mpred_fold_base (P : mPrePredO)
-       : mpredO :=
-      MonPred (fun i => iProp_fold (P i)) _.
-    Next Obligation.
-      intros i1 i2 Le.
-    Abort.
-
-    Instance mpred_fold_base_ne : NonExpansive mpred_fold_base.
-    Proof. solve_contractive. Qed.
-    Definition mpred_fold : mPrePredO -n> mPredO :=
-      OfeMor mpred_fold_base.
-
-    Definition mpred_fold_unfold :
-      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P.
-    Abort.
-
-    Definition mpred_unfold_fold :
-      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P.
-    Abort. *)
-
-
-    (* TODO: generalize to a telescope version of -d> *)
-    (* With something like -td> below:
-      Definition laterPred `{cpp_logic} {T: tele} (Q : T -t> mpred) :
-        laterO (T -td> mPrePredO) :=
-        Next (λ args, mpred_unfold (tele_app Q args)). *)
-    Definition mPrePredO_to_laterO (P : mpred) : laterO mPrePredO :=
-      Next (mpred_unfold P).
-
-    Definition mPrePredO_to_laterO_1 {A: ofeT}
-      (P : ofe_car A -> mpred) : laterO (A -d> mPrePredO) :=
-      Next (fun a => mpred_unfold (P a)).
+      := OfeT mpred (ofe_mixin (monPredO ti (iPropI _Σ))). (* TODO: make opaque. *)
   End with_cpp.
 
   Bind Scope bi_scope with bi_car.
