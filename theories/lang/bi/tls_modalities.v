@@ -72,8 +72,17 @@ Class ObjectiveWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
   objective_with i j : P i -∗ P (i .= (L, j)).
 Arguments ObjectiveWith {_ _ _} _ _%I.
 Arguments objective_with {_ _ _} _ _%I {_}.
-Hint Mode ObjectiveWith ! ! + + ! : typeclass_instances.
+#[global] Hint Mode ObjectiveWith ! ! + + ! : typeclass_instances.
 Instance: Params (@ObjectiveWith) 3 := {}.
+
+
+(* LocalWith respect to J *)
+Class LocalWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
+  local_with i1 i2 (Eq: i1.^L = i2.^L): P i1 -∗ P i2.
+Arguments LocalWith {_ _ _} _ _%I.
+Arguments local_with {_ _ _} _ _%I {_}.
+#[global] Hint Mode LocalWith ! ! + + ! : typeclass_instances.
+Instance: Params (@LocalWith) 3 := {}.
 
 Local Ltac unfold_at :=
   constructor => i;
