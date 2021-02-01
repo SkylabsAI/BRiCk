@@ -77,6 +77,8 @@ Instance: Params (@ObjectiveWith) 3 := {}.
 
 
 (* LocalWith respect to J *)
+(* This means that P only depends on the component J, anything else can be
+  arbitrary. *)
 Class LocalWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
   local_with i1 i2 (Eq: i1.^L = i2.^L): P i1 -∗ P i2.
 Arguments LocalWith {_ _ _} _ _%I.
@@ -590,7 +592,7 @@ Section other_instances.
     `{!ObjectiveWith L P} : ObjectiveWith L (■?p P).
   Proof. rewrite /plainly_if. destruct p; apply _. Qed.
 
-  (* LocalWith *)
+  (* LocalWith *) (* TODO: more instances *)
   Global Instance embed_local_with L (P : PROP) : LocalWith L ⎡P⎤.
   Proof. intros ???. by rewrite !monPred_at_embed. Qed.
   Global Instance pure_local_with L φ : LocalWith (PROP:=PROP) L ⌜φ⌝.
