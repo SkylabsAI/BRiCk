@@ -89,6 +89,7 @@ Section defs.
    *)
   Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
     as_Rep (fun p =>
+         valid_ptr p **
          Forall (ti : thread_info), □ (Forall vs Q,
          [| List.length vs = List.length fs.(fs_arguments) |] -*
          fs.(fs_spec) ti vs Q -*
@@ -337,11 +338,11 @@ Section with_cpp.
   Lemma _offsetR_fupd o R E1 E2 : _offsetR o (|={E1,E2}=> R) -|- |={E1,E2}=> _offsetR o R.
   Proof. by rewrite _offsetR_eq/_offsetR_def /as_Rep; constructor => p /=; rewrite !monPred_at_fupd. Qed.
 
-  Lemma _offsetR_intuitionistically l (R : Rep) : _offsetR l (□ R) ⊣⊢ □ (_offsetR l R).
+  Lemma _offsetR_intuitionistically o (R : Rep) : _offsetR o (□ R) ⊣⊢ □ (_offsetR o R).
   Proof. by rewrite _offsetR_eq/_offsetR_def; constructor => p /=; rewrite !monPred_at_intuitionistically. Qed.
 
-  Lemma _offsetR_intuitionistically_if o b R : □?b (_offsetR o R) -|- _offsetR o (□?b R).
-  Proof. by destruct b => /= //; rewrite _offsetR_intuitionistically. Qed.
+  Lemma _offsetR_intuitionistically_if o b R : _offsetR o (□?b R) -|- □?b (_offsetR o R).
+  Proof. by destruct b => //=; rewrite _offsetR_intuitionistically. Qed.
 
   Lemma _offsetR_except_0 o R : _offsetR o (bi_except_0 R) -|- bi_except_0 (_offsetR o R).
   Proof. by rewrite _offsetR_eq/_offsetR_def; constructor => p /=; rewrite !monPred_at_except_0. Qed.
@@ -374,13 +375,12 @@ Section with_cpp.
     Fractional r → AsFractional (_offsetR o (r q)) (λ q, _offsetR o (r q)) q.
   Proof. constructor. done. apply _. Qed.
 
-  (* TODO: consider making this a global instance, but test performance impact. *)
-  Local Instance _offsetR_observe {o} {Q R : Rep} :
+  Global Instance _offsetR_observe {o} {Q R : Rep} :
     Observe Q R ->
     Observe (_offsetR o Q) (_offsetR o R).
   Proof. move->. by rewrite /Observe _offsetR_pers. Qed.
 
-  Local Instance _offsetR_observe_2 {o} {Q R1 R2 : Rep} :
+  Global Instance _offsetR_observe_2 {o} {Q R1 R2 : Rep} :
     Observe2 Q R1 R2 ->
     Observe2 (_offsetR o Q) (_offsetR o R1) (_offsetR o R2).
   Proof. move->. by rewrite /Observe2 _offsetR_wand _offsetR_pers. Qed.
@@ -391,6 +391,13 @@ Section with_cpp.
   Global Instance _offsetR_observe_2_only_provable Q o (R1 R2 : Rep) :
     Observe2 [| Q |] R1 R2 → Observe2 [| Q |] (_offsetR o R1) (_offsetR o R2).
   Proof. rewrite -{2}_offsetR_only_provable. apply _. Qed.
+
+  Global Instance _offsetR_observe_pure Q o (R : Rep) :
+    Observe [! Q !] R → Observe [! Q !] (_offsetR o R).
+  Proof. rewrite -{2}_offsetR_pure. apply _. Qed.
+  Global Instance _offsetR_observe_2_pure Q o (R1 R2 : Rep) :
+    Observe2 [! Q !] R1 R2 → Observe2 [! Q !] (_offsetR o R1) (_offsetR o R2).
+  Proof. rewrite -{2}_offsetR_pure. apply _. Qed.
 
   Lemma _offsetR_obs o r P :
     r |-- r ** [| P |] →
@@ -439,6 +446,7 @@ Section with_cpp.
     (HPQ : forall p : ptr, _at p P |-- _at p Q) :
     P |-- Q.
   Proof. constructor => p. move: HPQ => /(_ p). by rewrite _at_eq. Qed.
+  (* Inverses of [Rep_equiv_at] and [Rep_entails_at] are [Proper] instances [_at_proper] and [_at_mono], applicable via [f_equiv] or [apply]. *)
 
   Lemma _at_as_Rep (l : ptr) (Q : ptr → mpred) : _at l (as_Rep Q) ⊣⊢ Q l.
   Proof. by rewrite _at_eq/_at_def. Qed.
@@ -490,8 +498,8 @@ Section with_cpp.
 
   Lemma _at_intuitionistically l (R : Rep) : _at l (□ R) ⊣⊢ □ (_at l R).
   Proof. by rewrite _at_eq/_at_def monPred_at_intuitionistically. Qed.
-  Lemma _at_intuitionistically_if p b R : □?b (_at p R) -|- _at p (□?b R).
-  Proof. destruct b => /= //. by rewrite _at_intuitionistically. Qed.
+  Lemma _at_intuitionistically_if p b R : _at p (□?b R) -|- □?b (_at p R).
+  Proof. destruct b => //=. by rewrite _at_intuitionistically. Qed.
 
   Lemma _at_except_0 p R : _at p (bi_except_0 R) -|- bi_except_0 (_at p R).
   Proof. by rewrite _at_eq/_at_def monPred_at_except_0. Qed.
@@ -534,13 +542,12 @@ Section with_cpp.
     AsFractional (_at l (r q)) (λ q, _at l (r q)) q.
   Proof. constructor. done. apply _. Qed.
 
-  (* TODO: consider making this a global instance, but test performance impact. *)
-  Local Instance _at_observe {p} {Q R : Rep} :
+  Global Instance _at_observe {p} {Q R : Rep} :
     Observe Q R ->
     Observe (_at p Q) (_at p R).
   Proof. move->. by rewrite /Observe _at_pers. Qed.
 
-  Local Instance _at_observe_2 {p} {Q R1 R2 : Rep} :
+  Global Instance _at_observe_2 {p} {Q R1 R2 : Rep} :
     Observe2 Q R1 R2 ->
     Observe2 (_at p Q) (_at p R1) (_at p R2).
   Proof. move->. by rewrite /Observe2 _at_wand _at_pers. Qed.
@@ -551,6 +558,13 @@ Section with_cpp.
   Global Instance _at_observe_2_only_provable Q l (R1 R2 : Rep) :
     Observe2 [| Q |] R1 R2 → Observe2 [| Q |] (_at l R1) (_at l R2).
   Proof. rewrite -_at_only_provable. apply _. Qed.
+
+  Global Instance _at_observe_pure Q l (R : Rep) :
+    Observe [! Q !] R → Observe [! Q !] (_at l R).
+  Proof. rewrite -_at_pure. apply _. Qed.
+  Global Instance _at_observe_2_pure Q l (R1 R2 : Rep) :
+    Observe2 [! Q !] R1 R2 → Observe2 [! Q !] (_at l R1) (_at l R2).
+  Proof. rewrite -_at_pure. apply _. Qed.
 
   Lemma _at_obs (l : ptr) (r : Rep) P :
     r |-- r ** [| P |] →
@@ -866,13 +880,23 @@ Section with_cpp.
 
   #[global] Instance cptrR_persistent {resolve s} : Persistent (cptrR s).
   Proof. rewrite cptrR_eq. apply _. Qed.
+  #[global] Instance cptrR_affine {resolve s} : Affine (cptrR s).
+  Proof. rewrite cptrR_eq. apply _. Qed.
+
+  (* NOTE this should become an instance. *)
+  Lemma cptrR_valid_observe {resolve:genv} (p : ptr) f : Observe (valid_ptr p) (_at p (cptrR f)).
+  Proof.
+    apply observe_intro_persistent; refine _.
+    rewrite cptrR_eq/cptrR_def _at_as_Rep.
+    iIntros "[$ _]".
+  Qed.
 
   (* TODO: Proper wrt [genv_leq]. *)
   #[global] Instance cptrR_mono {resolve} : Proper (flip fs_entails ==> (⊢)) cptrR.
   Proof.
     intros ??; rewrite /flip /fs_entails /fs_impl cptrR_eq/cptrR_def; intros Heq.
     constructor => p /=.
-    f_equiv=>ti; f_equiv; f_equiv => vs; f_equiv => Q.
+    f_equiv; f_equiv=>ti; f_equiv; f_equiv => vs; f_equiv => Q.
     iIntros "Hcptr -> Hy".
     iDestruct Heq as "(%Hspec & #Hyx)"; rewrite Hspec.
     iApply ("Hcptr" with "[%] (Hyx Hy)").
@@ -996,6 +1020,9 @@ Section with_cpp.
   Proof.
     rewrite is_nonnull_eq uninitR_eq. apply monPred_observe=>p /=. apply _.
   Qed.
+  Global Instance anyR_nonnull {σ} ty q :
+    Observe is_nonnull (anyR (resolve:=σ) ty q).
+  Proof. rewrite anyR_eq. apply _. Qed.
 
   Definition alignedR_def (al : N) : Rep := as_Rep (aligned_ptr al).
   Definition alignedR_aux : seal (@alignedR_def). Proof. by eexists. Qed.

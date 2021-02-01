@@ -72,28 +72,6 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
       bi_bi_mixin := bi_bi_mixin (iPropI _Σ);
       bi_bi_later_mixin := bi_bi_later_mixin (iPropI _Σ);
     |}.
-
-    Definition mPrePredO : ofeT := iPrePropO _Σ.
-
-    Definition mpred_unfold : mpredO -n> mPrePredO := iProp_unfold.
-    Definition mpred_fold : mPrePredO -n> mpredO := iProp_fold.
-
-    Definition mpred_fold_unfold :
-      ∀ (P : mpred), mpred_fold (mpred_unfold P) ≡ P := iProp_fold_unfold.
-    Definition mpred_unfold_fold :
-      ∀ (P : mPrePredO), mpred_unfold (mpred_fold P) ≡ P := iProp_unfold_fold.
-
-    (* TODO: generalize to a telescope version of -d> *)
-    (* With something like -td> below:
-      Definition laterPred `{cpp_logic} {T: tele} (Q : T -t> mpred) :
-        laterO (T -td> mPrePredO) :=
-        Next (λ args, mpred_unfold (tele_app Q args)). *)
-    Definition mPrePredO_to_laterO (P : mpred) : laterO mPrePredO :=
-      Next (mpred_unfold P).
-
-    Definition mPrePredO_to_laterO_1 {A: ofeT}
-      (P : ofe_car A -> mpred) : laterO (A -d> mPrePredO) :=
-      Next (fun a => mpred_unfold (P a)).
   End with_cpp.
 
   Bind Scope bi_scope with bi_car.
@@ -609,7 +587,7 @@ Section with_cpp.
   Proof.
     case: i => [|i] Hle; iIntros "V".
     - iDestruct (valid_o_sub_size with "V") as %?.
-      by rewrite o_sub_0 // offset_ptr_id.
+      by rewrite _offset_ptr_sub_0.
     - rewrite strict_valid_ptr_sub; last by lia.
       case: vt => //. by rewrite strict_valid_valid.
   Qed.
