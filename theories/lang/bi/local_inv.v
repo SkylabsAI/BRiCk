@@ -12,6 +12,8 @@ From iris.proofmode Require Import tactics.
 Require Import bedrock.lang.bi.mlens.
 Require Import bedrock.lang.bi.tls_modalities.
 Require Import bedrock.lang.bi.invariants.
+Require Import bedrock.lang.bi.cancelable_invariants.
+
 
 Class MLensStable {I J} (L: MLens I J) :=
   mlens_stable i i' : i ⊑ i' → i'.^L = i.^L.
@@ -85,3 +87,73 @@ Section local_inv.
     iApply own_inv_to_inv. done.
   Qed.
 End local_inv.
+
+
+(* Allocation rules for monPred that are tied specifically to iProp. *)
+Section local_cinv.
+  Context {K J : biIndex} `{!invG Σ, !cinvG Σ} (L : MLens K J).
+
+  Notation monPred := (monPred K (iPropI Σ)).
+  Notation monPredI := (monPredI K (iPropI Σ)).
+
+  Implicit Types (i j : K) (γ : gname) (P Q R : monPred).
+
+  (* some re-exporting of embedding properties *)
+  #[global] Instance monPred_own_local_with `{!inG Σ A} γ (a : A) :
+    LocalWith L (own γ a).
+  Proof. rewrite has_own_monpred_eq. apply _. Qed.
+
+  Typeclasses Transparent cinv_own cinv.
+  (*** Allocation rules. *)
+  (** The "strong" variants permit any infinite [I], and choosing [P] is delayed
+  until after [γ] was chosen.*)
+  Lemma cinv_alloc_strong (I : gname → Prop) E N `{!MLensStable L} :
+    pred_infinite I →
+    ⊢ |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗
+                    ∀ P, ⌜ LocalWith L P ⌝ → ▷ P ={E}=∗ cinv N γ P.
+  Proof.
+    iIntros (?). iMod (own_alloc_strong 1%Qp I) as (γ) "[Hfresh Hγ]"; [done|done|].
+    iExists γ. iIntros "!> {$Hγ} {$Hfresh}" (P LW) "HP".
+    iMod (inv_alloc L N _ (P ∨ cinv_own γ 1) with "[HP]"); eauto.
+  Qed.
+
+  (** The "open" variants create the invariant in the open state, and delay
+  having to prove [P].
+  These do not imply the other variants because of the extra assumption [↑N ⊆ E]. *)
+  Lemma cinv_alloc_strong_open (I : gname → Prop) E N `{!MLensStable L} :
+    pred_infinite I →
+    ↑N ⊆ E →
+    ⊢ |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗ ∀ P, ⌜ LocalWith L P ⌝ →
+      |={E,E∖↑N}=> cinv N γ P ∗ (▷ P ={E∖↑N,E}=∗ True).
+  Proof.
+    iIntros (??). iMod (own_alloc_strong 1%Qp I) as (γ) "[Hfresh Hγ]"; [done|done|].
+    iExists γ. iIntros "!> {$Hγ $Hfresh}" (P LW).
+    iMod (inv_alloc_open L N _ (P ∨ cinv_own γ 1)) as "[Hinv Hclose]"; first by eauto.
+    iIntros "!>". iFrame. iIntros "HP". iApply "Hclose". iLeft. done.
+  Qed.
+
+  Lemma cinv_alloc_cofinite (G : gset gname) E N `{!MLensStable L} :
+    ⊢ |={E}=> ∃ γ, ⌜ γ ∉ G ⌝ ∗ cinv_own γ 1 ∗
+                    ∀ P, ⌜ LocalWith L P ⌝ → ▷ P ={E}=∗ cinv N γ P.
+  Proof.
+    apply : cinv_alloc_strong. apply (pred_infinite_set (C:=gset gname))=> E'.
+    exists (fresh (G ∪ E')). apply not_elem_of_union, is_fresh.
+  Qed.
+
+  Lemma cinv_alloc E N P `{!MLensStable L} `{!LocalWith L P} :
+    ▷ P ={E}=∗ ∃ γ, cinv N γ P ∗ cinv_own γ 1.
+  Proof.
+    iIntros "HP". iMod (cinv_alloc_cofinite ∅ E N) as (γ _) "[Hγ Halloc]".
+    iExists γ. iFrame "Hγ". by iApply "Halloc".
+  Qed.
+
+  Lemma cinv_alloc_open E N P `{!MLensStable L} `{LW: LocalWith _ _ _ L P} :
+    ↑N ⊆ E → ⊢ |={E,E∖↑N}=> ∃ γ, cinv N γ P ∗ cinv_own γ 1 ∗ (▷ P ={E∖↑N,E}=∗ True).
+  Proof.
+    iIntros (?). iMod (cinv_alloc_strong_open (λ _, True)) as (γ) "(_ & Htok & Hmake)"; [|done|].
+    { apply pred_infinite_True. }
+    iMod ("Hmake" $! P LW) as "[Hinv Hclose]". iIntros "!>". iExists γ. iFrame.
+  Qed.
+End local_cinv.
+
+Typeclasses Opaque cinv_own cinv.
