@@ -14,7 +14,7 @@ Require Import bedrock.lang.bi.tls_modalities.
 Require Import bedrock.lang.bi.invariants.
 Require Import bedrock.lang.bi.cancelable_invariants.
 
-
+(* TODO: write a README for all this. *)
 Class MLensStable {I J} (L: MLens I J) :=
   mlens_stable i i' : i ⊑ i' → i'.^L = i.^L.
 Arguments MLensStable {_ _} _.
