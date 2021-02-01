@@ -590,6 +590,21 @@ Section other_instances.
     `{!ObjectiveWith L P} : ObjectiveWith L (■?p P).
   Proof. rewrite /plainly_if. destruct p; apply _. Qed.
 
+  (* LocalWith *)
+  Global Instance embed_local_with L (P : PROP) : LocalWith L ⎡P⎤.
+  Proof. intros ???. by rewrite !monPred_at_embed. Qed.
+  Global Instance pure_local_with L φ : LocalWith (PROP:=PROP) L ⌜φ⌝.
+  Proof. intros ???. by rewrite !monPred_at_pure. Qed.
+  Global Instance emp_local_with L : @LocalWith I J PROP L emp.
+  Proof. intros ???. by rewrite !monPred_at_emp. Qed.
+
+  Global Instance and_local_with L P Q
+    `{!LocalWith L P, !LocalWith L Q} : LocalWith L (P ∧ Q).
+  Proof. intros i j Eq. by rewrite !monPred_at_and -!(local_with L _ i). Qed.
+  Global Instance or_local_with L P Q
+    `{!LocalWith L P, !LocalWith L Q} : LocalWith L (P ∨ Q).
+  Proof. intros i j Eq. by rewrite !monPred_at_or !(local_with L _ i). Qed.
+
   (* TODO: big_op *)
 
 End other_instances.
