@@ -20,7 +20,7 @@ Section Bi.
 
   (* @(L,j) P *)
   Program Definition monPred_exactly_at_def L (j : J) P :=
-    MonPred (λ i, P (i .= (L, j))) _.
+    MonPred (λ i, P ((L .= j) i)) _.
   Next Obligation. intros ?? P ???. rewrite mlens_set_mono; eauto. Qed.
   Local Definition monPred_exactly_at_aux : seal (@monPred_exactly_at_def).
   Proof. by eexists. Qed.
@@ -69,7 +69,7 @@ Notation "'⊒{' L '}' j" := (monPred_atleast L j)
 
 (* ObjectiveWith respect to J *)
 Class ObjectiveWith {I J} {PROP: bi} (L: MLens I J) (P: monPred I PROP) :=
-  objective_with i j : P i -∗ P (i .= (L, j)).
+  objective_with i j : P i -∗ P ((L .= j) i).
 Arguments ObjectiveWith {_ _ _} _ _%I.
 Arguments objective_with {_ _ _} _ _%I {_}.
 #[global] Hint Mode ObjectiveWith ! ! + + ! : typeclass_instances.
@@ -154,7 +154,7 @@ Lemma objective_with_intro_exactly_at L P `{!ObjectiveWith L P} j :
 Proof.
   unfold_at. iSplit.
   - rewrite -objective_with. eauto.
-  - iIntros "P". rewrite (objective_with L P (i .= (L, j)) (i.^L)).
+  - iIntros "P". rewrite (objective_with L P ((L .= j) i) (i.^L)).
     by rewrite mlens_set_set mlens_set_get.
 Qed.
 
@@ -252,7 +252,7 @@ Section objectivelyWith_lens.
   Proof.
     intros Le. unfold_at. rewrite !monPred_at_forall /=.
     apply bi.forall_intro=> x.
-    by rewrite (bi.forall_elim ((i .= (Lj, x)).^Lk)) mlens_le_set_inner //.
+    by rewrite (bi.forall_elim (((Lj .= x) i).^Lk)) mlens_le_set_inner //.
   Qed.
 
   Corollary monPred_objectively_with_objective_with_lens_mono Lj Lk P :
@@ -502,7 +502,7 @@ Section other_instances.
     rewrite !monPred_at_impl. apply bi.forall_intro=> i'.
     rewrite bi.pure_impl_forall. apply bi.forall_intro=>Le.
     assert (Le2 := mlens_set_reset_order _ _ _ _ Le).
-    rewrite (bi.forall_elim (i' .= (L, i.^L))) bi.pure_impl_forall bi.forall_elim //.
+    rewrite (bi.forall_elim ((L .= (i.^L)) i')) bi.pure_impl_forall bi.forall_elim //.
     rewrite (objective_with L Q _ (i'.^L)) mlens_set_set mlens_set_get.
     apply bi.impl_mono; eauto.
   Qed.
@@ -535,7 +535,7 @@ Section other_instances.
     rewrite !monPred_at_wand. apply bi.forall_intro=> i'.
     rewrite bi.pure_impl_forall. apply bi.forall_intro=>Le.
     assert (Le2 := mlens_set_reset_order _ _ _ _ Le).
-    rewrite (bi.forall_elim (i' .= (L, i.^L))) bi.pure_impl_forall bi.forall_elim //.
+    rewrite (bi.forall_elim ((L .= (i.^L)) i')) bi.pure_impl_forall bi.forall_elim //.
     rewrite (objective_with L Q _ (i'.^L)) mlens_set_set mlens_set_get.
     apply bi.wand_mono; eauto.
   Qed.

@@ -25,8 +25,8 @@ Structure MLens {I J : biIndex} : Type := MLensMake {
 
 Arguments MLens : clear implicits.
 
-Notation "i '.=' ( L , j )" := (mlens_set L j i) (at level 50, format "i  .=  ( L ,  j )") : stdpp_scope.
-Notation "i '.^' L " := (mlens_get L i) (at level 49, format "i .^ L") : stdpp_scope.
+Notation "L '.=' j" := (mlens_set L j) (at level 49, left associativity, format "L  .=  j") : stdpp_scope.
+Notation "i '.^' L" := (mlens_get L i) (at level 45, left associativity, format "i .^ L") : stdpp_scope.
 
 (* TODO: seal all of these lens operations. *)
 Program Definition MLid {I} : MLens I I := {|
@@ -38,35 +38,35 @@ Next Obligation. done. Qed.
 Next Obligation. done. Qed.
 Next Obligation. done. Qed.
 
-(* Lj .>> Lk *)
-Local Hint Extern 2 (_.^_ ⊑ _.^_) => apply : mlens_get_mono : core.
-Local Hint Extern 2 (_ .= (_,_) ⊑ _ .= (_,_)) => apply : mlens_set_mono : core.
+Local Hint Extern 2 (mlens_get _ _ ⊑ mlens_get _ _) => apply : mlens_get_mono : core.
+Local Hint Extern 2 (mlens_set _ _ _ ⊑ mlens_set _ _ _) => apply : mlens_set_mono : core.
 
+(* Lj .@ Lk *)
 Program Definition MLens_compose {I J K}
   (Lj : MLens I J) (Lk : MLens J K) : MLens I K :=
 {|
-  mlens_get := fun i => (i.^Lj).^Lk ;
-  mlens_set := fun k i => i .= (Lj, (i.^Lj) .= (Lk, k)) ;
+  mlens_get := fun i => i.^Lj.^Lk ;
+  mlens_set := fun k i => (Lj .= (Lk .= k) (i.^Lj)) i ;
 |}.
 Next Obligation. intros ???  ?? ???. auto. Qed.
 Next Obligation. intros ??? ?? ??? ???. auto. Qed.
 Next Obligation. intros. by rewrite /= !mlens_get_set. Qed.
 Next Obligation. intros. by rewrite /= !mlens_set_get. Qed.
 Next Obligation. intros. by rewrite /= !mlens_get_set !mlens_set_set. Qed.
-Infix ".>>" := MLens_compose (at level 45, left associativity) : stdpp_scope.
-Notation "(.>>)" := MLens_compose (only parsing) : stdpp_scope.
+Infix ".@" := MLens_compose (at level 45, left associativity) : stdpp_scope.
+Notation "(.@)" := MLens_compose (only parsing) : stdpp_scope.
 
 (* L1 .== L2 *)
 Record MLens_eq {I J} (L1 L2: MLens I J) := mkMLensEq {
   mlens_eq_get i : i.^L1 = i.^L2 ;
-  mlens_eq_set i j : i .= (L1, j) = i .= (L2, j);
+  mlens_eq_set i j : (L1 .= j) i = (L2 .= j) i;
 }.
 Infix ".==" := MLens_eq (at level 70) : stdpp_scope.
 Notation "(.==)" := MLens_eq (only parsing) : stdpp_scope.
 
 (* Lj .<= Lk *)
 Definition MLens_le {I J K} (Lj: MLens I J) (Lk: MLens I K) : Prop :=
-  ∃ (L : MLens K J), Lj .== Lk .>> L.
+  ∃ (L : MLens K J), Lj .== Lk .@ L.
 Infix ".<=" := MLens_le (at level 70) : stdpp_scope.
 Notation "(.<=)" := MLens_le (only parsing) : stdpp_scope.
 
@@ -78,7 +78,7 @@ Notation "(.≡)" := MLens_equiv (only parsing) : stdpp_scope.
 
 (* Lj .## Lk *)
 Definition MLens_disjoint {I J K} (Lj: MLens I J) (Lk: MLens I K) :=
-  ∀ i j k, (i .= (Lj, j)) .= (Lk, k) = (i .= (Lk, k)) .= (Lj, j).
+  ∀ i j k, (Lk .= k) ((Lj .= j) i) = (Lj .= j) ((Lk .= k) i).
 Infix ".##" := MLens_disjoint (at level 70) : stdpp_scope.
 Notation "(.##)" := MLens_disjoint (only parsing) : stdpp_scope.
 (* TODO suggested by Paolo :
@@ -115,8 +115,8 @@ Next Obligation. by intros ?? []. Qed.
 Next Obligation. by intros ?? []. Qed.
 Next Obligation. by intros ?? []. Qed.
 
-Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J := L .>> MLens_fst.
-Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K := L .>> MLens_snd.
+Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J := L .@ MLens_fst.
+Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K := L .@ MLens_snd.
 
 Notation "L '.l'" := (MLens_left L)
   (at level 61, left associativity, format "L .l"): stdpp_scope.
@@ -128,7 +128,7 @@ Program Definition MLens_join {I J K}
   (Lj: MLens I J) (Lk: MLens I K) (DISJ: Lj .## Lk)
   : MLens I (J *i K) := {|
     mlens_get := fun i => (i.^Lj, i.^Lk);
-    mlens_set := fun jk i => (i .= (Lj, jk.1)) .= (Lk, jk.2);
+    mlens_set := fun jk i => (Lk .= jk.2) ((Lj .= jk.1) i);
   |}.
 Next Obligation. intros ??? ?? ? ???. split; simpl; auto. Qed.
 Next Obligation. intros ??? ??? [] [] [] ???. simpl; auto. Qed.
@@ -164,14 +164,14 @@ Instance : Params (@mlens_set) 2 := {}.
 (* MLens_compose *)
 (* We would like instances here, like LeftId, RightId, Assoc, but the types of
   lenses do not fit into `relation A` of the same `A` *)
-Lemma mlens_compose_id_l {I J} (L: MLens I J) : L .== L .>> MLid.
+Lemma mlens_compose_id_l {I J} (L: MLens I J) : L .== L .@ MLid.
 Proof. by constructor. Qed.
-Lemma mlens_compose_id_r {I J} (L: MLens I J) : L .== MLid .>> L.
+Lemma mlens_compose_id_r {I J} (L: MLens I J) : L .== MLid .@ L.
 Proof. by constructor. Qed.
 
 Lemma mlens_compose_assoc {I J K H}
   (Lj : MLens I J) (Lk : MLens J K) (Lh : MLens K H) :
-  Lj .>> Lk .>> Lh .== Lj .>> (Lk .>> Lh).
+  Lj .@ Lk .@ Lh .== Lj .@ (Lk .@ Lh).
 Proof. by constructor. Qed.
 
 Instance mlens_eq_compose_proper {I J K} :
@@ -204,7 +204,7 @@ Lemma mlens_le_transitive {I J K H}
   (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
   Lj .<= Lk -> Lk .<= Lh -> Lj .<= Lh.
 Proof.
-  intros [L1 Le1] [L2 Le2]. exists (L2 .>> L1).
+  intros [L1 Le1] [L2 Le2]. exists (L2 .@ L1).
   by rewrite Le1 Le2 mlens_compose_assoc.
 Qed.
 
@@ -213,11 +213,11 @@ Lemma mlens_le_get {I J K} (Lj: MLens I J) (Lk: MLens I K) :
 Proof. intros [Lm [Eq1 Eq2]] i1 i2 Eqk. by rewrite !Eq1 /= Eqk. Qed.
 
 Lemma mlens_le_set_inner {I J K} (Lj: MLens I J) (Lk: MLens I K) i j :
-  Lj .<= Lk -> i .= (Lk, (i .= (Lj, j)).^Lk) = i .= (Lj, j).
+  Lj .<= Lk -> (Lk .= ((Lj .= j) i.^Lk)) i = (Lj .= j) i.
 Proof. intros [Lm [Eq1 Eq2]]. by rewrite Eq2 mlens_get_set. Qed.
 
 Lemma mlens_le_set_outer {I J K} (Lj: MLens I J) (Lk: MLens I K) i j k :
-  Lj .<= Lk -> (i .= (Lj, j)) .= (Lk, k) = i .= (Lk, k).
+  Lj .<= Lk -> (Lk .= k) ((Lj .= j) i) = (Lk .= k) i.
 Proof. intros [Lm [Eq1 Eq2]]. by rewrite Eq2 mlens_set_set. Qed.
 
 (* MLens_equiv *)
@@ -258,13 +258,13 @@ Proof. split; intros DISJ ???; by rewrite DISJ. Qed.
 
 Lemma mlens_disjoint_get_set {I J K} (Lj: MLens I J) (Lk: MLens I K)
   (DISJ: Lj .## Lk) :
-  forall i j, (i .= (Lj, j)).^Lk = i.^Lk.
+  forall i j, ((Lj .= j) i).^Lk = i.^Lk.
 Proof.
   intros i j. by rewrite -{1}(mlens_set_get Lk i) -DISJ mlens_get_set.
 Qed.
 
 Lemma mlens_set_reset_order {I J} (L: MLens I J) i i' j :
-  i .= (L, j) ⊑ i' -> i ⊑ i' .= (L, i.^L).
+  (L .= j) i ⊑ i' -> i ⊑ (L .= (i.^L)) i'.
 Proof.
   intros Le. rewrite -{1}(mlens_set_get L i)-(mlens_set_set _ i _ j).
   apply mlens_set_mono; auto.
