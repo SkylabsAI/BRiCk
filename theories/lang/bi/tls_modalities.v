@@ -607,6 +607,109 @@ Section other_instances.
     `{!LocalWith L P, !LocalWith L Q} : LocalWith L (P ∨ Q).
   Proof. intros i j Eq. by rewrite !monPred_at_or !(local_with L _ i). Qed.
 
+  Global Instance impl_local_with L P Q
+    `{!LocalWith L P, !LocalWith L Q} : LocalWith L (P → Q).
+  Proof.
+    intros i j Eqi.
+    rewrite !monPred_at_impl. apply bi.forall_intro=> i'.
+    rewrite bi.pure_impl_forall. apply bi.forall_intro=>Le.
+    assert (Le' : i ⊑ (L .= i'.^L) i).
+    { rewrite -{1}(mlens_set_get L i). apply mlens_set_mono; [|done].
+      rewrite Eqi. by apply mlens_get_mono. }
+    rewrite (bi.forall_elim ((L .= (i'.^L)) i)) bi.pure_impl_forall bi.forall_elim //.
+    rewrite (local_with L Q _ i'); last by rewrite mlens_get_set.
+    apply bi.impl_mono; eauto.
+    by rewrite (local_with L) // mlens_get_set.
+  Qed.
+
+  Global Instance forall_local_with {A} L (Φ : A → monPred)
+    `{∀ x : A, LocalWith L (Φ x)} :
+    LocalWith L (∀ x, Φ x).
+  Proof.
+    intros i j ?.
+    rewrite !monPred_at_forall. by setoid_rewrite (local_with L _ _ _ Eq).
+  Qed.
+
+  Global Instance exist_local_with {A} L (Φ : A → monPred)
+    `{∀ x : A, LocalWith L (Φ x)} :
+    LocalWith L (∃ x, Φ x).
+  Proof.
+    intros i j ?.
+    rewrite !monPred_at_exist. by setoid_rewrite (local_with L _ _ _ Eq).
+  Qed.
+
+  Global Instance sep_local_with L P Q
+    `{OP: !LocalWith L P, OQ: !LocalWith L Q} :
+    LocalWith L (P ∗ Q)%I.
+  Proof.  intros i j ?. by rewrite !monPred_at_sep !(local_with L _ i j). Qed.
+
+  Global Instance wand_local_with L P Q
+    `{!LocalWith L P, !LocalWith L Q} : LocalWith L (P -∗ Q).
+  Proof.
+    intros i j Eqi.
+    rewrite !monPred_at_wand. apply bi.forall_intro=> i'.
+    rewrite bi.pure_impl_forall. apply bi.forall_intro=>Le.
+    assert (Le' : i ⊑ (L .= i'.^L) i).
+    { rewrite -{1}(mlens_set_get L i). apply mlens_set_mono; [|done].
+      rewrite Eqi. by apply mlens_get_mono. }
+    rewrite (bi.forall_elim ((L .= (i'.^L)) i)) bi.pure_impl_forall bi.forall_elim //.
+    rewrite (local_with L Q _ i'); last by rewrite mlens_get_set.
+    apply bi.wand_mono; eauto.
+    by rewrite (local_with L) // mlens_get_set.
+  Qed.
+  Global Instance persistently_local_with L P
+    `{!LocalWith L P} : LocalWith L (<pers> P).
+  Proof.
+    intros i j ?. by rewrite !monPred_at_persistently !(local_with L _ i j).
+  Qed.
+
+  Global Instance affinely_local_with L P
+    `{!LocalWith L P} : LocalWith L (<affine> P).
+  Proof. rewrite /bi_affinely. apply _. Qed.
+  Global Instance intuitionistically_local_with L P
+    `{!LocalWith L P} : LocalWith L (□ P).
+  Proof. rewrite /bi_intuitionistically. apply _. Qed.
+  Global Instance absorbingly_local_with L P
+    `{!LocalWith L P} : LocalWith L (<absorb> P).
+  Proof. rewrite /bi_absorbingly. apply _. Qed.
+  Global Instance persistently_if_local_with L P p
+    `{!LocalWith L P} : LocalWith L (<pers>?p P).
+  Proof. rewrite /bi_persistently_if. destruct p; apply _. Qed.
+  Global Instance affinely_if_local_with L P p
+    `{!LocalWith L P} : LocalWith L (<affine>?p P).
+  Proof. rewrite /bi_affinely_if. destruct p; apply _. Qed.
+  Global Instance absorbingly_if_local_with L P p
+    `{!LocalWith L P} : LocalWith L (<absorb>?p P).
+  Proof. rewrite /bi_absorbingly_if. destruct p; apply _. Qed.
+  Global Instance intuitionistically_if_local_with L P p
+    `{!LocalWith L P} : LocalWith L (□?p P).
+  Proof. rewrite /bi_intuitionistically_if. destruct p; apply _. Qed.
+
+  Global Instance bupd_local_with `{BiBUpd PROP} L P
+    `{!LocalWith L P} : LocalWith L (|==> P)%I.
+  Proof. intros i j ?. by rewrite !monPred_at_bupd (local_with L _ i j). Qed.
+
+  Global Instance fupd_local_with `{BiFUpd PROP} L E1 E2 P
+    `{!LocalWith L P} : LocalWith L (|={E1,E2}=> P)%I.
+  Proof. intros i j ?. by rewrite !monPred_at_fupd (local_with L _ i j). Qed.
+
+  Global Instance later_local_with L P
+    `{!LocalWith L P} : LocalWith L (▷ P).
+  Proof. intros i j ?. by rewrite !monPred_at_later (local_with L _ i j). Qed.
+  Global Instance laterN_local_with L P
+    `{!LocalWith L P} n : LocalWith L (▷^n P).
+  Proof. induction n; apply _. Qed.
+  Global Instance except0_local_with L P
+    `{!LocalWith L P} : LocalWith L (◇ P).
+  Proof. rewrite /bi_except_0. apply _. Qed.
+
+  Global Instance plainly_local_with `{BiPlainly PROP} L P :
+    LocalWith L (■ P).
+  Proof. rewrite monPred_plainly_unfold. apply _. Qed.
+  Global Instance plainly_if_local_with `{BiPlainly PROP} L P p
+    `{!LocalWith L P} : LocalWith L (■?p P).
+  Proof. rewrite /plainly_if. destruct p; apply _. Qed.
+
   (* TODO: big_op *)
 
 End other_instances.
