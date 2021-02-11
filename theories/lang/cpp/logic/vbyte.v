@@ -54,3 +54,24 @@ Module Type PHANTDATA.
   #[global] Existing Instance phantdata_at_timeless.
 End PHANTDATA.
 Declare Module Export Phantdata_impl : PHANTDATA.
+
+(*[va_region q addr sz_bytes]: The virtual address region starting at
+  [addr] of [sz_bytes] bytes. Unlike [vbyte_at], this predicate gives
+  NO OWNERSHIP of the page mapping and backing physical memory.*)
+Module Type VA_REGION.
+  Parameter va_region :
+    forall `{Σ:cpp_logic} (q : Qp) (addr : N) (sz_bytes : N), mpred.
+  Axiom va_region_fractional :
+    forall `{Σ:cpp_logic} addr sz_bytes,
+      Fractional (λ q, va_region q addr sz_bytes).
+  #[global] Existing Instance va_region_fractional.
+  Axiom va_region_frac_valid :
+    forall `{Σ:cpp_logic} addr sz_bytes (q : Qp),
+      Observe [| q ≤ 1 |]%Qp (va_region q addr sz_bytes).
+  #[global] Existing Instance va_region_frac_valid.
+  Axiom va_region_timeless :
+    forall `{Σ:cpp_logic} q addr sz_bytes,
+      Timeless (va_region q addr sz_bytes).
+  #[global] Existing Instance va_region_timeless.
+End VA_REGION.
+Declare Module Export Va_region_impl : VA_REGION.
