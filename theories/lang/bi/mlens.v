@@ -34,7 +34,7 @@ Program Definition MLid {I} : MLens I I := {|
   mlens_set := fun j i => j;
 |}.
 Next Obligation. by intros ??? L ???. Qed.
-Next Obligation. done. Qed.cd .
+Next Obligation. done. Qed.
 Next Obligation. done. Qed.
 Next Obligation. done. Qed.
 
