@@ -34,14 +34,16 @@ Program Definition MLid {I} : MLens I I := {|
   mlens_set := fun j i => j;
 |}.
 Next Obligation. by intros ??? L ???. Qed.
-Next Obligation. done. Qed.
+Next Obligation. done. Qed.cd .
 Next Obligation. done. Qed.
 Next Obligation. done. Qed.
 
 Local Hint Extern 2 (mlens_get _ _ ⊑ mlens_get _ _) => apply : mlens_get_mono : core.
 Local Hint Extern 2 (mlens_set _ _ _ ⊑ mlens_set _ _ _) => apply : mlens_set_mono : core.
 
-(* Lj .@ Lk *)
+(* Lj .>> Lk *)
+(* Gordon used the notation .@, but this is clashing with namespaces
+  subnamespacing, so I opted to use this notation .>>*)
 Program Definition MLens_compose {I J K}
   (Lj : MLens I J) (Lk : MLens J K) : MLens I K :=
 {|
@@ -53,8 +55,8 @@ Next Obligation. intros ??? ?? ??? ???. auto. Qed.
 Next Obligation. intros. by rewrite /= !mlens_get_set. Qed.
 Next Obligation. intros. by rewrite /= !mlens_set_get. Qed.
 Next Obligation. intros. by rewrite /= !mlens_get_set !mlens_set_set. Qed.
-Infix ".@" := MLens_compose (at level 45, left associativity) : stdpp_scope.
-Notation "(.@)" := MLens_compose (only parsing) : stdpp_scope.
+Infix ".>>" := MLens_compose (at level 45, left associativity) : stdpp_scope.
+Notation "(.>>)" := MLens_compose (only parsing) : stdpp_scope.
 
 (* L1 .== L2 *)
 Record MLens_eq {I J} (L1 L2: MLens I J) := mkMLensEq {
@@ -66,7 +68,7 @@ Notation "(.==)" := MLens_eq (only parsing) : stdpp_scope.
 
 (* Lj .<= Lk *)
 Definition MLens_le {I J K} (Lj: MLens I J) (Lk: MLens I K) : Prop :=
-  ∃ (L : MLens K J), Lj .== Lk .@ L.
+  ∃ (L : MLens K J), Lj .== Lk .>> L.
 Infix ".<=" := MLens_le (at level 70) : stdpp_scope.
 Notation "(.<=)" := MLens_le (only parsing) : stdpp_scope.
 
@@ -115,8 +117,8 @@ Next Obligation. by intros ?? []. Qed.
 Next Obligation. by intros ?? []. Qed.
 Next Obligation. by intros ?? []. Qed.
 
-Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J := L .@ MLens_fst.
-Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K := L .@ MLens_snd.
+Definition MLens_left {I J K} (L: MLens I (J *i K)) : MLens I J := L .>> MLens_fst.
+Definition MLens_right {I J K} (L: MLens I (J *i K)) : MLens I K := L .>> MLens_snd.
 
 Notation "L '.l'" := (MLens_left L)
   (at level 61, left associativity, format "L .l"): stdpp_scope.
@@ -164,14 +166,14 @@ Instance : Params (@mlens_set) 2 := {}.
 (* MLens_compose *)
 (* We would like instances here, like LeftId, RightId, Assoc, but the types of
   lenses do not fit into `relation A` of the same `A` *)
-Lemma mlens_compose_id_l {I J} (L: MLens I J) : L .== L .@ MLid.
+Lemma mlens_compose_id_l {I J} (L: MLens I J) : L .== L .>> MLid.
 Proof. by constructor. Qed.
-Lemma mlens_compose_id_r {I J} (L: MLens I J) : L .== MLid .@ L.
+Lemma mlens_compose_id_r {I J} (L: MLens I J) : L .== MLid .>> L.
 Proof. by constructor. Qed.
 
 Lemma mlens_compose_assoc {I J K H}
   (Lj : MLens I J) (Lk : MLens J K) (Lh : MLens K H) :
-  Lj .@ Lk .@ Lh .== Lj .@ (Lk .@ Lh).
+  Lj .>> Lk .>> Lh .== Lj .>> (Lk .>> Lh).
 Proof. by constructor. Qed.
 
 Instance mlens_eq_compose_proper {I J K} :
@@ -204,7 +206,7 @@ Lemma mlens_le_transitive {I J K H}
   (Lj : MLens I J) (Lk : MLens I K) (Lh : MLens I H) :
   Lj .<= Lk -> Lk .<= Lh -> Lj .<= Lh.
 Proof.
-  intros [L1 Le1] [L2 Le2]. exists (L2 .@ L1).
+  intros [L1 Le1] [L2 Le2]. exists (L2 .>> L1).
   by rewrite Le1 Le2 mlens_compose_assoc.
 Qed.
 
