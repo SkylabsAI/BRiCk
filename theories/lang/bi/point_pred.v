@@ -266,8 +266,31 @@ Implicit Types i : I.
 Implicit Types P Q : monPred.
 
 (** monPred_at unfolding laws *)
+
 Lemma monPred_at_pure i (φ : Prop) : monPred_at ⌜φ⌝ i ⊣⊢ ⌜φ⌝.
-Proof. by unseal. Qed.
+Proof.
+  (* Demonstrate simplification problem. *)
+  unsealf. (* This works, but unfolds the bi structure by hand. *)
+  Show.
+
+  Undo.
+  (* But I don't see anything else that works. *)
+
+
+  cbn.
+  Show.
+  simpl.
+  Show.
+  #[global] Arguments point_pred.monPred_at {I} {PROP} _ _ / : assert.
+  simpl.
+  Show.
+  unsealf.
+  Show.
+  done.
+Qed.
+(* XXX Restore old setting *)
+#[global] Arguments point_pred.monPred_at {I} {PROP} !_ _ / : assert.
+
 Lemma monPred_at_emp i : monPred_at emp i ⊣⊢ emp.
 Proof. by unseal. Qed.
 Lemma monPred_at_and i P Q : (P ∧ Q) i ⊣⊢ P i ∧ Q i.
