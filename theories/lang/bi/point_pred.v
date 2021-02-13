@@ -162,6 +162,13 @@ Notation "'<obj>' P" := (monPred_objectively P) : bi_scope.
 Notation "'<subj>' P" := (monPred_subjectively P) : bi_scope.
 
 Module Import MonPred.
+(* "unseal folding". TODO name. *)
+Ltac unsealf :=
+  unfold bi_affinely, bi_absorbingly, bi_except_0, bi_pure, bi_emp,
+         bi_and, bi_or,
+         bi_impl, bi_forall, bi_exist, bi_sep, bi_wand,
+         bi_persistently, bi_affinely, bi_later; simpl.
+
 Definition unseal_eqs :=
   (
     (* @monPred_and_eq, @monPred_or_eq, @monPred_impl_eq,
@@ -169,13 +176,7 @@ Definition unseal_eqs :=
    @monPred_persistently_eq, @monPred_later_eq, @monPred_in_eq,
    @monPred_embed_eq, @monPred_emp_eq, @monPred_pure_eq, *)
    @monPred_objectively_eq, @monPred_subjectively_eq).
-Ltac unseal :=
-  unfold bi_affinely, bi_absorbingly, bi_except_0, bi_pure, bi_emp,
-         bi_and, bi_or,
-         bi_impl, bi_forall, bi_exist, bi_sep, bi_wand,
-         bi_persistently, bi_affinely, bi_later;
-  simpl;
-  rewrite ?unseal_eqs /=.
+Ltac unseal := unsealf; rewrite ?unseal_eqs /=.
 End MonPred.
 
 Section canonical.
