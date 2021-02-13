@@ -23,6 +23,7 @@ theories/lang/prelude/avl.v
 theories/lang/bi/big_op.v
 theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
+theories/lang/bi/point_pred.v
 theories/lang/bi/derived_laws.v
 theories/lang/bi/prelude.v
 theories/lang/bi/IrisBridge.v
