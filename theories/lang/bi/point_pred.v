@@ -257,6 +257,25 @@ Global Arguments objective_at {_ _} _%I {_}.
 Global Hint Mode Objective + + ! : typeclass_instances.
 Global Instance: Params (@Objective) 2 := {}.
 
+
+(* For now, only primitives *)
+Ltac monPredUnfold :=
+  rewrite
+    ?[@bi_pure (monPredI _ _)] /bi_pure
+    ?[@bi_emp (monPredI _ _)] /bi_emp
+    ?[@bi_sep (monPredI _ _)] /bi_sep
+    ?[@bi_and (monPredI _ _)] /bi_and
+    ?[@bi_or (monPredI _ _)] /bi_or
+    ?[@bi_impl (monPredI _ _)] /bi_impl
+    ?[@bi_wand (monPredI _ _)] /bi_wand
+    ?[@bi_exist (monPredI _ _)] /bi_exist
+    ?[@bi_forall (monPredI _ _)] /bi_forall
+    ?[@bi_persistently (monPredI _ _)] /bi_persistently
+    ?[@bi_later (monPredI _ _)] /bi_later
+    /=.
+  (* unfold bi_affinely, bi_absorbingly, bi_except_0,
+         bi_persistently, bi_affinely, bi_later; simpl. *)
+
 Section bi_facts.
 Context {I : biIndex} {PROP : bi}.
 Local Notation monPred := (monPred I PROP).
@@ -272,8 +291,13 @@ Proof.
   (* Demonstrate simplification problem. *)
   unsealf. (* This works, but unfolds the bi structure by hand. *)
   Show.
-
   Undo.
+
+  monPredUnfold. (* This also works! And doesn't affect the proof term! *)
+  Show.
+  Show Proof.
+  Undo.
+
   (* But I don't see anything else that works. *)
 
 
@@ -283,8 +307,6 @@ Proof.
   Show.
   #[global] Arguments point_pred.monPred_at {I} {PROP} _ _ / : assert.
   simpl.
-  Show.
-  unsealf.
   Show.
   done.
 Qed.
