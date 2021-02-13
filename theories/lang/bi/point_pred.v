@@ -242,3 +242,27 @@ Proof.
   - intros P Q i. apply: bi.sep_elim_l.
   - intros P Q i. by apply bi.persistently_and_sep_elim.
 Qed.
+
+Lemma monPred_bi_later_mixin :
+  BiLaterMixin (PROP:=monPred I PROP) monPred_entails monPred_pure
+               monPred_or monPred_impl monPred_forall monPred_exist
+               monPred_sep monPred_persistently monPred_later.
+Proof.
+  split; unseal.
+  all: rewrite /monPred_entails/=.
+  - by split=> ? /=; repeat f_equiv.
+  - intros P Q ? i. by apply bi.later_mono.
+  - intros P i. by apply bi.later_intro.
+  - intros A Ψ i. by apply bi.later_forall_2.
+  - intros A Ψ i. by apply bi.later_exist_false.
+  - intros P Q i. by apply bi.later_sep_1.
+  - intros P Q i. by apply bi.later_sep_2.
+  - intros P i. by apply bi.later_persistently_1.
+  - intros P i. by apply bi.later_persistently_2.
+  - intros P i. apply bi.later_false_em.
+Qed.
+
+Canonical Structure monPredI : bi :=
+  {| bi_ofe_mixin := monPred_ofe_mixin; bi_bi_mixin := monPred_bi_mixin;
+     bi_bi_later_mixin := monPred_bi_later_mixin |}.
+End canonical.
