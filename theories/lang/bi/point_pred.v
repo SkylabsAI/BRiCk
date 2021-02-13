@@ -92,9 +92,9 @@ Implicit Types i : I.
 Notation monPred := (monPred I PROP).
 Implicit Types P Q : monPred.
 
-Inductive monPred_entails (P1 P2 : monPred) : Prop :=
-  { monPred_in_entails i : P1 i ⊢ P2 i }.
-#[local] Hint Immediate monPred_in_entails : core.
+Definition monPred_entails (P1 P2 : monPred) : Prop :=
+  ∀ i , P1 i ⊢ P2 i.
+(* #[local] Hint Immediate monPred_in_entails : core. *)
 
 Definition monPred_embed_def : Embed PROP monPred := λ (P : PROP), MonPred (λ _, P).
 Definition monPred_embed_aux : seal (@monPred_embed_def). Proof. by eexists. Qed.
@@ -205,42 +205,40 @@ Lemma monPred_bi_mixin : BiMixin (PROP:=monPred I PROP)
   monPred_persistently.
 Proof.
   split; try unseal; try by (split=> ? /=; repeat f_equiv).
+  all: rewrite /monPred_entails/=.
   - split.
-    + intros P. by split.
-    + intros P Q R [H1] [H2]. split => ?. by rewrite H1 H2.
+    + intros P. by [].
+    + intros P Q R H1 H2 ?. by rewrite H1 H2.
   - split.
-    + intros [HPQ]. split; split => i; move: (HPQ i); by apply bi.equiv_spec.
-    + intros [[] []]. split=>i. by apply bi.equiv_spec.
-  - intros φ ?. split=> i/=. by apply bi.pure_intro.
-  - intros φ P HP. split=> i. apply bi.pure_elim'=> ?. by apply HP.
-  - intros P Q. split=> i. by apply bi.and_elim_l.
-  - intros P Q. split=> i. by apply bi.and_elim_r.
-  - intros P Q R [?] [?]. split=> i. by apply bi.and_intro.
-  - intros P Q. split=> i. by apply bi.or_intro_l.
-  - intros P Q. split=> i. by apply bi.or_intro_r.
-  - intros P Q R [?] [?]. split=> i. by apply bi.or_elim.
-  - intros P Q R [HR]. split=> i /=.
-    apply bi.impl_intro_r, HR.
-  - intros P Q R [HR]. split => i /=.
-    rewrite HR. apply bi.impl_elim_l.
-  - intros A P Ψ HΨ. split=> i. apply bi.forall_intro => ?. by apply HΨ.
-  - intros A Ψ. split=> i. by apply: bi.forall_elim.
-  - intros A Ψ a. split=> i. by rewrite /= -bi.exist_intro.
-  - intros A Ψ Q HΨ. split=> i. apply bi.exist_elim => a. by apply HΨ.
-  - intros P P' Q Q' [?] [?]. split=> i. by apply bi.sep_mono.
-  - intros P. split=> i. by apply bi.emp_sep_1.
-  - intros P. split=> i. by apply bi.emp_sep_2.
-  - intros P Q. split=> i. by apply bi.sep_comm'.
-  - intros P Q R. split=> i. by apply bi.sep_assoc'.
-  - intros P Q R [HR]. split=> i /=.
-    apply bi.wand_intro_r, HR.
-  - intros P Q R [HR]. split => i /=.
+    + intros [HPQ]. split => i; move: (HPQ i); by apply bi.equiv_spec.
+    + intros []. split=>i. by apply bi.equiv_spec.
+  - intros P φ ? i. by apply bi.pure_intro.
+  - intros φ P HP i. apply bi.pure_elim'=> ?. by apply HP.
+  - intros P Q i. by apply bi.and_elim_l.
+  - intros P Q i. by apply bi.and_elim_r.
+  - intros P Q R ? ? i. by apply bi.and_intro.
+  - intros P Q i. by apply bi.or_intro_l.
+  - intros P Q i. by apply bi.or_intro_r.
+  - intros P Q R ?? i. by apply bi.or_elim.
+  - intros P Q R HR i. apply bi.impl_intro_r, HR.
+  - intros P Q R HR i. rewrite HR. apply bi.impl_elim_l.
+  - intros A P Ψ HΨ i. apply bi.forall_intro => ?. by apply HΨ.
+  - intros A Ψ a i. by apply: bi.forall_elim.
+  - intros A Ψ a i. by rewrite /= -bi.exist_intro.
+  - intros A Ψ Q HΨ i. apply bi.exist_elim => a. by apply HΨ.
+  - intros P P' Q Q' ?? i. by apply bi.sep_mono.
+  - intros P i. by apply bi.emp_sep_1.
+  - intros P i. by apply bi.emp_sep_2.
+  - intros P Q i. by apply bi.sep_comm'.
+  - intros P Q R i. by apply bi.sep_assoc'.
+  - intros P Q R HR i. apply bi.wand_intro_r, HR.
+  - intros P Q R HR i.
     rewrite HR. apply bi.wand_elim_l.
-  - intros P Q [?]. split=> i /=. by f_equiv.
-  - intros P. split=> i. by apply bi.persistently_idemp_2.
-  - split=> i. by apply bi.persistently_emp_intro.
-  - intros A Ψ. split=> i. by apply bi.persistently_forall_2.
-  - intros A Ψ. split=> i. by apply bi.persistently_exist_1.
-  - intros P Q. split=> i. apply bi.sep_elim_l, _.
-  - intros P Q. split=> i. by apply bi.persistently_and_sep_elim.
+  - intros P Q ? i. by f_equiv.
+  - intros P i. by apply bi.persistently_idemp_2.
+  - intros i. by apply bi.persistently_emp_intro.
+  - intros A Ψ i. by apply bi.persistently_forall_2.
+  - intros A Ψ i. by apply bi.persistently_exist_1.
+  - intros P Q i. apply: bi.sep_elim_l.
+  - intros P Q i. by apply bi.persistently_and_sep_elim.
 Qed.
