@@ -4,9 +4,8 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-(* TODO: LICENSE for Iris. *)
-
 (** Own instances for iProp and monPred **)
+(* TODO: these should be upstreamed to Iris. *)
 Require Export iris.si_logic.bi.
 Require Import iris.bi.monpred.
 

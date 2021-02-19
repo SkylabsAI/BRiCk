@@ -2,16 +2,29 @@
  * Copyright (c) 2020 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
+ *
+ * This file is derived from code original to the Iris project. That
+ * original code is
+ *
+ *	Copyright Iris developers and contributors
+ *
+ * and used according to the following license.
+ *
+ *	SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Original Code:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/iris/base_logic/lib/invariants.v
+ *
+ * Original Iris License:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/LICENSE-CODE
  *)
 
-(* TODO: LICENSE for Iris. *)
 (** Extraction of invariants that doesn't depend on iProp.
-  Most proofs in this file generalize those of Iris, see
-  https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/invariants.v
+  Most proofs in this file generalize those of Iris, see the link above.
   In many cases, the proofs are unchanged and are exact duplicates of those in
   Iris. But their types did change and become more general.
 
-  TODO: These should be upstreamed to Iris's code base. **)
+  TODO: These should be upstreamed to Iris. **)
 
 Require Export iris.base_logic.lib.invariants. (* << export [invG] *)
 
