@@ -48,6 +48,7 @@ Definition bi_cmra_valid
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) : PROP :=
   embed (si_cmra_valid a).
 
+(* TODO: figure out if overwriting Iris's notation for [uPred_cmra_valid] works robustly, until this is upstreamed. *)
 Notation "✓ x" := (bi_cmra_valid x) (at level 20) : bi_scope.
 
 Instance prop_valid_plain
