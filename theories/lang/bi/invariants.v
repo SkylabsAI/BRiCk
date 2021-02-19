@@ -66,6 +66,12 @@ End defs.
 Arguments inv {_ _} N P%I.
 Instance : Params (@inv) 3 := {}.
 
+(* TODO: allocation rules are missing. These rely on the specific model of PROP,
+  so the client of this library needs the provide the corresponding model of
+  invariants for their PROP, and then prove the allocation rules. *)
+(* Such a model exists for iProp, see
+  https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/iris/base_logic/lib/invariants.v#L27 *)
+
 Section inv_properties.
 Context `{!BiFUpd PROP}.
 
