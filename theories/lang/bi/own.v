@@ -13,17 +13,12 @@
 
   TODO: These should be upstreamed to Iris's code base. **)
 
-Require Import iris.bi.bi.
-Require Import iris.algebra.cmra.
-Require Import iris.bi.embedding.
-Require Import iris.si_logic.siprop.
 Require Export iris.si_logic.bi.
 
 Require Import iris.algebra.proofmode_classes.
 Require Import iris.proofmode.classes.
 
-(* Needed for gname *)
-Require Import iris.base_logic.lib.iprop.
+Require Import iris.base_logic.lib.iprop. (* << for [gname] only *)
 
 (* Step-indexed Validity *)
 Program Definition si_cmra_valid_def {A : cmraT} (a : A) : siProp :=

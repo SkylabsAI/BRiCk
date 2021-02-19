@@ -7,20 +7,11 @@
 (* TODO: LICENSE for Iris. *)
 
 (** Own instances for iProp and monPred **)
-
-Require Import iris.bi.bi.
-Require Import iris.algebra.cmra.
-Require Import iris.bi.embedding.
-Require Import iris.si_logic.siprop.
 Require Export iris.si_logic.bi.
+Require Import iris.bi.monpred.
 
-Require Import iris.proofmode.classes.
-
-Require Import iris.base_logic.lib.iprop.
 Require Export iris.base_logic.lib.own. (* << exporting [inG] and [gFunctors] *)
 
-Require Import iris.bi.monpred.
-Require Import bedrock.lang.bi.invariants.
 Require Export bedrock.lang.bi.own.
 
 (* Instances for iProp *)
@@ -220,9 +211,6 @@ Section monpred_instances.
   Qed.
 
   (* some re-exporting of embedding properties *)
-  #[global] Instance monPred_own_weakly_objective γ (a : A) :
-    WeaklyObjective (own γ a).
-  Proof. rewrite has_own_monpred_eq. apply _. Qed.
   #[global] Instance monPred_own_objective γ (a : A) :
     Objective (own γ a).
   Proof. rewrite has_own_monpred_eq. apply _. Qed.
