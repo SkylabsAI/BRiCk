@@ -285,7 +285,7 @@ one is [PTRS_IMPL].
     size_of σ ty = Some sz -> (sz > 0)%N ->
     same_property ptr_vaddr (p .., o_sub _ ty n1) (p .., o_sub _ ty n2) ->
     n1 = n2.
-  Axiom o_dot_sub : ∀ {σ : genv} i j ty,
+  Axiom o_dot_sub : ∀ [σ : genv] i j ty,
     o_dot (o_sub _ ty i) (o_sub _ ty j) = o_sub _ ty (i + j).
 End PTRS.
 
@@ -412,23 +412,89 @@ Module Type PTRS_MIXIN (Import P : PTRS) (Import PD : PTRS_DERIVED P).
     same_address (p .., o_sub _ ty n1) (p .., o_sub _ ty n2) -> n1 = n2.
   Proof. rewrite same_address_eq. exact: ptr_vaddr_o_sub_eq. Qed.
 
+  Lemma offset_ptr_dot_inv p o1 o2 :
+    p .., o1 .., o2 = p .., (o1 .., o2).
+  Proof. by rewrite offset_ptr_dot. Qed.
+
+  Definition ptr_canon :=
+    (
+      (* offset_ptr_sub_0, o_sub_sub, *)
+    offset_ptr_dot_inv, offset_ptr_id, o_sub_0, @o_dot_sub,
+    Z.add_assoc,
+    left_id_L o_id, right_id_L o_id, assoc_L o_dot).
+  Ltac ptr_canon := rewrite ?ptr_canon.
   Lemma offset_ptr_sub_0 p ty resolve
     (Hsz : is_Some (size_of resolve ty)) :
-    _offset_ptr p (o_sub _ ty 0) = p.
-  Proof. by rewrite o_sub_0 // offset_ptr_id. Qed.
+    p .., (o_sub _ ty 0) = p.
+  Proof.
+    by ptr_canon.
+    (* by rewrite o_sub_0 // offset_ptr_id. *)
+    Qed.
 
   #[deprecated(note="Use offset_ptr_sub_0", since="2021-02-18")]
   Notation _offset_ptr_sub_0 := offset_ptr_sub_0 (only parsing).
 
   Lemma o_sub_sub p ty i j σ :
-    p .., o_sub _ ty i .., o_sub _ ty j = (p .., o_sub _ ty (i + j)).
-  Proof. by rewrite -offset_ptr_dot o_dot_sub. Qed.
+    p .., o_sub _ ty i .., o_sub _ ty j = p .., o_sub _ ty (i + j).
+  Proof.
+    by ptr_canon.
+    (* by rewrite -offset_ptr_dot o_dot_sub. *)
+  Qed.
+
+  Lemma o_sub_sub' p ty i j o σ :
+    p .., o_sub _ ty i .., o_sub _ ty j .., o = p .., o_sub _ ty (i + j) .., o.
+  Proof.
+    by ptr_canon.
+    (* by rewrite o_sub_sub. *)
+    (* by rewrite -!offset_ptr_dot assoc_L o_dot_sub.  *)
+  Qed.
+
+  Definition ptr_canon' :=
+    (
+    offset_ptr_sub_0, o_sub_sub', o_sub_sub,
+    offset_ptr_dot_inv, offset_ptr_id, o_sub_0, @o_dot_sub,
+    (* Z.add_assoc, *)
+    left_id_L o_id, right_id_L o_id, assoc_L o_dot).
+  Ltac ptr_canon ::= rewrite ?ptr_canon'.
+
+
+  Lemma o_sub_0_test p ty σ
+    (Hsz : is_Some (size_of _ ty))
+    :
+    (* p .., o_sub _ ty 0 .., o_sub _ ty j .., o_sub _ ty k = (p .., o_sub _ ty (j + k)). *)
+    p .., o_sub _ ty 0 = p.
+  Proof. by ptr_canon. Qed.
+  Lemma o_sub_sub_sub p ty σ i j k :
+    p .., o_sub _ ty i .., o_sub _ ty j .., o_sub _ ty k = (p .., o_sub _ ty (i + j + k)).
+  Proof. by ptr_canon. Qed.
+  Lemma o_sub_sub_sub_sub p ty σ i j k l :
+    p .., o_sub _ ty i .., o_sub _ ty j .., o_sub _ ty k .., o_sub _ ty l = (p .., o_sub _ ty (i + j + k + l)).
+  Proof. ptr_canon. rewrite Z.add_assoc //. Qed.
+
+  Lemma o_sub_0_sub_sub p ty σ j k :
+    p .., o_sub _ ty 0 .., o_sub _ ty j .., o_sub _ ty k = (p .., o_sub _ ty (j + k)).
+  Proof. by ptr_canon. Qed.
+
+    (* Time Fail by rewrite ?o_sub_sub.
+    Time by rewrite ?(o_sub_sub p).
+    Restart.
+    Time by rewrite ?(o_sub_sub, Z.add_assoc).
+    Time by rewrite !o_sub_sub !Z.add_assoc.
+    Restart.
+    Time by rewrite_strat bottomup(o_sub_sub).
+    Time by rewrite_strat topdown(o_sub_sub).
+    Restart.
+    by rewrite !o_sub_sub' !o_sub_sub.
+  Qed. *)
 
   (* TODO: drop for [o_dot_o_sub]. *)
   Lemma _o_sub_sub_nneg : ∀ σ p ty (z1 z2 : Z),
     0 <= z1 -> 0 <= z2 ->
     p .., o_sub σ ty z1 .., o_sub σ ty z2 = p .., o_sub σ ty (z1 + z2).
-  Proof. intros * _ _. exact: o_sub_sub. Qed.
+  Proof.
+    intros * _ _. by ptr_canon.
+    (* exact: o_sub_sub. *)
+  Qed.
 
   #[deprecated(since="2021-02-13", note="Use stronger [o_sub_sub] (or [o_dot_sub]).")]
   Notation o_sub_sub_nneg := _o_sub_sub_nneg.
