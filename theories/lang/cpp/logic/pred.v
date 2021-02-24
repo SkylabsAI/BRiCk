@@ -97,9 +97,8 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
 
     (**
       [_valid_ptr vt p] is a persistent assertion that [p] is a _valid pointer_, that is:
-      - [p] can be [nullptr]
       - [p] can point to a function or a (possibly dead) object [o]
-      - if [vt = Relaxed], [p] can be past-the-end of a (possibly dead) object [o].
+      - if [vt = Relaxed], [p] can be nullptr, or past-the-end of a (possibly dead) object [o].
       In particular, [_valid_ptr vt p] prevents producing [p] by incrementing
       past-the-end pointers into overflow territory.
 
@@ -145,7 +144,8 @@ Module Type CPP_LOGIC (Import CC : CPP_LOGIC_CLASS)
     Axiom _valid_ptr_timeless : forall b p, Timeless (_valid_ptr b p).
     Global Existing Instances _valid_ptr_persistent _valid_ptr_affine _valid_ptr_timeless.
 
-    Axiom _valid_ptr_nullptr : forall b, |-- _valid_ptr b nullptr.
+    Axiom valid_ptr_nullptr : |-- valid_ptr nullptr.
+    Axiom not_strictly_valid_ptr_nullptr : strict_valid_ptr nullptr |-- False.
     Axiom strict_valid_valid : forall p,
       strict_valid_ptr p |-- valid_ptr p.
 
@@ -542,12 +542,6 @@ Declare Module Export VALID_PTR : VALID_PTR_AXIOMS.
 
 Section pinned_ptr_def.
   Context `{Σ : cpp_logic}.
-
-  (* Just wrappers. *)
-  Lemma valid_ptr_nullptr : |-- valid_ptr nullptr.
-  Proof. exact: _valid_ptr_nullptr. Qed.
-  Lemma strict_valid_ptr_nullptr : |-- strict_valid_ptr nullptr.
-  Proof. exact: _valid_ptr_nullptr. Qed.
 
   Definition exposed_ptr_def p : mpred :=
     valid_ptr p ** ∃ aid, [| ptr_alloc_id p = Some aid |] ** exposed_aid aid.
