@@ -65,6 +65,9 @@ stages:
       - build/gitshas.txt
       - build/cpp2v
       - build/bedrock
+  except:
+    variables:
+      - $CI_MERGE_REQUEST_LABELS =~ /CI-skip-proofs/
 
 .test:
   stage: test
@@ -77,7 +80,7 @@ stages:
     - merge_requests
   except:
     variables:
-      - $CI_MERGE_REQUEST_TITLE =~ /^WIP:/
+      - $CI_MERGE_REQUEST_LABELS =~ /CI-skip-proofs/
 
 build_latest:
   extends: .build
