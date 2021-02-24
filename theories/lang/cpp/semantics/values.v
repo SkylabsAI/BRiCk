@@ -590,23 +590,29 @@ of type [t]." This implies:
 - if [ty <> Tvoid], then [v <> Vundef].
 - if [ty = Tint sz sgn], then [v] fits the appropriate bounds (see
 [has_int_type']).
-- if [ty] is a type of pointers/references/aggregates, we only ensure that [v
-= Vptr p].
+- if [ty] is a type of pointers/references/aggregates to [ty'],
+  we do not ensure that the pointed data matches [ty'].
+  We ensure that [v = Vptr p] and that it's not [nullptr] when appropriate.
+  Moreover, we ensure that [p] has some address ([exists va, ptr_vaddr p =
+  Some va]), because all C++ pointers have a valid address.
+  A Coq pointer [p : ptr] with [ptr_vaddr p = None] is only a way to refer to
+  some objects potentially stored outside of memory (e.g. registers), but
+  these "virtual pointers" correspond to no C++ pointer.
   *)
 Parameter has_type : val -> type -> Prop.
 
 Axiom has_type_pointer : forall v ty,
-    has_type v (Tpointer ty) -> exists p, v = Vptr p.
+    has_type v (Tpointer ty) -> exists p va, v = Vptr p /\ ptr_vaddr p = Some va.
 Axiom has_type_nullptr : forall v,
     has_type v Tnullptr -> v = Vptr nullptr.
 Axiom has_type_reference : forall v ty,
-    has_type v (Treference ty) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Treference ty) -> exists p, v = Vptr p /\ p <> nullptr /\ ptr_vaddr p = Some va.
 Axiom has_type_rv_reference : forall v ty,
-    has_type v (Trv_reference ty) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Trv_reference ty) -> exists p, v = Vptr p /\ p <> nullptr /\ ptr_vaddr p = Some va.
 Axiom has_type_array : forall v ty n,
-    has_type v (Tarray ty n) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Tarray ty n) -> exists p, v = Vptr p /\ p <> nullptr /\ ptr_vaddr p = Some va.
 Axiom has_type_function : forall v cc rty args,
-    has_type v (Tfunction (cc:=cc) rty args) -> exists p, v = Vptr p /\ p <> nullptr.
+    has_type v (Tfunction (cc:=cc) rty args) -> exists p, v = Vptr p /\ p <> nullptr /\ ptr_vaddr p = Some va.
 
 Axiom has_type_void : forall v,
     has_type v Tvoid -> v = Vundef.
