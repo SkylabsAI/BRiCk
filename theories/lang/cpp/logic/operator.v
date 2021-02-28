@@ -12,18 +12,10 @@ From bedrock.lang.cpp Require Import logic.pred.
 Parameter eval_binop_impure : forall `{has_cpp : cpp_logic} {resolve : genv}, BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), mpred.
 
 (** Pointer [p'] is not at the beginning of a block. *)
-Definition non_beginning_ptr `{has_cpp : cpp_logic} p' : mpred :=
-  ∃ p o, [| p' = p .., o /\
+Definition non_beginning_ptr p' : Prop :=
+  ∃ p o, p' = p .., o /\
     (* ensure that o is > 0 *)
-    some_Forall2 N.lt (ptr_vaddr p) (ptr_vaddr p') |] ∧ valid_ptr p.
-
-Section non_beginning_ptr.
-  Context `{has_cpp : cpp_logic}.
-
-  #[global] Instance non_beginning_ptr_persistent p : Persistent (non_beginning_ptr p) := _.
-  #[global] Instance non_beginning_ptr_affine p : Affine (non_beginning_ptr p) := _.
-  #[global] Instance non_beginning_ptr_timeless p : Timeless (non_beginning_ptr p) := _.
-End non_beginning_ptr.
+    some_Forall2 N.lt (ptr_vaddr p) (ptr_vaddr p').
 
 Typeclasses Opaque non_beginning_ptr.
 
@@ -58,9 +50,38 @@ Section with_Σ.
     (forall va1 va2, ptr_vaddr p1 = Some va1 -> ptr_vaddr base = Some va2 -> f va1 va2 = res) ->
     valid_ptr p1 ∗ valid_ptr base ⊢ ptr_ord_comparable p1 base f res.
   Proof.
-    intros -> Hres. eapply (ptr_ord_comparable_off_off o1 o_id base) => //.
+    intros -> Hres. apply (ptr_ord_comparable_off_off o1 o_id base) => //.
     by rewrite offset_ptr_id.
   Qed.
+
+  Lemma ptr_ord_comparable_self p f res
+    (Hres : forall va, f va va = res) :
+    valid_ptr p ⊢ ptr_ord_comparable p p f res.
+  Proof.
+    rewrite /ptr_ord_comparable. iIntros "#V".
+    iDestruct (same_alloc_refl with "V") as "$"; iFrame "V"; iIntros "!%".
+    intros ?? -> [= <-]. exact: Hres.
+  Qed.
+
+  Lemma ptr_ord_comparable_self_eq p :
+    valid_ptr p ⊢ ptr_ord_comparable p p (λ va1 va2 : vaddr, bool_decide (va1 = va2)) true.
+  Proof. apply: ptr_ord_comparable_self => va. exact: bool_decide_true. Qed.
+
+  #[local] Definition ptr_unambiguous_cmp vt1 p2 : Prop :=
+    vt1 = Strict \/ non_beginning_ptr p2.
+
+  Axiom ptr_eq_comparable_unambiguous : forall p1 p2 vt1 vt2,
+    same_address p1 p2 ->
+    ptr_unambiguous_cmp vt1 p2 ->
+    ptr_unambiguous_cmp vt2 p1 ->
+    live_ptr p1 ∧ live_ptr p2 ⊢
+    _valid_ptr vt1 p1 -∗ _valid_ptr vt2 p2 -∗ [| same_alloc p1 p2 |].
+
+  Lemma ptr_eq_comparable_strict_live p1 p2 :
+    same_address p1 p2 ->
+    live_ptr p1 ∧ live_ptr p2 ⊢
+    strict_valid_ptr p1 -∗ strict_valid_ptr p2 -∗ [| same_alloc p1 p2 |].
+  Proof. intros. by apply: ptr_eq_comparable_unambiguous => //; left. Qed.
 
   (** Skeleton for [Beq] and [Bneq] axioms on pointers.
 
@@ -98,8 +119,69 @@ Section with_Σ.
      pointer represents the address one past the last element of a different
      complete object, the result of the comparison is unspecified.
    *)
-  #[local] Definition ptr_unambiguous_cmp vt1 p2 : mpred :=
-    [| vt1 = Strict |] ∨ non_beginning_ptr p2.
+  Definition ptr_eq_comparable p1 p2 res : mpred :=
+    (* TODO maybe use pinned_ptr_pure, but it seems to complicate reasoning. *)
+    ∀ va1 va2 (Heq1 : ptr_vaddr p1 = Some va1) (Heq2: ptr_vaddr p2 = Some va2),
+      ([| va1 = va2 |] -∗ [| same_alloc p1 p2 |]) ∗ [| bool_decide (va1 = va2) = res |] ∗
+      valid_ptr p1 ∗ valid_ptr p2.
+
+  Lemma ptr_eq_comparable_symm p1 p2 res :
+    ptr_eq_comparable p1 p2 res ⊢ ptr_eq_comparable p2 p1 res.
+  Proof.
+    iIntros "H %va2 %va1 %Hp2 %Hp1".
+    rewrite /ptr_eq_comparable !(comm _ p2 p1) {1}(comm eq va2 va1).
+    iDestruct ("H" $! va1 va2 Hp1 Hp2) as "($ & %Eq & $ & $)"; iIntros "!%".
+    repeat case_bool_decide; naive_solver.
+  Qed.
+
+  Lemma ptr_ord_comparable_eq_comparable p1 p2 res :
+    ptr_ord_comparable p1 p2 (λ va1 va2, bool_decide (va1 = va2)) res ⊢ ptr_eq_comparable p1 p2 res.
+  Proof. iIntros "($ & %Hi & $ & $) !%" (va1 va2 Hs1 Hs2). split; first done. exact: Hi. Qed.
+
+  Lemma self_ptr_eq_comparable p :
+    valid_ptr p ⊢ ptr_eq_comparable p p true.
+  Proof. rewrite -ptr_ord_comparable_eq_comparable. exact: ptr_ord_comparable_self_eq. Qed.
+
+  Lemma same_address_eq_null_1 p vt :
+    same_address p nullptr -> _valid_ptr vt p ⊢ [| same_alloc p nullptr |].
+  Proof.
+    rewrite same_address_eq_null. iIntros "!% /=" (Addr [-> _]) =>//.
+    exact: same_alloc_nullptr_nullptr.
+  Qed.
+
+  Lemma nullptr_ptr_eq_comparable {p res} :
+    (is_Some (ptr_vaddr p) -> bool_decide (p = nullptr) = res) ->
+    valid_ptr p ⊢ ptr_eq_comparable p nullptr res.
+  Proof.
+    iIntros "%HresI #V" (va1 va2 Hp1 Hp2); iFrame "V".
+    repeat iSplit; last by iApply valid_ptr_nullptr. {
+      iIntros (<-). iApply (same_address_eq_null_1 with "V").
+      exact: same_address_intro.
+    }
+    iDestruct (same_address_bool_null with "V") as %E.
+    rewrite -(same_address_bool_eq Hp1 Hp2) E HresI //. exact: mk_is_Some.
+  Qed.
+
+  Lemma ptr_eq_comparable_off_off o1 o2 base p1 p2 res :
+    p1 = base .., o1 ->
+    p2 = base .., o2 ->
+    same_address_bool p1 p2 = res ->
+    valid_ptr p1 ∗ valid_ptr p2 ⊢ ptr_eq_comparable p1 p2 res.
+  Proof.
+    intros ->-> Hs. rewrite -ptr_ord_comparable_eq_comparable.
+    apply: ptr_ord_comparable_off_off; [done..|].
+    move=> va1 va2 Hs1 Hs2. by rewrite -(same_address_bool_eq Hs1 Hs2).
+  Qed.
+
+  Lemma ptr_eq_comparable_off o1 base p1 res :
+    p1 = base .., o1 ->
+    same_address_bool p1 base = res ->
+    valid_ptr p1 ∗ valid_ptr base ⊢ ptr_eq_comparable p1 base res.
+  Proof.
+    intros -> Hres. eapply (ptr_eq_comparable_off_off o1 o_id base) => //.
+    by rewrite offset_ptr_id.
+  Qed.
+
 
   (** Can these pointers be validly compared? *)
   (* Written to ease showing [ptr_comparable_symm]. *)
@@ -111,14 +193,31 @@ Section with_Σ.
       (_valid_ptr vt1 p1 ∗ _valid_ptr vt2 p2) ∗
       ([| same_alloc p1 p2 |] ∨
         ([| p1 = nullptr |] ∨ [| p2 = nullptr |]) ∨
-        ((live_ptr p1 ∧ live_ptr p2) ∗
-          ptr_unambiguous_cmp vt1 p2 ∗ ptr_unambiguous_cmp vt2 p1)).
+        ([| ptr_unambiguous_cmp vt1 p2 ∧ ptr_unambiguous_cmp vt2 p1 |] ∗
+          (live_ptr p1 ∧ live_ptr p2))).
+
+  (* Unlikely to be invertible. *) (* TODO: drop? *)
+  Lemma ptr_comparable_eq_comparable p1 p2 res :
+    ptr_comparable p1 p2 res ⊢ ptr_eq_comparable p1 p2 res.
+  Proof.
+    rewrite /ptr_comparable /ptr_eq_comparable.
+    iIntros "H" (va1 va2 Hp1 Hp2).
+    rewrite (same_address_bool_eq Hp1 Hp2).
+    iDestruct ("H" with "[%]") as (vt1 vt2) "($ & (V1 & V2) & D)"; [by eauto|].
+    iSplit. 2: { rewrite !_valid_valid. iFrame. }
+    iIntros "<-".
+    have Addr : same_address p1 p2 by exact: same_address_intro.
+    iDestruct "D" as "[%D | [%D | ([%U1 %U2] & L)]]"; [by iIntros "!%" |..]. {
+      destruct D as [-> | ->]; first rewrite (comm same_alloc); by iApply same_address_eq_null_1.
+    }
+    { by iApply (ptr_eq_comparable_unambiguous with "L V1 V2"). }
+  Qed.
 
   Lemma ptr_ord_comparable_comparable p1 p2 res :
     ptr_ord_comparable p1 p2 (λ va1 va2, bool_decide (va1 = va2)) res ⊢ ptr_comparable p1 p2 res.
   Proof.
-    iIntros "($ & %Hi & ? & ?)" ([[va1 Hs1] [va2 Hs2]]);
-      iExists Relaxed, Relaxed; iFrame.
+    iIntros "(? & %Hi & ? & ?)" ([[va1 Hs1] [va2 Hs2]]);
+      iExists Relaxed, Relaxed. iFrame.
     by rewrite -(Hi _ _ Hs1 Hs2) (same_address_bool_eq Hs1 Hs2).
   Qed.
 
@@ -134,6 +233,7 @@ Section with_Σ.
     iStopProof. repeat f_equiv.
   Qed.
 
+  (* TODO: drop. *)
   Lemma nullptr_ptr_comparable {p res} :
     (is_Some (ptr_vaddr p) -> bool_decide (p = nullptr) = res) ->
     valid_ptr p ⊢ ptr_comparable p nullptr res.
@@ -144,13 +244,18 @@ Section with_Σ.
     iApply valid_ptr_nullptr.
   Qed.
 
+  (* TODO: drop. *)
+  Lemma nullptr_ptr_eq_comparable' {p res} :
+    (is_Some (ptr_vaddr p) -> bool_decide (p = nullptr) = res) ->
+    valid_ptr p ⊢ ptr_eq_comparable p nullptr res.
+  Proof.
+    intros HresI. by rewrite nullptr_ptr_comparable // ptr_comparable_eq_comparable.
+  Qed.
+
+  (* TODO: drop. *)
   Lemma self_ptr_comparable p :
     valid_ptr p ⊢ ptr_comparable p p true.
-  Proof.
-    rewrite -ptr_ord_comparable_comparable /ptr_ord_comparable; iIntros "#V".
-    iDestruct (same_alloc_refl with "V") as "$"; iFrame "V"; iIntros "!%".
-    intros; simplify_eq. exact: bool_decide_true.
-  Qed.
+  Proof. rewrite -ptr_ord_comparable_comparable. exact: ptr_ord_comparable_self_eq. Qed.
 
   Lemma ptr_comparable_off_off o1 o2 base p1 p2 res :
     p1 = base .., o1 ->
@@ -163,6 +268,7 @@ Section with_Σ.
     move=> va1 va2 Hs1 Hs2. by rewrite -(same_address_bool_eq Hs1 Hs2).
   Qed.
 
+  (* TODO: drop. *)
   Lemma ptr_comparable_off o1 base p1 res :
     p1 = base .., o1 ->
     same_address_bool p1 base = res ->
