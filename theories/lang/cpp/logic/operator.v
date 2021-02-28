@@ -284,22 +284,22 @@ Section with_Σ.
       (Vptr p1) (Vptr p2) (Vbool res) ∗ True.
 
   Axiom eval_ptr_eq : forall ty p1 p2 res,
-      ptr_comparable p1 p2 res
+      ptr_eq_comparable p1 p2 res
     ⊢ Unfold eval_ptr_eq_cmp_op (eval_ptr_eq_cmp_op Beq ty p1 p2 res).
 
   Lemma eval_ptr_nullptr_eq_l {ty vp res} :
     (is_Some (ptr_vaddr vp) -> bool_decide (vp = nullptr) = res) ->
     valid_ptr vp ⊢ Unfold eval_ptr_eq_cmp_op (eval_ptr_eq_cmp_op Beq ty vp nullptr res).
-  Proof. intros ->%nullptr_ptr_comparable. by rewrite -eval_ptr_eq. Qed.
+  Proof. intros ->%nullptr_ptr_eq_comparable. by rewrite -eval_ptr_eq. Qed.
 
   Lemma eval_ptr_nullptr_eq_r {ty vp res} :
     (is_Some (ptr_vaddr vp) -> bool_decide (vp = nullptr) = res) ->
     valid_ptr vp ⊢ Unfold eval_ptr_eq_cmp_op (eval_ptr_eq_cmp_op Beq ty nullptr vp res).
-  Proof. intros ->%nullptr_ptr_comparable. by rewrite ptr_comparable_symm -eval_ptr_eq. Qed.
+  Proof. intros ->%nullptr_ptr_eq_comparable. by rewrite ptr_eq_comparable_symm -eval_ptr_eq. Qed.
 
   Lemma eval_ptr_self_eq ty p :
     valid_ptr p ⊢ Unfold eval_ptr_eq_cmp_op (eval_ptr_eq_cmp_op Beq ty p p true).
-  Proof. by rewrite -eval_ptr_eq -self_ptr_comparable. Qed.
+  Proof. by rewrite -eval_ptr_eq -self_ptr_eq_comparable. Qed.
 
   Axiom eval_ptr_neq : forall ty p1 p2 res,
     Unfold eval_ptr_eq_cmp_op
