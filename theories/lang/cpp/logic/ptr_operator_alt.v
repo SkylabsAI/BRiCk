@@ -29,17 +29,18 @@ Section with_Σ.
   Lemma ptr_comparable_eq_comparable p1 p2 res :
     ptr_comparable p1 p2 res ⊢ ptr_eq_comparable p1 p2 res.
   Proof.
-    rewrite /ptr_comparable /ptr_eq_comparable.
+    rewrite /ptr_comparable ptr_eq_comparable_eq /ptr_eq_comparable_def.
     iIntros "H" (va1 va2 Hp1 Hp2).
     rewrite (same_address_bool_eq Hp1 Hp2).
-    iDestruct ("H" with "[%]") as (vt1 vt2) "($ & (V1 & V2) & D)"; [by eauto|].
-    iSplit. 2: { rewrite !_valid_valid. iFrame. }
-    iIntros "<-".
+    iDestruct ("H" with "[%]") as (vt1 vt2) "(%Heq & #(V1 & V2) & D)"; [by eauto|].
+    iFrame (Heq); iSplitL. 2: { rewrite !_valid_valid. iFrame "#". }
+    case_bool_decide; simplify_eq; last done.
     have Addr : same_address p1 p2 by exact: same_address_intro.
     iDestruct "D" as "[%D | [%D | ([%U1 %U2] & L)]]"; [by iIntros "!%" |..]. {
+      iIntros "!> _".
       destruct D as [-> | ->]; first rewrite (comm same_alloc); by iApply same_address_eq_null_1.
     }
-    { by iApply (ptr_eq_comparable_unambiguous with "L V1 V2"). }
+    { by iDestruct (ptr_eq_comparable_unambiguous with "L V1 V2") as "#$". }
   Qed.
 
   Lemma ptr_ord_comparable_comparable p1 p2 res :
