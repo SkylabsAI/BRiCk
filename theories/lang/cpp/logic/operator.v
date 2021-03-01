@@ -26,7 +26,7 @@ Section with_Σ.
     [| eval_binop_pure b lhsT rhsT resT lhs rhs res |] ∨ eval_binop_impure b lhsT rhsT resT lhs rhs res.
 
   (** * Pointer comparison operators *)
-  (** For [Ble, Blt, Bge, Bgt] axioms on pointers. *)
+  (** Define when two pointers can be compared with order operators [Ble, Blt, Bge, Bgt]. *)
   Definition ptr_ord_comparable p1 p2 (f : vaddr -> vaddr -> bool) res : mpred :=
     [| same_alloc p1 p2 |] ∗
     [| forall va1 va2, ptr_vaddr p1 = Some va1 -> ptr_vaddr p2 = Some va2 -> f va1 va2 = res |] ∗
@@ -67,6 +67,46 @@ Section with_Σ.
     valid_ptr p ⊢ ptr_ord_comparable p p (λ va1 va2 : vaddr, bool_decide (va1 = va2)) true.
   Proof. apply: ptr_ord_comparable_self => va. exact: bool_decide_true. Qed.
 
+  (** Define when two pointers can be compared with order operators [Ble, Blt, Bge, Bgt]. *)
+  (**
+  Skeleton for [Beq] and [Bneq] axioms on pointers.
+
+  We forbid cases where comparisons have undefined, unspecified or
+  non-deterministic behavior. That is:
+
+  (1) We always require both pointers to be valid.
+  (2) Crucially, we forbid comparing pointers with distinct provenances
+      (allocation ID) but the same address (case 3 in the table below),
+      because that has non-deterministic results. This choice is equivalent
+      to the Cerberus semantics for C (https://doi.org/10.1145/3290380; see
+      rule eq_op_ptrval in Fig. 2).
+
+  For clarity, here is a table of the result of p1 == p2, depending on
+  whether p1 and p2 have the same provenance and the same address.
+
+  Row n. | Same provenance | Same address | Result of p1 == p2 |
+       1 |               T |            T |                  T |
+       2 |               T |            F |                  F |
+       3 |               F |            T |  Non-deterministic |
+       4 |               F |            F |                  F |
+
+  Because a Cerberus pointer has only a provenance and an address, this is
+  equivalent to the Cerberus semantics. Like Cerberus and unlike the
+  standard, we assume compilers do not perform lifetime-end pointer zapping
+  (see also http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2443.pdf).
+
+  However, some comparisons with dangling pointers will have unspecified
+  behavior.
+
+  This specification is also informed by the C++ standard
+  (https://eel.is/c++draft/expr.eq#3) and Krebbers's thesis.
+
+  Like Cerberus and unlike the standard, we assume compilers do not perform
+  lifetime-end pointer zapping (see also
+  http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2443.pdf).
+  some comparisons with dangling pointers will have unspecified behavior.
+  *)
+
   Definition ptr_eq_comparable_def p1 p2 res : mpred :=
     (* TODO maybe use pinned_ptr_pure, but it seems to complicate reasoning. *)
     □ ∀ va1 va2 (Heq1 : ptr_vaddr p1 = Some va1) (Heq2: ptr_vaddr p2 = Some va2),
@@ -76,6 +116,18 @@ Section with_Σ.
   Definition ptr_eq_comparable := ptr_eq_comparable_aux.(unseal).
   Definition ptr_eq_comparable_eq : ptr_eq_comparable = _ := ptr_eq_comparable_aux.(seal_eq).
 
+  (**
+  Axiom [ptr_eq_comparable_unambiguous] is subtle.
+  The C++ standard specifies that live pointers are comparable except in the
+  following case:
+  (https://eel.is/c++draft/expr.eq#3.1):
+
+  > If one pointer represents the address of a complete object, and another
+    pointer represents the address one past the last element of a different
+    complete object, the result of the comparison is unspecified.
+
+  This axiom also asserts that live objects are disjoint.
+  *)
   #[local] Definition ptr_unambiguous_cmp vt1 p2 : Prop :=
     vt1 = Strict \/ non_beginning_ptr p2.
 
@@ -92,41 +144,34 @@ Section with_Σ.
     strict_valid_ptr p1 -∗ strict_valid_ptr p2 -∗ [| same_alloc p1 p2 |].
   Proof. intros. by apply: ptr_eq_comparable_unambiguous => //; left. Qed.
 
-  (** Skeleton for [Beq] and [Bneq] axioms on pointers.
+    (*
 
-   This specification follows the C++ standard
-   (https://eel.is/c++draft/expr.eq#3), and is inspired by Cerberus's pointer
-   provenance semantics for C, and Krebbers's thesis. We forbid cases where
-   comparisons have undefined or unspecified behavior.
-   As a deviation, we assume compilers do not perform lifetime-end pointer
-   zapping (see http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2443.pdf).
+      in all these semantics
+      (3) Assuming (2), the result of the comparison is the
 
-   (1) We always require both pointers to be valid.
-   (2) Crucially, in all these semantics comparing pointers with distinct
-       provenances (allocation ID) but the same address has non-deterministic
-       results, so we forbid it. Hence, we must prevent ambiguous results.
-       (a) Comparing two pointers with the same allocation ID is never
-           ambiguous.
-       (b) We assume non-null pointers can be reliably distinguished from
-           [nullptr], because we don't support pointer zapping (unlike
-           Krebbers and the standard).
-       (c) Otherwise, we require that both pointers are jointly live, and
-           prevent remaining potential confusion via [ptr_unambiguous_cmp].
+          Hence, we must prevent ambiguous results.
+          (a) Comparing two pointers with the same allocation ID is never
+              ambiguous.
+          (b) We assume non-null pointers can be reliably distinguished from
+              [nullptr], because we don't support pointer zapping (unlike
+              Krebbers and the standard).
+          (c) Otherwise, we require that both pointers are jointly live, and
+              prevent remaining potential confusion via [ptr_unambiguous_cmp].
 
-   - Joint liveness is required in clause (c) because a dangling pointer and
-     a non-null live pointer have different provenances but can have the same
-     address, because the allocator could have reused the address of the
-     dangling pointer.
-   - Via [ptr_unambiguous_cmp], we forbid comparing a one-past-the-end
-     pointer to an object with a pointer to the "beginning" of a different
-     object, because that gives unspecified results [1], so we choose not to
-     support this case. We use [non_beginning_ptr] to ensure a pointer is not
-     to the beginning of a complete object.
+      - Joint liveness is required in clause (c) because a dangling pointer and
+        a non-null live pointer have different provenances but can have the same
+        address, because the allocator could have reused the address of the
+        dangling pointer.
+      - Via [ptr_unambiguous_cmp], we forbid comparing a one-past-the-end
+        pointer to an object with a pointer to the "beginning" of a different
+        object, because that gives unspecified results [1], so we choose not to
+        support this case. We use [non_beginning_ptr] to ensure a pointer is not
+        to the beginning of a complete object.
 
-   [1] From https://eel.is/c++draft/expr.eq#3.1:
-   > If one pointer represents the address of a complete object, and another
-     pointer represents the address one past the last element of a different
-     complete object, the result of the comparison is unspecified.
+      [1] From https://eel.is/c++draft/expr.eq#3.1:
+      > If one pointer represents the address of a complete object, and another
+        pointer represents the address one past the last element of a different
+        complete object, the result of the comparison is unspecified.
    *)
 
   #[global] Instance ptr_eq_comparable_persistent p1 p2 res : Persistent (ptr_eq_comparable p1 p2 res).
@@ -146,6 +191,8 @@ Section with_Σ.
     repeat case_bool_decide; naive_solver.
   Qed.
 
+  (** Pointers that can be compared with `<=`
+   *)
   Lemma ptr_ord_comparable_eq_comparable p1 p2 res :
     ptr_ord_comparable p1 p2 (λ va1 va2, bool_decide (va1 = va2)) res ⊢ ptr_eq_comparable p1 p2 res.
   Proof.
@@ -198,11 +245,13 @@ Section with_Σ.
     by rewrite offset_ptr_id.
   Qed.
 
+  (** Skeleton for [Beq] and [Bneq] axioms on pointers. *)
   #[local] Definition eval_ptr_eq_cmp_op (bo : BinOp) ty p1 p2 res : mpred :=
     eval_binop_impure bo
       (Tpointer ty) (Tpointer ty) Tbool
       (Vptr p1) (Vptr p2) (Vbool res) ∗ True.
 
+  (** Axiom. *)
   Axiom eval_ptr_eq : forall ty p1 p2 res,
       ptr_eq_comparable p1 p2 res
     ⊢ Unfold eval_ptr_eq_cmp_op (eval_ptr_eq_cmp_op Beq ty p1 p2 res).
