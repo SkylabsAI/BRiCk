@@ -674,6 +674,18 @@ Section with_cpp.
     by iApply offset_exposed_ptr.
   Qed.
 
+  (** XXX: the same lemma exists as [shift_pinned_ptr_sub] in NOVA:proof.
+   *  The two should be merged at a convenient timing. *)
+  Lemma shift_pinned_ptr_sub' ty n va (p1 : ptr) p2 o:
+    size_of σ ty = Some o ->
+    [| _offset_ptr p1 (o_sub _ ty n) = p2 |] ** valid_ptr p2 ** pinned_ptr va p1 |-- pinned_ptr (Z.to_N (Z.of_N va + n * (Z.of_N o))) p2.
+  Proof.
+    move => o_eq.
+    iIntros "[<- [val pin1]]".
+    iApply (offset_pinned_ptr _ with "val") => //.
+    rewrite eval_o_sub o_eq /= Z.mul_comm //.
+  Qed.
+
   Lemma pinned_ptr_aligned_divide va n p :
     pinned_ptr va p ⊢
     [| aligned_ptr n p <-> (n | va)%N |].

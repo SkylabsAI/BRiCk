@@ -868,6 +868,20 @@ Section with_cpp.
     Observe [| q ≤ 1 |]%Qp (anyR ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
 
+  (* XXX: the same statement appears as [anyR_disjoint] in [NOVA:proof]
+     The two should be unified at a convenient timing.
+   *)
+  Global Instance _at_anyR_disjoint resolve (l : Loc) ty:
+    Observe2 False (_at l (anyR ty 1)) (_at l (anyR ty 1)).
+  Proof.
+    iIntros "K L".
+    iCombine "K L" as "P".
+    iDestruct (@observe_elim _ _ _ (_at_observe (anyR_observe_frac_valid _ ty (1 + 1))) with "P") as "[_ P]".
+    rewrite _at_only_provable.
+    iDestruct "P" as %?.
+    by [].
+  Qed.
+
   Global Instance refR_persistent ty p : Persistent (refR ty p).
   Proof. rewrite refR_eq. apply _. Qed.
   Global Instance refR_affine ty p : Affine (refR ty p).
@@ -1069,6 +1083,17 @@ Section with_cpp.
     necessary to get [l |-> blockR n -|- l |-> blockR n ** l .[ T_uint8 ! m] |-> blockR 0]. *)
     [∗list] i ∈ seq 0 (N.to_nat sz),
       _offsetR (o_sub σ T_uint8 (Z.of_nat i)) (anyR (resolve:=σ) T_uint8 1).
+
+  (* XXX The same statement appears in NOVA:proof as [blockR_disjoint]
+     The two should be unified at a convenient timing.
+   *)
+  Lemma blockR_disjoint' {σ} (l : Loc):
+    Observe2 False (_at l (blockR 1)) (_at l (blockR 1)).
+  Proof.
+    rewrite /blockR/= !_at_sep !_at_offsetR.
+    iIntros "[_ [? _]] [_ [? _]]".
+    by iApply (_at_anyR_disjoint with "[$]").
+  Qed.
 
   (* [tblockR ty] is a [blockR] that is the size of [ty] and properly aligned.
    * it is a convenient short-hand since it happens frequently, but there is nothing

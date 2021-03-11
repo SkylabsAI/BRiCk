@@ -962,6 +962,27 @@ Module SimpleCPP.
       iExists vs'. by iFrame.
     Qed.
 
+    (** XXX: the same lemma exists as [tptsto_disjoint] in NOVA:proof.
+     *  The two should be merged at a convenient timing. *)
+    Lemma tptsto_disjoint' {σ} ty p v1 v2 :
+        Observe2 False (@tptsto σ ty 1 p v1) (@tptsto σ ty 1 p v2).
+    Proof.
+      iIntros "t1 t2".
+      iDestruct (observe_2_elim_pure with "t1 t2") as %K.
+      rewrite K.
+      Check fractional_merge.
+      iDestruct (fractional_merge _ _ _ 1%Qp 1%Qp with "t1 t2") as "T".
+      {
+        apply: Build_AsFractional.
+        by cbn.
+      }
+      {
+        apply: Build_AsFractional.
+        by cbn.
+      }
+      iDestruct (tptsto_frac_valid with "T") as %L; by cbn.
+    Qed.
+
     Axiom same_address_eq_type_ptr : forall resolve ty p1 p2 n,
       same_address p1 p2 ->
       size_of resolve ty = Some n ->
