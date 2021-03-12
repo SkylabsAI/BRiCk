@@ -2,28 +2,36 @@
  * Copyright (c) 2020 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
+ *
+ * This file is derived from code original to the Iris project. That
+ * original code is
+ *
+ *	Copyright Iris developers and contributors
+ *
+ * and used according to the following license.
+ *
+ *	SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Original Code:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/iris/base_logic/lib/own.v
+ *
+ * Original Iris License:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/LICENSE-CODE
  *)
 
-(* TODO: LICENSE for Iris. *)
 (** Extraction of own that doesn't depend on iProp.
-  Most proofs in this file generalize those of Iris, see
-  https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/own.v
+  Most proofs in this file generalize those of Iris (see the link above).
   In many cases, the proofs are unchanged and are exact duplicates of those in
   Iris. But their types do change and become more general.
 
   TODO: These should be upstreamed to Iris's code base. **)
 
-Require Import iris.bi.bi.
-Require Import iris.algebra.cmra.
-Require Import iris.bi.embedding.
-Require Import iris.si_logic.siprop.
 Require Export iris.si_logic.bi.
 
 Require Import iris.algebra.proofmode_classes.
 Require Import iris.proofmode.classes.
 
-(* Needed for gname *)
-Require Import iris.base_logic.lib.iprop.
+Require Import iris.base_logic.lib.iprop. (* << for [gname] only *)
 
 (* Step-indexed Validity *)
 Program Definition si_cmra_valid_def {A : cmraT} (a : A) : siProp :=
@@ -40,6 +48,7 @@ Definition bi_cmra_valid
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) : PROP :=
   embed (si_cmra_valid a).
 
+(* TODO: figure out if overwriting Iris's notation for [uPred_cmra_valid] works robustly, until this is upstreamed. *)
 Notation "✓ x" := (bi_cmra_valid x) (at level 20) : bi_scope.
 
 Instance prop_valid_plain
@@ -51,9 +60,6 @@ Instance prop_valid_persistent
   {PROP : bi} `{!BiEmbed siPropI PROP} {A : cmraT} (a : A) :
   Persistent (✓ a) := _.
 
-(* TODO: the fact that various properies of [own] are split across several
-  classes can hinder performance. We may want some bundling---this is best to
-  discuss upstream. *)
 (* own *)
 Class HasOwn {PROP : bi} {A : cmraT} : Type := {
   own           : gname → A → PROP ;
@@ -86,9 +92,8 @@ Class HasOwnUpd `{!BiBUpd PROP} `{!HasOwn PROP A} : Type := {
 }.
 Arguments HasOwnUpd _ {_} _ {_}.
 
-(* Separate from [HasOwnUpd] because this is restricted to unital cameras [ucmraT]. *)
 Class HasOwnUnit `{!BiBUpd PROP} {A : ucmraT} `{!HasOwn PROP A} : Type := {
-  own_unit γ : ⊢ |==> own γ (ε (A := A))
+  own_unit γ : ⊢ |==> own γ (ε:A)
 }.
 Arguments HasOwnUnit _ {_} _ {_}.
 

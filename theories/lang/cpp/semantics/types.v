@@ -7,13 +7,17 @@ From bedrock.lang.prelude Require Import base.
 From bedrock.lang.cpp.syntax Require Import names expr stmt types.
 From bedrock.lang.cpp.semantics Require Import genv.
 
-Definition glob_def (g : genv) (gn : globname) : option GlobDecl :=
-  g.(genv_tu).(globals) !! gn.
 
 Definition GlobDecl_size_of (g : GlobDecl) : option N :=
   match g with
   | Gstruct s => Some s.(s_size)
   | Gunion u => Some u.(u_size)
+  | _ => None
+  end.
+Definition GlobDecl_align_of (g : GlobDecl) : option N :=
+  match g with
+  | Gstruct s => Some s.(s_alignment)
+  | Gunion u => Some u.(u_alignment)
   | _ => None
   end.
 Variant Roption_leq {T} (R : T -> T -> Prop) : option T -> option T -> Prop :=
@@ -24,6 +28,13 @@ Variant Roption_leq {T} (R : T -> T -> Prop) : option T -> option T -> Prop :=
 Instance proper_GlobDecl_size_of: Proper (GlobDecl_ler ==> Roption_leq eq) GlobDecl_size_of.
 Proof.
   rewrite /GlobDecl_size_of => x y Heq.
+  repeat (case_match; try constructor);
+    simplify_eq/= => //;
+    apply require_eq_success in Heq; naive_solver.
+Qed.
+Instance proper_GlobDecl_align_of: Proper (GlobDecl_ler ==> Roption_leq eq) GlobDecl_align_of.
+Proof.
+  rewrite /GlobDecl_align_of => x y Heq.
   repeat (case_match; try constructor);
     simplify_eq/= => //;
     apply require_eq_success in Heq; naive_solver.
@@ -94,6 +105,14 @@ Lemma size_of_Qconst : forall {c} t ,
     @size_of c t = @size_of c (Qconst t).
 Proof. reflexivity. Qed.
 
+(* XXX: since size_of simplifies eagerly, this might be hard to apply, so you
+might need to inline the proof. *)
+Lemma size_of_genv_compat tu σ gn st
+  (Hσ : tu ⊧ σ)
+  (Hl : tu.(globals) !! gn = Some (Gstruct st)) :
+  size_of σ (Tnamed gn) = GlobDecl_size_of (Gstruct st).
+Proof. by rewrite /= (glob_def_genv_compat st Hl). Qed.
+
 Fixpoint find_field {T} (f : ident) (fs : list (ident * T)) : option T :=
   match fs with
   | nil => None
@@ -126,11 +145,14 @@ Definition parent_offset (resolve : genv) (t : globname) (f : globname) : option
 (** * alignof() *)
 (* todo: we should embed alignment information in our types *)
 Parameter align_of : forall {resolve : genv} (t : type), option N.
+Axiom align_of_named : ∀ {σ : genv} (nm : globname),
+  align_of (resolve:=σ) (Tnamed nm) =
+  glob_def σ nm ≫= GlobDecl_align_of.
 Axiom align_of_size_of : forall {σ : genv} (t : type) sz,
     size_of σ t = Some sz ->
     exists al, align_of (resolve:=σ) t = Some al /\
-          (* alignmend is a multiple of the size *)
-          (al mod sz = 0)%N.
+          (* size is a multiple of alignment *)
+          (sz mod al = 0)%N.
 
 Axiom Proper_align_of : Proper (genv_leq ==> eq ==> Roption_leq eq) (@align_of).
 Global Existing Instance Proper_align_of.

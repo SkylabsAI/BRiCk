@@ -2,18 +2,31 @@
  * Copyright (c) 2020 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
+ *
+ * This file is derived from code original to the Iris project. That
+ * original code is
+ *
+ *	Copyright Iris developers and contributors
+ *
+ * and used according to the following license.
+ *
+ *	SPDX-License-Identifier: BSD-3-Clause
+ *
+ * Original Code:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/iris/base_logic/lib/cancelable_invariants.v
+ *
+ * Original Iris License:
+ * https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/LICENSE-CODE
  *)
 
-(* TODO: LICENSE for Iris. *)
 (** Extraction of cancelable invariants that is general w.r.t HasOwn, and not
   tied to iProp.
 
-  Most proofs in this file generalize those of Iris, see
-  https://gitlab.mpi-sws.org/iris/iris/-/blob/master/iris/base_logic/lib/cancelable_invariants.v
+  Most proofs in this file generalize those of Iris, see the link above.
   In many cases, the proofs are unchanged and are exact duplicates of those in
   Iris. But their types did change and become more general.
 
-  TODO: These should be upstreamed to Iris's code base. **)
+  TODO: These should be upstreamed to Iris. **)
 
 Require Import iris.bi.lib.fractional.
 Require Export iris.algebra.frac.
@@ -44,6 +57,12 @@ Section defs.
 End defs.
 
 Instance: Params (@cinv) 5 := {}.
+
+(* TODO: allocation rules are missing. These rely on the specific model of PROP,
+  so the client of this library needs the provide the corresponding model of
+  invariants for their PROP, and then prove the allocation rules. *)
+(* Such a model exists for iProp, see
+  https://gitlab.mpi-sws.org/iris/iris/-/blob/5bb93f57729a8cc7d0ffeaab769cd24728e51a38/iris/base_logic/lib/invariants.v#L27 *)
 
 Section proofs.
   (* TODO: too many ... Also, not all lemmas need all of these (which may affect
@@ -140,66 +159,5 @@ Section proofs.
     iIntros "!> P". by iMod ("Close" with "P").
   Qed.
 End proofs.
-
-(* Allocation rules for monPred that are tied specifically to iProp. *)
-Section allocation.
-  Context {K : biIndex} `{!invG Σ, !cinvG Σ}.
-
-  Notation monPred := (monPred K (iPropI Σ)).
-  Notation monPredI := (monPredI K (iPropI Σ)).
-
-  Implicit Types (i j : K) (γ : gname) (P Q R : monPred).
-
-  (*** Allocation rules. *)
-  (** The "strong" variants permit any infinite [I], and choosing [P] is delayed
-  until after [γ] was chosen.*)
-  Lemma cinv_alloc_strong (I : gname → Prop) E N :
-    pred_infinite I →
-    ⊢ |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗
-                    ∀ P, ⌜WeaklyObjective P⌝ → ▷ P ={E}=∗ cinv N γ P.
-  Proof.
-    iIntros (?). iMod (own_alloc_strong 1%Qp I) as (γ) "[Hfresh Hγ]"; [done|done|].
-    iExists γ. iIntros "!> {$Hγ $Hfresh}" (P WO) "HP".
-    iMod (inv_alloc N _ (P ∨ cinv_own γ 1) with "[HP]"); eauto.
-  Qed.
-
-  (** The "open" variants create the invariant in the open state, and delay
-  having to prove [P].
-  These do not imply the other variants because of the extra assumption [↑N ⊆ E]. *)
-  Lemma cinv_alloc_strong_open (I : gname → Prop) E N :
-    pred_infinite I →
-    ↑N ⊆ E →
-    ⊢ |={E}=> ∃ γ, ⌜ I γ ⌝ ∗ cinv_own γ 1 ∗ ∀ P, ⌜ WeaklyObjective P ⌝ →
-      |={E,E∖↑N}=> cinv N γ P ∗ (▷ P ={E∖↑N,E}=∗ True).
-  Proof.
-    iIntros (??). iMod (own_alloc_strong 1%Qp I) as (γ) "[Hfresh Hγ]"; [done|done|].
-    iExists γ. iIntros "!> {$Hγ $Hfresh}" (P WO).
-    iMod (inv_alloc_open N _ (P ∨ cinv_own γ 1)) as "[Hinv Hclose]"; first by eauto.
-    iIntros "!>". iFrame. iIntros "HP". iApply "Hclose". iLeft. done.
-  Qed.
-
-  Lemma cinv_alloc_cofinite (G : gset gname) E N :
-    ⊢ |={E}=> ∃ γ, ⌜ γ ∉ G ⌝ ∗ cinv_own γ 1 ∗
-                    ∀ P, ⌜WeaklyObjective P⌝ → ▷ P ={E}=∗ cinv N γ P.
-  Proof.
-    apply cinv_alloc_strong. apply (pred_infinite_set (C:=gset gname))=> E'.
-    exists (fresh (G ∪ E')). apply not_elem_of_union, is_fresh.
-  Qed.
-
-  Lemma cinv_alloc E N P `{!WeaklyObjective P} :
-    ▷ P ={E}=∗ ∃ γ, cinv N γ P ∗ cinv_own γ 1.
-  Proof.
-    iIntros "HP". iMod (cinv_alloc_cofinite ∅ E N) as (γ _) "[Hγ Halloc]".
-    iExists γ. iFrame "Hγ". by iApply "Halloc".
-  Qed.
-
-  Lemma cinv_alloc_open E N P `{WO: WeaklyObjective _ _ P} :
-    ↑N ⊆ E → ⊢ |={E,E∖↑N}=> ∃ γ, cinv N γ P ∗ cinv_own γ 1 ∗ (▷ P ={E∖↑N,E}=∗ True).
-  Proof.
-    iIntros (?). iMod (cinv_alloc_strong_open (λ _, True)) as (γ) "(_ & Htok & Hmake)"; [|done|].
-    { apply pred_infinite_True. }
-    iMod ("Hmake" $! P WO) as "[Hinv Hclose]". iIntros "!>". iExists γ. iFrame.
-  Qed.
-End allocation.
 
 Typeclasses Opaque cinv_own cinv.

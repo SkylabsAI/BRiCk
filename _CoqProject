@@ -21,10 +21,10 @@ theories/lang/prelude/bytestring.v
 theories/lang/prelude/telescopes.v
 theories/lang/prelude/avl.v
 theories/lang/bi/big_op.v
+theories/lang/bi/atomic1.v
 theories/lang/bi/observe.v
 theories/lang/bi/only_provable.v
 theories/lang/bi/derived_laws.v
-theories/lang/bi/weakly_objective.v
 theories/lang/bi/invariants.v
 theories/lang/bi/own.v
 theories/lang/bi/own_instances.v
@@ -43,6 +43,7 @@ theories/lang/cpp/syntax/typing.v
 theories/lang/cpp/ast.v
 
 # Semantics
+theories/lang/cpp/semantics/ptrs.v
 theories/lang/cpp/semantics/values.v
 theories/lang/cpp/semantics/operator.v
 theories/lang/cpp/semantics/builtins.v
@@ -57,6 +58,7 @@ theories/lang/cpp/semantics.v
 # Program Logic
 theories/lang/cpp/logic/spec.v
 theories/lang/cpp/logic/pred.v
+theories/lang/cpp/logic/pred_paradoxes.v
 theories/lang/cpp/logic/path_pred.v
 theories/lang/cpp/logic/operator.v
 theories/lang/cpp/logic/heap_pred.v
@@ -94,7 +96,10 @@ theories/lang/cpp/compile.v
 theories/lang/cpp.v
 
 # "consistency" proofs
+theories/lang/cpp/model/simple_pointers_utils.v
 theories/lang/cpp/model/simple_pointers.v
+theories/lang/cpp/model/inductive_pointers_utils.v
+theories/lang/cpp/model/inductive_pointers.v
 theories/lang/cpp/model/simple_pred.v
 
 # misc

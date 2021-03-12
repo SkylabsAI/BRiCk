@@ -116,9 +116,6 @@ Instance: Params (@pureR) 2 := {}.
 Arguments refR {_ Σ} ty v : rename.
 Arguments cptrR {_ Σ resolve} _ : rename.
 
-#[deprecated(since="2020-01-09", note="Use cptrR")]
-Notation cptr := cptrR (only parsing).
-
 Arguments type_ptrR {_ Σ σ} _%bs.
 Arguments identityR {_ Σ σ} _%bs _%bs _%Qp.
 
@@ -891,16 +888,22 @@ Section with_cpp.
     iIntros "[$ _]".
   Qed.
 
-  (* TODO: Proper wrt [genv_leq]. *)
+  Lemma cptrR_fs_impl {resolve} f g :
+    pureR (fs_impl g f) |-- cptrR f -* cptrR g.
+  Proof.
+    rewrite cptrR_eq/cptrR_def.
+    constructor => p; rewrite Rep_wand_force; iIntros "#(%ty & fs_impl)" => /=.
+    iIntros "(val & #rest)"; iFrame. iIntros (ti vs Q len).
+    rewrite ty. iSpecialize ("rest" $! ti). iModIntro. iIntros "fs_g".
+    iApply "rest"; first by apply length_type_of_spec in ty; rewrite -ty len.
+    by iApply "fs_impl".
+  Qed.
+
+(* TODO: Proper wrt [genv_leq]. *)
   #[global] Instance cptrR_mono {resolve} : Proper (flip fs_entails ==> (⊢)) cptrR.
   Proof.
-    intros ??; rewrite /flip /fs_entails /fs_impl cptrR_eq/cptrR_def; intros Heq.
-    constructor => p /=.
-    f_equiv; f_equiv=>ti; f_equiv; f_equiv => vs; f_equiv => Q.
-    iIntros "Hcptr -> Hy".
-    iDestruct Heq as "(%Hspec & #Hyx)"; rewrite Hspec.
-    iApply ("Hcptr" with "[%] (Hyx Hy)").
-    exact: length_type_of_spec.
+    intros ??; rewrite /fs_entails/flip => impl. iApply cptrR_fs_impl.
+    by rewrite -impl pureR_emp.
   Qed.
 
   #[global] Instance cptrR_flip_mono {resolve} : Proper (fs_entails ==> flip (⊢)) cptrR.
@@ -1024,7 +1027,7 @@ Section with_cpp.
     Observe is_nonnull (anyR (resolve:=σ) ty q).
   Proof. rewrite anyR_eq. apply _. Qed.
 
-  Definition alignedR_def (al : N) : Rep := as_Rep (aligned_ptr al).
+  Definition alignedR_def (al : N) : Rep := as_Rep (λ p, [| aligned_ptr al p |]).
   Definition alignedR_aux : seal (@alignedR_def). Proof. by eexists. Qed.
   Definition alignedR := alignedR_aux.(unseal).
   Definition alignedR_eq : @alignedR = _ := alignedR_aux.(seal_eq).
@@ -1034,6 +1037,23 @@ Section with_cpp.
   Proof. rewrite alignedR_eq. apply _. Qed.
   #[global] Instance alignedR_timeless {al} : Timeless (alignedR al).
   Proof. rewrite alignedR_eq. apply _. Qed.
+
+  Global Instance alignedR_divide_mono :
+    Proper (flip N.divide ==> bi_entails) alignedR.
+  Proof.
+    intros m n ?.
+    rewrite alignedR_eq /alignedR_def. constructor=>p/=. iIntros "!%".
+    exact: aligned_ptr_divide_weaken.
+  Qed.
+
+  Global Instance alignedR_divide_flip_mono :
+    Proper (N.divide ==> flip bi_entails) alignedR.
+  Proof. solve_proper. Qed.
+
+  Lemma alignedR_divide_weaken m n :
+    (n | m)%N ->
+    alignedR m ⊢ alignedR n.
+  Proof. by move->. Qed.
 
   Lemma null_nonnull (R : Rep) : is_null |-- is_nonnull -* R.
   Proof.
@@ -1050,7 +1070,7 @@ Section with_cpp.
     [∗list] i ∈ seq 0 (N.to_nat sz),
       _offsetR (o_sub σ T_uint8 (Z.of_nat i)) (anyR (resolve:=σ) T_uint8 1).
 
-  (* [tblockR ty] is a [blockR] that is the size of [ty].
+  (* [tblockR ty] is a [blockR] that is the size of [ty] and properly aligned.
    * it is a convenient short-hand since it happens frequently, but there is nothing
    * special about it.
    *)
@@ -1124,18 +1144,8 @@ Section with_cpp.
   Proof. apply off_validR => p. apply _valid_ptr_derived. Qed.
 End with_cpp.
 
-#[deprecated(since = "2021-01-09", note = "Use _field_validR")]
-Notation o_field_validR := _field_validR.
-#[deprecated(since = "2021-01-09", note = "Use _base_validR")]
-Notation o_base_validR := _base_validR.
-#[deprecated(since = "2021-01-09", note = "Use _field_validR")]
-Notation o_derived_validR := _derived_validR.
-
 Typeclasses Opaque identityR.
 Typeclasses Opaque type_ptrR validR svalidR alignedR.
 
 Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} nm s :
   Persistent (_at (Σ:=Σ) (_global nm) (cptrR s)) := _.
-
-
-#[deprecated(since="2021-01-08",note="use _at_offsetR")] Notation _at_offsetL_offsetR := _at_offsetR (only parsing).
