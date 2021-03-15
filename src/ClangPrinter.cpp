@@ -6,6 +6,7 @@
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
+#include <clang/AST/GlobalDecl.h>
 #include <clang/AST/Mangle.h>
 #include <clang/Frontend/CompilerInstance.h>
 
@@ -34,21 +35,34 @@ ClangPrinter::getTypeSize(const BuiltinType *t) const {
     return this->context_->getTypeSize(t);
 }
 
+static GlobalDecl
+to_gd(const NamedDecl *decl) {
+    if (auto ct = dyn_cast<CXXConstructorDecl>(decl)) {
+        return GlobalDecl(ct, CXXCtorType::Ctor_Complete);
+    } else if (auto dt = dyn_cast<CXXDestructorDecl>(decl)) {
+        return GlobalDecl(dt, CXXDtorType::Dtor_Complete);
+    } else {
+        return GlobalDecl(decl);
+    }
+}
+
 void
 ClangPrinter::printGlobalName(const NamedDecl *decl, CoqPrinter &print,
                               bool raw) {
     if (!raw) {
         print.output() << "\"";
     }
+
     if (auto fd = dyn_cast<FunctionDecl>(decl)) {
         if (fd->getLanguageLinkage() == LanguageLinkage::CLanguageLinkage) {
             print.output() << fd->getNameAsString();
         } else {
-            mangleContext_->mangleCXXName(decl, print.output().nobreak());
+            mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
         }
     } else {
-        mangleContext_->mangleCXXName(decl, print.output().nobreak());
+        mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
     }
+
     if (!raw) {
         print.output() << "\"";
     }
