@@ -5,6 +5,7 @@ let
     nixpkgs.clang_11
     nixpkgs.llvm_11
     nixpkgs.cmake
+    nixpkgs.valgrind
   ];
  
 in
