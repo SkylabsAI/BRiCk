@@ -63,9 +63,9 @@ ClangPrinter::printGlobalName(const NamedDecl *decl, CoqPrinter &print,
     }
 
     if (mangleContext_->shouldMangleDeclName(decl)) {
-        print.output() << decl->getNameAsString();
-    } else {
         mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
+    } else {
+        print.output() << decl->getNameAsString();
 #if 0
         if (auto fd = dyn_cast<FunctionDecl>(decl)) {
             if (fd->getLanguageLinkage() == LanguageLinkage::CLanguageLinkage) {
