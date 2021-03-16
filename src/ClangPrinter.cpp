@@ -8,6 +8,7 @@
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/GlobalDecl.h>
 #include <clang/AST/Mangle.h>
+#include <clang/Basic/Version.h>
 #include <clang/Frontend/CompilerInstance.h>
 
 #include "ClangPrinter.hpp"
@@ -53,14 +54,21 @@ ClangPrinter::printGlobalName(const NamedDecl *decl, CoqPrinter &print,
         print.output() << "\"";
     }
 
-    if (auto fd = dyn_cast<FunctionDecl>(decl)) {
-        if (fd->getLanguageLinkage() == LanguageLinkage::CLanguageLinkage) {
-            print.output() << fd->getNameAsString();
+    if (mangleContext_->shouldMangleDeclName(decl)) {
+        print.output() << decl->getNameAsString();
+    } else {
+        mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
+#if 0
+        if (auto fd = dyn_cast<FunctionDecl>(decl)) {
+            if (fd->getLanguageLinkage() == LanguageLinkage::CLanguageLinkage) {
+                print.output() << fd->getNameAsString();
+            } else {
+                mangleContext_->mangleName(to_gd(fd), print.output().nobreak());
+            }
         } else {
             mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
         }
-    } else {
-        mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
+#endif
     }
 
     if (!raw) {
