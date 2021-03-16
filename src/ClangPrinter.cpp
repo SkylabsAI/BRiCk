@@ -36,6 +36,7 @@ ClangPrinter::getTypeSize(const BuiltinType *t) const {
     return this->context_->getTypeSize(t);
 }
 
+#if CLANG_VERSION_MAJOR >= 11
 static GlobalDecl
 to_gd(const NamedDecl *decl) {
     if (auto ct = dyn_cast<CXXConstructorDecl>(decl)) {
@@ -46,6 +47,12 @@ to_gd(const NamedDecl *decl) {
         return GlobalDecl(decl);
     }
 }
+#else
+static const NamedDecl *
+to_gd(const NamedDecl *decl) {
+    return decl;
+}
+#endif /* CLANG_VERSION_MAJOR >= 11 */
 
 void
 ClangPrinter::printGlobalName(const NamedDecl *decl, CoqPrinter &print,
