@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include <clang/Basic/Version.h>
 #include "CommentScanner.hpp"
 #include "clang/Basic/Version.inc"
 #include <Formatter.hpp>

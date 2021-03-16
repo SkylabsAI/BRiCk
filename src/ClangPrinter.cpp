@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include <clang/Basic/Version.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
