@@ -143,15 +143,14 @@ Section with_Σ.
      ; wpp_post := {| we_ex := t
                     ; we_post := Q |} |}.
 
-  Definition add_with {t : tele} (wpp : t -t> WithPrePost) : WithPrePost :=
+  Definition add_with (t : tele) (wpp : t -t> WithPrePost) : WithPrePost :=
     {| wpp_with := tele_append t (tele_map wpp_with wpp)
      ; wpp_pre  := tele_fun_append (@wpp_pre _ _ _) t wpp
      ; wpp_post := tele_fun_append (@wpp_post _ _ _) t wpp
      |}.
 
-  Definition with_tele (t : telescopes.tele) (f : telescopes.tele_arg t -> WithPrePost)
-  : WithPrePost :=
-    @add_with (telescopes.TeleS (fun x : telescopes.tele_arg t => telescopes.TeleO)) f.
+  Definition with_tele (t : tele) (f : tele_arg t -> WithPrePost) : WithPrePost :=
+    add_with (TeleS (fun x : tele_arg t => TeleO)) f.
 
   (* Markers to help notation printing. *)
   Definition let_fspec (X : WithPrePost) : WithPrePost := X.
@@ -170,8 +169,6 @@ Section with_Σ.
 
 End with_Σ.
 
-Arguments with_tele _ _ _ : clear implicits.
-
 Strategy expand
    [ add_pre add_args add_require add_arg add_post add_prepost with_tele ].
 (** Make sure to list all identity functions above. And in the same order, for clarity. *)
@@ -179,51 +176,54 @@ Strategy expand
    [ let_fspec with_arg_fspec with_pre_fspec with_prepost_fspec with_require_fspec with_persist_fspec exactWpp ].
 
 Notation "'\with' x .. y X" :=
-  (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-            (fun x => .. (fun y => X%fspec) ..)).
+  (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
+    (fun x => .. (fun y => X%fspec) ..)).
+Notation "'\withT' ts <- t X" := (with_tele t (fun ts => X%fspec)).
 
-Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X)).
+Notation "'\prepost' P X" := (add_prepost P%I X).
+Notation "'\prepost{' x .. y '}' P X" :=
+  (with_prepost_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
+      (fun x => .. (fun y => add_prepost P%I X) .. ))).
 
-Notation "'\prepost' pp X" := (@add_prepost _ pp%I X%fspec).
-Notation "'\prepost{' x .. y '}' pp X" :=
-  (with_prepost_fspec ((@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => @add_prepost _ pp%I X%fspec) .. )))).
+Notation "'\let' x ':=' e X" := (let_fspec (let x := e in X)).
 
-Notation "'\let' x ':=' e X" := (let_fspec (let x := e in X%fspec)).
-
-Notation "'\args' ls X" := (@add_args _ ls%list X%fspec).
-
+Notation "'\args' ls X" := (add_args ls X).
 Notation "'\args{' x .. y '}' ls X" :=
-  (@with_arg_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => (@add_args _ ls%list X%fspec)) .. ))).
+  (with_arg_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
+      (fun x => .. (fun y => (add_args ls X)) .. ))).
 
-Notation "'\arg' nm v X" := (@add_arg _ nm%bs v X%fspec).
-
+Notation "'\arg' nm v X" := (add_arg nm v X).
 Notation "'\arg{' x .. y } nm v X" :=
-  (@with_arg_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_arg _ nm%bs v X%fspec)) .. ))).
+  (with_arg_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
+      (fun x => .. (fun y => (add_arg nm v X)) .. ))).
 
-Notation "'\require' pre X" := (@add_require _ pre X%fspec).
-Notation "'\require{' x .. y } pre X" :=
-  (@with_require_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_require _ pre X%fspec)) .. ))).
+Notation "'\require' P X" := (add_require P X).
+Notation "'\require{' x .. y } P X" :=
+  (with_require_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
+      (fun x => .. (fun y => (add_require P X)) .. ))).
 
-Notation "'\persist' pre X" := (@add_persist _ pre%I X%fspec).
-Notation "'\persist{' x .. y } pre X" :=
-  (@with_persist_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_persist _ pre%I X%fspec)) .. ))).
+Notation "'\persist' P X" := (add_persist P%I X).
+Notation "'\persist{' x .. y } P X" :=
+  (with_persist_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
+      (fun x => .. (fun y => (add_persist P%I X)) .. ))).
 
-Notation "'\pre' pre X" := (@add_pre _ pre%I X%fspec).
-Notation "'\pre{' x .. y '}' pp X" :=
-  (with_pre_fspec ((@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => @add_pre _ pp%I X%fspec) .. )))).
+Notation "'\pre' P X" := (add_pre P%I X).
+Notation "'\pre{' x .. y '}' P X" :=
+  (with_pre_fspec
+    (add_with (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
+      (fun x => .. (fun y => add_pre P%I X) .. ))).
 
-Notation "'\post' { x .. y } [ r ] post" :=
-  (@post_ret _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-             (fun x => .. (fun y => (r, post%I)) ..)).
-Notation "'\post' { } [ r ] post" := (@post_ret _ TeleO (r, post%I)) (only parsing).
-Notation "'\post' [ r ] post" := (@post_ret _ TeleO (r, post%I)).
-Notation "'\post' post" := (@post_void _ TeleO post%I).
+Notation "'\post' { x .. y } [ r ] P" :=
+  (post_ret (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
+    (fun x => .. (fun y => (r, P%I)) ..)).
+Notation "'\post' { } [ r ] P" := (post_ret TeleO (r, P%I)) (only parsing).
+Notation "'\post' [ r ] P" := (post_ret TeleO (r, P%I)).
+Notation "'\post' P" := (post_void TeleO P%I).
 
 Notation "'\exact' wpp" := (exactWpp wpp).
 
@@ -304,5 +304,13 @@ refine (
     \post{}[Vptr nullptr] emp).
 (* Show Proof. *)
 Abort.
+
+(** A case for the "extra" [%I] annotations. *)
+Goal WithPrePost mpredI. refine (\pre (emp : mpred) \post emp). Abort.
+Goal WithPrePost mpredI. refine (\pre{n : N} (emp : mpred) \post emp). Abort.
+Goal WithPrePost mpredI. refine (\prepost (emp : mpred) \post emp). Abort.
+Goal WithPrePost mpredI. refine (\prepost{n : N} (emp : mpred) \post emp). Abort.
+Goal WithPrePost mpredI. refine (\persist (emp : mpred) \post emp). Abort.
+Goal WithPrePost mpredI. refine (\persist{n : N} (emp : mpred) \post emp). Abort.
 
 End with_Σ.
