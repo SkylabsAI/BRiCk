@@ -101,7 +101,9 @@ Section destroy.
     | Tarray t sz =>
       (* NOTE when destroying an array, elements of the array are destroyed with non-virtual dispatch. *)
       fold_right (fun i Q => valid_ptr (this .[ t ! Z.of_nat i ]) **
-         destruct_val false t (this .[ t ! Z.of_nat i ]) dtor Q) Q (List.rev (seq 0 (N.to_nat sz)))
+                                    destruct_val false t (this .[ t ! Z.of_nat i ]) dtor Q) Q (List.rev (seq 0 (N.to_nat sz)))
+    | Tincomplete_array ty =>
+      emp (* this is really a pointer *)
     | _ =>
       (* |={↑pred_ns}=> *) this |-> anyR (erase_qualifiers t) 1 ** (this |-> tblockR (erase_qualifiers t) 1 -* Q)
       (* emp *)

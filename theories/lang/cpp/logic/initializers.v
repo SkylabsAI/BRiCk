@@ -121,6 +121,7 @@ Module Type Init.
       | Tnullptr => False (* nullptr fields are not supported *)
       | Tarch _ _ => False (* vendor-specific types are not supported *)
       | Tfloat _ => False (* floating point numbers are not supported *)
+      | Tincomplete_array _ => False
       end.
 
     Lemma wp_initialize_frame obj ty e Q Q' :

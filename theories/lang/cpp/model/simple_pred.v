@@ -396,6 +396,7 @@ Module SimpleCPP.
         | Tqualified _ _ => False (* unreachable *)
         | Tvoid
         | Tarray _ _
+        | Tincomplete_array _
         | Tnamed _ => False (* not directly encoded in memory *)
         end.
       Definition encodes (t : type) (v : val) (vs : list runtime_val) : mpred :=

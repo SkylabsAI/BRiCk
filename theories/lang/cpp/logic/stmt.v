@@ -164,6 +164,21 @@ Module Type Stmt.
         end
       | Tfloat _ => UNSUPPORTED "floating point declarations" (* not supportd *)
       | Tarch _ _ => UNSUPPORTED "architecure specific declarations" (* not supported *)
+      | Tincomplete_array ty =>
+        let ty := Tqualified {| q_const := true ; q_volatile := false |} ty in
+        Forall a : ptr,
+        let continue :=
+            k (Rbind x a ρ)
+              (fun P => a |-> anyR (erase_qualifiers ty) 1 ** P)
+        in
+        match init with
+        | None =>
+          a |-> uninitR (erase_qualifiers ty) 1 -* continue
+        | Some init =>
+          wp_prval ρ init (fun v free => free **
+              (a |-> primR (erase_qualifiers ty) 1 v -* continue))
+        end
+
       end.
 
     Lemma decl_prim:

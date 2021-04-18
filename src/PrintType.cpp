@@ -310,8 +310,8 @@ public:
                                 CoqPrinter& print, ClangPrinter& cprint) {
         print.ctor("Tarray");
         printQualType(type->getElementType(), print, cprint);
-        print.output() << fmt::nbsp << type->getSize().getLimitedValue()
-                       << fmt::rparen;
+        print.output() << fmt::nbsp << type->getSize().getLimitedValue();
+        print.end_ctor();
     }
 
     void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* type,
@@ -322,11 +322,9 @@ public:
 
     void VisitIncompleteArrayType(const IncompleteArrayType* type,
                                   CoqPrinter& print, ClangPrinter& cprint) {
-        // note(gmm): i might want to note the sugar.
-        print.ctor("Qconst");
-        print.ctor("Tptr", false);
+        print.ctor("Tincomplete_array");
         printQualType(type->getElementType(), print, cprint);
-        print.output() << fmt::rparen << fmt::rparen;
+        print.end_ctor();
     }
 
     void VisitDecayedType(const DecayedType* type, CoqPrinter& print,

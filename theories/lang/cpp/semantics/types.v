@@ -52,6 +52,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tint sz _ => Some (bytesN sz)
   | Tvoid => None
   | Tarray t n => N.mul n <$> size_of resolve t
+  | Tincomplete_array _ => None
   | Tnamed nm => glob_def resolve nm ≫= GlobDecl_size_of
   | Tfunction _ _ => None
   | Tbool => Some 1

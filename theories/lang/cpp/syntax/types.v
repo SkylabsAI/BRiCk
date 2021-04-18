@@ -146,7 +146,8 @@ Inductive type : Set :=
 | Trv_ref (_ : type)
 | Tint (size : bitsize) (signed : signed)
 | Tvoid
-| Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
+| Tarray (_ : type) (_ : N)
+| Tincomplete_array (_ : type)
 | Tnamed (_ : globname)
 | Tfunction {cc : calling_conv} (_ : type) (_ : list type)
 | Tbool
@@ -158,6 +159,7 @@ Inductive type : Set :=
    some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs)
 .
+Arguments Tarray _ _%N.
 
 (** Strengthened Induction Principle for [type]
 
@@ -190,6 +192,9 @@ Section type_ind'.
   Hypothesis Tvoid_ind' : P Tvoid.
   Hypothesis Tarray_ind' : forall (ty : type) (sz : N),
     P ty -> P (Tarray ty sz).
+  Hypothesis Tincomplete_array_ind' : forall (ty : type),
+    P ty -> P (Tincomplete_array ty).
+
   Hypothesis Tnamed_ind' : forall (name : globname),
     P (Tnamed name).
   Hypothesis Tfunction_ind' : forall {cc : calling_conv} (ty : type) (tys : list type),
@@ -213,6 +218,7 @@ Section type_ind'.
     | Tint sz sgn             => Tint_ind' sz sgn
     | Tvoid                   => Tvoid_ind'
     | Tarray ty sz            => Tarray_ind' ty sz (type_ind' ty)
+    | Tincomplete_array ty    => Tincomplete_array_ind' ty (type_ind' ty)
     | Tnamed name             => Tnamed_ind' name
     | Tfunction ty tys        =>
       Tfunction_ind' ty tys (type_ind' ty)
@@ -262,6 +268,7 @@ Section type_countable.
       | Tint sz sgn => GenNode 3 [BITSIZE sz; SIGNED sgn]
       | Tvoid => GenNode 4 []
       | Tarray t n => GenNode 5 [go t; N n]
+      | Tincomplete_array t => GenNode 15 [go t]
       | Tnamed gn => GenNode 6 [BS gn]
       | @Tfunction cc ret args => GenNode 7 $ (CC cc) :: go ret :: (go <$> args)
       | Tbool => GenNode 8 []
@@ -289,10 +296,11 @@ Section type_countable.
       | GenNode 12 [] => Tnullptr
       | GenNode 13 [BS gn] => Tarch None gn
       | GenNode 14 [BITSIZE sz; BS gn] => Tarch (Some sz) gn
+      | GenNode 15 [t] => Tincomplete_array (go t)
       | _ => Tvoid	(** dummy *)
       end.
     apply (inj_countable' enc dec). refine (fix go t := _).
-    destruct t as [| | | | | | |cc ret args| | | | | |[]]; simpl; f_equal; try done.
+    destruct t as [| | | | | | | |cc ret args| | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
   Defined.
 End type_countable.
@@ -388,6 +396,7 @@ Fixpoint normalize_type (t : type) : type :=
   | Treference t => Treference (normalize_type t)
   | Trv_reference t => Trv_reference (normalize_type t)
   | Tarray t n => Tarray (normalize_type t) n
+  | Tincomplete_array t => Tincomplete_array (normalize_type t)
   | @Tfunction cc r args =>
     Tfunction (cc:=cc) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
