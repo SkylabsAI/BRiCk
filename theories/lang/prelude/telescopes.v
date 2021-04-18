@@ -3,7 +3,8 @@
  *
  * SPDX-License-Identifier: LGPL-2.1 WITH BedRock Exception for use over network, see repository root for details.
  *)
-Require Import stdpp.telescopes.
+Require Export stdpp.telescopes.
+Require Import bedrock.lang.prelude.base.
 
 Set Universe Polymorphism.
 Unset Auto Template Polymorphism.
