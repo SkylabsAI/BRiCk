@@ -16,6 +16,77 @@ Declare Scope fspec_scope.
 Delimit Scope fspec_scope with fspec.
 Bind Scope fspec_scope with WithPrePost.
 
+Reserved Notation "'\with' x .. y X"
+  (at level 10, x closed binder, y closed binder, X at level 200, right associativity,
+   format "'[v' '\with'     '[hv' x  ..  y ']'  '//' X ']'").
+Reserved Notation "'\withT' ts <- t X"
+  (at level 200, ts name, X at level 200, right associativity,
+   format "'[v' '\withT'     ts <- t  '//' X ']'").
+Reserved Notation "'\let' x ':=' e X"
+  (at level 10, x pattern, e at level 150, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\let'      x  ':='  '/' e ']' '//' X ']'").
+
+Reserved Notation "'\arg' nm v X"
+  (at level 10, nm at level 0, X at level 200, right associativity,
+   format "'[v' '\arg'  nm  v  '//' X ']'").
+Reserved Notation "'\arg{' x .. y } nm v X"
+  (at level 10, nm at level 0, x binder, y binder, X at level 200, right associativity,
+   format "'[v' '\arg{' x  ..  y '}'  nm  v  '//' X ']'").
+
+Reserved Notation "'\args' ls X"
+  (at level 10, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\args'     '/' ls  ']' '//' X ']'").
+Reserved Notation "'\args{' x .. y '}' ls X"
+  (at level 10, x binder, y binder, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\args{' x  ..  y '}'  '/' ls  ']' '//' X ']'").
+
+Reserved Notation "'\pre' pre X"
+  (at level 10, pre at level 200, X at level 200, left associativity,
+   format "'[v' '[  ' '\pre'  '/' pre  ']' '//' X ']'").
+Reserved Notation "'\pre{' x .. y '}' pp X"
+  (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\pre{' x  ..  y '}'  '/' pp ']' '//' X ']'").
+
+Reserved Notation "'\require' pre X"
+  (at level 10, pre at level 200, X at level 200, left associativity,
+   format "'[v' '[' '\require'  pre ']' '//' X ']'").
+Reserved Notation "'\require{' x .. y } pre X"
+  (at level 10, pre at level 200, x binder, y binder, X at level 200, left associativity,
+   format "'[v' '\require{' x  ..  y '}'  pre  '//' X ']'").
+
+Reserved Notation "'\persist' pre X"
+  (at level 10, pre at level 200, X at level 200, left associativity,
+   format "'[v' '[' '\persist'  pre ']' '//' X ']'").
+Reserved Notation "'\persist{' x .. y } pre X"
+  (at level 10, pre at level 200, x binder, y binder, X at level 200, left associativity,
+   format "'[v' '\persist{' x  ..  y '}'  pre  '//' X ']'").
+
+Reserved Notation "'\post' { x .. y } [ r ] post"
+  (at level 10, r at level 200, no associativity, x binder, y binder,
+   post at level 200,
+   format "'[v' '\post' { x  ..  y } [ r ]  '//'          '[hv ' post ']' ']'").
+Reserved Notation "'\post' { } [ r ] post"
+  (at level 10, r at level 200, no associativity,
+   post at level 200).
+Reserved Notation "'\post' [ r ] post"
+  (at level 10, r at level 200, no associativity,
+   post at level 200,
+   format "'[v' '\post' [ r ]  '//'          '[hv ' post ']' ']'").
+Reserved Notation "'\post' post"
+  (at level 10, no associativity,
+   post at level 200,
+   format "'[v' '\post'     '[hv ' post ']' ']'").
+
+Reserved Notation "'\prepost' pp X"
+  (at level 10, pp at level 100, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\prepost'  '/' pp ']' '//' X ']'").
+Reserved Notation "'\prepost{' x .. y '}' pp X"
+  (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
+   format "'[v' '[hv  ' '\prepost{' x  ..  y '}'  '/' pp ']' '//' X ']'").
+
+Reserved Notation "'\exact' wpp"
+  (at level 10, wpp at level 200).
+
 Section with_Σ.
   Context `{PROP : bi}.
 
@@ -130,111 +201,52 @@ Strategy expand
 
 Notation "'\with' x .. y X" :=
   (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-            (fun x => .. (fun y => X%fspec) ..))
-  (at level 10, x closed binder, y closed binder, X at level 200, right associativity,
-   format "'[v' '\with'     '[hv' x  ..  y ']'  '//' X ']'").
+            (fun x => .. (fun y => X%fspec) ..)).
 
-Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X))
-  (at level 200, ts name, X at level 200, right associativity,
-   format "'[v' '\withT'     ts <- t  '//' X ']'").
+Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X)).
 
-Notation "'\prepost' pp X" :=
-  (@add_prepost _ pp%I X%fspec)
-  (at level 10, pp at level 100, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\prepost'  '/' pp ']' '//' X ']'").
-
+Notation "'\prepost' pp X" := (@add_prepost _ pp%I X%fspec).
 Notation "'\prepost{' x .. y '}' pp X" :=
   (with_prepost_fspec ((@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => @add_prepost _ pp%I X%fspec) .. ))))
-  (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\prepost{' x  ..  y '}'  '/' pp ']' '//' X ']'").
+                                (fun x => .. (fun y => @add_prepost _ pp%I X%fspec) .. )))).
 
-Notation "'\let' x ':=' e X" :=
-  (let_fspec (let x := e in X%fspec))
-  (at level 10, x pattern, e at level 150, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\let'      x  ':='  '/' e ']' '//' X ']'").
+Notation "'\let' x ':=' e X" := (let_fspec (let x := e in X%fspec)).
 
-Notation "'\args' ls X" :=
-  (@add_args _ ls%list X%fspec)
-  (at level 10, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\args'     '/' ls  ']' '//' X ']'").
+Notation "'\args' ls X" := (@add_args _ ls%list X%fspec).
 
 Notation "'\args{' x .. y '}' ls X" :=
   (@with_arg_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => (@add_args _ ls%list X%fspec)) .. )))
-  (at level 10, x binder, y binder, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\args{' x  ..  y '}'  '/' ls  ']' '//' X ']'").
+                                (fun x => .. (fun y => (@add_args _ ls%list X%fspec)) .. ))).
 
-Notation "'\arg' nm v X" :=
-  (@add_arg _ nm%bs v X%fspec)
-  (at level 10, nm at level 0, X at level 200, right associativity,
-   format "'[v' '\arg'  nm  v  '//' X ']'").
+Notation "'\arg' nm v X" := (@add_arg _ nm%bs v X%fspec).
 
 Notation "'\arg{' x .. y } nm v X" :=
   (@with_arg_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_arg _ nm%bs v X%fspec)) .. )))
-  (at level 10, nm at level 0, x binder, y binder, X at level 200, right associativity,
-   format "'[v' '\arg{' x  ..  y '}'  nm  v  '//' X ']'").
+                                (fun x => .. (fun y => (@add_arg _ nm%bs v X%fspec)) .. ))).
 
-Notation "'\require' pre X" :=
-  (@add_require _ pre X%fspec)
-  (at level 10, pre at level 200, X at level 200, left associativity,
-   format "'[v' '[' '\require'  pre ']' '//' X ']'").
-
+Notation "'\require' pre X" := (@add_require _ pre X%fspec).
 Notation "'\require{' x .. y } pre X" :=
   (@with_require_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_require _ pre X%fspec)) .. )))
-  (at level 10, pre at level 200, x binder, y binder, X at level 200, left associativity,
-   format "'[v' '\require{' x  ..  y '}'  pre  '//' X ']'").
+                                (fun x => .. (fun y => (@add_require _ pre X%fspec)) .. ))).
 
-Notation "'\persist' pre X" :=
-  (@add_persist _ pre%I X%fspec)
-  (at level 10, pre at level 200, X at level 200, left associativity,
-   format "'[v' '[' '\persist'  pre ']' '//' X ']'").
-
+Notation "'\persist' pre X" := (@add_persist _ pre%I X%fspec).
 Notation "'\persist{' x .. y } pre X" :=
   (@with_persist_fspec _ (@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-                                (fun x => .. (fun y => (@add_persist _ pre%I X%fspec)) .. )))
-  (at level 10, pre at level 200, x binder, y binder, X at level 200, left associativity,
-   format "'[v' '\persist{' x  ..  y '}'  pre  '//' X ']'").
+                                (fun x => .. (fun y => (@add_persist _ pre%I X%fspec)) .. ))).
 
-Notation "'\pre' pre X" :=
-  (@add_pre _ pre%I X%fspec)
-  (at level 10, pre at level 200, X at level 200, left associativity,
-   format "'[v' '[  ' '\pre'  '/' pre  ']' '//' X ']'").
-
+Notation "'\pre' pre X" := (@add_pre _ pre%I X%fspec).
 Notation "'\pre{' x .. y '}' pp X" :=
   (with_pre_fspec ((@add_with _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) .. ))
-                                (fun x => .. (fun y => @add_pre _ pp%I X%fspec) .. ))))
-  (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
-   format "'[v' '[hv  ' '\pre{' x  ..  y '}'  '/' pp ']' '//' X ']'").
+                                (fun x => .. (fun y => @add_pre _ pp%I X%fspec) .. )))).
 
 Notation "'\post' { x .. y } [ r ] post" :=
   (@post_ret _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
-             (fun x => .. (fun y => (r, post%I)) ..))
-  (at level 10, r at level 200, no associativity, x binder, y binder,
-   post at level 200,
-   format "'[v' '\post' { x  ..  y } [ r ]  '//'          '[hv ' post ']' ']'").
+             (fun x => .. (fun y => (r, post%I)) ..)).
+Notation "'\post' { } [ r ] post" := (@post_ret _ TeleO (r, post%I)) (only parsing).
+Notation "'\post' [ r ] post" := (@post_ret _ TeleO (r, post%I)).
+Notation "'\post' post" := (@post_void _ TeleO post%I).
 
-Notation "'\post' { } [ r ] post" :=
-  (@post_ret _ TeleO (r, post%I))
-  (at level 10, r at level 200, no associativity,
-   post at level 200, only parsing).
-
-Notation "'\post' [ r ] post" :=
-  (@post_ret _ TeleO (r, post%I))
-  (at level 10, r at level 200, no associativity,
-   post at level 200,
-   format "'[v' '\post' [ r ]  '//'          '[hv ' post ']' ']'").
-
-Notation "'\post' post" :=
-  (@post_void _ TeleO post%I)
-  (at level 10, no associativity,
-   post at level 200,
-   format "'[v' '\post'     '[hv ' post ']' ']'").
-
-Notation "'\exact' wpp" := (exactWpp wpp)
-  (at level 10, wpp at level 200).
+Notation "'\exact' wpp" := (exactWpp wpp).
 
 Section with_Σ.
   Context `{Σ : cpp_logic ti}.
