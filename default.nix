@@ -13,18 +13,48 @@
 #}) {} }:
 
 let
+  # All dependencies information are here
+  llvm = nixpkgs.llvm_10;
+  llvmPackages = nixpkgs.llvmPackages_10;
+  # aliases
+  # * clang-unwrapped is a multi-platform cross-compiler, but cannot produce
+  #   host binaries (because it is not integrated with Nix's magic).
+  clang-unwrapped = llvmPackages.clang-unwrapped;
+  # * clang is a host compiler that is integrated with Nix
+  #   (and is implemented by clang-wrapper, a wrapper to clang that forces
+  #   `-target x86_64-apple-darwin` among many other options).
+  clang = llvmPackages.clang;
   pkgs = [
-    nixpkgs.clang_10
-    nixpkgs.llvm_10
+    llvm
+    clang
     nixpkgs.cmake
   ];
+  llvm_dir = llvm.outPath;
+  clang_dir = clang-unwrapped.outPath;
+
+  llvm_bin_dir = llvm_dir + "/bin";
+  clang_bin_dir = clang_dir + "/bin";
 
 in
   nixpkgs.stdenv.mkDerivation {
     name = "env";
     buildInputs = pkgs;
+    # cpp2v-core depends on ${LLVM,CLANG}_DIR
+    # zeta depends on ${LLVM,CLANG}_BASE_DIR
+    # NOVA depends on $PREFIX_{aarch64,x86_64}
+    # Beware that ${foo} is expanded by Nix while ''${foo} is expanded by the shell.
+    #
+    # Nova might need clang-unwrapped on the PATH
+    # cpp2v-core needs a wrapped compiler (clang or nothing) to build on the host.
     shellHook=''
-      export LLVM_DIR=${nixpkgs.llvm_10.outPath}
-      export CLANG_DIR=${nixpkgs.llvmPackages_10.clang-unwrapped.outPath}
+      export LLVM_DIR=${llvm_dir}
+      export CLANG_DIR=${clang_dir}
+      export CLANG_PREFIX_aarch64=${clang_bin_dir}/
+      export CLANG_PREFIX_x86_64=${clang_bin_dir}/
+      export LLVM_BASE_DIR=${llvm_bin_dir}/
+      export CLANG_BASE_DIR=${clang_bin_dir}/
       '';
+      # export WRAPPED_CLANG_DIR=${clang.outPath}
+      # export PATH=${clang-unwrapped.outPath}/bin:''$PATH
+      # export PATH=${clang.outPath}/bin:''$PATH
   }
