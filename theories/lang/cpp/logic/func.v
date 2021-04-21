@@ -222,6 +222,10 @@ Section with_cpp.
         | Vptr p => bind_vars xs vs (Rbind_check x p r) Q
         | _ => ERROR "non-pointer passed for aggregate"
         end
+      | Tincomplete_array ty =>
+        let ty := Tptr (erase_qualifiers ty) in
+        Forall a : ptr, a |-> primR ty 1 v -*
+        bind_vars xs vs (Rbind_check x a r) (fun r free => Q r (a |-> anyR ty 1 ** free))
       | _              =>
         Forall a : ptr, a |-> primR (erase_qualifiers ty) 1 v -*
         bind_vars xs vs (Rbind_check x a r) (fun r free => Q r (a |-> anyR (erase_qualifiers ty) 1 ** free))

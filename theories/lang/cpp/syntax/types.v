@@ -148,6 +148,10 @@ Inductive type : Set :=
 | Tvoid
 | Tarray (_ : type) (_ : N)
 | Tincomplete_array (_ : type)
+  (* ^ incomplete arrays are generally the same as constant pointers *except* for when they
+     occur in aggregates. Therefore, we distinguish them syntactically, but have the semantics
+     equate them in the appropriate places.
+   *)
 | Tnamed (_ : globname)
 | Tfunction {cc : calling_conv} (_ : type) (_ : list type)
 | Tbool
@@ -155,8 +159,8 @@ Inductive type : Set :=
 | Tfloat (_ : bitsize)
 | Tqualified (_ : type_qualifiers) (_ : type)
 | Tnullptr
-(* architecture-specific types; currently unused.
-   some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
+  (* ^ architecture-specific types; currently unused.
+     some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs)
 .
 Arguments Tarray _ _%N.

@@ -122,6 +122,9 @@ Module Type Init.
       | Tarch _ _ => False (* vendor-specific types are not supported *)
       | Tfloat _ => False (* floating point numbers are not supported *)
       | Tincomplete_array _ => False
+        (* you can not declare incomplete arrays.
+           NOTE the elaboration phase will elaborate code such as
+                [char x[] = "hello"] and [char x[] = {1}] *)
       end.
 
     Lemma wp_initialize_frame obj ty e Q Q' :
