@@ -24,9 +24,11 @@ let
   #   (and is implemented by clang-wrapper, a wrapper to clang that forces
   #   `-target x86_64-apple-darwin` among many other options).
   clang = llvmPackages.clang;
+  lld = llvmPackages.lld;
   pkgs = [
     llvm
     clang
+    lld
     nixpkgs.cmake
   ];
   llvm_dir = llvm.outPath;
@@ -34,6 +36,7 @@ let
 
   llvm_bin_dir = llvm_dir + "/bin";
   clang_bin_dir = clang_dir + "/bin";
+  lld_bin_dir = lld.outPath + "/bin";
 
 in
   nixpkgs.stdenv.mkDerivation {
@@ -53,6 +56,7 @@ in
       export CLANG_PREFIX_x86_64=${clang_bin_dir}/
       export LLVM_BASE_DIR=${llvm_bin_dir}/
       export CLANG_BASE_DIR=${clang_bin_dir}/
+      export LLD_BASE_DIR=${lld_bin_dir}/
       '';
       # export WRAPPED_CLANG_DIR=${clang.outPath}
       # export PATH=${clang-unwrapped.outPath}/bin:''$PATH
