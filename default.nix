@@ -30,6 +30,7 @@ let
     clang
     lld
     nixpkgs.cmake
+    clang-unwrapped.lib
   ];
   llvm_dir = llvm.outPath;
   clang_dir = clang-unwrapped.outPath;
@@ -57,6 +58,7 @@ in
       export LLVM_BASE_DIR=${llvm_bin_dir}/
       export CLANG_BASE_DIR=${clang_bin_dir}/
       export LLD_BASE_DIR=${lld_bin_dir}/
+      export CLANG_LIB_DIR=${clang-unwrapped.lib.outPath}/lib
       '';
       # export WRAPPED_CLANG_DIR=${clang.outPath}
       # export PATH=${clang-unwrapped.outPath}/bin:''$PATH
