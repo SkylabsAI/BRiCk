@@ -33,6 +33,8 @@ Our instructions are for Linux (Ubuntu) and OSX.
 - cmake
 - [opam 2](https://opam.ocaml.org/)
 
+To install LLVM using Nix, see [nix.md](nix.md).
+
 ### Native dependencies: Linux (Ubuntu)
 
 ```sh
