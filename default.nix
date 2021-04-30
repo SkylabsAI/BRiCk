@@ -40,7 +40,7 @@ let
   lld_bin_dir = lld.outPath + "/bin";
 
 in
-  nixpkgs.stdenv.mkDerivation {
+  nixpkgs.mkShell {
     name = "env";
     buildInputs = pkgs;
     # cpp2v-core depends on ${LLVM,CLANG}_DIR
@@ -50,17 +50,17 @@ in
     #
     # Nova might need clang-unwrapped on the PATH
     # cpp2v-core needs a wrapped compiler (clang or nothing) to build on the host.
-    shellHook=''
-      export LLVM_DIR=${llvm_dir}
-      export CLANG_DIR=${clang_dir}
-      export CLANG_PREFIX_aarch64=${clang_bin_dir}/
-      export CLANG_PREFIX_x86_64=${clang_bin_dir}/
-      export LLVM_BASE_DIR=${llvm_bin_dir}/
-      export CLANG_BASE_DIR=${clang_bin_dir}/
-      export LLD_BASE_DIR=${lld_bin_dir}/
-      export CLANG_LIB_DIR=${clang-unwrapped.lib.outPath}/lib
-      '';
-      # export WRAPPED_CLANG_DIR=${clang.outPath}
-      # export PATH=${clang-unwrapped.outPath}/bin:''$PATH
-      # export PATH=${clang.outPath}/bin:''$PATH
+    LLVM_DIR = llvm_dir;
+    CLANG_DIR = clang_dir;
+    CLANG_PREFIX_aarch64 = "${clang_bin_dir}/";
+    CLANG_PREFIX_x86_64 = "${clang_bin_dir}/";
+    LLVM_BASE_DIR = "${llvm_bin_dir}/";
+    CLANG_BASE_DIR = "${clang_bin_dir}/";
+    LLD_BASE_DIR = "${lld_bin_dir}/";
+    CLANG_LIB_DIR = "${clang-unwrapped.lib.outPath}/lib";
+    # export WRAPPED_CLANG_DIR=${clang.outPath}
+    # shellHook=''
+    #   '';
+    # export PATH=${clang-unwrapped.outPath}/bin:''$PATH
+    # export PATH=${clang.outPath}/bin:''$PATH
   }
