@@ -1,1 +1,14 @@
-bin: [ "build/cpp2v" { "cpp2v" } ]
+lib: [
+  "_build/install/default/lib/coq-cpp2v-bin/META"
+  "_build/install/default/lib/coq-cpp2v-bin/dune-package"
+  "_build/install/default/lib/coq-cpp2v-bin/opam"
+]
+bin: [
+  "_build/install/default/bin/cpp2v"
+]
+doc: [
+  "_build/install/default/doc/coq-cpp2v-bin/LICENSE-BedRock"
+  "_build/install/default/doc/coq-cpp2v-bin/LICENSE-LGPL"
+  "_build/install/default/doc/coq-cpp2v-bin/LICENSE-LLVM"
+  "_build/install/default/doc/coq-cpp2v-bin/README.md"
+]
