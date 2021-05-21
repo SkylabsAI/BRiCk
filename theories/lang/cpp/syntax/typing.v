@@ -68,14 +68,15 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Treference t => Treference (erase_qualifiers t)
   | Trv_reference t => Trv_reference (erase_qualifiers t)
   | Tint _ _
+  | Tchar
   | Tbool
   | Tvoid
   | Tfloat _
   | Tnamed _ => t
+  | Tqualified _ t => erase_qualifiers t
   | Tarray t sz => Tarray (erase_qualifiers t) sz
   | @Tfunction cc t ts => Tfunction (cc:=cc) (erase_qualifiers t) (List.map erase_qualifiers ts)
   | Tmember_pointer cls t => Tmember_pointer cls (erase_qualifiers t)
-  | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr
   | Tarch sz nm => Tarch sz nm
   end.

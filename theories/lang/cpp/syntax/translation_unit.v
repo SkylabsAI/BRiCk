@@ -192,6 +192,20 @@ Variant endian : Set := Little | Big.
 Instance endian_dec : EqDecision endian.
 Proof. solve_decision. Defined.
 
+Record target_info : Set := mkTI
+{ byte_order : endian
+; char_signed : signed
+  (* ^ whether or not [char] is the same as [signed char] or [unsigned char] *)
+; char_size  : bitsize
+; short_size : bitsize
+; int_size   : bitsize
+; long_size  : bitsize
+; longlong_size : bitsize
+  (** TODO probably more necessary *)
+; _compatible :
+    Is_true (bool_decide (8 <= bitsN char_size /\ 16 <= bitsN short_size /\ 32 <= bitsN int_size /\ 32 <= bitsN long_size /\ 64 <= bitsN longlong_size)%N)
+}.
+
 (**
 A [translation_unit] value represents all the statically known information
 about a C++ translation unit, that is, a source file.
@@ -201,7 +215,7 @@ a translation unit a "singleton" value in this monoid? *)
 Record translation_unit : Type :=
 { symbols    : symbol_table
 ; globals    : type_table
-; byte_order : endian
+; target     : target_info
 }.
 
 Instance global_lookup : Lookup globname GlobDecl translation_unit :=

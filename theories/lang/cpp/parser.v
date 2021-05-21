@@ -107,9 +107,9 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) : translation_unit :=
+Definition decls ls (trg : target_info) : translation_unit :=
   decls' ls ∅ ∅ (fun a b => {| symbols := avl.map_canon a
                            ; globals := avl.map_canon b
-                           ; byte_order := e |}).
+                           ; target := trg |}).
 
 Declare Reduction reduce_translation_unit := vm_compute.

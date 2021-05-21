@@ -139,12 +139,36 @@ Defined.
 Existing Class calling_conv.
 Existing Instance CC_C.
 
+Variant int_type : Set :=
+| Ichar | Ishort | Iint | Ilong | Ilonglong | Iexplicit (_ : bitsize).
+#[global] Instance: EqDecision int_type.
+Proof. solve_decision. Defined.
+#[global] Instance: Countable int_type.
+Proof.
+  (*
+  apply (inj_countable'
+    (fun it =>
+      match it with
+      | Ichar => 0 | Ishort => 1 | Iint => 2 | Ilong => 3 | Ilonglong => 4 | Iexplicit sz => 5 + encode sz
+      end)%positive
+    (λ n,
+      match n with
+      | 0 => Ichar | 1 => Ishort | 2 => Iint | 3 => Ilong | 4 => Ilonglong | v => Iexplicit (decode (Pos.sub v 5%positive))
+      end)).
+  Print countable.
+  abstract (by intros []).
+Defined.
+   *)
+Admitted.
+
 (* types *)
 Inductive type : Set :=
+  (* the C++ standard treats [char] as a special type that is either [signed char] or [unsigned char] *)
 | Tptr (_ : type)
 | Tref (_ : type)
 | Trv_ref (_ : type)
-| Tint (size : bitsize) (signed : signed)
+| Tint (_ : int_type) (_ : signed)
+| Tchar
 | Tvoid
 | Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
 | Tnamed (_ : globname)
@@ -185,8 +209,9 @@ Section type_ind'.
     P ty -> P (Tref ty).
   Hypothesis Trv_ref_ind' : forall (ty : type),
     P ty -> P (Trv_ref ty).
-  Hypothesis Tint_ind' : forall (size : bitsize) (sign : signed),
-    P (Tint size sign).
+  Hypothesis Tint_ind' : forall (it : int_type) (sgn : signed),
+    P (Tint it sgn).
+  Hypothesis Tchar_ind' : P Tchar.
   Hypothesis Tvoid_ind' : P Tvoid.
   Hypothesis Tarray_ind' : forall (ty : type) (sz : N),
     P ty -> P (Tarray ty sz).
@@ -211,6 +236,7 @@ Section type_ind'.
     | Tref ty                 => Tref_ind' ty (type_ind' ty)
     | Trv_ref ty              => Trv_ref_ind' ty (type_ind' ty)
     | Tint sz sgn             => Tint_ind' sz sgn
+    | Tchar                   => Tchar_ind'
     | Tvoid                   => Tvoid_ind'
     | Tarray ty sz            => Tarray_ind' ty sz (type_ind' ty)
     | Tnamed name             => Tnamed_ind' name
@@ -235,7 +261,6 @@ Section type_ind'.
     end.
 End type_ind'.
 
-Notation Tchar := Tint (only parsing).
 (* XXX merge type_eq_dec into type_eq. *)
 Definition type_eq_dec : forall (ty1 ty2 : type), { ty1 = ty2 } + { ty1 <> ty2 }.
 Proof.
@@ -251,7 +276,9 @@ Section type_countable.
   Local Notation BITSIZE x := (GenLeaf (inl (inl (inr x)))).
   Local Notation SIGNED x  := (GenLeaf (inl (inl (inl (inr x))))).
   Local Notation CC x      := (GenLeaf (inl (inl (inl (inl (inr x)))))).
-  Local Notation N x       := (GenLeaf (inl (inl (inl (inl (inl x)))))).
+  Local Notation N x       := (GenLeaf (inl (inl (inl (inl (inl (inl x))))))).
+  Local Notation INT_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
+
   Global Instance type_countable : Countable type.
   Proof.
     set enc := fix go (t : type) :=
@@ -259,7 +286,8 @@ Section type_countable.
       | Tptr t => GenNode 0 [go t]
       | Tref t => GenNode 1 [go t]
       | Trv_ref t => GenNode 2 [go t]
-      | Tint sz sgn => GenNode 3 [BITSIZE sz; SIGNED sgn]
+      | Tint it sgn => GenNode 3 [INT_TYPE it; SIGNED sgn]
+      | Tchar => GenNode 15 []
       | Tvoid => GenNode 4 []
       | Tarray t n => GenNode 5 [go t; N n]
       | Tnamed gn => GenNode 6 [BS gn]
@@ -277,7 +305,8 @@ Section type_countable.
       | GenNode 0 [t] => Tptr (go t)
       | GenNode 1 [t] => Tref (go t)
       | GenNode 2 [t] => Trv_ref (go t)
-      | GenNode 3 [BITSIZE sz; SIGNED sgn] => Tint sz sgn
+      | GenNode 3 [INT_TYPE sz; SIGNED sgn] => Tint sz sgn
+      | GenNode 15 [] => Tchar
       | GenNode 4 [] => Tvoid
       | GenNode 5 [t; N n] => Tarray (go t) n
       | GenNode 6 [BS gn] => Tnamed gn
@@ -292,7 +321,7 @@ Section type_countable.
       | _ => Tvoid	(** dummy *)
       end.
     apply (inj_countable' enc dec). refine (fix go t := _).
-    destruct t as [| | | | | | |cc ret args| | | | | |[]]; simpl; f_equal; try done.
+    destruct t as [| | | | | | | |cc ret args| | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
   Defined.
 End type_countable.
@@ -392,12 +421,13 @@ Fixpoint normalize_type (t : type) : type :=
     Tfunction (cc:=cc) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
   | Tqualified q t => qual_norm q t
-  | Tint _ _ => t
-  | Tbool => t
-  | Tvoid => t
-  | Tnamed _ => t
-  | Tnullptr => t
-  | Tfloat _ => t
+  | Tint _ _
+  | Tchar
+  | Tbool
+  | Tvoid
+  | Tnamed _
+  | Tnullptr
+  | Tfloat _
   | Tarch _ _ => t
   end.
 
@@ -451,51 +481,5 @@ End normalize_type_idempotent.
 
 Definition decompose_type : type -> type_qualifiers * type :=
   qual_norm (fun q t => (q, t)).
-
-
-(* types with explicit size information
- *)
-Definition T_int8    := Tint W8 Signed.
-Definition T_uint8   := Tint W8 Unsigned.
-Definition T_int16   := Tint W16 Signed.
-Definition T_uint16  := Tint W16 Unsigned.
-Definition T_int32   := Tint W32 Signed.
-Definition T_uint32  := Tint W32 Unsigned.
-Definition T_int64   := Tint W64 Signed.
-Definition T_uint64  := Tint W64 Unsigned.
-Definition T_int128  := Tint W128 Signed.
-Definition T_uint128 := Tint W128 Unsigned.
-
-(* note(gmm): types without explicit size information need to
- * be parameters of the underlying code, otherwise we can't
- * describe the semantics correctly.
- * - cpp2v should probably insert these types.
- *)
-(**
-https://en.cppreference.com/w/cpp/language/types
-The 4 definitions below use the LP64 data model.
-LLP64 and LP64 agree except for the [long] type: see
-the warning below.
-In future, we may want to parametrize by a data model, or
-the machine word size.
-*)
-Definition char_bits : bitsize := W8.
-Definition short_bits : bitsize := W16.
-Definition int_bits : bitsize := W32.
-Definition long_bits : bitsize := W64. (** warning: LLP64 model uses 32 *)
-Definition long_long_bits : bitsize := W64.
-
-Definition T_ushort : type := Tint short_bits Unsigned.
-Definition T_short : type := Tint short_bits Signed.
-Definition T_ulong : type := Tint long_bits Unsigned.
-Definition T_long : type := Tint long_bits Signed.
-Definition T_ulonglong : type := Tint long_long_bits Unsigned.
-Definition T_longlong : type := Tint long_long_bits Signed.
-Definition T_uint : type := Tint int_bits Unsigned.
-Definition T_int : type := Tint int_bits Signed.
-
-Notation T_schar := (Tchar char_bits Signed) (only parsing).
-Notation T_uchar := (Tchar char_bits Unsigned) (only parsing).
-
 
 Coercion CCcast : PrimCast >-> Cast.

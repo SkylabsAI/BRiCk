@@ -64,6 +64,24 @@ translateModule(const TranslationUnitDecl* decl, CoqPrinter& print, ClangPrinter
 
 using namespace clang;
 
+            const std::string bitsize(unsigned n) {
+                switch (n) {
+                case 8:
+                    return "W8";
+                case 16:
+                    return "W16";
+                case 32:
+                    return "W32";
+                case 64:
+                    return "W64";
+                case 128:
+                    return "W128";
+                default:
+                    return "unknown_bit_size";
+                }
+            }
+
+
 void
 ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
                            clang::TranslationUnitDecl *decl) {
@@ -116,12 +134,22 @@ ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
             }
             print.end_list();
             print.output() << fmt::nbsp;
-            if (ctxt->getTargetInfo().isBigEndian()) {
+
+            // generate target info
+            print.ctor("mkTI");
+            auto &ti = ctxt->getTargetInfo();
+            if (ti.isBigEndian()) {
                 print.output() << "Big";
             } else {
-                assert(ctxt->getTargetInfo().isLittleEndian());
+                assert(ti.isLittleEndian());
                 print.output() << "Little";
             }
+
+            print.output() << fmt::nbsp << "Signed" << fmt::nbsp << bitsize(ti.getCharWidth()) << " "
+                           << bitsize(ti.getShortWidth()) << " " << bitsize(ti.getIntWidth()) << " "
+                           << bitsize(ti.getLongWidth()) << " " << bitsize(ti.getLongLongWidth()) << " ";
+            print.output() << "I";
+            print.end_ctor();
             print.output() << "." << fmt::outdent << fmt::line;
         }
     }

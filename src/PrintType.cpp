@@ -57,24 +57,6 @@ printQualifier(const QualType& qt, CoqPrinter& print) {
     print.end_record();
 }
 
-const std::string
-bitsize(unsigned n) {
-    switch (n) {
-    case 8:
-        return "W8";
-    case 16:
-        return "W16";
-    case 32:
-        return "W32";
-    case 64:
-        return "W64";
-    case 128:
-        return "W128";
-    default:
-        return "unknown_bit_size";
-    }
-}
-
 class PrintType :
     public TypeVisitor<PrintType, void, CoqPrinter&, ClangPrinter&> {
 private:
@@ -145,6 +127,18 @@ public:
         cprint.printQualType(type->getInnerType(), print);
     }
 
+    const char* bitsize(unsigned int sz) {
+        switch(sz) {
+            case 8: return "W8";
+            case 16: return "W16";
+            case 32: return "W32";
+            case 64: return "W64";
+            case 128: return "W128";
+            default:
+            return "Wunknown";
+        }
+    }
+
     void printTypeSugar(const BuiltinType* type, CoqPrinter& print,
                         ClangPrinter& cprint) {
         if (type->isSignedIntegerType()) {
@@ -202,6 +196,23 @@ public:
         case BuiltinType::Kind::NullPtr:
             print.output() << "Tnullptr";
             break;
+#define CASE_KIND(kind, s) case kind: { print.output() << s; break; }
+#define CASE_INT(kind, s, sgn) case kind: { print.output() << "(Tint " #s " " #sgn ")"; break; }
+        CASE_KIND(BuiltinType::Kind::Char_S, "Tchar")
+        CASE_INT(BuiltinType::Kind::Char_U, Ichar, Unsigned)
+        CASE_INT(BuiltinType::Kind::Short, Ishort, Signed)
+        CASE_INT(BuiltinType::Kind::UShort, Ishort, Signed)
+        CASE_INT(BuiltinType::Kind::Int, Iint, Signed)
+        CASE_INT(BuiltinType::Kind::UInt, Iint, Unsigned)
+        CASE_INT(BuiltinType::Kind::Long, Ilong, Signed)
+        CASE_INT(BuiltinType::Kind::ULong, Ilong, Unsigned)
+        CASE_INT(BuiltinType::Kind::ULongLong, Ilonglong, Unsigned)
+        CASE_INT(BuiltinType::Kind::LongLong, Ilonglong, Signed)
+        CASE_INT(BuiltinType::Kind::Int128, (Iexplicit W128), Signed)
+        CASE_INT(BuiltinType::Kind::UInt128, (Iexplicit W128), Unsigned)
+#undef CASE_INT
+#undef CASE_KIND
+
 #if CLANG_VERSION_MAJOR == 10
         case BuiltinType::Kind::SveInt8:
         case BuiltinType::Kind::SveInt16:
@@ -224,14 +235,14 @@ public:
         default:
             if (type->isAnyCharacterType()) {
                 print.output()
-                    << "(Tchar " << bitsize(cprint.getTypeSize(type)) << " "
+                    << "(Tint (Iexplicit " << bitsize(cprint.getTypeSize(type)) << ") "
                     << (type->isSignedInteger() ? "Signed" : "Unsigned") << ")";
             } else if (type->isFloatingPoint()) {
                 print.output()
                     << "(Tfloat " << bitsize(cprint.getTypeSize(type)) << ")";
             } else if (type->isIntegerType()) {
                 print.output()
-                    << "(Tint " << bitsize(cprint.getTypeSize(type)) << " "
+                    << "(Tint (Iexplicit " << bitsize(cprint.getTypeSize(type)) << ") "
                     << (type->isSignedInteger() ? "Signed" : "Unsigned") << ")";
 #if CLANG_VERSION_MAJOR >= 11
             } else if (type->isSizelessBuiltinType()) {
