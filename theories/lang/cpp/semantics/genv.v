@@ -26,7 +26,7 @@ Record genv : Type :=
 }.
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
-  g.(genv_tu).(byte_order).
+  g.(genv_tu).(target).(byte_order).
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
 
 (** * global environments *)
@@ -64,7 +64,7 @@ Instance pointer_size_flip_proper : Proper (flip genv_leq ==> eq) pointer_size.
 Proof. by intros ?? <-. Qed.
 
 Instance genv_byte_order_proper : Proper (genv_leq ==> eq) genv_byte_order.
-Proof. intros ???. apply sub_module.byte_order_proper. solve_proper. Qed.
+Proof. intros ???. apply sub_module.target_proper. solve_proper. Qed.
 Instance genv_byte_order_flip_proper : Proper (flip genv_leq ==> eq) genv_byte_order.
 Proof. by intros ?? <-. Qed.
 (* this states that the [genv] is compatible with the given [translation_unit]

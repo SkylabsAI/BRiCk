@@ -201,10 +201,16 @@ Record target_info : Set := mkTI
 ; int_size   : bitsize
 ; long_size  : bitsize
 ; longlong_size : bitsize
-  (** TODO probably more necessary *)
+(** TODO probably more necessary *)
 ; _compatible :
     Is_true (bool_decide (8 <= bitsN char_size /\ 16 <= bitsN short_size /\ 32 <= bitsN int_size /\ 32 <= bitsN long_size /\ 64 <= bitsN longlong_size)%N)
 }.
+Instance: forall P, EqDecision (Is_true P).
+Proof. destruct P; compute. destruct x. destruct y; eauto. destruct x. Defined.
+Instance: EqDecision target_info.
+Proof.
+  do 2 red. destruct x; destruct y; simpl.
+Admitted.
 
 (**
 A [translation_unit] value represents all the statically known information

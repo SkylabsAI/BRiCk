@@ -280,7 +280,7 @@ Proof. intros. by eapply complete_respects_sub_table_mut. Qed.
 Record sub_module (a b : translation_unit) : Prop :=
 { types_compat : type_table_le a.(globals) b.(globals)
 ; syms_compat : syms_table_le a.(symbols) b.(symbols)
-; byte_order_compat : a.(byte_order) = b.(byte_order) }.
+; target_compat : a.(target) = b.(target) }.
 
 Section sub_module.
   Local Instance: Reflexive sub_module.
@@ -347,9 +347,9 @@ Proof.
   destruct g2 => //= /require_eq_success. naive_solver.
 Qed.
 
-Instance byte_order_proper : Proper (sub_module ==> eq) byte_order.
+Instance byte_order_proper : Proper (sub_module ==> eq) target.
 Proof. by destruct 1. Qed.
-Instance byte_order_flip_proper : Proper (flip sub_module ==> eq) byte_order.
+Instance byte_order_flip_proper : Proper (flip sub_module ==> eq) target.
 Proof. by destruct 1. Qed.
 
 Definition compat_le {T}
@@ -396,7 +396,7 @@ Lemma complete_type_respects_sub_module tt1 tt2 t :
 Proof. move=> /types_compat Hsub Hct. exact: complete_type_respects_sub_table. Qed.
 
 Definition module_le (a b : translation_unit) : bool :=
-  bool_decide (a.(byte_order) = b.(byte_order)) &&
+  bool_decide (a.(target) = b.(target)) &&
   compat_le (fun l r => match l , r with
                      | None , _ => true
                      | Some _ , None => false
@@ -422,7 +422,7 @@ Theorem module_le_sound : forall a b, if module_le a b then
                                    ~sub_module a b.
 Proof.
   unfold module_le; intros.
-  destruct (bool_decide_reflect (byte_order a = byte_order b)); simpl.
+  destruct (bool_decide_reflect (target a = target b)); simpl.
   2:{ red. destruct 1. congruence. }
   match goal with
   | |- context [ compat_le ?f ?l ?r && _ ] =>
