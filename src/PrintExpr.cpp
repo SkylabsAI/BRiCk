@@ -1200,7 +1200,7 @@ public:
         cprint.printQualType(expr->getType(), print);
         print.output() << fmt::nbsp;
 
-        print.list(expr->arguments(), [&li](auto print, auto i) {
+        print.list(expr->arguments(), [&](auto print, auto i) {
             cprint.printExprAndValCat(i, print, li);
           });
 
@@ -1231,7 +1231,7 @@ public:
 
     void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
                                    CoqPrinter& print, ClangPrinter& cprint,
-                                   const ASTContext&) {
+                                   const ASTContext&, OpaqueNames &) {
         print.ctor("Eunresolved_symbol");
         print.str(expr->getName().getAsString());
         done(expr, print, cprint);
