@@ -139,36 +139,18 @@ Defined.
 Existing Class calling_conv.
 Existing Instance CC_C.
 
-Variant int_type : Set :=
-| Ichar | Ishort | Iint | Ilong | Ilonglong | Iexplicit (_ : bitsize).
-#[global] Instance: EqDecision int_type.
-Proof. solve_decision. Defined.
-#[global] Instance: Countable int_type.
-Proof.
-  (*
-  apply (inj_countable'
-    (fun it =>
-      match it with
-      | Ichar => 0 | Ishort => 1 | Iint => 2 | Ilong => 3 | Ilonglong => 4 | Iexplicit sz => 5 + encode sz
-      end)%positive
-    (λ n,
-      match n with
-      | 0 => Ichar | 1 => Ishort | 2 => Iint | 3 => Ilong | 4 => Ilonglong | v => Iexplicit (decode (Pos.sub v 5%positive))
-      end)).
-  Print countable.
-  abstract (by intros []).
-Defined.
-   *)
-Admitted.
-
 (* types *)
 Inductive type : Set :=
   (* the C++ standard treats [char] as a special type that is either [signed char] or [unsigned char] *)
 | Tptr (_ : type)
 | Tref (_ : type)
 | Trv_ref (_ : type)
-| Tint (_ : int_type) (_ : signed)
-| Tchar
+| Tchar | Tuchar | Tschar
+| Tshort | Tushort
+| Tint | Tuint
+| Tlong | Tulong
+| Tlonglong | Tulonglong
+| Tint128 | Tuint128
 | Tvoid
 | Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
 | Tnamed (_ : globname)
@@ -208,10 +190,21 @@ Section type_ind'.
   Hypothesis Tref_ind' : forall (ty : type),
     P ty -> P (Tref ty).
   Hypothesis Trv_ref_ind' : forall (ty : type),
-    P ty -> P (Trv_ref ty).
-  Hypothesis Tint_ind' : forall (it : int_type) (sgn : signed),
-    P (Tint it sgn).
+      P ty -> P (Trv_ref ty).
   Hypothesis Tchar_ind' : P Tchar.
+  Hypothesis Tschar_ind' : P Tschar.
+  Hypothesis Tuchar_ind' : P Tuchar.
+  Hypothesis Tshort_ind' : P Tshort.
+  Hypothesis Tushort_ind' : P Tushort.
+  Hypothesis Tint_ind' : P Tint.
+  Hypothesis Tuint_ind' : P Tuint.
+  Hypothesis Tlong_ind' : P Tlong.
+  Hypothesis Tulong_ind' : P Tulong.
+  Hypothesis Tlonglong_ind' : P Tlonglong.
+  Hypothesis Tulonglong_ind' : P Tulonglong.
+  Hypothesis Tint128_ind' : P Tint128.
+  Hypothesis Tuint128_ind' : P Tuint128.
+
   Hypothesis Tvoid_ind' : P Tvoid.
   Hypothesis Tarray_ind' : forall (ty : type) (sz : N),
     P ty -> P (Tarray ty sz).
@@ -235,8 +228,6 @@ Section type_ind'.
     | Tptr ty                 => Tptr_ind' ty (type_ind' ty)
     | Tref ty                 => Tref_ind' ty (type_ind' ty)
     | Trv_ref ty              => Trv_ref_ind' ty (type_ind' ty)
-    | Tint sz sgn             => Tint_ind' sz sgn
-    | Tchar                   => Tchar_ind'
     | Tvoid                   => Tvoid_ind'
     | Tarray ty sz            => Tarray_ind' ty sz (type_ind' ty)
     | Tnamed name             => Tnamed_ind' name
@@ -258,7 +249,9 @@ Section type_ind'.
     | Tqualified q ty         => Tqualified_ind' q ty (type_ind' ty)
     | Tnullptr                => Tnullptr_ind'
     | Tarch osize name        => Tarch_ind' osize name
+    | _ => ltac:(try eassumption)
     end.
+
 End type_ind'.
 
 (* XXX merge type_eq_dec into type_eq. *)
@@ -280,6 +273,8 @@ Section type_countable.
   Local Notation INT_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
 
   Global Instance type_countable : Countable type.
+  Proof. Admitted.
+  (*
   Proof.
     set enc := fix go (t : type) :=
       match t with
@@ -323,7 +318,7 @@ Section type_countable.
     apply (inj_countable' enc dec). refine (fix go t := _).
     destruct t as [| | | | | | | |cc ret args| | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
-  Defined.
+  Defined. *)
 End type_countable.
 
 Notation Tpointer := Tptr (only parsing).
@@ -421,8 +416,12 @@ Fixpoint normalize_type (t : type) : type :=
     Tfunction (cc:=cc) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
   | Tqualified q t => qual_norm q t
-  | Tint _ _
-  | Tchar
+  | Tchar | Tuchar | Tschar
+  | Tshort | Tushort
+  | Tint | Tuint
+  | Tlong | Tulong
+  | Tlonglong | Tulonglong
+  | Tint128 | Tuint128
   | Tbool
   | Tvoid
   | Tnamed _

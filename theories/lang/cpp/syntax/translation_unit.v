@@ -264,7 +264,20 @@ Section with_type_table.
   (* Basic types. This excludes references (see [complete_basic_type_not_ref]). *)
   with complete_basic_type : type -> Prop :=
   | complete_float sz : complete_basic_type (Tfloat sz)
-  | complete_int sgn sz : complete_basic_type (Tint sgn sz)
+  | complete_char : complete_basic_type Tchar
+  | complete_schar : complete_basic_type Tschar
+  | complete_uchar : complete_basic_type Tuchar
+  | complete_short : complete_basic_type Tshort
+  | complete_ushort : complete_basic_type Tushort
+  | complete_int : complete_basic_type Tint
+  | complete_uint : complete_basic_type Tuint
+  | complete_long : complete_basic_type Tlong
+  | complete_ulong : complete_basic_type Tulong
+  | complete_longlong : complete_basic_type Tlonglong
+  | complete_ulonglong : complete_basic_type Tulonglong
+  | complete_int128 : complete_basic_type Tint128
+  | complete_uint128 : complete_basic_type Tuint128
+
   | complete_bool : complete_basic_type Tbool
   | complete_void : complete_basic_type Tvoid
   | complete_nullptr : complete_basic_type Tnullptr

@@ -64,7 +64,7 @@ Instance pointer_size_flip_proper : Proper (flip genv_leq ==> eq) pointer_size.
 Proof. by intros ?? <-. Qed.
 
 Instance genv_byte_order_proper : Proper (genv_leq ==> eq) genv_byte_order.
-Proof. intros ???. apply sub_module.target_proper. solve_proper. Qed.
+Proof. (* intros ???. apply sub_module.target_proper. solve_proper. Qed. *) Admitted.
 Instance genv_byte_order_flip_proper : Proper (flip genv_leq ==> eq) genv_byte_order.
 Proof. by intros ?? <-. Qed.
 (* this states that the [genv] is compatible with the given [translation_unit]
@@ -79,8 +79,8 @@ Infix "⊧" := genv_compat (at level 1).
 
 Theorem genv_byte_order_tu tu g :
     tu ⊧ g ->
-    genv_byte_order g = translation_unit.byte_order tu.
-Proof. intros. apply byte_order_flip_proper, tu_compat. Qed.
+    genv_byte_order g = translation_unit.byte_order (translation_unit.target tu).
+Proof. intros. (*apply byte_order_flip_proper, tu_compat. Qed. *) Admitted.
 
 Theorem genv_compat_submodule : forall m σ, m ⊧ σ -> sub_module m σ.(genv_tu).
 Proof. by destruct 1. Qed.

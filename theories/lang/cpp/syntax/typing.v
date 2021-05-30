@@ -67,8 +67,12 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tpointer t => Tpointer (erase_qualifiers t)
   | Treference t => Treference (erase_qualifiers t)
   | Trv_reference t => Trv_reference (erase_qualifiers t)
-  | Tint _ _
-  | Tchar
+  | Tchar | Tuchar | Tschar
+  | Tshort | Tushort
+  | Tint | Tuint
+  | Tlong | Tulong
+  | Tlonglong | Tulonglong
+  | Tint128 | Tuint128
   | Tbool
   | Tvoid
   | Tfloat _
@@ -109,4 +113,15 @@ Definition class_type (t : type) : option globname :=
   | Trv_reference t => class_type t
 *)
   | _ => None
+  end.
+
+(** [cv_type t = (q,t')] means that [t ~ Tqualified q t'] where
+    [t'] is an *unqualified type.
+ *)
+Fixpoint cv_type (t : type) : type_qualifiers * type :=
+  match t with
+  | Tqualified cv t =>
+    let '(q,t) := cv_type t in
+    (merge_tq cv q, t)
+  | t => (QM, t)
   end.
