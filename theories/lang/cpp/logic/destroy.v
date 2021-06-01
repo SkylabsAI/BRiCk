@@ -72,7 +72,7 @@ Section destroy.
          *)
         if dispatch && has_virtual_dtor s then
           resolve_dtor cls this (fun fimpl impl_class this' =>
-            let ty := Tfunction Tvoid nil in
+            let ty := Tfunction Tvoid [] in
             |> mspec σ.(genv_tu).(globals) (Tnamed impl_class) ty ti (Vptr fimpl) (Vptr this' :: nil) (fun _ => Q))
         else
           (* NOTE the setup with explicit destructors (even when those destructors are trivial)
@@ -86,7 +86,7 @@ Section destroy.
              for direct desructor calls, e.g. [c.~C()], which are encoded as
              [Emember_call ... "~C" ..] *)
           (let dtor := s.(s_dtor) in
-           let ty := Tfunction Tvoid nil in (** NOTE this implicitly requires all destructors to have C calling convention *)
+           let ty := Tfunction Tvoid [] in (** NOTE this implicitly requires all destructors to have C calling convention *)
            |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global s.(s_dtor)) (Vptr this :: nil) (fun _ => Q))
 
       | Some (Gunion u) =>
@@ -94,7 +94,7 @@ Section destroy.
              the destructor.
            *)
           (let dtor := u.(u_dtor) in
-           let ty := Tfunction Tvoid nil in
+           let ty := Tfunction Tvoid [] in
            |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global u.(u_dtor)) (Vptr this :: nil) (fun _ => Q))
       | _ => False
       end

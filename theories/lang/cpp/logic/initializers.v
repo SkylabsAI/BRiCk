@@ -72,6 +72,8 @@ Module Type Init.
 
       | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
       | Tqualified _ ty => default_initialize ty p Q
+      | Tvar _ => UNSUPPORTED "initialization of type variables is handled via macros"
+      | Tspecialize _ _ => UNSUPPORTED "initialization of specializations is handled via macros"
       end.
 
     Lemma default_initialize_frame:
@@ -110,7 +112,7 @@ Module Type Init.
       end.
      *)
 
-    Fixpoint is_primitive (ty : type) : bool :=
+    Definition is_primitive (ty : type) : bool :=
       match erase_qualifiers ty with
       | Tpointer _ | Tmember_pointer _ _ | Tbool | Tint _ _ | Tnullptr => true
       | _ => false
@@ -162,7 +164,7 @@ Module Type Init.
       (Forall free, Q free -* Q' free) |-- wp_initialize ty obj e Q -* wp_initialize ty obj e Q'.
     Proof using.
       rewrite /wp_initialize.
-      case_eq (drop_qualifiers ty) =>/=; intros; eauto.
+      induction ty =>/=; intros; eauto.
       { iIntros "a". iApply wp_prval_frame; try reflexivity.
         iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
       { iIntros "a". iApply wp_prval_frame; try reflexivity.

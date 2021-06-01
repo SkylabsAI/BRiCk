@@ -53,15 +53,9 @@ Section with_resolve.
       end
     end.
 
-  Fixpoint ce_length (c : celist) : nat :=
-    match c with
-    | cenil => 0
-    | cecons _ _ c => S (ce_length c)
-    end.
-
   (* this will require length *)
   Lemma wp_args_frame_strong : forall es Q Q',
-       (Forall vs free, [| length vs = ce_length es |] -* Q vs free -* Q' vs free)
+       (Forall vs free, [| length vs = length (to_list es) |] -* Q vs free -* Q' vs free)
     |-- wp_args es Q -* wp_args es Q'.
   Proof.
     elim => /=.
