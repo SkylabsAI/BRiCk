@@ -815,7 +815,7 @@ Section with_cpp.
   Record function_spec : Type :=
     { fs_cc : calling_conv
     ; fs_return : type
-    ; fs_arguments : list type
+    ; fs_arguments : tlist
     ; fs_spec : thread_info -d> list val -d> (val -> mpred) -d> mpredO
     }.
 
@@ -834,11 +834,12 @@ Section with_cpp.
 
   Lemma length_type_of_spec fs1 fs2 :
     type_of_spec fs1 = type_of_spec fs2 →
-    length (fs_arguments fs1) = length (fs_arguments fs2).
+    slength (fs_arguments fs1) = slength (fs_arguments fs2).
   Proof.
     destruct fs1, fs2; rewrite /type_of_spec/=; intros [= _ _ Hmap].
-    erewrite <-map_length, Hmap.
-    by rewrite map_length.
+    clear - Hmap; generalize dependent fs_arguments1.
+    induction fs_arguments0; destruct fs_arguments1; simpl; try congruence.
+    { inversion 1; rewrite /slength/=. f_equal. by eapply IHfs_arguments0. }
   Qed.
 
   Section ofe.

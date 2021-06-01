@@ -72,7 +72,7 @@ Section with_Σ.
     and an SC store.
     See https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html *)
   Axiom wp_prval_atomic: forall ao es ty (Q : val → FreeTemps → epred),
-      match get_acc_type ao ty (map (fun x => type_of (snd x)) es) with
+      match get_acc_type ao ty (map (fun x => type_of (snd x)) $ to_list es) with
       | None => False
       | Some acc_type =>
         wp_args es (fun (vs : list val) (free : FreeTemps) =>

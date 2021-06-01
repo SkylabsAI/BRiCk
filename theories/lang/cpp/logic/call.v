@@ -19,11 +19,11 @@ Section with_resolve.
   Local Notation wp_xval := (wp_xval M ti ρ).
   Local Notation wp_init := (wp_init M ti ρ).
 
-  Fixpoint wp_args (es : list (ValCat * Expr)) (Q : list val -> FreeTemps -> mpred)
+  Fixpoint wp_args (es : celist) (Q : list val -> FreeTemps -> mpred)
   : mpred :=
     match es with
-    | nil => Q nil emp%I
-    | (vc,e) :: es =>
+    | cenil => Q nil emp%I
+    | cecons vc e es =>
       let ty := erase_qualifiers $ type_of e in
       match vc with
       | Lvalue =>
@@ -53,12 +53,20 @@ Section with_resolve.
       end
     end.
 
+  Fixpoint ce_length (c : celist) : nat :=
+    match c with
+    | cenil => 0
+    | cecons _ _ c => S (ce_length c)
+    end.
+
+  (* this will require length *)
   Lemma wp_args_frame_strong : forall es Q Q',
-      (Forall vs free, [| length vs = length es |] -* Q vs free -* Q' vs free) |-- wp_args es Q -* wp_args es Q'.
+       (Forall vs free, [| length vs = ce_length es |] -* Q vs free -* Q' vs free)
+    |-- wp_args es Q -* wp_args es Q'.
   Proof.
     elim => /=.
     { by iIntros (? ?) "H"; iApply "H". }
-    { iIntros ([vc e] ? IH ? ?) "H".
+    { iIntros (vc e ? IH ? ?) "H".
       destruct vc.
       { iIntros "X"; iDestruct "X" as (Qarg) "[He Hes]".
         iExists Qarg; iFrame.

@@ -54,7 +54,7 @@ Section defs.
     as_Rep (fun p =>
          valid_ptr p **
          Forall (ti : thread_info), □ (Forall vs Q,
-         [| List.length vs = List.length fs.(fs_arguments) |] -*
+         [| List.length vs = slength fs.(fs_arguments) |] -*
          fs.(fs_spec) ti vs Q -*
          fspec resolve.(genv_tu).(globals) (type_of_spec fs) ti (Vptr p) vs Q)).
   Definition cptrR_aux : seal (@cptrR_def). Proof. by eexists. Qed.

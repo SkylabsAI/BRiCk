@@ -44,9 +44,9 @@ Section merge_elem.
   Definition merge_elem (x0 : X) (xs : list X) : list X :=
     match xs with
     | x1 :: xs' => f x0 x1 ++ xs'
-    | [] => [x0]
+    | nil => x0 :: nil
     end.
-  Lemma merge_elem_nil x0 : merge_elem x0 [] = [x0].
+  Lemma merge_elem_nil x0 : merge_elem x0 nil = x0 :: nil.
   Proof. done. Qed.
   Lemma merge_elem_cons x0 x1 xs : merge_elem x0 (x1 :: xs) = f x0 x1 ++ xs.
   Proof. done. Qed.

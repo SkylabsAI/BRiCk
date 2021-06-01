@@ -154,8 +154,6 @@ Module Type Init.
       | Tnullptr => False (* nullptr fields are not supported *)
       | Tarch _ _ => False (* vendor-specific types are not supported *)
       | Tfloat _ => False (* floating point numbers are not supported *)
-      | Tarch _ _ => False (* vendor-specific types are not supported *)
-      | Tfloat _ => False (* floating point numbers are not supported *)
       | Tvar _ => False (* no rule *)
       | Tspecialize _ _ => False (* no rule *)
       end.

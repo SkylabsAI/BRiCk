@@ -188,7 +188,7 @@ Section with_cpp.
            else
              wp ⊤ ti ρ body (Kfree frees (val_return (fun x => |> Q x))))
       | Builtin builtin =>
-        wp_builtin ⊤ ti builtin (Tfunction (cc:=f.(f_cc)) f.(f_return) (List.map snd f.(f_params))) args Q
+        wp_builtin ⊤ ti builtin (Tfunction (cc:=f.(f_cc)) f.(f_return) (from_list (T:=tlist) $ List.map snd f.(f_params))) args Q
       end
     end.
 

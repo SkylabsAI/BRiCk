@@ -194,7 +194,7 @@ Proof. solve_decision. Defined.
  *)
 Definition Tmember_func (ty : type) (fty : type) : type :=
   match fty with
-  | @Tfunction cc ret args => Tfunction (cc:=cc) ret (Tptr ty :: args)
+  | @Tfunction cc ret args => Tfunction (cc:=cc) ret (tcons (Tptr ty) args)
   | _ => fty
   end.
 
@@ -203,13 +203,13 @@ Definition type_of_value (o : ObjValue) : type :=
   normalize_type
   match o with
   | Ovar t _ => t
-  | Ofunction f => Tfunction (cc:=f.(f_cc)) f.(f_return) $ snd <$> f.(f_params)
+  | Ofunction f => Tfunction (cc:=f.(f_cc)) f.(f_return) $ from_list (T:=tlist) $ snd <$> f.(f_params)
   | Omethod m =>
-    Tmember_func (Tqualified m.(m_this_qual) (Tnamed m.(m_class))) $ Tfunction (cc:=m.(m_cc)) m.(m_return) $ snd <$> m.(m_params)
+    Tmember_func (Tqualified m.(m_this_qual) (Tnamed m.(m_class))) $ Tfunction (cc:=m.(m_cc)) m.(m_return) $ from_list (T:=tlist) $ snd <$> m.(m_params)
   | Oconstructor c =>
-    Tmember_func (Tnamed c.(c_class)) $ Tfunction (cc:=c.(c_cc)) Tvoid $ snd <$> c.(c_params)
+    Tmember_func (Tnamed c.(c_class)) $ Tfunction (cc:=c.(c_cc)) Tvoid $ from_list (T:=tlist) $ snd <$> c.(c_params)
   | Odestructor d =>
-    Tmember_func (Tnamed d.(d_class)) $ Tfunction (cc:=d.(d_cc)) Tvoid nil
+    Tmember_func (Tnamed d.(d_class)) $ Tfunction (cc:=d.(d_cc)) Tvoid tnil
   end.
 
 Variant GlobDecl : Set :=
@@ -315,12 +315,12 @@ Section with_type_table.
       (_ : complete_pointee_type ret)
       (_ : complete_pointee_types args)
     : complete_pointee_type (Tfunction (cc:=cc) ret args)
-  with complete_pointee_types : list type -> Prop :=
-  | complete_pt_nil : complete_pointee_types []
+  with complete_pointee_types : tlist -> Prop :=
+  | complete_pt_nil : complete_pointee_types tnil
   | complete_pt_cons t ts :
     complete_pointee_type t ->
     complete_pointee_types ts ->
-    complete_pointee_types (t :: ts)
+    complete_pointee_types (tcons t ts)
   (* [complete_type t] says that type [t] is well-formed, that is, complete. *)
   with complete_type : type -> Prop :=
   | complete_basic t :

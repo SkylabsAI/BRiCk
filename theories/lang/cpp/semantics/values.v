@@ -130,10 +130,10 @@ Module Type RAW_BYTES_MIXIN
       val_related σ ty v1 v2 ->
       val_related σ (Tqualified t ty) v1 v2
   | Vraw_uint8 σ raw z:
-      raw_bytes_of_val σ (Tint W8 Unsigned) (Vint z) [raw] ->
+      raw_bytes_of_val σ (Tint W8 Unsigned) (Vint z) (raw :: nil) ->
       val_related σ (Tint W8 Unsigned) (Vraw raw) (Vint z)
   | Vuint8_raw σ z raw:
-      raw_bytes_of_val σ (Tint W8 Unsigned) (Vint z) [raw] ->
+      raw_bytes_of_val σ (Tint W8 Unsigned) (Vint z) (raw :: nil) ->
       val_related σ (Tint W8 Unsigned) (Vint z) (Vraw raw).
 
   Lemma val_related_qual :

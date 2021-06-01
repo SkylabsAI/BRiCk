@@ -9,6 +9,23 @@ Require Import bedrock.lang.cpp.syntax.names.
 
 Set Primitive Projections.
 
+Section Sequence.
+  Context {T : Type}.
+  Class Sequence : Type :=
+  { E : Type
+  ; to_list : T -> list E
+  ; from_list : list E -> T
+  ; from_to x : to_list (from_list x) = x
+  ; to_from x : from_list (to_list x) = x
+  }.
+
+  Context {s : Sequence}.
+  Definition slength (l : T) : nat := length (to_list l).
+  Definition sForall (P : E -> Prop) (l : T) : Prop := Forall P (to_list l).
+  Definition smap (f : E -> E) (l : T) : T := from_list (List.map f (to_list l)).
+End Sequence.
+Arguments Sequence _ : clear implicits.
+
 (* Type qualifiers *)
 Record type_qualifiers : Set :=
 { q_const : bool
@@ -177,7 +194,6 @@ Variant VarRef : Set :=
 Instance: EqDecision VarRef.
 Proof. solve_decision. Defined.
 
-
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
@@ -187,18 +203,23 @@ Inductive type : Set :=
 | Tvoid
 | Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
 | Tnamed (_ : globname)
-| Tfunction {cc : calling_conv} (_ : type) (_ : list type)
+| Tfunction {cc : calling_conv} (_ : type) (_ : tlist)
 | Tbool
 | Tmember_pointer (_ : globname) (_ : type)
 | Tfloat (_ : bitsize)
 | Tqualified (_ : type_qualifiers) (_ : type)
 | Tnullptr
+
+| Tvar (_ : bs) (* a reference to a type variable *)
+| Tspecialize (_ : bs) (_ : talist)
+
 (* architecture-specific types; currently unused.
    some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs)
 
-| Tvar (_ : bs) (* a reference to a type variable *)
-| Tspecialize (_ : bs) (_ : list template_arg)
+with tlist : Set :=
+| tnil
+| tcons (_ : type) (_ : tlist)
 
 with Expr : Set :=
 | Econst_ref (_ : VarRef) (_ : type)
@@ -235,18 +256,21 @@ with Expr : Set :=
 | Ecomma (vc : ValCat) (e1 e2 : Expr) (* type = type_of e2 *)
   (* ^ these are specialized because they have special control flow semantics *)
 
-| Ecall    (_ : Expr) (_ : list (ValCat * Expr)) (_ : type)
+| Ecall    (_ : Expr) (_ : celist) (_ : type)
 | Ecast    (_ : Cast) (_ : ValCat * Expr) (_ : type)
 
 | Emember  (_ : ValCat) (obj : Expr) (_ : field) (_ : type)
   (* TODO: maybe replace the left branch use [Expr] here? *)
-| Emember_call (method : (obj_name * call_type * type) + Expr) (_ : ValCat) (obj : Expr) (_ : list (ValCat * Expr)) (_ : type)
-(* ^ in (globname * bool), bool = true when method being called is virtual *)
+| Emember_call (method : (obj_name * call_type * type) + Expr) (_ : ValCat) (obj : Expr) (_ : celist) (_ : type)
+  (* ^ [Emember_call (inl (f, Direct, t)) vc obj ...] is essentially the same as
+       [Emember_call (inr (Emember vc obj {| f_name := f ; f_type := t |})) vc obj ...]
+       but this doesn't exactly work because member functions are not fields.
+   *)
 
 | Esubscript (_ : Expr) (_ : Expr) (_ : type)
 | Esize_of (_ : type + Expr) (_ : type)
 | Ealign_of (_ : type + Expr) (_ : type)
-| Econstructor (_ : globname) (_ : list (ValCat * Expr)) (_ : type)
+| Econstructor (_ : globname) (_ : celist) (_ : type)
 | Eimplicit (_ : Expr) (_ : type)
 | Eimplicit_init (_ : type)
 | Eif       (_ _ _ : Expr) (_ : type)
@@ -255,7 +279,7 @@ with Expr : Set :=
 | Enull
 | Einitlist (_ : list Expr) (_ : option Expr) (_ : type)
 
-| Enew (new_fn : option (obj_name * type)) (new_args : list (ValCat * Expr))
+| Enew (new_fn : option (obj_name * type)) (new_args : celist)
        (alloc_ty : type)
        (array_size : option Expr) (init : option Expr) (_ : type)
 | Edelete (is_array : bool) (delete_fn : option (obj_name * type)) (arg : Expr)
@@ -266,14 +290,35 @@ with Expr : Set :=
 | Ebind_temp (_ : Expr) (_ : obj_name) (_ : type)
 
 | Ebuiltin (_ : BuiltinFn) (_ : type)
-| Eatomic (_ : AtomicOp) (_ : list (ValCat * Expr)) (_ : type)
+| Eatomic (_ : AtomicOp) (_ : celist) (_ : type)
 | Eva_arg (_ : Expr) (_ : type)
 | Epseudo_destructor (_ : type) (_ : Expr) (* type void *)
-| Eunsupported (_ : bs) (_ : type)
 
-| Eunresolved_ctor (_ : type) (_ : list (ValCat * Expr))
+| Earrayloop_init (oname : N) (src : ValCat * Expr) (level : N) (length : N) (init : Expr) (_ : type)
+| Earrayloop_index (level : N) (_ : type)
+| Eopaque_ref (name : N) (_ : type)
+
+| Eunresolved_ctor (_ : type) (_ : celist)
 | Eunresolved_member (_ : type) (_ : bs) (_ : type)
 | Eunresolved_symbol (_ : bs) (_ : type)
+
+(*
+  template<typename T, int X>
+  int f(T x) {
+    Foo<X + 1> blah;
+    int a[X];
+    x.bar(); // Emember_call (inr (Eunresolved_member ..))
+    foo(x); // Ecall (Eunresolved_symbol ..) (x)
+            // Ecall (Ecast (function2pointer) (Evar "foo"))
+  }
+
+*)
+
+| Eunsupported (_ : bs) (_ : type)
+
+with celist : Set :=
+| cenil
+| cecons (_ : ValCat) (_ : Expr) (_ : celist)
 
 with Cast : Set :=
 | Cdependent (* this doesn't have any semantics *)
@@ -303,26 +348,89 @@ with Cast : Set :=
 with template_arg : Set :=
 | template_type (_ : type)
 | template_value (_ : Expr)
+
+with talist : Set :=
+| tanil
+| tacons (_ : template_arg) (_ : talist)
 .
 Instance type_inhabited : Inhabited type := populate Tvoid.
 
-(** Strengthened Induction Principle for [type]
+#[global,program] Instance Seq_talist : Sequence talist :=
+{| to_list := fix go a := match a with
+                          | tanil => nil
+                          | tacons x xs => x :: go xs
+                          end
+ ; from_list := fix go a := match a with
+                            | nil => tanil
+                            | x :: xs => tacons x (go xs)
+                            end |}.
+Next Obligation. induction x; f_equal; eauto. Qed.
+Next Obligation. induction x; f_equal; eauto. Qed.
+#[global,program] Instance Seq_tlist : Sequence tlist :=
+{| to_list := fix go a := match a with
+                          | tnil => nil
+                          | tcons x xs => x :: go xs
+                          end
+ ; from_list := fix go a := match a with
+                            | nil => tnil
+                            | x :: xs => tcons x (go xs)
+                            end |}.
+Next Obligation. induction x; f_equal; eauto. Qed.
+Next Obligation. induction x; f_equal; eauto. Qed.
+#[global,program] Instance Seq_celist : Sequence celist :=
+{| to_list := fix go a := match a with
+                          | cenil => nil
+                          | cecons v x xs => (v,x) :: go xs
+                          end
+ ; from_list := fix go a := match a with
+                            | nil => cenil
+                            | (v,x) :: xs => cecons v x (go xs)
+                            end |}.
+Next Obligation. induction x as [|[??]]; f_equal; eauto. Qed.
+Next Obligation. induction x; f_equal; eauto. Qed.
 
-    [type] is a `Nested Inductive Type` due to the use of [list type]
-    in the [Tfunction] constructor. In Coq, the default induction
-    principle generated for a nested inductive type is too weak because
-    it fails to thread the indexed predicate through the structure
-    of the parameterized type family. While strengthened induction
-    principles are not generally derivable, we can manually strengthen
-    it if we can find a way to incorporate the nested uses of the Type.
-    Luckily, we can use [List.Forall] to express that the indexed
-    predicate must hold on each element of the list which is sufficient
-    for the [normalize_type_idempotent] Lemma. For more information on
-    this topic, please refer to [1].
 
-    [1] http://adam.chlipala.net/cpdt/html/InductiveTypes.html;
-          "Nested Inductive Types" Section
+Declare Scope tlist_scope.
+Bind Scope tlist_scope with tlist.
+Notation "[ ]" := tnil (format "[ ]") : tlist_scope.
+Notation "[ x ]" := (tcons x tnil) : tlist_scope.
+Notation "[ a ; b ; .. ; c ]" := (tcons a (tcons b .. (tcons c tnil) ..)) : tlist_scope.
+Infix "::" := tcons : tlist_scope.
+Arguments Tfunction {cc} _ _%tlist_scope.
+Declare Scope talist_scope.
+Bind Scope talist_scope with talist.
+Notation "[ ]" := tanil (format "[ ]") : talist_scope.
+Notation "[ x ]" := (tacons x tanil) : talist_scope.
+Notation "[ a ; b ; .. ; c ]" := (tacons a (tacons b .. (tacons c tanil) ..)) : talist_scope.
+Infix "::" := tacons : talist_scope.
+Arguments Tspecialize _ _%talist_scope.
+
+(*
+Scheme type_rec' := Induction for type Sort Set
+  with tlist_rec' := Induction for tlist Sort Set
+  with expr_rec' := Induction for Expr Sort Set
+  with celist_rec' := Induction for celist Sort Set
+  with Cast_rec' := Induction for Cast Sort Set
+  with template_arg_rec' := Induction for template_arg Sort Set
+  with talist_rec' := Induction for talist Sort Set.
+Combined Scheme type_mutind from type_rec', tlist_rec', expr_rec', celist_rec', Cast_rec', template_arg_rec', talist_rec'.
+Scheme type_rect' := Induction for type Sort Type
+  with tlist_rect' := Induction for tlist Sort Type
+  with expr_rect' := Induction for Expr Sort Type
+  with celist_rect' := Induction for celist Sort Type
+  with Cast_rect' := Induction for Cast Sort Type
+  with template_arg_rect' := Induction for template_arg Sort Type
+  with talist_rect' := Induction for talist Sort Type.
+Scheme type_ind' := Induction for type Sort Prop
+  with tlist_ind' := Induction for tlist Sort Prop
+  with expr_ind' := Induction for Expr Sort Prop
+  with celist_ind' := Induction for celist Sort Prop
+  with Cast_ind' := Induction for Cast Sort Prop
+  with template_arg_ind' := Induction for template_arg Sort Prop
+  with talist_ind' := Induction for talist Sort Prop.
  *)
+
+(*
 Section type_ind'.
   Variable P : type -> Prop.
 
@@ -351,6 +459,12 @@ Section type_ind'.
   Hypothesis Tnullptr_ind' : P Tnullptr.
   Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : bs),
     P (Tarch osize name).
+  Hypothesis Tvar_ind' : forall nm, P (Tvar nm).
+  Hypothesis Tspecialize_ind' : forall nm ls, Forall (fun ab =>
+                                                   match ab with
+                                                   | template_type t => P t
+                                                   | _ => True
+                                                   end) ls -> P (Tspecialize nm ls).
 
   Fixpoint type_ind' (ty : type) : P ty :=
     match ty with
@@ -381,6 +495,7 @@ Section type_ind'.
     | Tarch osize name        => Tarch_ind' osize name
     end.
 End type_ind'.
+*)
 
 Notation Tchar := Tint (only parsing).
 (* XXX merge type_eq_dec into type_eq. *)
@@ -393,6 +508,9 @@ Proof. (*
   decide equality; try solve_trivial_decision. *)
 Admitted. (** TODO *)
 Instance type_eq: EqDecision type := type_eq_dec.
+Axiom type_countable : Countable type.
+#[global] Existing Instance type_countable.
+(*
 Section type_countable.
   Local Notation BS x      := (GenLeaf (inr x)).
   Local Notation QUAL x    := (GenLeaf (inl (inr x))).
@@ -444,9 +562,10 @@ Section type_countable.
     induction args; simpl; f_equal; done.
   Defined.
 End type_countable.
-Global Instance type_eq: EqDecision type := type_eq_dec.
+*)
 Global Instance expr_eq : EqDecision Expr.
 Proof. Admitted. (* TODO *)
+
 
 Notation Tpointer := Tptr (only parsing).
 Notation Treference := Tref (only parsing).
@@ -507,7 +626,7 @@ Fixpoint normalize_type (t : type) : type :=
   | Trv_reference t => Trv_reference (normalize_type t)
   | Tarray t n => Tarray (normalize_type t) n
   | @Tfunction cc r args =>
-    Tfunction (cc:=cc) (drop_norm r) (List.map drop_norm args)
+    Tfunction (cc:=cc) (drop_norm r) (normalize_types args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
   | Tqualified q t => qual_norm q t
   | Tint _ _ => t
@@ -519,8 +638,14 @@ Fixpoint normalize_type (t : type) : type :=
   | Tarch _ _ => t
   | Tvar _ => t
   | Tspecialize _ _ => t
+  end
+with normalize_types (t : tlist) : tlist :=
+  match t with
+  | tnil => tnil
+  | tcons t ts => tcons (qual_norm (fun _ t => normalize_type t) t) (normalize_types ts)
   end.
 
+(* TODO port 
 Section normalize_type_idempotent.
   Lemma merge_tq_assoc:
     forall q q' q'',
@@ -538,7 +663,7 @@ Section normalize_type_idempotent.
   Proof.
     { (* _drop_norm_involutive *)
       generalize dependent q; generalize dependent q';
-        induction ty using type_ind'; intros *;
+        induction ty using type_ind; intros *;
         rewrite /qual_norm/= ?normalize_type_idempotent//.
       - rewrite map_map /qual_norm !IHty /merge_tq/=;
           erewrite map_ext_Forall; eauto; eapply Forall_impl; eauto;
@@ -568,6 +693,7 @@ Section normalize_type_idempotent.
     }
   Qed.
 End normalize_type_idempotent.
+ *)
 
 Definition decompose_type : type -> type_qualifiers * type :=
   qual_norm (fun q t => (q, t)).

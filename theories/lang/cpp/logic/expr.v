@@ -702,7 +702,7 @@ Module Type Expr.
            end)
         |-- wp_prval (Ecall f es ty) Q.
 
-    Axiom wp_lval_call : forall f (es : list (ValCat * Expr)) Q (ty : type),
+    Axiom wp_lval_call : forall f es Q (ty : type),
         match unptr (type_of f) with
         | Some fty =>
           wp_prval f (fun f free_f => wp_args es (fun vs free =>

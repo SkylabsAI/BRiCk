@@ -261,7 +261,7 @@ Lemma complete_respects_sub_table_mut te2 :
   (∀ g : GlobDecl, complete_decl te2 g → complete_decl_respects te2 g) ∧
   (∀ t : type, complete_basic_type te2 t → complete_basic_type_respects te2 t) ∧
   (∀ t : type, complete_pointee_type te2 t → complete_pointee_type_respects te2 t) ∧
-  (∀ l : list type, complete_pointee_types te2 l → complete_pointee_types_respects te2 l) ∧
+  (∀ l : tlist, complete_pointee_types te2 l → complete_pointee_types_respects te2 l) ∧
   (∀ t : type, complete_type te2 t → complete_type_respects te2 t).
 Proof.
   apply complete_mut_ind; try solve [intros; red; repeat_on_hyps (fun H => red in H); eauto].
