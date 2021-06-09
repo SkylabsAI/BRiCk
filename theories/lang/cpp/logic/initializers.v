@@ -72,6 +72,7 @@ Module Type Init.
 
       | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
       | Tqualified _ ty => default_initialize ty p Q
+      | Tincomplete_array _ => Q emp%I
       end.
 
     Lemma default_initialize_frame:
@@ -81,8 +82,9 @@ Module Type Init.
     Proof.
       induction ty; simpl;
         try solve [ intros; iIntros "a b c"; iApply "a"; iApply "b"; eauto | eauto ].
-      iIntros (? ? ?) "X"; iApply (default_initialize_array_frame with "X").
-      iModIntro. iIntros (???). iApply IHty.
+      { iIntros (? ? ?) "X"; iApply (default_initialize_array_frame with "X").
+        iModIntro. iIntros (???). iApply IHty. }
+      { intros. iIntros "X"; iApply "X". }
     Qed.
 
     (* [wp_initialize] provides "constructor" semantics for types.

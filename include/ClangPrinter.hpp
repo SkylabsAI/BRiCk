@@ -39,7 +39,7 @@ public:
 
     void printStmt(const clang::Stmt* s, CoqPrinter& print);
 
-    void printType(const clang::Type* t, CoqPrinter& print);
+    void printType(const clang::Type* t, CoqPrinter& print, bool field=false);
 
     void printExpr(const clang::Expr* d, CoqPrinter& print);
     void printExpr(const clang::Expr* d, CoqPrinter& print, OpaqueNames& li);
@@ -51,7 +51,7 @@ public:
 
     void printName(const clang::NamedDecl* decl, CoqPrinter& print);
 
-    void printQualType(const clang::QualType& qt, CoqPrinter& print);
+    void printQualType(const clang::QualType& qt, CoqPrinter& print, bool field=true);
 
     void printQualifier(const clang::QualType& qt, CoqPrinter& print) const;
 

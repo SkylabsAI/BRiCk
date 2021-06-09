@@ -19,8 +19,8 @@
 using namespace clang;
 using namespace fmt;
 
-void
-printQualType(const QualType& qt, CoqPrinter& print, ClangPrinter& cprint) {
+static void
+printQualType(const QualType& qt, CoqPrinter& print, ClangPrinter& cprint, bool field) {
     if (auto p = qt.getTypePtrOrNull()) {
         if (qt.isLocalConstQualified()) {
             if (qt.isVolatileQualified()) {
@@ -28,15 +28,15 @@ printQualType(const QualType& qt, CoqPrinter& print, ClangPrinter& cprint) {
             } else {
                 print.ctor("Qconst", false);
             }
-            cprint.printType(p, print);
+            cprint.printType(p, print, field);
             print.end_ctor();
         } else {
             if (qt.isLocalVolatileQualified()) {
                 print.ctor("Qmut_volatile", false);
-                cprint.printType(p, print);
+                cprint.printType(p, print, field);
                 print.end_ctor();
             } else {
-                cprint.printType(p, print);
+                cprint.printType(p, print, field);
             }
         }
     } else {
@@ -78,10 +78,13 @@ bitsize(unsigned n) {
 class PrintType :
     public TypeVisitor<PrintType, void, CoqPrinter&, ClangPrinter&> {
 private:
-    PrintType() {}
+    PrintType(bool field):_field(field) {}
+    bool _field;
 
 public:
     static PrintType printer;
+    static PrintType field_printer;
+
 
     void VisitType(const Type* type, CoqPrinter& print, ClangPrinter& cprint) {
         using namespace logging;
@@ -322,9 +325,16 @@ public:
 
     void VisitIncompleteArrayType(const IncompleteArrayType* type,
                                   CoqPrinter& print, ClangPrinter& cprint) {
-        print.ctor("Tincomplete_array");
-        printQualType(type->getElementType(), print, cprint);
-        print.end_ctor();
+        if (_field) {
+            print.ctor("Tincomplete_array");
+            printQualType(type->getElementType(), print, cprint);
+            print.end_ctor();
+        } else {
+            print.ctor("Qconst");
+            print.ctor("Tptr", false);
+            printQualType(type->getElementType(), print, cprint);
+            print.output() << fmt::rparen << fmt::rparen;
+        }
     }
 
     void VisitDecayedType(const DecayedType* type, CoqPrinter& print,
@@ -383,19 +393,25 @@ public:
     }
 };
 
-PrintType PrintType::printer;
+PrintType PrintType::printer {false};
+PrintType PrintType::field_printer {true};
+
 
 void
-ClangPrinter::printType(const clang::Type* type, CoqPrinter& print) {
+ClangPrinter::printType(const clang::Type* type, CoqPrinter& print, bool field) {
     auto depth = print.output().get_depth();
-    PrintType::printer.Visit(type, print, *this);
+    if (field)
+        PrintType::printer.Visit(type, print, *this);
+    else
+        PrintType::printer.Visit(type, print, *this);
+
     assert(depth == print.output().get_depth());
 }
 
 void
-ClangPrinter::printQualType(const QualType& qt, CoqPrinter& print) {
+ClangPrinter::printQualType(const QualType& qt, CoqPrinter& print, bool field) {
     auto depth = print.output().get_depth();
-    ::printQualType(qt, print, *this);
+    ::printQualType(qt, print, *this, field);
     assert(depth == print.output().get_depth());
 }
 

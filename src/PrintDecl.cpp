@@ -268,7 +268,7 @@ public:
             print.ctor("mkMember") << fmt::nbsp;
             printMangledFieldName(field, print, cprint);
             print.output() << fmt::nbsp;
-            cprint.printQualType(field->getType(), print);
+            cprint.printQualType(field->getType(), print, true);
             print.output() << fmt::nbsp;
             printFieldInitializer(field, print, cprint);
             print.output() << fmt::nbsp;
