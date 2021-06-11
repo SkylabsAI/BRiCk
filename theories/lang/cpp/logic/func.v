@@ -234,6 +234,11 @@ Section with_cpp.
     match args , vals with
     | nil , nil => Q r emp
     | (x,ty) :: xs , v :: vs  =>
+      match v with
+      | Vptr p => bind_vars xs vs (Rbind_check x p r) Q
+      | _ => ERROR "non-pointer passed to function (the caller is responsible for constructing objects)"
+      end
+(*
       match drop_qualifiers ty with
       | Tqualified _ t => ERROR "unreachable" (* unreachable *)
       | Treference    _
@@ -249,11 +254,12 @@ Section with_cpp.
         (* Here we view [anyR (erase_quaifiers ty) 1] as essentially the pre-condition
            to the "destructor" of a primitive. *)
       end
+*)
     | _ , _ => ERROR "bind_vars: argument mismatch"
     end%I.
 
   Lemma bind_vars_frame : forall ts args ρ Q Q',
-      Forall ρ free, Q ρ free -* Q' ρ free
+        Forall ρ free, Q ρ free -* Q' ρ free
     |-- bind_vars ts args ρ Q -* bind_vars ts args ρ Q'.
   Proof.
     induction ts; destruct args => /= *; eauto.

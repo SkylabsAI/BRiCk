@@ -693,6 +693,12 @@ Module Type Expr.
      *)
 
     (** function calls *)
+    Definition arg_types (ty : type) : option (list type) :=
+      match ty with
+      | @Tfunction _ _ args => Some args
+      | _ => None
+      end.
+
     (**
     The next few axioms rely on the evaluation order specified
     since C++17 (implemented in Clang >= 4):
@@ -702,16 +708,20 @@ Module Type Expr.
     Official references (from http://clang.llvm.org/cxx_status.html):
     http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0400r0.html
     http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0145r3.pdf
-    *)
+     *)
     Axiom wp_prval_call : forall ty f es Q,
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Ecall f es ty) Q)
          else
            match unptr (type_of f) with
            | Some fty =>
-             wp_prval f (fun f free_f =>
-                           wp_args es (fun vs free =>
+             match arg_types fty with
+             | Some targs =>
+               wp_prval f (fun f free_f =>
+                           wp_args targs (snd <$> es) (fun vs free =>
                                          |> fspec (normalize_type fty) ti f vs (fun v => Q v (free ** free_f))))
+             | _ => False
+             end
            | _ => False
            end)
         |-- wp_prval (Ecall f es ty) Q.
@@ -719,8 +729,12 @@ Module Type Expr.
     Axiom wp_lval_call : forall f (es : list (ValCat * Expr)) Q (ty : type),
         match unptr (type_of f) with
         | Some fty =>
-          wp_prval f (fun f free_f => wp_args es (fun vs free =>
+          match arg_types fty with
+          | Some targs =>
+          wp_prval f (fun f free_f => wp_args targs (snd <$> es) (fun vs free =>
              |> fspec (normalize_type fty) ti f vs (fun res => Exists p, [| res = Vptr p |] ** Q p (free ** free_f))))
+          | _ => False
+          end
         | _ => False
         end
         |-- wp_lval (Ecall f es ty) Q.
@@ -728,8 +742,12 @@ Module Type Expr.
     Axiom wp_xval_call : forall ty f es Q,
         match unptr (type_of f) with
         | Some fty =>
-          wp_prval f (fun f free_f => wp_args es (fun vs free =>
+          match arg_types fty with
+          | Some targs =>
+          wp_prval f (fun f free_f => wp_args targs (snd <$> es) (fun vs free =>
              |> fspec (normalize_type fty) ti f vs (fun v => Exists p, [| v = Vptr p |] ** Q p (free ** free_f))))
+          | None => False
+          end
         | _ => False
         end
       |-- wp_xval (Ecall f es ty) Q.
@@ -737,18 +755,31 @@ Module Type Expr.
     Axiom wp_init_call : forall f es Q (addr : ptr) ty,
         match unptr (type_of f) with
         | Some fty =>
+          match arg_types fty with
+          | Some targs =>
           addr |-> tblockR (erase_qualifiers ty) 1 **
           (* ^ give up the memory that was created by [materialize_into_temp] *)
           wp_prval f (fun f free_f =>
-                        wp_args es (fun vs free =>
+                        wp_args targs (snd <$> es) (fun vs free =>
                                       |> fspec (normalize_type fty) ti f vs (fun res => [| res = Vptr addr |] -* Q (free_f ** free))))
           (* NOTE We use the assumed equality to mean that the value was constructed immediately into
              the correct place *)
+          | None => False
+          end
         | _ => False
         end
         |-- wp_init ty addr (Ecall f es ty) Q.
 
-    (** member call
+    (** * Member calls *)
+
+    Definition member_arg_types (fty : type) : option (list type) :=
+      match fty with
+      | @Tfunction _ _ (_ :: args) => Some args
+      | _ => None
+      end.
+
+
+    (** member calls
         NOTE it is technically not accurate to treat member calls as regular function calls
         where the function takes an extra argument. We could fix this by splitting [fspec]
         more, but we are deferring that for now.
@@ -756,30 +787,32 @@ Module Type Expr.
         In practice we assume that the AST is well-typed, so the only way to exploit this problem
         is to use [reinterpret_cast< >] to cast a function pointer to an member pointer or vice versa.
      *)
-    Axiom wp_lval_member_call : forall ty fty f vc obj es Q,
-        wp_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+    Axiom wp_lval_member_call : forall ty fty f vc obj es Q targs
+                                  (_ : member_arg_types fty = Some targs),
+        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
            |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_lval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
-    Axiom wp_xval_member_call : forall ty fty f vc obj es Q,
-        wp_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+    Axiom wp_xval_member_call : forall ty fty f vc obj es Q targs (_ : member_arg_types fty = Some targs),
+        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
            |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_xval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
-    Axiom wp_prval_member_call : forall ty fty f vc obj es Q,
+    Axiom wp_prval_member_call : forall ty fty f vc obj es Q targs (_ : member_arg_types fty = Some targs),
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q)
          else
-            wp_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+            wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
               |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v => Q v (free_t ** free)))))
         |-- wp_prval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
-    Axiom wp_init_member_call : forall f ret ts cc es (addr : ptr) ty vc obj Q,
-        wp_glval vc obj (fun this free_t => wp_args es (fun vs free =>
+    Axiom wp_init_member_call : forall f ret ts cc es (addr : ptr) ty vc obj Q
+                                  (fty := Tfunction (cc:=cc) ret ts)
+                                  targs (_ : member_arg_types fty = Some targs),
+        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
             addr |-> tblockR (erase_qualifiers ret) 1 **
-            let fty := Tfunction (cc:=cc) ret ts in
             |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun res =>
                       [| res = Vptr addr |] -* Q (free_t ** free))))
         (* NOTE as with regular function calls, we use an assumed equation to unify the address
@@ -787,6 +820,7 @@ Module Type Expr.
          *)
         |-- wp_init ty addr (Emember_call (inl (f, Direct, Tfunction (cc:=cc) ret ts)) vc obj es ty) Q.
 
+(** * TODO port this
     (** virtual functions
         these are slightly more complex because we need to compute the address of the function
         using the most-derived-class of the [this] object. This is done using [resolve_virtual].
@@ -843,6 +877,8 @@ Module Type Expr.
           | _ => False
           end))
       |-- wp_init ty addr (Emember_call (inl (f, Virtual, Tfunction (cc:=cc) ret ts)) vc obj es ty) Q.
+DONE ***)
+
 
     (* null *)
     Axiom wp_null : forall Q,
@@ -880,8 +916,10 @@ Module Type Expr.
         - Currently, we do not model coalescing of multiple allocations
           (https://eel.is/c++draft/expr.new#14).
      *)
-    Axiom wp_prval_new : forall new_fn new_args init aty ty Q,
-        wp_args new_args (fun vs free =>
+    Axiom wp_prval_new : forall new_fn new_args init aty ty Q targs (_ : arg_types new_fn.2 = Some targs),
+        (** TODO this needs a side-condition requiring that [new] with no arguments does not return
+            [nullptr] because the C++ standard permits the assumption. *)
+        wp_args targs (snd <$> new_args) (fun vs free =>
           Exists sz al, [| size_of aty = Some sz |] ** [| align_of aty = Some al |] **
             |> fspec new_fn.2 ti (Vptr $ _global new_fn.1) (Vn sz :: vs) (fun res =>
                   Exists storage_ptr : ptr,
@@ -1036,6 +1074,118 @@ Module Type Expr.
         drop_qualifiers ty = Tbool ->
           Q (Vbool false) emp
       |-- wp_prval (Eimplicit_init ty) Q.
+
+    (** TODO missing the type of the (arguments of the) constructor *)
+    Axiom wp_init_constructor : forall cls addr cnd es Q targs,
+      wp_args targs (snd <$> es) (fun ls free =>
+           match resolve.(genv_tu) !! cnd with
+           | Some cv =>
+             |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (Vptr addr :: ls) (fun _ => Q free)
+           | _ => False
+           end)
+      |-- wp_init (Tnamed cls) addr (Econstructor cnd es (Tnamed cls)) Q.
+
+    Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
+      match es with
+      | nil => Q emp
+      | e :: rest =>
+          (* NOTE: We nest the recursive calls to `wp_array_init` within
+               the continuation of the `wp_initialize` statement to
+               reflect the fact that the C++ Standard introduces
+               sequence-points between all of the elements of an
+               initializer list (c.f. http://eel.is/c++draft/dcl.init.list#4)
+           *)
+         base .[ ety ! idx ] |-> tblockR ety 1 -* (* provide the memory to the initializer. *)
+         wp_initialize M ti ρ ety (base .[ ety ! idx ]) e (fun free => free ** wp_array_init ety base rest (Z.succ idx) Q)
+      end%I.
+
+    Definition fill_initlist (desiredsz : N) (es : list Expr) (f : Expr) : list Expr :=
+      let actualsz := N.of_nat (length es) in
+      es ++ numbers.replicateN f (desiredsz - actualsz).
+
+    (** NOTE this assumes that the C++ abstract machine already owns the array
+        that is being initialized, see [wp_init_initlist_array] *)
+    Definition wp_array_init_fill (ety : type) (base : ptr) (es : list Expr) (f : option Expr) (sz : N) (Q : FreeTemps -> mpred) : mpred :=
+      let len := N.of_nat (length es) in
+      match (len ?= sz)%N with
+      | Lt =>
+          match f with
+          | None => False
+          | Some fill => wp_array_init ety base (fill_initlist sz es fill) 0 Q
+          end
+      | Eq => wp_array_init ety base es 0 Q
+      (* <http://eel.is/c++draft/dcl.init.general#16.5>
+
+         Programs which contain more initializer expressions than
+         array-members are ill-formed.
+       *)
+      | Gt => False
+      end.
+
+    Axiom wp_init_initlist_array :forall ls fill ety (sz : N) (base : ptr) Q,
+          base |-> tblockR (Tarray ety sz) 1 ** wp_array_init_fill ety base ls fill sz Q
+      |-- wp_init (Tarray ety sz) base (Einitlist ls fill (Tarray ety sz)) Q.
+
+    (* https://eel.is/c++draft/dcl.init#general-7.2 says that "To
+    default-initialize an object of type T means: If T is an array type, each
+    element is default-initialized." Clang emits [Econstructor ... (Tarray
+    (Tnamed ...))] initializing expressions for those cases, where the
+    Econstructor node indicates the constructor for the *elements* in the
+    array.
+
+    We assume that the elements of the array are initialized from
+    left to right, i.e. from the first element to the last element. The
+    standard is not explicit about the initialization order for default
+    initialization of arrays, but the standard does explicitly specify this
+    ordering for arrays with an explicit element list
+    (https://eel.is/c++draft/dcl.init#general-15.5). The standard also demands
+    destructors to be run in opposite order (https://eel.is/c++draft/dcl.init.general#19),
+    and it's expected that every object "is destroyed in the exact reverse order
+    it was constructed." (https://doi.org/10.1145/2103656.2103718,
+    https://eel.is/c++draft/expr.delete#6). Therefore, it seems
+    reasonable to assume that the same ordering applies for default
+    initialization. For this reason, the rule for default initalization
+    simply defers to the rule for initialization with an empty initializer
+    list. *)
+    Axiom wp_init_default_array : forall ety sz base ctorname args Q,
+      wp_init (Tarray ety sz) base (Einitlist [] (Some (Econstructor ctorname args ety)) (Tarray ety sz)) Q
+      |-- wp_init (Tarray ety sz) base (Econstructor ctorname args (Tarray ety sz)) Q.
+
+    Axiom wp_prval_initlist_default : forall t Q,
+          match get_default t with
+          | None => False
+          | Some v => Q v emp
+          end
+      |-- wp_prval (Einitlist nil None t) Q.
+
+    Axiom wp_prval_initlist_prim : forall t e Q,
+          (if prim_initializable t
+           then wp_prval e Q
+           else False)
+      |-- wp_prval (Einitlist (e :: nil) None t) Q.
+
+    Axiom wp_init_cast_integral : forall e ty addr Q,
+        wp_prval e (fun v free =>
+          Exists v',
+            [| conv_int (type_of e) ty v v' |] **
+            _at addr (anyR (erase_qualifiers ty) 1) **
+            (_at addr (primR (erase_qualifiers ty) 1 v') -* Q free))
+        |-- wp_init ty addr (Ecast Cintegral (Prvalue, e) ty) Q.
+
+    Axiom wp_init_cast_noop : forall e ty addr ty' Q,
+        wp_init ty addr e Q
+        |-- wp_init ty addr (Ecast Cnoop (Prvalue, e) ty') Q.
+
+    Axiom wp_init_clean : forall e ty ty' addr Q,
+        wp_init ty' addr e Q
+        |-- wp_init ty' addr (Eandclean e ty) Q.
+    Axiom wp_init_const : forall ty addr e Q,
+        wp_init ty addr e Q
+        |-- wp_init (Qconst ty) addr e Q.
+    Axiom wp_init_mut : forall ty addr e Q,
+        wp_init ty addr e Q
+        |-- wp_init (Qmut ty) addr e Q.
+
 
   End with_resolve.
 
