@@ -128,4 +128,15 @@ Section destroy.
         { iIntros "X Y"; iNext; iRevert "Y"; iApply mspec_frame; iIntros (?); done. } } }
   Qed.
 
+  (** [wp_alloc ty Q] allocates storage for [ty] and passes the address
+      to [Q]. Generally, [Q] will initialize this memory.
+   *)
+  Definition wp_alloc (ty : type) (Q : ptr -> mpred) : mpred :=
+    Forall addr : ptr, addr |-> tblockR (erase_qualifiers ty) 1 -* Q addr.
+
+  (** [wp_free ty addr Q] frees the memory of a [ty] at address [addr].
+   *)
+  Definition wp_free (ty : type) (addr : ptr) (Q : mpred) : mpred :=
+    destruct_val false ty addr (addr |-> tblockR (σ:=σ) ty 1 ** Q).
+
 End destroy.
