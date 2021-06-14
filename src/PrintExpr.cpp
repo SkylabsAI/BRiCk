@@ -322,6 +322,9 @@ public:
                           ClangPrinter& cprint, const ASTContext& ctxt,
                           OpaqueNames& on) {
         auto d = expr->getDecl();
+        if (d->getType()->isReferenceType()) {
+            print.ctor("Eread_ref");
+        }
         if (isa<EnumConstantDecl>(d)) {
             print.ctor("Econst_ref", false);
         } else {
@@ -335,6 +338,9 @@ public:
             cprint.printName(d, print);
         }
         done(expr, print, cprint);
+        if (d->getType()->isReferenceType()) {
+            print.end_ctor();
+        }
     }
 
     void VisitCallExpr(const CallExpr* expr, CoqPrinter& print,
@@ -552,12 +558,17 @@ public:
                 print.output() << fmt::nbsp;
                 cprint.printExpr(expr->getBase(), print, li);
                 print.output() << fmt::nbsp;
+                if (vd->getType()->isReferenceType()) {
+                    print.ctor("Eread_ref");
+                }
                 print.ctor("Evar", false);
                 cprint.printName(vd, print);
                 print.output() << fmt::nbsp;
                 cprint.printQualType(vd->getType(), print);
                 print.end_ctor();
-                print.end_ctor();
+                if (vd->getType()->isReferenceType())
+                    print.end_ctor();
+                done(expr, print, cprint);
 
 #if 0
                 // this handles the special case of static members
@@ -583,6 +594,8 @@ public:
                 return;
             }
         }
+        if (expr->getMemberDecl()->getType()->isReferenceType())
+            print.ctor("Eread_ref");
         print.ctor("Emember");
 
         auto base = expr->getBase();
@@ -602,6 +615,8 @@ public:
         print.output() << fmt::nbsp;
         cprint.printField(expr->getMemberDecl(), print);
         done(expr, print, cprint);
+        if (expr->getMemberDecl()->getType()->isReferenceType())
+            print.end_ctor();
     }
 
     void VisitArraySubscriptExpr(const ArraySubscriptExpr* expr,

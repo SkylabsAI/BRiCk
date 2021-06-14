@@ -25,6 +25,9 @@ Section with_resolve.
     match ts , es with
     | nil , nil => Q nil emp%I
     | t :: ts , e :: es =>
+      (** TODO this *almost* works except that when passing code by reference, we don't
+          want the [tblockR] at all.
+       *)
       Forall a : ptr, a |-> tblockR (erase_qualifiers t) 1 -*
       Exists Qarg,
         wp_initialize M ti ρ t a e Qarg **
