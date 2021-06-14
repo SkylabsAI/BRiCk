@@ -197,7 +197,7 @@ Section with_cpp.
     Qed.
   End wp_lval.
 
-  (** prvalue *)
+  (** * prvalue *)
   (*
    * there are two distinct weakest pre-conditions for this corresponding to the
    * standard text:
@@ -346,7 +346,7 @@ Section with_cpp.
     Qed.
   End wp_prval.
 
-  (** xvalues *)
+  (** * xvalues *)
 
   (* evaluate an expression as an xvalue *)
   Parameter wp_xval
@@ -513,66 +513,7 @@ Section with_cpp.
     iIntros (v f); iApply H4; reflexivity.
   Qed.
 
-  (** initializers *)
-  (* TODO this seems unnecessary *)
-  Parameter wpi
-    : forall {resolve:genv} (M : coPset) (ti : thread_info) (ρ : region)
-        (cls : globname) (this : ptr) (init : Initializer)
-        (Q : mpred -> mpred), mpred.
-
-  Axiom wpi_shift : forall σ M ti ρ cls this e Q,
-      (|={M}=> wpi (resolve:=σ) M ti ρ cls this e (fun k => |={M}=> Q k))
-    ⊢ wpi (resolve:=σ) M ti ρ cls this e Q.
-
-  Axiom wpi_frame :
-    forall σ1 σ2 M ti ρ cls this e k1 k2,
-      genv_leq σ1 σ2 ->
-      Forall f, k1 f -* k2 f |-- @wpi σ1 M ti ρ cls this e k1 -* @wpi σ2 M ti ρ cls this e k2.
-
-  Global Instance Proper_wpi :
-    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> eq ==> eq ==> (lentails ==> lentails) ==> lentails)
-           (@wpi).
-  Proof. repeat red; intros; subst.
-         iIntros "X"; iRevert "X"; iApply wpi_frame; eauto.
-         iIntros (f); iApply H6. reflexivity.
-  Qed.
-
-  Section wpi.
-    Context {σ : genv} (M : coPset) (ti : thread_info) (ρ : region)
-      (cls : globname) (this : ptr) (init : Initializer).
-    Local Notation WP := (wpi (resolve:=σ) M ti ρ cls this init) (only parsing).
-    Implicit Types P : mpred.
-    Implicit Types k : mpred → mpred.
-
-    Lemma wpi_wand k1 k2 : WP k1 |-- (∀ Q, k1 Q -* k2 Q) -* WP k2.
-    Proof. iIntros "Hwp HK". by iApply (wpi_frame with "HK Hwp"). Qed.
-    Lemma fupd_wpi k : (|={M}=> WP k) |-- WP k.
-    Proof.
-      rewrite -{2}wpi_shift. apply fupd_elim. rewrite -fupd_intro.
-      iIntros "Hwp". iApply (wpi_wand with "Hwp"). auto.
-    Qed.
-    Lemma wpi_fupd k : WP (λ Q, |={M}=> k Q) |-- WP k.
-    Proof. iIntros "Hwp". by iApply (wpi_shift with "[$Hwp]"). Qed.
-
-    (* proof mode *)
-    Global Instance elim_modal_fupd_wpi p P k :
-      ElimModal True p false (|={M}=> P) P (WP k) (WP k).
-    Proof.
-      rewrite /ElimModal. rewrite bi.intuitionistically_if_elim/=.
-      by rewrite fupd_frame_r bi.wand_elim_r fupd_wpi.
-    Qed.
-    Global Instance elim_modal_bupd_wpi p P k :
-      ElimModal True p false (|==> P) P (WP k) (WP k).
-    Proof.
-      rewrite /ElimModal (bupd_fupd M). exact: elim_modal_fupd_wpi.
-    Qed.
-    Global Instance add_modal_fupd_wpi P k : AddModal (|={M}=> P) P (WP k).
-    Proof.
-      rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wpi.
-    Qed.
-  End wpi.
-
-  (** Statements *)
+  (** * Statements *)
 
   Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (P ** Q) k.
   Proof using .

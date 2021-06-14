@@ -20,7 +20,6 @@ Module Type Init.
     Variables (M : coPset) (ti : thread_info) (ρ : region).
 
     #[local] Notation wp := (wp (resolve:=σ) M ti ρ).
-    #[local] Notation wpi := (wpi (resolve:=σ) M ti ρ).
     #[local] Notation wp_lval := (wp_lval (resolve:=σ) M ti ρ).
     #[local] Notation wp_prval := (wp_prval (resolve:=σ) M ti ρ).
     #[local] Notation wp_xval := (wp_xval (resolve:=σ) M ti ρ).
@@ -112,8 +111,14 @@ Module Type Init.
       | Tnamed _ => wp_init ty addr (not_mine init) k
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
-      | Treference t => False (* reference fields are not supported *)
-      | Trv_reference t => False (* reference fields are not supported *)
+      | Treference _ =>
+        wp_lval init (fun p free =>
+                        addr |-> tblockR (erase_qualifiers ty) 1 **
+                        ( addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -* k free))
+      | Trv_reference _ => (* reference fields are not supported *)
+        wp_xval init (fun p free =>
+                        addr |-> tblockR (erase_qualifiers ty) 1 **
+                        ( addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -* k free))
       | Tfunction _ _ => False (* functions not supported *)
 
       | Tqualified _ ty => False (* unreachable *)
@@ -128,6 +133,10 @@ Module Type Init.
       rewrite /wp_initialize.
       case_eq (drop_qualifiers ty) =>/=; intros; eauto.
       { iIntros "a". iApply wp_prval_frame; try reflexivity.
+        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
+      { iIntros "a". iApply wp_lval_frame; try reflexivity.
+        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
+      { iIntros "a". iApply wp_xval_frame; try reflexivity.
         iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
       { iIntros "a". iApply wp_prval_frame; try reflexivity.
         iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
@@ -145,13 +154,16 @@ Module Type Init.
       iIntros "A B"; iRevert "A"; iApply wp_initialize_frame; eauto.
     Qed.
 
-    Axiom wpi_initialize : forall (thisp : ptr) i cls Q,
-        let p' := thisp ., offset_for cls i.(init_path) in
-          wp_initialize (erase_qualifiers i.(init_type)) p' i.(init_init) Q
-      |-- wpi cls thisp i Q.
-
+    Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : _) : mpred :=
+        let p' := thisp ., offset_for cls init.(init_path) in
+        wp_initialize (erase_qualifiers init.(init_type)) p' init.(init_init) Q.
 
   End with_resolve.
+
+  Theorem wpi_frame (thread_info : biIndex) (Σ : cpp_logic thread_info) (σ1 σ2 : genv) (M : coPset) (ti : thread_info) (ρ : region) 
+          (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : mpred → mpredI) :
+    genv_leq σ1 σ2 → Forall f : mpred, k1 f -* k2 f |-- wpi M ti ρ cls this e k1 -* wpi M ti ρ cls this e k2.
+  Proof. (** TODO this is easy to prove but will require some more work for [genv_leq] *) Admitted.
 
 End Init.
 
