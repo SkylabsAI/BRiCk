@@ -30,7 +30,7 @@ Section with_resolve.
   > When a function is called, each parameter ([dcl.fct]) is initialized ([dcl.init], [class.copy.ctor])
   > with its corresponding argument.
   *)
-  Fixpoint wp_args (ts : list type) (es : list Expr) (Q : list val -> FreeTemps -> mpred)
+  Fixpoint wp_args (ts : list type) (es : list Expr) (Q : list ptr -> FreeTemps -> mpred)
   : mpred :=
     match ts , es with
     | nil , nil => Q nil emp%I
@@ -40,7 +40,7 @@ Section with_resolve.
         wp_initialize M ti ρ t a e Qarg **
         wp_args ts es (fun vs frees =>
                          Forall free,
-                         Qarg free -* Q (Vptr a :: vs) (destruct_val (σ:=σ) ti false t a (a |-> tblockR (σ:=σ) t 1) ** free ** frees))
+                         Qarg free -* Q (a :: vs) (destruct_val (σ:=σ) ti false t a (a |-> tblockR (σ:=σ) t 1) ** free ** frees))
     | _ , _ => False (* mismatched arguments and parameters. *)
     end.
 

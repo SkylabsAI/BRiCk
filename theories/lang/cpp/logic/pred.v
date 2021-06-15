@@ -821,7 +821,7 @@ Section with_cpp.
     { fs_cc : calling_conv
     ; fs_return : type
     ; fs_arguments : list type
-    ; fs_spec : thread_info -d> list val -d> (val -> mpred) -d> mpredO
+    ; fs_spec : thread_info -d> list ptr -d> (ptr -> mpred) -d> mpredO
     }.
   Arguments function_spec : clear implicits.
   Arguments Build_function_spec : clear implicits.

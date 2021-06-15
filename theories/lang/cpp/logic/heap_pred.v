@@ -47,7 +47,7 @@ Section defs.
   Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
     as_Rep (fun p =>
          valid_ptr p **
-         Forall (ti : thread_info), □ (Forall vs Q,
+         Forall (ti : thread_info), □ (Forall (vs : list ptr) Q,
          [| List.length vs = List.length fs.(fs_arguments) |] -*
          fs.(fs_spec) ti vs Q -*
          fspec resolve.(genv_tu).(globals) (type_of_spec fs) ti (Vptr p) vs Q)).
