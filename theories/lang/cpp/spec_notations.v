@@ -27,13 +27,13 @@ Section with_Σ.
      ; wpp_post := wpp.(wpp_post)
      |}.
 
-  Definition add_args (ls : list val) (wpp : WithPrePost) : WithPrePost :=
+  Definition add_args (ls : list ptr) (wpp : WithPrePost) : WithPrePost :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre  := tele_map (fun '(args,X) => (ls ++ args, X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
     |}.
 
-  Definition add_arg (s : names.ident) (v : val) (wpp : WithPrePost) : WithPrePost :=
+  Definition add_arg (s : names.ident) (v : ptr) (wpp : WithPrePost) : WithPrePost :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre  := tele_map (fun '(args,X) => (v :: args, X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
@@ -61,17 +61,19 @@ Section with_Σ.
   Definition add_prepost (P : PROP) (wpp : WithPrePost) : WithPrePost :=
     add_pre P (add_post P wpp).
 
+  (*
   Definition post_void (t : tele) (Q : t -t> PROP) : WithPrePost :=
     {| wpp_with := TeleO
      ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := t
-                    ; we_post := tele_map (fun Q => (Vvoid, Q)) Q |} |}.
+                    ; we_post := tele_map (fun Q => (None, Q)) Q |} |}.
 
   Definition post_ret (t : tele) (Q : t -t> val * PROP) : WithPrePost :=
     {| wpp_with := TeleO
      ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := t
                     ; we_post := Q |} |}.
+   *)
 
   Definition add_with {t : tele} (wpp : t -t> WithPrePost) : WithPrePost.
   refine
@@ -82,7 +84,7 @@ Section with_Σ.
   { refine ((fix go (t : tele)  :=
               match t as t
                     return forall (wpp : t -t> WithPrePost),
-                  tele_append t (tele_map wpp_with wpp) -t> list val * PROP
+                  tele_append t (tele_map wpp_with wpp) -t> list ptr * PROP
               with
               | TeleO => fun wpp => wpp.(wpp_pre)
               | TeleS rst => fun wpp x => go (rst x) (wpp x)
@@ -208,7 +210,7 @@ Notation "'\pre{' x .. y '}' pp X" :=
                                 (fun x => .. (fun y => @add_pre _ pp%I X%fspec) .. ))))
   (at level 10, x binder, y binder, pp at level 100, X at level 200, right associativity,
    format "'[v' '[hv  ' '\pre{' x  ..  y '}'  '/' pp ']' '//' X ']'").
-
+(* TODO update this
 Notation "'\post' { x .. y } [ r ] post" :=
   (@post_ret _ (TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
              (fun x => .. (fun y => (r, post%I)) ..))
@@ -315,3 +317,4 @@ refine (
 Abort.
 
 End with_Σ.
+END UPDATE THIS *)

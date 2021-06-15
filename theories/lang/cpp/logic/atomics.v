@@ -4,7 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Import iris.proofmode.tactics. 
+Require Import iris.proofmode.tactics.
 Require Import bedrock.lang.bi.ChargeCompat.
 Require Export bedrock.lang.bi.atomic1.
 From bedrock.lang.cpp Require Import ast semantics.
@@ -85,10 +85,14 @@ Section with_Σ.
       match get_acc_type ao ty targs with
       | None => False
       | Some acc_type =>
-        wp_args targs (List.map snd es) (fun (vs : list val) (free : FreeTemps) =>
-          wp_atom' ao acc_type vs (fun v => Q v free))
+        wp_args targs (List.map snd es) (fun (vs : list ptr) (free : FreeTemps) =>
+          wp_atom' ao acc_type (Vptr <$> vs) (fun v => Q v free))
       end)
-      |-- wp_prval (Eatomic ao es ty) Q.
+        |-- wp_prval (Eatomic ao es ty) Q.
+  (** ^ TODO the calling convention for atomics should change to be
+      more uniform. e.g. atomics should be treated more like builtin
+      functions.
+   *)
 
   (* Memory Ordering Patterns: Now we only have _SEQ_CST *)
   Definition _SEQ_CST := Vint 5.

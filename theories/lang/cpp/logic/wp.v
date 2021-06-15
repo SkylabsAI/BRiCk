@@ -596,11 +596,11 @@ Section with_cpp.
   (* this is the low-level specificaiton of C++ code blocks.
    *
    * [addr] represents the address of the entry point of the code.
-   * note: the [list val] will be related to the register set.
+   * note: the [list ptr] will be related to the register set.
    *)
   Parameter fspec
     : forall (tt : type_table) (fun_type : type) (ti : thread_info)
-             (addr : val) (ls : list val) (Q : val -> epred), mpred.
+        (addr : val) (ls : list ptr) (Q : ptr -> epred), mpred.
 
   Axiom fspec_complete_type : forall te ft ti a ls Q,
       fspec te ft ti a ls Q
@@ -639,9 +639,9 @@ Section with_cpp.
   Qed.
 
   Section fspec.
-    Context {tt : type_table} {tf : type} (ti : thread_info) (addr : val) (ls : list val).
+    Context {tt : type_table} {tf : type} (ti : thread_info) (addr : val) (ls : list ptr).
     Local Notation WP := (fspec tt tf ti addr ls) (only parsing).
-    Implicit Types Q : val → epred.
+    Implicit Types Q : ptr → epred.
 
     Lemma fspec_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
     Proof. iIntros "Hwp HK".
@@ -659,11 +659,11 @@ Section with_cpp.
            be casted to a regular function that takes an extra parameter.
    *)
   Definition mspec (tt : type_table) (this_type : type) (fun_type : type)
-    : thread_info -> val -> list val -> (val -> epred) -> mpred :=
+    : thread_info -> val -> list ptr -> (ptr -> epred) -> mpred :=
     fspec tt (Tmember_func this_type fun_type).
 
   Lemma mspec_frame:
-    ∀ ti (t : type) (l : list val) (v : val) (t0 : type) (t1 : type_table) (Q Q' : val -> _),
+    ∀ ti (t : type) (l : list ptr) (v : val) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
       Forall v, Q v -* Q' v |-- mspec t1 t t0 ti v l Q -* mspec t1 t t0 ti v l Q'.
   Proof. intros; apply fspec_frame. Qed.
 

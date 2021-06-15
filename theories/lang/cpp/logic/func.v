@@ -307,7 +307,7 @@ Section with_cpp.
     | None => False
     | Some body =>
       match args with
-      | Vptr thisp :: rest_vals =>
+      | thisp :: rest_vals =>
         let ρ := Remp (Some thisp) m.(m_return) in
         bind_vars m.(m_params) rest_vals ρ (fun ρ frees =>
         |> if is_void m.(m_return) then

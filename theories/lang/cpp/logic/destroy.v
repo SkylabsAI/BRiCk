@@ -77,7 +77,7 @@ Section destroy.
         if dispatch && has_virtual_dtor s then
           resolve_dtor cls this (fun fimpl impl_class this' =>
             let ty := Tfunction Tvoid nil in
-            |> mspec σ.(genv_tu).(globals) (Tnamed impl_class) ty ti (Vptr fimpl) (Vptr this' :: nil) (fun _ => Q))
+            |> mspec σ.(genv_tu).(globals) (Tnamed impl_class) ty ti (Vptr fimpl) (this' :: nil) (fun _ => Q))
         else
           (* NOTE the setup with explicit destructors (even when those destructors are trivial)
                   abstracts away some of the complexities of the underlying C++ semantics that
@@ -91,7 +91,7 @@ Section destroy.
              [Emember_call ... "~C" ..] *)
           (let dtor := s.(s_dtor) in
            let ty := Tfunction Tvoid nil in (** NOTE this implicitly requires all destructors to have C calling convention *)
-           |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global s.(s_dtor)) (Vptr this :: nil) (fun _ => Q))
+           |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global s.(s_dtor)) (this :: nil) (fun _ => Q))
 
       | Some (Gunion u) =>
           (* unions can not have [virtual] destructors, so we directly invoke
@@ -99,7 +99,7 @@ Section destroy.
            *)
           (let dtor := u.(u_dtor) in
            let ty := Tfunction Tvoid nil in
-           |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global u.(u_dtor)) (Vptr this :: nil) (fun _ => Q))
+           |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global u.(u_dtor)) (this :: nil) (fun _ => Q))
       | _ => False
       end
     | Tarray t sz =>

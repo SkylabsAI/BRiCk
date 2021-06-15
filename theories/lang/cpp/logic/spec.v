@@ -62,10 +62,10 @@ Section with_prop.
 
   (* Aliases specialized to [val]. We use definitions to control the universe
   arguments. *)
-  Definition WithEx@{X Z Y} := WithExG@{X Z Y _} val.
-  Definition WithPrePost@{X Z Y} := WithPrePostG@{X Z Y _ _} (list val) val.
-  Definition WppD@{X Z Y} := (WppGD@{X Z Y _ _} (ARGS := list val) (RESULT := val)).
-  Definition WithEx_map@{X Z Y} := WithExG_map@{X Z Y _ _} (T := val) (U := val).
+  Definition WithEx@{X Z Y} := WithExG@{X Z Y _} ptr.
+  Definition WithPrePost@{X Z Y} := WithPrePostG@{X Z Y _ _} (list ptr) ptr.
+  Definition WppD@{X Z Y} := (WppGD@{X Z Y _ _} (ARGS := list ptr) (RESULT := ptr)).
+  Definition WithEx_map@{X Z Y} := WithExG_map@{X Z Y _ _} (T := ptr) (U := ptr).
 End with_prop.
 
 Arguments WithPrePostG : clear implicits.
@@ -155,4 +155,4 @@ Section wpp_ofe.
   Canonical Structure WithPrePostGO := OfeT WPP wpp_ofe_mixin.
 End wpp_ofe.
 Arguments WithPrePostGO : clear implicits.
-Notation WithPrePostO PROP := (WithPrePostGO PROP (list val) val).
+Notation WithPrePostO PROP := (WithPrePostGO PROP (list ptr) ptr).
