@@ -21,7 +21,7 @@ Module Type Init.
 
     #[local] Notation wp := (wp (resolve:=σ) M ti ρ).
     #[local] Notation wp_lval := (wp_lval (resolve:=σ) M ti ρ).
-    #[local] Notation wp_prval := (wp_prval (resolve:=σ) M ti ρ).
+(*    #[local] Notation wp_prval := (wp_prval (resolve:=σ) M ti ρ). *)
     #[local] Notation wp_xval := (wp_xval (resolve:=σ) M ti ρ).
     #[local] Notation wp_init := (wp_init (resolve:=σ) M ti ρ).
     #[local] Notation fspec := (@fspec _ Σ σ.(genv_tu).(globals)).
@@ -83,6 +83,7 @@ Module Type Init.
       iModIntro. iIntros (???). iApply IHty.
     Qed.
 
+    (*
     (* [wp_initialize] provides "constructor" semantics for types.
      * For aggregates, simply delegates to [wp_init], but for primitives,
      * the semantics is to evaluate the primitive and initialize the location
@@ -153,18 +154,16 @@ Module Type Init.
     Proof using.
       iIntros "A B"; iRevert "A"; iApply wp_initialize_frame; eauto.
     Qed.
-
-    Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : _) : mpred :=
-        let p' := thisp ., offset_for cls init.(init_path) in
-        wp_initialize (erase_qualifiers init.(init_type)) p' init.(init_init) Q.
+*)
 
   End with_resolve.
 
+  (*
   Theorem wpi_frame (thread_info : biIndex) (Σ : cpp_logic thread_info) (σ1 σ2 : genv) (M : coPset) (ti : thread_info) (ρ : region) 
           (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : mpred → mpredI) :
     genv_leq σ1 σ2 → Forall f : mpred, k1 f -* k2 f |-- wpi M ti ρ cls this e k1 -* wpi M ti ρ cls this e k2.
   Proof. (** TODO this is easy to prove but will require some more work for [genv_leq] *) Admitted.
-
+*)
 End Init.
 
 Declare Module IN : Init.

@@ -110,10 +110,6 @@ End Kpred.
 Section with_cpp.
   Context `{Σ : cpp_logic thread_info}.
 
-  (* [SP] denotes the sequence point for an expression *)
-  Definition SP (Q : val -> mpred) (v : val) (free : FreeTemps) : mpred :=
-    free ** Q v.
-
   (* The expressions in the C++ language are categorized into five
    * "value categories" as defined in:
    *    http://eel.is/c++draft/expr.prop#basic.lval-1
@@ -199,31 +195,23 @@ Section with_cpp.
 
   (** * prvalue *)
   (*
-   * there are two distinct weakest pre-conditions for this corresponding to the
-   * standard text:
+   * According to the standard text:
    * "A prvalue is an expression whose evaluation...
    * 1. initializes an object, or
    * 2. computes the value of an operand of an operator,
    * as specified by the context in which it appears,..."
+   *
+   * In our semantics, we *always* materialize temporaries
+   * meaning that our semantics will always consider the first
+   * case. The second case is handled *only* at operators which
+   * perform an implicit read to extract the value and then compute
+   * with it.
+   *
+   * For uniformity, [wp_prval] will have the same type as the
+   * other expression semantics, this means that values will be
+   * allocated while they are being initialized.
    *)
 
-  (* evaluate a prvalue that "initializes an object"
-
-     Schematically, a [wp_init ty addr e Q] looks like the following:
-       [[[
-         addr |-> tblockR ty 1 ** (addr |-> R ... 1 -* Q)
-       ]]]
-     which captures the fact that it:
-     1. *consumes* uninitialized memory at [addr], the [addr |-> tblockR ty 1], and
-     2. *produces* initialized memory at [addr], something like [addr |-> R ... 1].
-
-     An alternative scheme would be to not give this block back to the user each time
-     and instead keep it in the C++ abstract machine. Currently, the problem with
-     this approach is that constructors would essentially be performing allocation out
-     of the abstract machine, which would require us to distinguish (in a more semantic
-     way) between constructors and regular functions.
-     TODO this is something that we should probably revisit at some point.
-   *)
   Parameter wp_init
     : forall {resolve:genv}, coPset -> thread_info -> region ->
                         type -> ptr -> Expr ->
@@ -284,12 +272,13 @@ Section with_cpp.
     Qed.
   End wp_init.
 
+(** TODO this gets *defined* in [expr.v]
   (* evaluate a prvalue that "computes the value of an operand of an operator"
    *)
   Parameter wp_prval
     : forall {resolve:genv}, coPset -> thread_info -> region ->
         Expr ->
-        (val -> FreeTemps -> epred) -> (* result -> free -> post *)
+        (ptr -> FreeTemps -> epred) -> (* result -> free -> post *)
         (* ^^ TODO the biggest question is what does this [val] represent
          *)
         mpred. (* pre-condition *)
@@ -316,7 +305,7 @@ Section with_cpp.
     Context {σ : genv} (M : coPset) (ti : thread_info) (ρ : region) (e : Expr).
     Local Notation WP := (wp_prval (resolve:=σ) M ti ρ e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : val → FreeTemps → epred.
+    Implicit Types Q : ptr → FreeTemps → epred.
 
     Lemma wp_prval_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_prval_frame with "HK Hwp"). Qed.
@@ -345,6 +334,7 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_prval.
     Qed.
   End wp_prval.
+ *)
 
   (** * xvalues *)
 
@@ -439,6 +429,7 @@ Section with_cpp.
     iIntros "A B"; iRevert "A"; iApply wp_glval_frame; eauto.
   Qed.
 
+(** TODO move this to [expr.v]
   (** Bundled evaluation, this enables us slightly more concisely
       represent some weakest-precondition rules.
    *)
@@ -446,19 +437,18 @@ Section with_cpp.
     Context {resolve:genv}.
     Variable (M : coPset) (ti : thread_info) (ρ : region).
 
-    Definition wpe (vc : ValCat) (e : Expr) (Q :val -> FreeTemps -> mpred) : mpred :=
+    Definition wpe (vc : ValCat) (e : Expr) (Q : ptr -> FreeTemps -> mpred) : mpred :=
       match vc with
-      | Lvalue => @wp_lval resolve M ti ρ e (fun p => Q (Vptr p))
+      | Lvalue => @wp_lval resolve M ti ρ e Q
       | Prvalue => @wp_prval resolve M ti ρ e Q
-      | Xvalue => @wp_xval resolve M ti ρ e (fun p => Q (Vptr p))
+      | Xvalue => @wp_xval resolve M ti ρ e Q
       end.
 
     Definition wpAny (vce : ValCat * Expr)
-      : (val -> FreeTemps -> mpred) -> mpred :=
+      : (ptr -> FreeTemps -> mpred) -> mpred :=
       let '(vc,e) := vce in
       wpe vc e.
 
-    Definition wpAnys := fun ve Q free => wpAny ve (fun v f => Q v (f ** free)).
   End wpe.
 
   Lemma wpe_frame σ1 σ2 M ti ρ vc e k1 k2:
@@ -467,13 +457,11 @@ Section with_cpp.
   Proof.
     destruct vc => /=; [ | apply wp_prval_frame | ].
     - intros. rewrite -wp_lval_frame; eauto.
-      iIntros "h" (v f) "x"; iApply "h"; iFrame.
     - intros. rewrite -wp_xval_frame; eauto.
-      iIntros "h" (v f) "x"; iApply "h"; iFrame.
   Qed.
 
   Global Instance Proper_wpe :
-    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> lentails ==> lentails) ==> lentails)
+    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> free_entails ==> lentails) ==> lentails)
            (@wpe).
   Proof.
     repeat red; intros; subst.
@@ -496,7 +484,7 @@ Section with_cpp.
   Proof. destruct e; apply: wpe_frame. Qed.
 
   Global Instance Proper_wpAny :
-    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> lentails ==> lentails) ==> lentails)
+    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> free_entails ==> lentails) ==> lentails)
            (@wpAny).
   Proof.
     repeat red; intros; subst.
@@ -512,6 +500,7 @@ Section with_cpp.
     iIntros "X"; iRevert "X"; iApply wpAny_frame; eauto.
     iIntros (v f); iApply H4; reflexivity.
   Qed.
+*)
 
   (** * Statements *)
 

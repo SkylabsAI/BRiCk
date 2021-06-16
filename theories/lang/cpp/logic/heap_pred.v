@@ -12,6 +12,7 @@ Require Import bedrock.lang.prelude.base.
 
 From bedrock.lang.cpp Require Import
      semantics ast logic.pred logic.path_pred logic.rep logic.wp logic.spec.
+(* NOTE logic.wp is only needed for [fspec] *)
 Export bedrock.lang.cpp.logic.rep.
 
 Implicit Types (σ resolve : genv) (p : ptr) (o : offset).

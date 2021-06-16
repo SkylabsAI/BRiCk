@@ -10,7 +10,6 @@ Require Import iris.proofmode.tactics.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Import pred heap_pred path_pred.
-Require Import bedrock.lang.cpp.logic.wp.
 Require Import bedrock.lang.cpp.heap_notations.
 
 Section with_cpp.
