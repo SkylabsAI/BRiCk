@@ -718,7 +718,7 @@ Module Type Expr.
              match arg_types fty with
              | Some targs =>
                wp_prval f (fun f free_f =>
-                           wp_args targs (snd <$> es) (fun vs free =>
+                           wp_args targs es (fun vs free =>
                                          |> fspec (normalize_type fty) ti f vs (fun v => Q v (free ** free_f))))
              | _ => False
              end
@@ -731,7 +731,7 @@ Module Type Expr.
         | Some fty =>
           match arg_types fty with
           | Some targs =>
-          wp_prval f (fun f free_f => wp_args targs (snd <$> es) (fun vs free =>
+          wp_prval f (fun f free_f => wp_args targs es (fun vs free =>
              |> fspec (normalize_type fty) ti f vs (fun res => Exists p, [| res = Vptr p |] ** Q p (free ** free_f))))
           | _ => False
           end
@@ -744,7 +744,7 @@ Module Type Expr.
         | Some fty =>
           match arg_types fty with
           | Some targs =>
-          wp_prval f (fun f free_f => wp_args targs (snd <$> es) (fun vs free =>
+          wp_prval f (fun f free_f => wp_args targs es (fun vs free =>
              |> fspec (normalize_type fty) ti f vs (fun v => Exists p, [| v = Vptr p |] ** Q p (free ** free_f))))
           | None => False
           end
@@ -760,7 +760,7 @@ Module Type Expr.
           addr |-> tblockR (erase_qualifiers ty) 1 **
           (* ^ give up the memory that was created by [materialize_into_temp] *)
           wp_prval f (fun f free_f =>
-                        wp_args targs (snd <$> es) (fun vs free =>
+                        wp_args targs es (fun vs free =>
                                       |> fspec (normalize_type fty) ti f vs (fun res => [| res = Vptr addr |] -* Q (free_f ** free))))
           (* NOTE We use the assumed equality to mean that the value was constructed immediately into
              the correct place *)
@@ -789,13 +789,13 @@ Module Type Expr.
      *)
     Axiom wp_lval_member_call : forall ty fty f vc obj es Q targs
                                   (_ : member_arg_types fty = Some targs),
-        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
+        wp_glval vc obj (fun this free_t => wp_args targs es (fun vs free =>
            |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_lval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_xval_member_call : forall ty fty f vc obj es Q targs (_ : member_arg_types fty = Some targs),
-        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
+        wp_glval vc obj (fun this free_t => wp_args targs es (fun vs free =>
            |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v =>
                     Exists p, [| v = Vptr p |] ** Q p (free_t ** free))))
         |-- wp_xval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
@@ -804,14 +804,14 @@ Module Type Expr.
         (if is_aggregate ty then
            Reduce (materialize_into_temp ty (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q)
          else
-            wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
+            wp_glval vc obj (fun this free_t => wp_args targs es (fun vs free =>
               |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun v => Q v (free_t ** free)))))
         |-- wp_prval (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_init_member_call : forall f ret ts cc es (addr : ptr) ty vc obj Q
                                   (fty := Tfunction (cc:=cc) ret ts)
                                   targs (_ : member_arg_types fty = Some targs),
-        wp_glval vc obj (fun this free_t => wp_args targs (snd <$> es) (fun vs free =>
+        wp_glval vc obj (fun this free_t => wp_args targs es (fun vs free =>
             addr |-> tblockR (erase_qualifiers ret) 1 **
             |> mspec (type_of obj) (normalize_type fty) ti (Vptr $ _global f) (Vptr this :: vs) (fun res =>
                       [| res = Vptr addr |] -* Q (free_t ** free))))
@@ -1077,7 +1077,7 @@ DONE ***)
 
     (** TODO missing the type of the (arguments of the) constructor *)
     Axiom wp_init_constructor : forall cls addr cnd es Q targs,
-      wp_args targs (snd <$> es) (fun ls free =>
+      wp_args targs es (fun ls free =>
            match resolve.(genv_tu) !! cnd with
            | Some cv =>
              |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (Vptr addr :: ls) (fun _ => Q free)
