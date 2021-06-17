@@ -70,14 +70,16 @@ Section with_cpp.
   Proof. exact: ne_proper. Qed.
 
 
-  (* A specification for a constructor *)
+  (* A specification for a constructor
+     TODO the [this] argument is passed in a non-standard style
+   *)
   Definition SConstructor@{X Z Y} {cc : calling_conv} (class : globname)
              (targs : list type)
              (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
   : function_spec :=
     let this_type := Qmut (Tnamed class) in
-    let map_pre this '(args, P) :=
-        (Vptr this :: args,
+    let map_pre (this : ptr) '(args, P) :=
+        (this :: args,
          this |-> tblockR (Tnamed class) 1 ** P) in
     SFunction (cc:=cc) (Qmut Tvoid) (Qconst (Tpointer this_type) :: targs)
               {| wpp_with := TeleS (fun this : ptr => (PQ this).(wpp_with))
@@ -86,12 +88,14 @@ Section with_cpp.
                ; wpp_post this := (PQ this).(wpp_post)
                |}.
 
-  (* A specification for a destructor *)
+  (* A specification for a destructor
+     TODO the [this] argument is passed in a non-standard style
+   *)
   Definition SDestructor@{X Z Y} {cc : calling_conv} (class : globname)
              (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
   : function_spec :=
     let this_type := Qmut (Tnamed class) in
-    let map_pre this '(args, P) := (Vptr this :: args, P) in
+    let map_pre (this : ptr) '(args, P) := (this :: args, P) in
     let map_post (this : ptr) '{| we_ex := pwiths ; we_post := Q|} :=
         {| we_ex := pwiths
          ; we_post := tele_map (fun '(result, Q) =>
@@ -108,19 +112,21 @@ Section with_cpp.
                    tele_map (map_post this) (PQ this).(wpp_post)
               |}.
 
-  (* A specification for a method *)
+  (* A specification for a method
+     TODO the [this] argument is passed in a non-standard style
+   *)
   Definition SMethod@{X Z Y} {cc : calling_conv}
              (class : globname) (qual : type_qualifiers)
              (ret : type) (targs : list type)
              (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
   : function_spec :=
-    let map_pre this '(args, P) := (this :: args, P) in
+    let map_pre (this : ptr) '(args, P) := (this :: args, P) in
     let class_type := Tnamed class in
     let this_type := Tqualified qual class_type in
     SFunction (cc:=cc) ret (Qconst (Tpointer this_type) :: targs)
               {| wpp_with := TeleS (fun this : ptr => (PQ this).(wpp_with))
                ; wpp_pre this :=
-                   tele_map (map_pre (Vptr this)) (PQ this).(wpp_pre)
+                   tele_map (map_pre this) (PQ this).(wpp_pre)
                ; wpp_post this := (PQ this).(wpp_post)
                |}.
 
@@ -222,39 +228,14 @@ Section with_cpp.
 
   (** * Binding parameters *)
 
-  (** [bind_vars args vals r Q] preforms initialization of the parameters
+  (** [bind_vars args locs r Q] preforms initialization of the parameters
       given the values being passed.
-
-      TODO this is technically inaccurate, because the caller of the function
-      should be constructing the pointers. In this setup, [vals] should
-      just be a list of [ptr] and the signature would be:
-      [bind_vars : list (ident * type) -> list ptr -> region -> region]
    *)
-  Fixpoint bind_vars (args : list (ident * type)) (vals : list val) (r : region) (Q : region -> FreeTemps -> mpred) : mpred :=
-    match args , vals with
+  Fixpoint bind_vars (args : list (ident * type)) (locs : list ptr) (r : region) (Q : region -> FreeTemps -> mpred) : mpred :=
+    match args , locs with
     | nil , nil => Q r emp
-    | (x,ty) :: xs , v :: vs  =>
-      match v with
-      | Vptr p => bind_vars xs vs (Rbind_check x p r) Q
-      | _ => ERROR "non-pointer passed to function (the caller is responsible for constructing objects)"
-      end
-(*
-      match drop_qualifiers ty with
-      | Tqualified _ t => ERROR "unreachable" (* unreachable *)
-      | Treference    _
-      | Trv_reference _
-      | Tnamed _ =>
-        match v with
-        | Vptr p => bind_vars xs vs (Rbind_check x p r) Q
-        | _ => ERROR "non-pointer passed for aggregate"
-        end
-      | _              =>
-        Forall a : ptr, a |-> primR (erase_qualifiers ty) 1 v -*
-        bind_vars xs vs (Rbind_check x a r) (fun r free => Q r (a |-> anyR (erase_qualifiers ty) 1 ** free))
-        (* Here we view [anyR (erase_quaifiers ty) 1] as essentially the pre-condition
-           to the "destructor" of a primitive. *)
-      end
-*)
+    | (x,ty) :: xs , p :: vs  =>
+      bind_vars xs vs (Rbind_check x p r) Q
     | _ , _ => ERROR "bind_vars: argument mismatch"
     end%I.
 
@@ -264,19 +245,14 @@ Section with_cpp.
   Proof.
     induction ts; destruct args => /= *; eauto.
     { iIntros "A B"; iApply "A"; eauto. }
-    { iIntros "A B". destruct a.
-      destruct (typing.drop_qualifiers t);
-        try solve
-            [ iIntros (?) "X"; iDestruct ("B" with "X") as "B"; iRevert "B";
-              iApply IHts; iIntros (? ?) "Z"; iApply "A"; iFrame
-            | destruct v; eauto; iRevert "B"; iApply IHts; eauto ]. }
+    { iIntros "A". destruct a; by iApply IHts. }
   Qed.
 
   (** * Weakest preconditions of the flavors of C++ "functions"  *)
 
   (** ** the weakest precondition of a function *)
-  Definition wp_func (f : Func) (ti : thread_info) (args : list val)
-             (Q : val -> epred) : mpred :=
+  Definition wp_func (f : Func) (ti : thread_info) (args : list ptr)
+             (Q : ptr -> epred) : mpred :=
     match f.(f_body) with
     | None => False
     | Some body =>
@@ -285,11 +261,12 @@ Section with_cpp.
         let ρ := Remp None f.(f_return) in
         bind_vars f.(f_params) args ρ (fun ρ frees =>
         |> if is_void f.(f_return) then
-             wp ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid)))
+             wp ⊤ ti ρ body (Kfree frees (void_return (|> Q invalid_ptr)))
            else
              wp ⊤ ti ρ body (Kfree frees (val_return (fun x => |> Q x))))
       | Builtin builtin =>
-        wp_builtin ⊤ ti builtin (Tfunction (cc:=f.(f_cc)) f.(f_return) (List.map snd f.(f_params))) args Q
+        (** TODO fixme *) False
+        (* wp_builtin ⊤ ti builtin (Tfunction (cc:=f.(f_cc)) f.(f_return) (List.map snd f.(f_params))) args Q *)
       end
     end.
 
@@ -297,12 +274,12 @@ Section with_cpp.
     : mpred :=
       [| type_of_spec spec = type_of_value (Ofunction f) |] **
       (* forall each argument, apply to [fs_spec ti] *)
-      □ Forall Q : val -> mpred, Forall vals,
+      □ Forall Q : _ -> mpred, Forall vals,
         spec.(fs_spec) ti vals Q -* wp_func f ti vals Q.
 
   (** ** The weakest precondition of a method *)
-  Definition wp_method (m : Method) ti (args : list val)
-             (Q : val -> epred) : mpred :=
+  Definition wp_method (m : Method) ti (args : list ptr)
+             (Q : ptr -> epred) : mpred :=
     match m.(m_body) with
     | None => False
     | Some body =>
@@ -311,7 +288,7 @@ Section with_cpp.
         let ρ := Remp (Some thisp) m.(m_return) in
         bind_vars m.(m_params) rest_vals ρ (fun ρ frees =>
         |> if is_void m.(m_return) then
-             wp ⊤ ti ρ body (Kfree frees (void_return (|>Q Vvoid)))
+             wp ⊤ ti ρ body (Kfree frees (void_return (|>Q invalid_ptr)))
            else
              wp ⊤ ti ρ body (Kfree frees (val_return (fun x => |>Q x))))
       | _ => False
@@ -322,7 +299,7 @@ Section with_cpp.
     : mpred :=
     [| type_of_spec spec = type_of_value (Omethod m) |] **
     (* forall each argument, apply to [fs_spec ti] *)
-    □ Forall Q : val -> mpred, Forall vals,
+    □ Forall Q : ptr -> epred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_method m ti vals Q.
 
   (** ** Weakest precondition of a constructor *)
@@ -535,15 +512,15 @@ Section with_cpp.
    * for each sub-object up front.
    *)
   Definition wp_ctor (ctor : Ctor)
-             (ti : thread_info) (args : list val)
-             (Q : val -> epred) : mpred :=
+             (ti : thread_info) (args : list ptr)
+             (Q : ptr -> epred) : mpred :=
     match ctor.(c_body) with
     | None => False
     | Some Defaulted => False
       (* ^ defaulted constructors are not supported yet *)
     | Some (UserDefined (inits, body)) =>
       match args with
-      | Vptr thisp :: rest_vals =>
+      | thisp :: rest_vals =>
         let ty := Tnamed ctor.(c_class) in
         match resolve.(genv_tu).(globals) !! ctor.(c_class) with
         | Some (Gstruct cls) =>
@@ -555,7 +532,7 @@ Section with_cpp.
           |> let ρ := Remp (Some thisp) Tvoid in
              bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
                (wp_struct_initializer_list cls ti ρ ctor.(c_class) thisp inits
-                  (wp ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid))))))
+                  (wp ⊤ ti ρ body (Kfree frees (void_return (|> Q invalid_ptr))))))
         | Some (Gunion union) =>
         (* this is a union *)
           thisp |-> tblockR ty 1 **
@@ -565,7 +542,7 @@ Section with_cpp.
           |> let ρ := Remp (Some thisp) Tvoid in
              bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
                (wp_union_initializer_list union ti ρ ctor.(c_class) thisp inits
-                  (wp ⊤ ti ρ body (Kfree frees (void_return (|> Q Vvoid))))))
+                  (wp ⊤ ti ρ body (Kfree frees (void_return (|> Q invalid_ptr))))))
         | Some _ =>
           ERROR "constructor for non-aggregate"
         | None => False
@@ -578,7 +555,7 @@ Section with_cpp.
     : mpred :=
     [| type_of_spec spec = type_of_value (Oconstructor ctor) |] **
     (* forall each argument, apply to [fs_spec ti] *)
-    □ Forall Q : val -> mpred, Forall vals,
+    □ Forall Q : ptr -> epred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_ctor ctor ti vals Q.
 
   (** ** Weakest precondition of a destructor *)
@@ -607,8 +584,8 @@ Section with_cpp.
   (** [wp_dtor dtor ti args Q] defines the semantics of the destructor [dtor] when
       applied to [args] with post-condition [Q].
    *)
-  Definition wp_dtor (dtor : Dtor) (ti : thread_info) (args : list val)
-             (Q : val -> epred) : mpred :=
+  Definition wp_dtor (dtor : Dtor) (ti : thread_info) (args : list ptr)
+             (Q : ptr -> epred) : mpred :=
     match dtor.(d_body) with
     | None => False
     | Some Defaulted => False
@@ -624,7 +601,7 @@ Section with_cpp.
                (* ^ the identity of the object is destroyed *)
                   (wpd_bases ti dtor.(d_class) thisp (List.map fst s.(s_bases))
                   (* ^ the base classes are destroyed (reverse order) *)
-                     (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |> Q Vvoid)))
+                     (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |> Q invalid_ptr)))
                      (* ^ the operations above destroy each object returning its memory to
                         the abstract machine. Then the abstract machine gives this memory
                         back to the program.
@@ -639,12 +616,12 @@ Section with_cpp.
                automatically where they can prove the active entry has a trivial destructor.
              *)
             |={⊤}=> thisp |-> tblockR (Tnamed dtor.(d_class)) 1 **
-                   (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |> Q Vvoid)
+                   (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |> Q invalid_ptr)
           | _ => None
           end%I
       in
       match epilog , args with
-      | Some epilog , Vptr thisp :: nil =>
+      | Some epilog , thisp :: nil =>
         let ρ := Remp (Some thisp) Tvoid in
           |> (* the function prolog consumes a step. *)
              wp ⊤ ti ρ body
@@ -688,7 +665,7 @@ Section with_cpp.
   Definition dtor_ok (dtor : Dtor) (ti : thread_info) (spec : function_spec)
     : mpred :=
     [| type_of_spec spec = type_of_value (Odestructor dtor) |] **
-    □ Forall Q : val -> mpred, Forall vals,
+    □ Forall Q : ptr -> epred, Forall vals,
       spec.(fs_spec) ti vals Q -* wp_dtor dtor ti vals Q.
 
 End with_cpp.

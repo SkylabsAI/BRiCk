@@ -40,7 +40,7 @@ Variant ReturnType : Set :=
 | Normal
 | Break
 | Continue
-| ReturnVal (_ : val)
+| ReturnVal (_ : ptr)
 | ReturnVoid
 .
 
@@ -68,7 +68,7 @@ Section Kpred.
           | _ => False
           end).
 
-  Definition val_return (P : val -> mpred) : KpredI :=
+  Definition val_return (P : _ -> mpred) : KpredI :=
     KP (funI rt =>
         match rt with
         | ReturnVal v => P v

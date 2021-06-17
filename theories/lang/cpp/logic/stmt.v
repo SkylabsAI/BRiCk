@@ -53,7 +53,7 @@ Module Type Stmt.
     Axiom wp_return : forall ρ c e (Q : KpredI),
           (let rty := erase_qualifiers (get_return_type ρ) in
            Forall ra : ptr, ra |-> tblockR rty 1 -*
-                            wp_initialize M ti ρ rty ra e (fun free => free ** Q (ReturnVal (Vptr ra))))
+                            wp_initialize M ti ρ rty ra e (fun free => free ** Q (ReturnVal ra)))
        |-- wp ρ (Sreturn (Some (c, e))) Q.
 
     Axiom wp_break : forall ρ Q,
