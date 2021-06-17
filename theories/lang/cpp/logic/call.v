@@ -24,11 +24,12 @@ Section with_resolve.
     match ts , es with
     | nil , nil => Q nil emp%I
     | t :: ts , e :: es =>
-      Exists (Qarg : ptr -> FreeTemps -> mpred),
-        wp_prval e Qarg **
+      wp_auto_alloc ti t (fun p free =>
+        Exists (Qarg : FreeTemps -> mpred),
+        wp_initialize M ti ρ t p e Qarg **
         wp_args ts es (fun vs frees =>
-                         Forall a free,
-                         Qarg a free -* Q (a :: vs) (destruct_val ti false t a (a |-> tblockR t 1) ** free ** frees))
+                         Forall free,
+                         Qarg free -* Q (p :: vs) (free ** frees)))
     | _ , _ => False (* mismatched arguments and parameters. *)
     end.
 
@@ -37,16 +38,14 @@ Section with_resolve.
   Proof.
     elim; destruct es => /=; try solve [ by intros; iIntros "? []" ].
     { by iIntros (? ?) "H"; iApply "H". }
-    { iIntros (? ?) "H K".
-      iDestruct "K" as (Qarg) "K".
+    { rewrite /wp_auto_alloc/wp_alloc.
+      iIntros (? ?) "H K"; iIntros (?) "at".
+      iDestruct ("K" with "at") as (Qarg) "K".
       iExists _.
       iDestruct "K" as "[$ K]".
       iRevert "K"; iApply H.
-      iIntros (?? ?) "X".
-      iIntros (??) "f".
-      iDestruct ("X" with "f") as "X".
-      iRevert "X"; iApply "H".
-      iPureIntro; simpl; eauto. }
+      iIntros (?? ?) "X"; iIntros (?) "Qarg".
+      iApply "H"; first by simpl; eauto. by iApply "X". }
   Qed.
 
   Lemma wp_args_frame : forall ts es Q Q',
