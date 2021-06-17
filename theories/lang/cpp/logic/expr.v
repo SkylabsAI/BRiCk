@@ -683,12 +683,11 @@ Module Type Expr.
         wp_prval (Ealign_of (inl (type_of e)) ty') Q
         |-- wp_prval (Ealign_of (inr e) ty') Q.
  *)
-
     Let materialize_into_temp ty e Q :=
       let raw_type := erase_qualifiers ty in
-      Forall addr : ptr, addr |-> tblockR raw_type 1 -*
+      wp_auto_alloc ti raw_type (fun addr free' =>
         wp_init ty addr e (fun free =>
-           Q (Vptr addr) (free ** destruct_val false raw_type addr (addr |-> tblockR raw_type 1))).
+           Q (Vptr addr) (free ** free'))).
     (* XXX This use of [Vptr] represents an aggregate.
        XXX The destruction of the value isn't quite correct because we explicitly
            generate the destructors.
@@ -1003,9 +1002,8 @@ DONE ***)
     Axiom wp_xval_temp : forall e Q,
         (let ty := type_of e in
          let raw_type := erase_qualifiers ty in
-         Forall a : ptr, a |-> tblockR raw_type 1 -*
-                  wp_init ty a e
-                          (fun free => Q a (destruct_val false ty a (a |-> tblockR raw_type 1 ** free))))
+         wp_auto_alloc ti raw_type (fun a free' =>
+                  wp_init ty a e (fun free => Q a (free ** free'))))
         |-- wp_xval (Ematerialize_temp e) Q.
 
 (** TODO PORT open question?

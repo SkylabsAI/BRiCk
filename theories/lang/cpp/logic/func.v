@@ -598,7 +598,7 @@ Section with_cpp.
     match bases with
     | nil => Q
     | base :: bases =>
-      destruct_val ti false (Tnamed base) (this ., _base cls base) (wpd_bases ti cls this bases Q)
+      destruct_val ti Direct (Tnamed base) (this ., _base cls base) (wpd_bases ti cls this bases Q)
     end.
 
   Fixpoint wpd_members
@@ -608,7 +608,7 @@ Section with_cpp.
     match members with
     | nil => Q
     | member :: members =>
-      destruct_val ti false member.(mem_type) (this ., _field {| f_name := member.(mem_name) ; f_type := cls |})
+      destruct_val ti Direct member.(mem_type) (this ., _field {| f_name := member.(mem_name) ; f_type := cls |})
            (wpd_members ti cls this members Q)
     end.
 

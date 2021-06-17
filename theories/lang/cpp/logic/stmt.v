@@ -74,7 +74,7 @@ Module Type Stmt.
         let rty := erase_qualifiers ty in
         let destroy free :=
             free ** k (Rbind x addr ρ)
-                      (fun P => destruct_val false ty addr (addr |-> tblockR rty 1 ** P))
+                      (fun P => destruct_val Direct ty addr (addr |-> tblockR rty 1 ** P))
         in
         match init with
         | Some init => addr |-> tblockR rty 1 -* wp_initialize M ti ρ_init ty addr init destroy

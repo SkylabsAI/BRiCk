@@ -63,7 +63,7 @@ Section destroy.
      no-op destructors. Thus, we can model the "not having a destructor"
      as an optimization. This choice makes the semantics more uniform.
    *)
-  Fixpoint destruct_val (dispatch : bool) (t : type) (this : ptr) (Q : mpred)
+  Fixpoint destruct_val (dispatch : call_type) (t : type) (this : ptr) (Q : mpred)
            {struct t}
   : mpred :=
     match t with
@@ -71,10 +71,10 @@ Section destroy.
     | Tnamed cls =>
       match σ.(genv_tu) !! cls with
       | Some (Gstruct s) =>
-        (** when [dispatch:=true], we should use virtual dispatch
+        (** when [dispatch:=Virtual], we should use virtual dispatch
             to invoke the destructor.
          *)
-        if dispatch && has_virtual_dtor s then
+        if bool_decide (dispatch = Virtual) && has_virtual_dtor s then
           resolve_dtor cls this (fun fimpl impl_class this' =>
             let ty := Tfunction Tvoid nil in
             |> mspec σ.(genv_tu).(globals) (Tnamed impl_class) ty ti (Vptr fimpl) (this' :: nil) (fun _ => Q))
@@ -105,7 +105,7 @@ Section destroy.
     | Tarray t sz =>
       (* NOTE when destroying an array, elements of the array are destroyed with non-virtual dispatch. *)
       fold_right (fun i Q => valid_ptr (this .[ t ! Z.of_nat i ]) **
-         destruct_val false t (this .[ t ! Z.of_nat i ]) Q) Q (List.rev (seq 0 (N.to_nat sz)))
+         destruct_val Direct t (this .[ t ! Z.of_nat i ]) Q) Q (List.rev (seq 0 (N.to_nat sz)))
     | _ =>
       (* |={↑pred_ns}=> *) this |-> anyR (erase_qualifiers t) 1 ** (this |-> tblockR (erase_qualifiers t) 1 -* Q)
       (* emp *)

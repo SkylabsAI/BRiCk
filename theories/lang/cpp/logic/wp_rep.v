@@ -42,7 +42,7 @@ Section contextualized.
   (** [wp_free ty addr Q] frees the memory of a [ty] at address [addr].
    *)
   Definition wp_free (ty : type) (addr : ptr) (Q : mpred) : mpred :=
-    destruct_val ti false ty addr (addr |-> tblockR (σ:=σ) ty 1 ** Q).
+    destruct_val ti Direct ty addr (addr |-> tblockR (σ:=σ) ty 1 ** Q).
 
   (** [wp_auto_alloc ty Q] allocates storage for [ty] and passes the address
       to [Q]. Generally, [Q] will initialize this memory.
