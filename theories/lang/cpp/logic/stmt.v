@@ -66,22 +66,18 @@ Module Type Stmt.
         |-- wp ρ (Sexpr vc e) Q.
 
     (* This definition performs allocation of local variables.
-     *
-     * TODO there is a lot of overlap between this and [wp_initialize] (which does initialization
-     * of aggregate fields).
      *)
     Definition wp_decl_var (ρ ρ_init : region) (x : ident) (ty : type) (init : option Expr)
                (k : region -> (mpred -> mpred) -> mpredI)
       : mpred :=
       Forall (addr : ptr),
         let rty := erase_qualifiers ty in
-        addr |-> tblockR rty 1 -*
         let destroy free :=
             free ** k (Rbind x addr ρ)
                       (fun P => destruct_val false ty addr (addr |-> tblockR rty 1 ** P))
         in
         match init with
-        | Some init => wp_init M ti ρ_init ty addr init destroy
+        | Some init => addr |-> tblockR rty 1 -* wp_initialize M ti ρ_init ty addr init destroy
         | None => default_initialize ty addr destroy
         end.
 
@@ -90,15 +86,21 @@ Module Type Stmt.
         |-- wp_decl_var ρ ρ_init x ty init k -* wp_decl_var ρ ρ_init x ty init k'.
     Proof.
       rewrite /wp_decl_var/=.
-      intros. iIntros "X Y" (?) "at".
-      iDestruct ("Y" with "at") as "Y"; iRevert "Y".
-      case_match;
-        [ iApply wp_init_frame; [ reflexivity | ]
-        | iApply default_initialize_frame ];
+      intros. iIntros "X Y" (?).
+      case_match.
+      { iIntros "at"; iDestruct ("Y" with "at") as "Y".
+        iRevert "Y".
+        iApply wp_initialize_frame.
         iIntros (?) "[$ x]"; iRevert "x"; iApply "X";
         iIntros (??) "X";
         iApply destruct_val_frame;
-        iIntros "[$ x]"; iApply "X"; eauto.
+        iIntros "[$ x]"; iApply "X"; eauto. }
+      { iSpecialize ("Y" $! addr); iRevert "Y".
+        iApply default_initialize_frame.
+        iIntros (?) "[$ x]"; iRevert "x"; iApply "X";
+        iIntros (??) "X";
+        iApply destruct_val_frame;
+        iIntros "[$ x]"; iApply "X"; eauto. }
     Qed.
 
     (*

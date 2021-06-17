@@ -10,7 +10,7 @@ Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.bi.errors.
 From bedrock.lang.cpp.logic Require Import
-     pred path_pred heap_pred wp.
+     pred path_pred heap_pred wp wp_rep.
 Require Import bedrock.lang.cpp.heap_notations.
 
 Module Type Init.
@@ -83,17 +83,16 @@ Module Type Init.
       iModIntro. iIntros (???). iApply IHty.
     Qed.
 
-    (*
-    (* [wp_initialize] provides "constructor" semantics for types.
-     * For aggregates, simply delegates to [wp_init], but for primitives,
-     * the semantics is to evaluate the primitive and initialize the location
-     * with the value.
-     *
-     * NOTE this is written as a recursive function rather than by using [decompose_type] because
-     * we want simplification to reduce it.
-     *
-     * NOTE this assumes that the memory has *not* yet been given to the C++ abstract machine.
-     * TODO make this consistent with [default_initialize].
+    (* [wp_initialize ty addr init k] is the pre-condition to a declaration
+       that initializes a value of type [ty] at address [addr] by the expression
+       [init].
+
+       NOTE that this is distinguished from (the similarly named) [wp_init] because
+       initialization of a reference (or rvalue-reference) evaluates the initialization
+       expression using [wp_lval] (or [wp_xval]) rather than [wp_init].
+
+       NOTE this assumes that the memory has *not* yet been given to the C++ abstract machine.
+       TODO make this consistent with [default_initialize].
      *)
     Definition wp_initialize (ty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       match drop_qualifiers ty with
@@ -101,25 +100,17 @@ Module Type Init.
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
       | Tbool as ty
-      | Tint _ _ as ty =>
-        wp_prval init (fun v free =>
-                         addr |-> tblockR (erase_qualifiers ty) 1 **
-                         (   addr |-> primR (erase_qualifiers ty) 1 v
-                          -* k free))
+      | Tint _ _ as ty => wp_init ty addr init k
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _
-      | Tnamed _ => wp_init ty addr (not_mine init) k
+      | Tnamed _ => wp_init ty addr init k
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
-      | Treference _ =>
-        wp_lval init (fun p free =>
-                        addr |-> tblockR (erase_qualifiers ty) 1 **
-                        ( addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -* k free))
-      | Trv_reference _ => (* reference fields are not supported *)
-        wp_xval init (fun p free =>
-                        addr |-> tblockR (erase_qualifiers ty) 1 **
-                        ( addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -* k free))
+      | Treference _ as ty =>
+        wp_lval init (fun p free => wp_set ty addr (Vptr p) (k free))
+      | Trv_reference _ as ty => (* reference fields are not supported *)
+        wp_xval init (fun p free => wp_set ty addr (Vptr p) (k free))
       | Tfunction _ _ => False (* functions not supported *)
 
       | Tqualified _ ty => False (* unreachable *)
@@ -132,20 +123,11 @@ Module Type Init.
       (Forall free, Q free -* Q' free) |-- wp_initialize ty obj e Q -* wp_initialize ty obj e Q'.
     Proof using.
       rewrite /wp_initialize.
-      case_eq (drop_qualifiers ty) =>/=; intros; eauto.
-      { iIntros "a". iApply wp_prval_frame; try reflexivity.
-        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
+      case_eq (drop_qualifiers ty) =>/=; intros; eauto;
+        try solve [ iIntros "a"; iApply wp_init_frame;  by try reflexivity ].
       { iIntros "a". iApply wp_lval_frame; try reflexivity.
         iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
       { iIntros "a". iApply wp_xval_frame; try reflexivity.
-        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
-      { iIntros "a". iApply wp_prval_frame; try reflexivity.
-        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
-      { iIntros "a". iApply wp_init_frame => //. }
-      { iIntros "a". iApply wp_init_frame => //. }
-      { iIntros "a". iApply wp_prval_frame; try reflexivity.
-        iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
-      { iIntros "a". iApply wp_prval_frame; try reflexivity.
         iIntros (v f) "[$ X] Y"; iApply "a"; iApply "X"; eauto. }
     Qed.
 
@@ -154,7 +136,6 @@ Module Type Init.
     Proof using.
       iIntros "A B"; iRevert "A"; iApply wp_initialize_frame; eauto.
     Qed.
-*)
 
   End with_resolve.
 
