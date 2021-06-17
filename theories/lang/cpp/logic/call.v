@@ -20,6 +20,11 @@ Section with_resolve.
   Local Notation wp_init := (wp_init (resolve:=σ) M ti ρ).
 
   (** TODO [Q] could be [list ptr -> FreeTemps -> mpred] *)
+  (**
+  [wp_args] encodes parameter passing as specified by the [standard](https://eel.is/c++draft/expr.call#7):
+  > When a function is called, each parameter ([dcl.fct]) is initialized ([dcl.init], [class.copy.ctor])
+  > with its corresponding argument.
+  *)
   Fixpoint wp_args (ts : list type) (es : list Expr) (Q : list val -> FreeTemps -> mpred)
   : mpred :=
     match ts , es with
