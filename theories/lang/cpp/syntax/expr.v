@@ -155,7 +155,7 @@ Inductive Expr : Set :=
   * operator shows up as a function call, not a `Eunop` or `Ebinop`.
   * this includes the assignment operator for classes.
   *)
-| Eread_ref (_ : Expr) (_ : type) (* type = type_of e *)
+| Eread_ref (_ : Expr) (* type = type_of e *)
 | Ederef (_ : Expr) (_ : type)
 | Eaddrof (e : Expr) (* type = Tptr (type_of e) *)
 | Eassign (e _ : Expr) (_ : type) (* XXX type = type_of e *)

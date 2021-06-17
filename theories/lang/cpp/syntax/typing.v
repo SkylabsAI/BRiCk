@@ -15,8 +15,8 @@ Fixpoint type_of (e : Expr) : type :=
   | Eint _ t => t
   | Ebool _ => Tbool
   | Eunop _ _ t
-  | Ebinop _ _ _ t
-  | Eread_ref _ t
+  | Ebinop _ _ _ t => t
+  | Eread_ref e => type_of e
   | Ederef _ t => t
   | Eaddrof e => Tptr (type_of e)
   | Eassign _ _ t
