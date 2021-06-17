@@ -72,5 +72,14 @@ Section contextualized.
     | Lvalue => wp_lval M ti ρ e Q
     | Prvalue => wp_prval e Q
     end.
+
+  (** [wp_set ty addr v Q] initializes (i.e. from a [tblockR] the value stored at [addr]
+      (of type [ty]) to [v].
+
+      NOTE that [ty] *must* be a primitive.
+   *)
+  Definition wp_set (ty : type) (addr : ptr) (v : val) (Q : mpred) : mpred :=
+    addr |-> tblockR ty 1 ** (addr |-> primR ty 1 v -* Q).
+
 End contextualized.
 

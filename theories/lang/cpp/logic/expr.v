@@ -75,14 +75,6 @@ Module Type Expr.
       wp_init ty addr e Q
       |-- wp_init ty addr (Econst_ref (Gname cnst) ty) Q.
 
-    (* Definition alloc_prim (ty : type) (v : val) (Q : ptr -> FreeTemps -> mpred) : mpred := *)
-    (*   Forall p : ptr, p |-> primR (drop_qualifiers ty) 1 v -* *)
-    (*                   Q p (destruct_val false (drop_qualifiers ty) p emp). *)
-    (* Definition read_prim (ty : type) (p : ptr) (Q : val -> mpred) : mpred := *)
-    (*   Exists v, (Exists q, p |-> primR ty q v ** True) //\\ Q v. *)
-    Definition wp_set (ty : type) (addr : ptr) (v : val) (Q : mpred) : mpred :=
-      addr |-> tblockR ty 1 ** (addr |-> primR ty 1 v -* Q).
-
     (* integer literals are prvalues *)
     Axiom wp_prval_int : forall addr n ty Q,
           [! has_type (Vint n) (drop_qualifiers ty) !] //\\ wp_set ty addr (Vint n) (Q emp)
