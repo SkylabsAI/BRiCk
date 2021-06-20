@@ -9,6 +9,7 @@ From bedrock.lang.cpp.logic Require Import
 
 Set Primitive Projections.
 
+Coercion _eqv : val >-> ptr.
 Section with_cpp.
   Context `{Σ : cpp_logic ti}.
 
@@ -26,9 +27,6 @@ Section with_cpp.
 
   Canonical Structure Rep_AT : AT :=
     {| AT_at := rep._offsetR (Σ:=Σ) |}.
-
-  Canonical Structure mpred_val_AT : AT :=
-    {| AT_at v := rep._at (Σ:=Σ) (_eqv v) |}.
 
 
   Canonical Structure Rep_field_AT {σ : genv} : AT :=
