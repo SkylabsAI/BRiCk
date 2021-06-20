@@ -11,7 +11,8 @@ Set Primitive Projections.
 
 Coercion _eqv : val >-> ptr.
 Section with_cpp.
-  Context `{Σ : cpp_logic ti}.
+  Context `{Σ : cpp_logic}.
+
 
   (* "points to" *)
   Structure AT : Type :=
@@ -91,7 +92,7 @@ Notation "p .[ t ! n ]" := (_offset_ptr (o_sub _ t n) p)
 (* Test suite *)
 Section test_suite.
 
-  Context {σ : genv} `{Σ : cpp_logic ti} (R : Rep) (f g : field) (o : offset) (l : ptr) (p : ptr) (v : val).
+  Context {σ : genv} `{Σ : cpp_logic} (R : Rep) (f g : field) (o : offset) (l : ptr) (p : ptr) (v : val).
 
   Example _0 := |> l |-> R.
 
