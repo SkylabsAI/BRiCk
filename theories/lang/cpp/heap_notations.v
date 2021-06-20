@@ -21,8 +21,8 @@ Section with_cpp.
   }.
   Arguments AT_at {!AT} _ _ : rename.
 
-  Canonical Structure mpred_AT : AT :=
-    {| AT_at := rep._at (Σ:=Σ) |}.
+  Canonical Structure mpred_ptr_AT : AT :=
+    {| AT_at v := rep._at (Σ:=Σ) v |}.
 
   Canonical Structure Rep_AT : AT :=
     {| AT_at := rep._offsetR (Σ:=Σ) |}.
@@ -30,8 +30,6 @@ Section with_cpp.
   Canonical Structure mpred_val_AT : AT :=
     {| AT_at v := rep._at (Σ:=Σ) (_eqv v) |}.
 
-  Canonical Structure mpred_ptr_AT : AT :=
-    {| AT_at v := rep._at (Σ:=Σ) v |}.
 
   Canonical Structure Rep_field_AT {σ : genv} : AT :=
     {| AT_at v := rep._offsetR (Σ:=Σ) (o_field σ v) |}.
