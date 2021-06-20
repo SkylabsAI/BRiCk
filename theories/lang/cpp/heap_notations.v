@@ -25,7 +25,7 @@ Section with_cpp.
   ; TO_OFFSET_to : Type
   ; #[canonical=no] _to_offset {σ : genv} : TO_OFFSET_from -> TO_OFFSET_to
   }.
-  Arguments _to_offset {!TO_OFFSET} _ : rename.
+  #[global] Arguments _to_offset {!TO_OFFSET _} _ : rename.
 
   Canonical Structure TO_OFFSET_field := {| TO_OFFSET_from := field; TO_OFFSET_to := offset; _to_offset := o_field |}.
   Canonical Structure TO_OFFSET_offset := {| TO_OFFSET_from := offset; TO_OFFSET_to := offset; _to_offset σ (o : offset) := o |}.
@@ -39,7 +39,7 @@ Section with_cpp.
   ; AT_result :> Type
   ; #[canonical=no] AT_at :> AT_lhs -> AT_rhs -> AT_result
   }.
-  Arguments AT_at {!AT} _ _ : rename.
+  #[global] Arguments AT_at {!AT} _ _ : rename.
 
   Canonical Structure mpredA : AT :=
     {| AT_lhs := ptr; AT_rhs := Rep; AT_result := mpred; AT_at := _at |}.
@@ -53,7 +53,7 @@ Section with_cpp.
   ; DOT_to : Type
   ; #[canonical=no] DOT_dot : offset -> DOT_from -> DOT_to
   }.
-  Arguments DOT_dot {!AT} _ _ : rename.
+  #[global] Arguments DOT_dot {!AT} _ _ : rename.
 
   Canonical Structure DOT_offset_ptr : DOT :=
     {| DOT_from := ptr; DOT_to := ptr; DOT_dot o p := _offset_ptr p o |}.
