@@ -230,10 +230,13 @@ Section with_cpp.
 
   (** [bind_vars args locs r Q] preforms initialization of the parameters
       given the values being passed.
+
+      NOTE the [FreeTemps] in [Q] is no longer necessary since allocation
+      is performed by the caller
    *)
   Fixpoint bind_vars (args : list (ident * type)) (locs : list ptr) (r : region) (Q : region -> FreeTemps -> mpred) : mpred :=
     match args , locs with
-    | nil , nil => Q r emp
+    | nil , nil => Q r (fun x => x)
     | (x,ty) :: xs , p :: vs  =>
       bind_vars xs vs (Rbind_check x p r) Q
     | _ , _ => ERROR "bind_vars: argument mismatch"

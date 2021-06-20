@@ -17,7 +17,6 @@ Section with_resolve.
   Local Notation wp_lval := (wp_lval (resolve:=σ) M ti ρ).
   Local Notation wp_prval := (wp_prval (resolve:=σ) M ti ρ).
   Local Notation wp_xval := (wp_xval (resolve:=σ) M ti ρ).
-  Local Notation wp_init := (wp_init (resolve:=σ) M ti ρ).
 
   (**
   [wp_args] encodes parameter passing as specified by the [standard](https://eel.is/c++draft/expr.call#7):
@@ -29,27 +28,29 @@ Section with_resolve.
   [wp_args] encodes parameter passing as specified by the [standard](https://eel.is/c++draft/expr.call#7):
   > When a function is called, each parameter ([dcl.fct]) is initialized ([dcl.init], [class.copy.ctor])
   > with its corresponding argument.
-  *)
-  Fixpoint wp_args (ts : list type) (es : list Expr) (Q : list ptr -> FreeTemps -> mpred)
+   *)
+  Fixpoint wp_args' (ts : list type) (es : list Expr) (Q : list ptr -> list FreeTemps -> mpred)
   : mpred :=
     match ts , es with
-    | nil , nil => Q nil emp%I
+    | nil , nil => Q nil nil
     | t :: ts , e :: es =>
-      Forall a : ptr, a |-> tblockR (erase_qualifiers t) 1 -*
-      Exists Qarg,
-        wp_initialize M ti ρ t a e Qarg **
-        wp_args ts es (fun vs frees =>
-                         Forall free,
-                         Qarg free -* Q (a :: vs) (destruct_val (σ:=σ) ti false t a (a |-> tblockR (σ:=σ) t 1) ** free ** frees))
+      Forall a,
+      Exists Qarg : FreeTemp -> FreeTemps -> mpred,
+        wp_initialize M ti ρ false t a e Qarg **
+        wp_args' ts es (fun ps frees =>
+                         Forall free free',
+                         Qarg free free' -* Q (a :: ps) ((fun x => free (free' x)) :: frees))
     | _ , _ => False (* mismatched arguments and parameters. *)
     end.
+  Definition wp_args (ts : list type) (es : list Expr) (Q : list ptr -> FreeTemps -> mpred) : mpred :=
+    wp_args' ts es (fun ps frees => Q ps (fun x => ([∗list] f ∈ frees, f emp) ** x)).
 
   Lemma wp_args_frame_strong : forall ts es Q Q',
       (Forall vs free, [| length vs = length es |] -* Q vs free -* Q' vs free) |-- wp_args ts es Q -* wp_args ts es Q'.
-  Proof.
+  Proof. (*
     elim; destruct es => /=; try solve [ by intros; iIntros "? []" ].
     { by iIntros (? ?) "H"; iApply "H". }
-    { iIntros (? ?) "H K"; iIntros (?) "at".
+    { iIntros (? ?) "H" => /wp_args/=.  iIntros (?) "at".
       iDestruct ("K" with "at") as (Qarg) "K".
       iExists _.
       iDestruct "K" as "[$ K]".
@@ -59,7 +60,7 @@ Section with_resolve.
       iDestruct ("X" with "f") as "X".
       iRevert "X"; iApply "H".
       iPureIntro; simpl; eauto. }
-  Qed.
+  Qed. *) Admitted.
 
   Lemma wp_args_frame : forall ts es Q Q',
       (Forall vs free, Q vs free -* Q' vs free) |-- wp_args ts es Q -* wp_args ts es Q'.

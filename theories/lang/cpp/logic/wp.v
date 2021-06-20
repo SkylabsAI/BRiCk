@@ -24,8 +24,18 @@ Set Primitive Projections.
 Definition epred `{Σ : cpp_logic thread_info} := mpred.
 Global Bind Scope bi_scope with epred.
 
-Definition FreeTemps `{Σ : cpp_logic thread_info} := mpred.
-Global Bind Scope bi_scope with FreeTemps.
+Definition FreeTemp `{Σ : cpp_logic thread_info} := epred -> mpred.
+Definition FreeTemps `{Σ : cpp_logic thread_info} := epred -> mpred.
+(*
+Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
+| Top
+| Then (_ : list FreeTemps) (_ : FreeTemps).
+(*Global Bind Scope bi_scope with FreeTemps. *)
+ *)
+(* TEMPORARY *)
+Instance FreeTemps_Equiv `{Σ : cpp_logic thread_info} : Equiv FreeTemps := fun P Q => forall e, P e -|- Q e.
+Instance FreeTemps_refl `{Σ : cpp_logic thread_info} : @Reflexive FreeTemps (≡).
+Proof. red. red. red. reflexivity. Qed.
 
 (** Statements *)
 (* continuations
@@ -94,8 +104,8 @@ Section Kpred.
   Definition Kat_exit (Q : mpred -> mpred) (k : Kpred) : Kpred :=
     KP (funI rt => Q (k rt)).
 
-  Definition Kfree (a : mpred) : Kpred -> Kpred :=
-    Kat_exit (fun P => a ** P).
+  Definition Kfree (free : FreeTemp) : Kpred -> Kpred :=
+    Kat_exit (fun P => free P).
 
   #[global] Instance mpred_Kpred_BiEmbed : BiEmbed mpredI KpredI := _.
 
@@ -109,10 +119,6 @@ End Kpred.
 
 Section with_cpp.
   Context `{Σ : cpp_logic thread_info}.
-
-  (* [SP] denotes the sequence point for an expression *)
-  Definition SP (Q : val -> mpred) (v : val) (free : FreeTemps) : mpred :=
-    free ** Q v.
 
   (* The expressions in the C++ language are categorized into five
    * "value categories" as defined in:
@@ -224,6 +230,7 @@ Section with_cpp.
      way) between constructors and regular functions.
      TODO this is something that we should probably revisit at some point.
    *)
+(*
   Parameter wp_init
     : forall {resolve:genv}, coPset -> thread_info -> region ->
                         type -> ptr -> Expr ->
@@ -283,49 +290,49 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_init.
     Qed.
   End wp_init.
-
-  (* evaluate a prvalue that "computes the value of an operand of an operator"
+*)
+  (* evaluate a prvalue that "initializes an object"
    *)
   Parameter wp_prval
     : forall {resolve:genv}, coPset -> thread_info -> region ->
         Expr ->
-        (val -> FreeTemps -> epred) -> (* result -> free -> post *)
+        (ptr -> FreeTemp -> FreeTemps -> epred) -> (* result -> top-free -> free -> post *)
         (* ^^ TODO the biggest question is what does this [val] represent
          *)
         mpred. (* pre-condition *)
 
   Axiom wp_prval_shift : forall σ M ti ρ e Q,
-      (|={M}=> wp_prval (resolve:=σ) M ti ρ e (fun v free => |={M}=> Q v free))
+      (|={M}=> wp_prval (resolve:=σ) M ti ρ e (fun v free frees => |={M}=> Q v free frees))
     ⊢ wp_prval (resolve:=σ) M ti ρ e Q.
 
   Axiom wp_prval_frame :
     forall σ1 σ2 M ti ρ e k1 k2,
       genv_leq σ1 σ2 ->
-      Forall v f, k1 v f -* k2 v f |-- @wp_prval σ1 M ti ρ e k1 -* @wp_prval σ2 M ti ρ e k2.
+      Forall v f fs, k1 v f fs -* k2 v f fs |-- @wp_prval σ1 M ti ρ e k1 -* @wp_prval σ2 M ti ρ e k2.
   Global Instance Proper_wp_prval :
     Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==>
-            pointwise_relation _ (pointwise_relation _ lentails) ==> lentails)
+            pointwise_relation _ (pointwise_relation _ (pointwise_relation _ lentails)) ==> lentails)
            (@wp_prval).
   Proof. repeat red; intros; subst.
          iIntros "X"; iRevert "X".
          iApply wp_prval_frame; eauto.
-         iIntros (v); iIntros (f); iApply H4.
+         iIntros (v f fs); iApply H4.
   Qed.
 
   Section wp_prval.
     Context {σ : genv} (M : coPset) (ti : thread_info) (ρ : region) (e : Expr).
     Local Notation WP := (wp_prval (resolve:=σ) M ti ρ e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : val → FreeTemps → epred.
+    Implicit Types Q : ptr → FreeTemp -> FreeTemps → epred.
 
-    Lemma wp_prval_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
+    Lemma wp_prval_wand Q1 Q2 : WP Q1 |-- (∀ v f fs, Q1 v f fs -* Q2 v f fs) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_prval_frame with "HK Hwp"). Qed.
     Lemma fupd_wp_prval Q : (|={M}=> WP Q) |-- WP Q.
     Proof.
       rewrite -{2}wp_prval_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_prval_wand with "Hwp"). auto.
     Qed.
-    Lemma wp_prval_fupd Q : WP (λ v f, |={M}=> Q v f) |-- WP Q.
+    Lemma wp_prval_fupd Q : WP (λ v f fs, |={M}=> Q v f fs) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_prval_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -345,6 +352,69 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_prval.
     Qed.
   End wp_prval.
+
+  (* evaluate a prvalue that "computes the value of an operand of an operator"
+   *)
+  Parameter wp_operand
+    : forall {resolve:genv}, coPset -> thread_info -> region ->
+        Expr ->
+        (val -> FreeTemps -> epred) -> (* result -> top-free -> free -> post *)
+        (* ^^ TODO the biggest question is what does this [val] represent
+         *)
+        mpred. (* pre-condition *)
+
+  Axiom wp_operand_shift : forall σ M ti ρ e Q,
+      (|={M}=> wp_operand (resolve:=σ) M ti ρ e (fun v frees => |={M}=> Q v frees))
+    ⊢ wp_operand (resolve:=σ) M ti ρ e Q.
+
+  Axiom wp_operand_frame :
+    forall σ1 σ2 M ti ρ e k1 k2,
+      genv_leq σ1 σ2 ->
+      Forall v f, k1 v f -* k2 v f |-- @wp_operand σ1 M ti ρ e k1 -* @wp_operand σ2 M ti ρ e k2.
+  Global Instance Proper_wp_operand :
+    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==>
+            pointwise_relation _ (pointwise_relation _ lentails) ==> lentails)
+           (@wp_operand).
+  Proof. repeat red; intros; subst.
+         iIntros "X"; iRevert "X".
+         iApply wp_operand_frame; eauto.
+         iIntros (v f); iApply H4.
+  Qed.
+
+  Section wp_operand.
+    Context {σ : genv} (M : coPset) (ti : thread_info) (ρ : region) (e : Expr).
+    Local Notation WP := (wp_operand (resolve:=σ) M ti ρ e) (only parsing).
+    Implicit Types P : mpred.
+    Implicit Types Q : val → FreeTemps → epred.
+
+    Lemma wp_operand_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
+    Proof. iIntros "Hwp HK". by iApply (wp_operand_frame with "HK Hwp"). Qed.
+    Lemma fupd_wp_operand Q : (|={M}=> WP Q) |-- WP Q.
+    Proof.
+      rewrite -{2}wp_operand_shift. apply fupd_elim. rewrite -fupd_intro.
+      iIntros "Hwp". iApply (wp_operand_wand with "Hwp"). auto.
+    Qed.
+    Lemma wp_operand_fupd Q : WP (λ v fs, |={M}=> Q v fs) |-- WP Q.
+    Proof. iIntros "Hwp". by iApply (wp_operand_shift with "[$Hwp]"). Qed.
+
+    (* proof mode *)
+    Global Instance elim_modal_fupd_wp_operand p P Q :
+      ElimModal True p false (|={M}=> P) P (WP Q) (WP Q).
+    Proof.
+      rewrite /ElimModal. rewrite bi.intuitionistically_if_elim/=.
+      by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_operand.
+    Qed.
+    Global Instance elim_modal_bupd_wp_operand p P Q :
+      ElimModal True p false (|==> P) P (WP Q) (WP Q).
+    Proof.
+      rewrite /ElimModal (bupd_fupd M). exact: elim_modal_fupd_wp_operand.
+    Qed.
+    Global Instance add_modal_fupd_wp_operand P Q : AddModal (|={M}=> P) P (WP Q).
+    Proof.
+      rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_operand.
+    Qed.
+  End wp_operand.
+
 
   (** * xvalues *)
 
@@ -446,10 +516,11 @@ Section with_cpp.
     Context {resolve:genv}.
     Variable (M : coPset) (ti : thread_info) (ρ : region).
 
+    #[deprecated(note="consider carfully")]
     Definition wpe (vc : ValCat) (e : Expr) (Q :val -> FreeTemps -> mpred) : mpred :=
       match vc with
       | Lvalue => @wp_lval resolve M ti ρ e (fun p => Q (Vptr p))
-      | Prvalue => @wp_prval resolve M ti ρ e Q
+      | Prvalue => @wp_prval resolve M ti ρ e (fun p free frees => Q (Vptr p) (fun x => free (frees x)))
       | Xvalue => @wp_xval resolve M ti ρ e (fun p => Q (Vptr p))
       end.
 
@@ -458,27 +529,28 @@ Section with_cpp.
       let '(vc,e) := vce in
       wpe vc e.
 
-    Definition wpAnys := fun ve Q free => wpAny ve (fun v f => Q v (f ** free)).
   End wpe.
 
   Lemma wpe_frame σ1 σ2 M ti ρ vc e k1 k2:
     genv_leq σ1 σ2 ->
     Forall v f, k1 v f -* k2 v f |-- wpe (resolve := σ1) M ti ρ vc e k1 -* wpe (resolve:=σ2) M ti ρ vc e k2.
   Proof.
-    destruct vc => /=; [ | apply wp_prval_frame | ].
+    destruct vc => /=.
     - intros. rewrite -wp_lval_frame; eauto.
       iIntros "h" (v f) "x"; iApply "h"; iFrame.
+    - intros. rewrite -wp_prval_frame; eauto.
+      iIntros "X" (v f fs). iApply "X".
     - intros. rewrite -wp_xval_frame; eauto.
       iIntros "h" (v f) "x"; iApply "h"; iFrame.
   Qed.
 
   Global Instance Proper_wpe :
-    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> lentails ==> lentails) ==> lentails)
+    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> (≡) ==> lentails) ==> lentails)
            (@wpe).
   Proof.
     repeat red; intros; subst.
     iIntros "X"; iRevert "X"; iApply wpe_frame; eauto.
-    iIntros (v f); iApply H5; reflexivity.
+    iIntros (v f); iApply H5; try reflexivity.
   Qed.
 
   Global Instance Proper_wpe' :
@@ -496,7 +568,7 @@ Section with_cpp.
   Proof. destruct e; apply: wpe_frame. Qed.
 
   Global Instance Proper_wpAny :
-    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> lentails ==> lentails) ==> lentails)
+    Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (eq ==> (≡) ==> lentails) ==> lentails)
            (@wpAny).
   Proof.
     repeat red; intros; subst.
@@ -515,15 +587,15 @@ Section with_cpp.
 
   (** * Statements *)
 
-  Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (P ** Q) k.
+  Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (fun x => P (Q x)) k.
   Proof using .
     rewrite /Kfree/Kat_exit/KP/=. constructor => rt.
-    rewrite /=. by rewrite assoc.
+    by rewrite /=.
   Qed.
 
-  Lemma Kfree_emp : forall k, Kfree emp k -|- k.
+  Lemma Kfree_emp : forall k, Kfree (fun x => x) k -|- k.
   Proof using .
-      by rewrite /Kfree/Kat_exit/KP/=; constructor => rt; rewrite /=; rewrite left_id.
+      by rewrite /Kfree/Kat_exit/KP/=; constructor => rt; rewrite /=.
   Qed.
 
   (* evaluate a statement *)
