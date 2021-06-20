@@ -10,84 +10,69 @@ From bedrock.lang.cpp.logic Require Import
 Set Primitive Projections.
 
 Coercion _eqv : val >-> ptr.
+
+(* coercions to [offset], V2 bad *)
+Definition rel_offset : Type := genv -> offset.
+Coercion offset_to_rel_offset := const : offset -> rel_offset.
+Coercion field_to_rel_offset := flip o_field : field -> rel_offset.
+
 Section with_cpp.
   Context `{Σ : cpp_logic}.
 
+  (* coercions to [offset], V1 good *)
+  Structure TO_OFFSET : Type :=
+  { TO_OFFSET_from : Type
+  ; TO_OFFSET_to : Type
+  ; #[canonical=no] _to_offset {σ : genv} : TO_OFFSET_from -> TO_OFFSET_to
+  }.
+  Arguments _to_offset {!TO_OFFSET} _ : rename.
+
+  Canonical Structure TO_OFFSET_field := {| TO_OFFSET_from := field; TO_OFFSET_to := offset; _to_offset := o_field |}.
+  Canonical Structure TO_OFFSET_offset := {| TO_OFFSET_from := offset; TO_OFFSET_to := offset; _to_offset σ (o : offset) := o |}.
+  Canonical Structure TO_OFFSET_ptr := {| TO_OFFSET_from := ptr; TO_OFFSET_to := ptr; _to_offset σ p := p |}.
+  (* Canonical Structure TO_OFFSET_val := {| TO_OFFSET_from := val; TO_OFFSET_to := ptr; _to_offset σ := _eqv |}. *)
 
   (* "points to" *)
   Structure AT : Type :=
   { AT_lhs    : Type
-  ; #[canonical=no] AT_rhs    : Type
-  ; #[canonical=no] AT_result : Type
-  ; #[canonical=no] AT_at     :> AT_lhs -> AT_rhs -> AT_result
+  ; AT_rhs    : Type
+  ; AT_result :> Type
+  ; #[canonical=no] AT_at :> AT_lhs -> AT_rhs -> AT_result
   }.
   Arguments AT_at {!AT} _ _ : rename.
 
-  Canonical Structure mpred_ptr_AT : AT :=
-    {| AT_at v := rep._at (Σ:=Σ) v |}.
+  Canonical Structure mpredA : AT :=
+    {| AT_lhs := ptr; AT_rhs := Rep; AT_result := mpred; AT_at := _at |}.
 
-  Canonical Structure Rep_AT : AT :=
-    {| AT_at := rep._offsetR (Σ:=Σ) |}.
-
-
-  Canonical Structure Rep_field_AT {σ : genv} : AT :=
-    {| AT_at v := rep._offsetR (Σ:=Σ) (o_field σ v) |}.
-
-  (* coercions to [offset] *)
-  Structure TO_OFFSET : Type :=
-  { TO_OFFSET_from :> Type
-  ; #[canonical=no] _to_offset : TO_OFFSET_from -> offset
-  }.
-  Arguments _to_offset {!TO_OFFSET} _ : rename.
-
-  Canonical Structure TO_OFFSET_field {σ : genv} := {| _to_offset := @o_field σ |}.
-  Canonical Structure TO_OFFSET_offset := {| _to_offset (o : offset) := o |}.
+  Canonical Structure RepA : AT :=
+    {| AT_lhs := offset; AT_rhs := Rep; AT_result := Rep; AT_at o := _offsetR o |}.
 
   (* paths *)
   Structure DOT : Type :=
   { DOT_from : Type
-  ; #[canonical=no] DOT_to : Type
+  ; DOT_to : Type
   ; #[canonical=no] DOT_dot : offset -> DOT_from -> DOT_to
   }.
   Arguments DOT_dot {!AT} _ _ : rename.
 
-  Canonical Structure DOT_offset_loc : DOT :=
-    {| DOT_dot o p := _offset_ptr p o |}.
-  Canonical Structure DOT_field_offset {σ : genv} : DOT :=
-    {| DOT_dot o f := o_dot (o_field σ f) o |}.
+  Canonical Structure DOT_offset_ptr : DOT :=
+    {| DOT_from := ptr; DOT_to := ptr; DOT_dot o p := _offset_ptr p o |}.
   Canonical Structure DOT_offset_offset : DOT :=
-    {| DOT_dot o1 o2 := o_dot o2 o1 |}. (** TODO confirm this *)
-(*
-  Canonical Structure DOT_ptr_offset : DOT :=
-    {| DOT_dot o p := _offset_ptr p o |}. *)
-  Canonical Structure DOT_val_offset : DOT :=
-    {| DOT_dot o p := _offset_ptr (_eqv p) o |}.
-
+    {| DOT_from := offset; DOT_to := offset; DOT_dot o1 o2 := o_dot o2 o1 |}.
 End with_cpp.
 
 (* notations *)
 Notation "l |-> r" := (@AT_at _ l r)
   (at level 15, r at level 20, right associativity).
 
-Notation "p ., o" := (@DOT_dot _ (@_to_offset _ o) p)
-  (at level 11, left associativity, only parsing).
+Notation "p ., o" := (@DOT_dot _ (_to_offset _ o) p)
+  (at level 11, left associativity, format "p  .,  o").
 
 Notation "p .[ t ! n ]" := (@DOT_dot _ (@o_sub _ t n%Z) p)
-  (at level 11, left associativity, only parsing).
-Notation ".[ t ! n ]" := ((@o_sub _ t n%Z))
-  (at level 11, only parsing).
-
-Notation "p ., o" := (_offset_ptr p o)
-  (at level 11, left associativity, only printing,
-   format "p  .,  o").
-Notation "p ., o" := (o_dot p o)
-  (at level 11, left associativity, only printing,
-   format "p  .,  o").
+  (at level 11, left associativity, format "p  .[  t  '!'  n  ]").
 
 Notation ".[ t ! n ]" := ((o_sub _ t n))
-  (at level 11, no associativity, only printing, format ".[  t  !  n  ]").
-Notation "p .[ t ! n ]" := (_offset_ptr (o_sub _ t n) p)
-  (at level 11, left associativity, only printing, format "p  .[  t  '!'  n  ]").
+  (at level 11, format ".[  t  !  n  ]").
 
 (* Test suite *)
 Section test_suite.
