@@ -30,14 +30,14 @@ Section with_cpp.
   Canonical Structure TO_OFFSET_field := {| TO_OFFSET_from := field; TO_OFFSET_to := offset; _to_offset := o_field |}.
   Canonical Structure TO_OFFSET_offset := {| TO_OFFSET_from := offset; TO_OFFSET_to := offset; _to_offset σ (o : offset) := o |}.
   Canonical Structure TO_OFFSET_ptr := {| TO_OFFSET_from := ptr; TO_OFFSET_to := ptr; _to_offset σ p := p |}.
-  (* Canonical Structure TO_OFFSET_val := {| TO_OFFSET_from := val; TO_OFFSET_to := ptr; _to_offset σ := _eqv |}. *)
+  Canonical Structure TO_OFFSET_val := {| TO_OFFSET_from := val; TO_OFFSET_to := ptr; _to_offset σ := _eqv |}.
 
   (* "points to" *)
   Structure AT : Type :=
   { AT_lhs    : Type
   ; AT_rhs    : Type
   ; AT_result :> Type
-  ; #[canonical=no] AT_at :> AT_lhs -> AT_rhs -> AT_result
+  ; #[canonical=no] AT_at : AT_lhs -> AT_rhs -> AT_result
   }.
   #[global] Arguments AT_at {!AT} _ _ : rename.
 
@@ -62,17 +62,17 @@ Section with_cpp.
 End with_cpp.
 
 (* notations *)
-Notation "l |-> r" := (@AT_at _ l r)
-  (at level 15, r at level 20, right associativity).
+Notation "l |-> r" := (@AT_at _ (_to_offset l) r)
+  (at level 15, r at level 20, right associativity, only parsing).
 
-Notation "p ., o" := (@DOT_dot _ (_to_offset _ o) p)
-  (at level 11, left associativity, format "p  .,  o").
+Notation "p ., o" := (@DOT_dot _ (_to_offset o) p)
+  (at level 11, left associativity, format "p  .,  o", only parsing).
 
-Notation "p .[ t ! n ]" := (@DOT_dot _ (@o_sub _ t n%Z) p)
-  (at level 11, left associativity, format "p  .[  t  '!'  n  ]").
+Notation "p .[ t ! n ]" := (@DOT_dot _ (@o_sub _ t n%Z) (_to_offset p))
+  (at level 11, left associativity, format "p  .[  t  '!'  n  ]", only parsing).
 
 Notation ".[ t ! n ]" := ((o_sub _ t n))
-  (at level 11, format ".[  t  !  n  ]").
+  (at level 11, format ".[  t  !  n  ]", only parsing).
 
 (* Test suite *)
 Section test_suite.
