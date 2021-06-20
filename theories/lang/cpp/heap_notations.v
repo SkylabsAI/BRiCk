@@ -66,11 +66,7 @@ End with_cpp.
 
 (* notations *)
 Notation "l |-> r" := (@AT_at _ l r)
-  (at level 15, r at level 20, right associativity, only parsing).
-Notation "l |-> r" := (_at l r)
-  (at level 15, r at level 20, right associativity, only printing).
-Notation "l |-> r" := (_offsetR l r)
-  (at level 15, r at level 20, right associativity, only printing).
+  (at level 15, r at level 20, right associativity).
 
 Notation "p ., o" := (@DOT_dot _ (@_to_offset _ o) p)
   (at level 11, left associativity, only parsing).
