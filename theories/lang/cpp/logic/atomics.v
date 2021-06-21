@@ -22,6 +22,7 @@ Section with_Σ.
   Implicit Type (Q : val → mpred).
 
   Local Notation wp_prval := (wp_prval (resolve:=resolve) M ti ρ).
+  Local Notation wp_operand := (wp_operand (resolve:=resolve) M ti ρ).
   Local Notation wp_args := (wp_args (σ:=resolve) M ti ρ).
 
   Local Notation glob_def := (glob_def resolve) (only parsing).
@@ -88,7 +89,7 @@ Section with_Σ.
           wp_args targs es (fun (vs : list ptr) (free : FreeTemps) =>
             wp_atom' ao acc_type (Vptr <$> vs) (fun v => Q v free))
         end)
-    |-- wp_prval (Eatomic ao es ty) Q.
+    |-- wp_operand (Eatomic ao es ty) Q.
   (** ^ TODO the calling convention for atomics should change to be
       more uniform. e.g. atomics should be treated more like builtin
       functions.

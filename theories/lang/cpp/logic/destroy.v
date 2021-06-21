@@ -62,6 +62,12 @@ Section destroy.
      that do not have destructors according to the standard have
      no-op destructors. Thus, we can model the "not having a destructor"
      as an optimization. This choice makes the semantics more uniform.
+
+     The specification of these destructors is:
+     [[[
+       \pre  this |-> anyR ty 1
+       \post this |-> tblockR ty
+     ]]]
    *)
   Fixpoint destruct_val (dispatch : bool) (t : type) (this : ptr) (Q : mpred)
            {struct t}
@@ -128,6 +134,7 @@ Section destroy.
         { iIntros "X Y"; iNext; iRevert "Y"; iApply mspec_frame; iIntros (?); done. } } }
   Qed.
 
+  (*
   (** [wp_alloc ty Q] allocates storage for [ty] and passes the address
       to [Q]. Generally, [Q] will initialize this memory.
    *)
@@ -138,5 +145,12 @@ Section destroy.
    *)
   Definition wp_free (ty : type) (addr : ptr) (Q : mpred) : mpred :=
     destruct_val false ty addr (addr |-> tblockR (σ:=σ) ty 1 ** Q).
+  *)
+
+  (** [delete_val dispatch ty this Q] destructs [this] (of type [t]) and then
+      frees the underlying memory
+   *)
+  Definition delete_val (ty : type) (this : ptr) (Q : mpred) : mpred :=
+    destruct_val false ty this (this |-> tblockR (erase_qualifiers ty) 1 ** Q).
 
 End destroy.

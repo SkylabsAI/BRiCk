@@ -24,8 +24,8 @@ Set Primitive Projections.
 Definition epred `{Σ : cpp_logic thread_info} := mpred.
 Global Bind Scope bi_scope with epred.
 
-Definition FreeTemp `{Σ : cpp_logic thread_info} := epred -> mpred.
 Definition FreeTemps `{Σ : cpp_logic thread_info} := epred -> mpred.
+Notation FreeTemp := FreeTemps.
 (*
 Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
 | Top
@@ -36,6 +36,53 @@ Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
 Instance FreeTemps_Equiv `{Σ : cpp_logic thread_info} : Equiv FreeTemps := fun P Q => forall e, P e -|- Q e.
 Instance FreeTemps_refl `{Σ : cpp_logic thread_info} : @Reflexive FreeTemps (≡).
 Proof. red. red. red. reflexivity. Qed.
+Declare Scope free_scope.
+Delimit Scope free_scope with free.
+
+Module FreeTemps.
+Section FreeTemps.
+  Context `{Σ : cpp_logic thread_info}.
+
+  (** [no_temps] is the unit of [FreeTemps], it signals that there are no
+      resources to destroy.
+   *)
+  Definition id : FreeTemps := fun x => x.
+
+  (** [par_FreeTemps a b] means that [a] and [b] should both be destroyed
+      but the order that they are destroyed is not defined.
+   *)
+  Definition par (a b : FreeTemps) : FreeTemps.
+  Admitted.
+  (** [seq_FreeTemps a b] means that [a] must be destroyed *before* [b].
+   *)
+  Definition seq (a b : FreeTemps) : FreeTemps :=
+    fun P => a (b P).
+
+  Definition wand (f1 f2 : FreeTemp) : mpred :=
+    (Forall x y, (x -* y) -* f1 x -* f2 y).
+
+  Theorem id_wand : |-- wand id id.
+  Proof. rewrite /wand/id. iIntros (??) "$". Qed.
+
+  Theorem seq_wand f1 f1' f2 f2' :
+    wand f1 f1' |-- wand f2 f2' -* wand (seq f1 f2) (seq f1' f2').
+  Proof.
+    rewrite /seq/wand.
+    iIntros "A B" (??) "X".
+      by iApply "A"; iApply "B".
+  Qed.
+
+  Axiom par_wand : forall f1 f1' f2 f2',
+    wand f1 f1' |-- wand f2 f2' -* wand (seq f1 f2) (par f1' f2').
+
+End FreeTemps.
+End FreeTemps.
+
+(* Notations *)
+Infix "|*|" := FreeTemps.par (at level 30) : free_scope.
+Infix ">*>" := FreeTemps.seq (at level 30) : free_scope.
+Bind Scope free_scope with FreeTemp.
+Bind Scope free_scope with FreeTemps.
 
 (** Statements *)
 (* continuations

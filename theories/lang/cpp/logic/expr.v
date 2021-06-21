@@ -66,8 +66,9 @@ Module Type Expr.
     Local Notation uninitR := (uninitR (resolve:=resolve)) (only parsing).
     Local Notation blockR := (blockR (σ:=resolve)) (only parsing).
 
-    Notation no_temps := (fun x => x).
+    #[local] Open Scope free_scope.
 
+    (** TODO move to types *)
     Definition is_primitive (t : type) : bool :=
       match drop_qualifiers t with
       | Tint _ _
@@ -80,7 +81,9 @@ Module Type Expr.
 
     (** [wp_operand] returns the result directly, while [wp_prval] returns it in memory.
         Because of this, [wp_operand] can only be used on primitives. The relationship
-        between the two is defined as.
+        between the two is captured by the following lemma.
+
+        TODO this should be defined in a higher level file.
 
         NOTE: this definition allows us to define [wp_operand] for expressions that
         return primitives and automatically derive [wp_prval] rules using this single rule.
@@ -93,6 +96,22 @@ Module Type Expr.
                            Q p (fun zz => destruct_val false ty p (p |-> tblockR ty 1 ** zz)) frees)
      |-- wp_prval e Q.
 
+    (** There is a relationship in the other direction as well, but it isn't
+        officially sactioned by the standard. In particular, the C++ standard
+        states that there is no materialization that occurs during [wp_operand].
+        However, we know that destroying a primitive is a no-op, so while the
+        materialization isn't legal, it also is not observable (since not all
+        pointers are backed by physical memory).
+        [[[
+          Axiom wp_operand_wp_prval : forall e Q,
+            let ty := type_of e in
+            wp_prval e (fun p free frees =>
+              Exists v, p |-> primR ty 1 v ** Q v frees)
+            |-- wp_operand e Q.
+        ]]]
+     *)
+
+
     (* constants are rvalues *)
     Axiom wp_prval_constant : forall ty cnst e Q,
       glob_def cnst = Some (Gconstant ty (Some e)) ->
@@ -101,17 +120,17 @@ Module Type Expr.
 
     (* integer literals are prvalues *)
     Axiom wp_prval_int : forall n ty Q,
-      [! has_type (Vint n) (drop_qualifiers ty) !] //\\ Q (Vint n) no_temps
+      [! has_type (Vint n) (drop_qualifiers ty) !] //\\ Q (Vint n) FreeTemps.id
       |-- wp_operand (Eint n ty) Q.
 
     (* note that `char` is actually `byte` *)
     Axiom wp_prval_char : forall c ty Q,
-      [! has_type (Vint c) (drop_qualifiers ty) !] //\\ Q (Vint c) no_temps
+      [! has_type (Vint c) (drop_qualifiers ty) !] //\\ Q (Vint c) FreeTemps.id
       |-- wp_operand (Echar c ty) Q.
 
     (* boolean literals are prvalues *)
     Axiom wp_prval_bool : forall (b : bool) Q,
-      Q (Vbool b) no_temps
+      Q (Vbool b) FreeTemps.id
       |-- wp_operand (Ebool b) Q.
 
     (* string literals are a lot more complex than other literals because they
@@ -122,25 +141,25 @@ Module Type Expr.
      *)
     Axiom wp_lval_string : forall bytes ty Q,
         match drop_qualifiers ty with
-        | Tarray ty' _ => Forall p, type_ptr (drop_qualifiers ty') p -* Q p no_temps
+        | Tarray ty' _ => Forall p, type_ptr (drop_qualifiers ty') p -* Q p FreeTemps.id
         | _ => False
         end
       |-- wp_lval (Estring bytes ty) Q.
 
     (* `this` is a prvalue *)
     Axiom wp_prval_this : forall ty Q,
-          valid_ptr (_this ρ) ** Q (Vptr $ _this ρ) no_temps
+          valid_ptr (_this ρ) ** Q (Vptr $ _this ρ) FreeTemps.id
       |-- wp_operand (Ethis ty) Q.
 
 
     (* variables are lvalues *)
     Axiom wp_lval_lvar : forall ty x Q,
-          valid_ptr (_local ρ x) ** Q (_local ρ x) no_temps
+          valid_ptr (_local ρ x) ** Q (_local ρ x) FreeTemps.id
       |-- wp_lval (Evar (Lname x) ty) Q.
 
     (* what about the type? if it exists *)
     Axiom wp_lval_gvar : forall ty x Q,
-          valid_ptr (_global x) ** Q (_global x) no_temps
+          valid_ptr (_global x) ** Q (_global x) FreeTemps.id
       |-- wp_lval (Evar (Gname x) ty) Q.
 
     (* [Emember a f ty] is an lvalue by default except when
@@ -203,12 +222,6 @@ Module Type Expr.
       | _ => false
       end.
 
-    Definition par_FreeTemps (a b : FreeTemps) : FreeTemps.
-    Admitted.
-    Definition seq_FreeTemps (a b : FreeTemps) : FreeTemps :=
-      fun P => a (b P).
-    #[local] Infix "|*|" := par_FreeTemps (at level 30).
-    #[local] Infix ">*>" := seq_FreeTemps (at level 30).
 
     (* [Esubscript a n ty] is an lvalue if
      * - one operand is an lvalue array
@@ -711,7 +724,7 @@ Module Type Expr.
 
     (** [sizeof] and [alignof] do not evaluate their arguments *)
     Axiom wp_prval_sizeof : forall ty' ty Q,
-        Exists sz, [| size_of ty = Some sz |]  ** Q (Vint (Z.of_N sz)) no_temps
+        Exists sz, [| size_of ty = Some sz |]  ** Q (Vint (Z.of_N sz)) FreeTemps.id
         |-- wp_operand (Esize_of (inl ty) ty') Q.
 
     Axiom wp_prval_sizeof_e : forall ty' e Q,
@@ -719,7 +732,7 @@ Module Type Expr.
         |-- wp_operand (Esize_of (inr e) ty') Q.
 
     Axiom wp_prval_alignof : forall ty' ty Q,
-        Exists align, [| align_of ty = Some align |] ** Q (Vint (Z.of_N align)) no_temps
+        Exists align, [| align_of ty = Some align |] ** Q (Vint (Z.of_N align)) FreeTemps.id
         |-- wp_operand (Ealign_of (inl ty) ty') Q.
 
     Axiom wp_prval_alignof_e : forall ty' e Q,
@@ -926,7 +939,7 @@ DONE ***)
 
     (* null *)
     Axiom wp_null : forall Q,
-      Q (Vptr nullptr) no_temps
+      Q (Vptr nullptr) FreeTemps.id
       |-- wp_operand Enull Q.
 
     (** [new (...) C(...)]
@@ -1043,9 +1056,7 @@ DONE ***)
     Axiom wp_xval_temp : forall e Q,
         (let ty := type_of e in
          let raw_type := erase_qualifiers ty in
-         Forall a : ptr, a |-> tblockR raw_type 1 -*
-                  wp_init ty a e
-                          (fun free => Q a (destruct_val false ty a (a |-> tblockR raw_type 1 ** free))))
+         wp_prval e (fun p free frees => Q p (free >*> frees)))
         |-- wp_xval (Ematerialize_temp e) Q.
 
     (** temporary materialization only occurs when the resulting value is used.
@@ -1055,7 +1066,6 @@ DONE ***)
 
         XXX this needs a thorough review.
         FIXME this might be too general.
-     *)
     Axiom wp_prval_implicit_materialize : forall e Q,
         is_aggregate (type_of e) = true ->
         (let ty := type_of e in
@@ -1064,7 +1074,7 @@ DONE ***)
                    wp_init ty a e (fun free =>
                                      Q (Vptr a) (destruct_val false ty a (a |-> tblockR raw_type 1 ** free))))
         |-- wp_prval e Q.
-
+    *)
 
     (** [Ebind_temp e dtor ty] is an initialization expression that ensures
        that the destructor is called.
@@ -1088,15 +1098,11 @@ DONE ***)
 
         with [T = int].
 
-        To maintain similarity with the rest of the system, we
-        the C++ abstract machine "implements" these destructors as
-        (essentially) a function with the specification:
-
-           \pre this |-> anyR ty 1
-           \post this |-> tblockR ty
+        TODO we probably need semantics for [e] being an [xvalue] as well.
      *)
     Axiom wp_pseudo_destructor : forall e ty Q,
-        wp_lval e (fun v free => v |-> anyR ty 1 ** (v |-> tblockR ty 1 -* Q Vundef free))
+            wp_lval e (fun p free =>
+               destruct_val false ty p (Q invalid_ptr FreeTemps.id free))
         |-- wp_prval (Epseudo_destructor ty e) Q.
 
     (* `Eimplicit_init` nodes reflect implicit /value initializations/ which are inserted
@@ -1111,64 +1117,47 @@ DONE ***)
      *)
     Axiom wp_prval_implicit_init_int : forall ty sz sgn Q,
         drop_qualifiers ty = Tint sz sgn ->
-          Q (Vint 0) emp
-      |-- wp_prval (Eimplicit_init ty) Q.
+          Q (Vint 0) FreeTemps.id
+      |-- wp_operand (Eimplicit_init ty) Q.
 
     Axiom wp_prval_implicit_init_bool : forall ty Q,
         drop_qualifiers ty = Tbool ->
-          Q (Vbool false) emp
-      |-- wp_prval (Eimplicit_init ty) Q.
+          Q (Vbool false) FreeTemps.id
+      |-- wp_operand (Eimplicit_init ty) Q.
 
     (** TODO missing the type of the (arguments of the) constructor *)
     Axiom wp_init_constructor : forall cls addr cnd es Q targs,
-      wp_args targs es (fun ls free =>
-           match resolve.(genv_tu) !! cnd with
-           | Some cv =>
-             |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (addr :: ls) (fun _ => Q free)
-           | _ => False
-           end)
-      |-- wp_init (Tnamed cls) addr (Econstructor cnd es (Tnamed cls)) Q.
+          wp_args targs es (fun ls frees =>
+             match resolve.(genv_tu) !! cnd with
+             | Some cv =>
+               |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (addr :: ls)
+                     (fun p => Q p (destruct_val false (Tnamed cls) p) frees)
+             | _ => False
+             end)
+      |-- wp_prval (Econstructor cnd es (Tnamed cls)) Q.
 
-    Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
-      match es with
-      | nil => Q emp
-      | e :: rest =>
-          (* NOTE: We nest the recursive calls to `wp_array_init` within
-               the continuation of the `wp_initialize` statement to
-               reflect the fact that the C++ Standard introduces
-               sequence-points between all of the elements of an
-               initializer list (c.f. http://eel.is/c++draft/dcl.init.list#4)
-           *)
-         base .[ ety ! idx ] |-> tblockR ety 1 -* (* provide the memory to the initializer. *)
-         wp_initialize M ti ρ ety (base .[ ety ! idx ]) e (fun free => free ** wp_array_init ety base rest (Z.succ idx) Q)
-      end%I.
-
+    (** TODO reduce duplication with *)
     Definition fill_initlist (desiredsz : N) (es : list Expr) (f : Expr) : list Expr :=
       let actualsz := N.of_nat (length es) in
       es ++ numbers.replicateN f (desiredsz - actualsz).
 
-    (** NOTE this assumes that the C++ abstract machine already owns the array
-        that is being initialized, see [wp_init_initlist_array] *)
-    Definition wp_array_init_fill (ety : type) (base : ptr) (es : list Expr) (f : option Expr) (sz : N) (Q : FreeTemps -> mpred) : mpred :=
-      let len := N.of_nat (length es) in
-      match (len ?= sz)%N with
-      | Lt =>
-          match f with
+    Axiom wp_init_initlist_array :forall es fill ety (sz : N) (base : ptr) Q,
+        (let len := N.of_nat (length es) in
+        match (len ?= sz)%N with
+        | Lt =>
+          match fill with
           | None => False
-          | Some fill => wp_array_init ety base (fill_initlist sz es fill) 0 Q
+          | Some fill => init_array ety (wp_prval <$> fill_initlist sz es fill) Q
           end
-      | Eq => wp_array_init ety base es 0 Q
-      (* <http://eel.is/c++draft/dcl.init.general#16.5>
+        | Eq => init_array ety (wp_prval <$> es) Q
+          (* <http://eel.is/c++draft/dcl.init.general#16.5>
 
-         Programs which contain more initializer expressions than
-         array-members are ill-formed.
-       *)
-      | Gt => False
-      end.
-
-    Axiom wp_init_initlist_array :forall ls fill ety (sz : N) (base : ptr) Q,
-          base |-> tblockR (Tarray ety sz) 1 ** wp_array_init_fill ety base ls fill sz Q
-      |-- wp_init (Tarray ety sz) base (Einitlist ls fill (Tarray ety sz)) Q.
+             Programs which contain more initializer expressions than
+             array-members are ill-formed.
+           *)
+        | Gt => False
+        end)
+      |-- wp_prval (Einitlist es fill (Tarray ety sz)) Q.
 
     (* https://eel.is/c++draft/dcl.init#general-7.2 says that "To
     default-initialize an object of type T means: If T is an array type, each
@@ -1191,16 +1180,17 @@ DONE ***)
     initialization. For this reason, the rule for default initalization
     simply defers to the rule for initialization with an empty initializer
     list. *)
-    Axiom wp_init_default_array : forall ety sz base ctorname args Q,
-      wp_init (Tarray ety sz) base (Einitlist [] (Some (Econstructor ctorname args ety)) (Tarray ety sz)) Q
-      |-- wp_init (Tarray ety sz) base (Econstructor ctorname args (Tarray ety sz)) Q.
+    Axiom wp_init_default_array : forall ety sz ctorname args Q,
+          wp_prval (Einitlist [] (Some (Econstructor ctorname args ety)) (Tarray ety sz)) Q
+      |-- wp_prval (Econstructor ctorname args (Tarray ety sz)) Q.
 
+    (** TODO consider this carefully *)
     Axiom wp_prval_initlist_default : forall t Q,
           match get_default t with
           | None => False
-          | Some v => Q v emp
+          | Some v => Q v FreeTemps.id
           end
-      |-- wp_prval (Einitlist nil None t) Q.
+      |-- wp_operand (Einitlist nil None t) Q.
 
     Axiom wp_prval_initlist_prim : forall t e Q,
           (if prim_initializable t
@@ -1208,28 +1198,27 @@ DONE ***)
            else False)
       |-- wp_prval (Einitlist (e :: nil) None t) Q.
 
-    Axiom wp_init_cast_integral : forall e ty addr Q,
-        wp_prval e (fun v free =>
+    Axiom wp_init_cast_integral : forall e ty Q,
+        wp_operand e (fun v free =>
           Exists v',
-            [| conv_int (type_of e) ty v v' |] **
-            _at addr (anyR (erase_qualifiers ty) 1) **
-            (_at addr (primR (erase_qualifiers ty) 1 v') -* Q free))
-        |-- wp_init ty addr (Ecast Cintegral (Prvalue, e) ty) Q.
+            [| conv_int (type_of e) ty v v' |] ** Q v' free)
+        |-- wp_operand (Ecast Cintegral (Prvalue, e) ty) Q.
 
-    Axiom wp_init_cast_noop : forall e ty addr ty' Q,
-        wp_init ty addr e Q
-        |-- wp_init ty addr (Ecast Cnoop (Prvalue, e) ty') Q.
+    Axiom wp_init_cast_noop : forall e ty Q,
+            wp_operand e Q
+        |-- wp_operand (Ecast Cnoop (Prvalue, e) ty) Q.
 
-    Axiom wp_init_clean : forall e ty addr Q,
-        wp_init ty addr e Q
-        |-- wp_init ty addr (Eandclean e) Q.
+    Axiom wp_init_clean : forall e Q,
+            wp_operand e Q
+        |-- wp_operand (Eandclean e) Q.
+(*
     Axiom wp_init_const : forall ty addr e Q,
-        wp_init ty addr e Q
-        |-- wp_init (Qconst ty) addr e Q.
+            wp_operand  e Q
+        |-- wp_operand (Qconst ty) addr e Q.
     Axiom wp_init_mut : forall ty addr e Q,
         wp_init ty addr e Q
         |-- wp_init (Qmut ty) addr e Q.
-
+*)
 
   End with_resolve.
 
@@ -1241,7 +1230,7 @@ DONE ***)
     (* These are the only ones that we need here. *)
     Local Notation wp_lval := (wp_lval (resolve:=resolve) M ti).
     Local Notation wp_prval := (wp_prval (resolve:=resolve) M ti).
-    Local Notation wp_init := (wp_init (resolve:=resolve) M ti).
+    Local Notation wp_operand := (wp_operand (resolve:=resolve) M ti).
     Local Notation wp_initialize := (wp_initialize (σ:=resolve) M ti).
     Local Notation primR := (primR (resolve:=resolve)) (only parsing).
     Local Notation wp_glval := (wp_glval (resolve:=resolve) M ti).
@@ -1299,8 +1288,8 @@ DONE ***)
           Exists v,
             ((Exists q, _local ρ (arrayloop_loop_index level)
                                |-> primR (erase_qualifiers ty) q v) **
-              True) //\\ Q v emp
-      |-- wp_prval ρ (Earrayloop_index level ty) Q.
+              True) //\\ Q v FreeTemps.id
+      |-- wp_operand ρ (Earrayloop_index level ty) Q.
 
     (* The following loop is essentially the following:
        recursion of `sz`:
@@ -1329,7 +1318,7 @@ DONE ***)
     Definition _arrayloop_init
                (ρ : region) (level : N)
                (targetp : ptr) (init : Expr)
-               (ty : type) (Q : FreeTemps -> epred)
+               (ty : type) (Q : FreeTemp -> FreeTemps -> epred)
                (* The arguments above this comment are constant throughout the recursion.
 
                   The arguments below this line will change during the recursion.
@@ -1337,19 +1326,19 @@ DONE ***)
                (sz : N) (idx : N)
       : mpred :=
       let loop_index := _local ρ (arrayloop_loop_index level) in
-      N.peano_rect (fun _ : N => N -> mpred)
-                   (fun _ => Q emp)%I
-                   (fun _ rest idx =>
+      N.peano_rect (fun _ : N => N -> FreeTemp -> FreeTemps -> mpred)
+                   (fun _ => Q)%I
+                   (fun _ rest idx free' frees' =>
                       (* NOTE The abstract machine only provides 1/2 of the ownership
                            to the program to make it read-only.
                          NOTE that no "correct" program will ever modify this variable
                            anyways. *)
                       loop_index |-> primR (Tint W64 Unsigned) (1/2) idx -*
                       targetp .[ ty ! idx ] |-> tblockR ty 1 -*
-                      wp_initialize ρ ty (targetp .[ ty ! idx ]) init
-                              (fun free => free **
+                      wp_initialize ρ true ty (targetp .[ ty ! idx ]) init
+                              (fun free frees =>
                                  loop_index |-> primR (Tint W64 Unsigned) (1/2) idx **
-                                 rest (N.succ idx))) sz idx.
+                                 rest (N.succ idx) (free >*> free')%free (frees >*> frees')%free)) sz idx FreeTemps.id FreeTemps.id.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) vc src init ty Q,
           has_type (Vn sz) (Tint W64 Unsigned) ->
@@ -1360,10 +1349,9 @@ DONE ***)
                       _arrayloop_init (Rbind (opaque_val oname) p
                                              (Rbind (arrayloop_loop_index level) idxp ρ))
                                       level trg init ty
-                                      (fun free' => Q (free ** free'))
+                                      (fun free' frees' => Q p free' (frees' >*> free)%free)
                                       sz 0)
-      |-- wp_init ρ (Tarray ty sz) trg
-                    (Earrayloop_init oname (vc, src) level sz init (Tarray ty sz)) Q.
+      |-- wp_prval ρ (Earrayloop_init oname (vc, src) level sz init (Tarray ty sz)) Q.
 
   End with_resolve__arrayloop.
 End Expr.
