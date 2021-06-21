@@ -400,6 +400,18 @@ Section with_cpp.
     Qed.
   End wp_prval.
 
+  (* [wp_init ] acts the same as [wp_prval] but the location that the value is
+     initialized into is provided as an parameter.
+
+     NOTE we achieve this by postulating an equation on the returned [ptr]
+     and the provided [ptr].
+   *)
+  Definition wp_init {resolve:genv} (M : coPset) (ti : thread_info) (ρ : region)
+             (into : ptr) (e : Expr) (Q : FreeTemp -> FreeTemps -> epred) (* result -> top-free -> free -> post *)
+    : mpred :=
+    wp_prval M ti ρ e (fun p free frees => [| p = into |] -* Q free frees).
+
+
   (* evaluate a prvalue that "computes the value of an operand of an operator"
    *)
   Parameter wp_operand

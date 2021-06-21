@@ -48,6 +48,7 @@ Module Type Expr.
     Local Notation wp_prval := (wp_prval (resolve:=resolve) M ti ρ).
     Local Notation wp_xval := (wp_xval (resolve:=resolve) M ti ρ).
     Local Notation wp_operand := (wp_operand (resolve:=resolve) M ti ρ).
+    Local Notation wp_init := (wp_init (resolve:=resolve) M ti ρ).
     Local Notation wpe := (wpe (resolve:=resolve) M ti ρ).
     Local Notation wp_glval := (wp_glval (resolve:=resolve) M ti ρ).
     Local Notation wp_args := (wp_args (σ:=resolve) M ti ρ).
@@ -1141,15 +1142,15 @@ DONE ***)
       let actualsz := N.of_nat (length es) in
       es ++ numbers.replicateN f (desiredsz - actualsz).
 
-    Axiom wp_init_initlist_array :forall es fill ety (sz : N) (base : ptr) Q,
+    Axiom wp_init_initlist_array :forall es fill ety (sz : N) Q,
         (let len := N.of_nat (length es) in
         match (len ?= sz)%N with
         | Lt =>
           match fill with
           | None => False
-          | Some fill => init_array ety (wp_prval <$> fill_initlist sz es fill) Q
+          | Some fill => init_array ety ((fun e a => wp_init a e) <$> fill_initlist sz es fill) Q
           end
-        | Eq => init_array ety (wp_prval <$> es) Q
+        | Eq => init_array ety ((fun e a => wp_init a e) <$> es) Q
           (* <http://eel.is/c++draft/dcl.init.general#16.5>
 
              Programs which contain more initializer expressions than
@@ -1334,18 +1335,16 @@ DONE ***)
                          NOTE that no "correct" program will ever modify this variable
                            anyways. *)
                       loop_index |-> primR (Tint W64 Unsigned) (1/2) idx -*
-                      targetp .[ ty ! idx ] |-> tblockR ty 1 -*
                       wp_initialize ρ true ty (targetp .[ ty ! idx ]) init
                               (fun free frees =>
                                  loop_index |-> primR (Tint W64 Unsigned) (1/2) idx **
                                  rest (N.succ idx) (free >*> free')%free (frees >*> frees')%free)) sz idx FreeTemps.id FreeTemps.id.
 
-    Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) vc src init ty Q,
+    Axiom wp_init_arrayloop_init : forall oname level sz ρ vc src init ty Q,
           has_type (Vn sz) (Tint W64 Unsigned) ->
-          trg |-> tblockR (Tarray ty sz) 1 ** (* give up your memory *)
           wp_glval ρ vc src
                    (fun p free =>
-                      Forall idxp,
+                      Forall trg idxp,
                       _arrayloop_init (Rbind (opaque_val oname) p
                                              (Rbind (arrayloop_loop_index level) idxp ρ))
                                       level trg init ty

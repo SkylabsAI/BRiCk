@@ -24,6 +24,7 @@ Module Type Init.
     #[local] Notation wp_prval := (wp_prval (resolve:=σ) M ti ρ).
     #[local] Notation wp_xval := (wp_xval (resolve:=σ) M ti ρ).
     #[local] Notation wp_operand := (wp_operand (resolve:=σ) M ti ρ).
+    #[local] Notation wp_init := (wp_init (resolve:=σ) M ti ρ).
     #[local] Notation fspec := (@fspec _ Σ σ.(genv_tu).(globals)).
     #[local] Notation mspec := (@mspec _ Σ σ.(genv_tu).(globals)).
 
@@ -34,13 +35,13 @@ Module Type Init.
       Section with_base.
         Variable (base : ptr).
 
-        Fixpoint initialize_array' (inits : list ((ptr -> FreeTemp -> FreeTemps -> mpred) -> mpred))
+        Fixpoint initialize_array' (inits : list (ptr -> (FreeTemp -> FreeTemps -> mpred) -> mpred))
                  (idx : Z) (Q : FreeTemp -> FreeTemps -> mpred)
                  {struct inits} : mpred :=
           match inits return mpred with
           | nil => emp (* base .[ ty ! idx ] |-> validR -* Q (fun x => x) (fun x => x) *)
           | init :: inits =>
-            init (fun p' free' frees' => [| p' = (base .[ ty ! idx ]) |] -*
+            init (base .[ ty ! idx ]) (fun free' frees' =>
               initialize_array' inits (1 + idx)%Z (fun free frees => Q (free >*> free') (frees >*> frees')))%free
           end.
       End with_base.
@@ -55,7 +56,7 @@ Module Type Init.
           to share the logic between array initialization and default
           initialization (which doesn't have any expressions).
        *)
-      Definition init_array (inits : list ((ptr -> FreeTemp -> FreeTemps -> mpred) -> mpred))
+      Definition init_array (inits : list (ptr -> (FreeTemp -> FreeTemps -> mpred) -> mpred))
                  (Q : ptr -> FreeTemp -> FreeTemps -> mpred) : mpred :=
         Forall base, initialize_array' base inits 0 (Q base).
 
@@ -156,11 +157,11 @@ Module Type Init.
       | Tbool as ty
       | Tnullptr as ty
       | Tint _ _ as ty =>
-        wp_prval init (fun p free frees => [| p = addr |] -* k free frees)
+        wp_init addr init k
         (* non-primitives are handled via prvalue-initialization semantics *)
 
       | Tarray _ _
-      | Tnamed _ => wp_prval init (fun v free frees => [| v = addr |] -* k free frees)
+      | Tnamed _ => wp_init addr init k
         (* NOTE because we are initializing an object, we drop the destruction of the temporary *)
 
       | Treference _ =>
