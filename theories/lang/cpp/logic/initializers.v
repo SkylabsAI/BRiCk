@@ -207,7 +207,7 @@ Module Type Init.
 
     Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : _) : mpred :=
         let p' := thisp ., offset_for cls init.(init_path) in
-        wp_initialize true (erase_qualifiers init.(init_type)) p' init.(init_init) (fun _ => Q).
+        wp_initialize true (erase_qualifiers init.(init_type)) p' init.(init_init) (fun _ free => free Q).
 
   End with_resolve.
 
