@@ -68,17 +68,14 @@ Module Type Init.
       Variable (default_initialize : type -> ptr -> (FreeTemps -> mpred) -> mpred).
       Variable (ty : type).
 
-      Definition default_initialize_array (len : N) (p : ptr) (Q : FreeTemp -> mpred) : mpred.
-        refine (
+      Definition default_initialize_array (len : N) (p : ptr) (Q : FreeTemp -> mpred) : mpred :=
           (fix rec (ls : list N) frees :=
              match ls with
              | nil => p .[ ty ! Z.of_N len ] |-> validR -* Q frees
              | l :: ls =>
                default_initialize ty (p .[ ty ! Z.of_N l ]) (rec ls)
              end)
-          (seqN 0 len) (fun x => x)
-          ).
-      Defined.
+          (seqN 0 len) FreeTemps.id.
 
       Lemma default_initialize_array_frame : ∀ sz Q Q' (p : ptr),
           (Forall f, Q f -* Q' f)
