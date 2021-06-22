@@ -55,6 +55,7 @@ Module Type Expr.
     Local Notation fspec := (fspec resolve.(genv_tu).(globals)).
     Local Notation mspec := (mspec resolve.(genv_tu).(globals)).
     Local Notation destruct_val := (destruct_val (σ:=resolve) ti) (only parsing).
+    Local Notation delete_val := (delete_val (σ:=resolve) ti) (only parsing).
 
     Local Notation glob_def := (glob_def resolve) (only parsing).
     Local Notation eval_unop := (@eval_unop resolve) (only parsing).
@@ -94,7 +95,7 @@ Module Type Expr.
         is_primitive ty ->
       wp_operand e (fun v frees =>
          Forall p : ptr, p |-> primR ty 1 v -*
-                           Q p (fun zz => destruct_val false ty p (p |-> tblockR ty 1 ** zz)) frees)
+                           Q p (delete_val ty p) frees)
      |-- wp_prval e Q.
 
     (** There is a relationship in the other direction as well, but it isn't
@@ -772,7 +773,7 @@ Module Type Expr.
              match arg_types fty with
              | Some targs =>
                wp_operand f (fun f free_f => wp_args targs es (fun vs free =>
-                  |> fspec (normalize_type fty) ti f vs (fun p => Q p (destruct_val false ty p) (free >*> free_f))))
+                  |> fspec (normalize_type fty) ti f vs (fun p => Q p (delete_val ty p) (free >*> free_f))))
              | _ => False
              end
            | _ => False
@@ -1015,6 +1016,9 @@ DONE ***)
        Hence, the destructor is passed a pointer to the object, and the
        deallocation function [delete] is passed a pointer to the the
        underlying storage.
+
+       TODO there is a bug here for [virtual] destruction since, in that case,
+       the full object is destroyed.
      *)
     Axiom wp_prval_delete : forall delete_fn e ty destroyed_type Q,
         (* call the destructor on the object, and then call delete_fn *)
@@ -1127,7 +1131,7 @@ DONE ***)
              match resolve.(genv_tu) !! cnd with
              | Some cv =>
                |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (addr :: ls)
-                     (fun p => Q p (destruct_val false (Tnamed cls) p) frees)
+                     (fun p => Q p (delete_val (Tnamed cls) p) frees)
              | _ => False
              end)
       |-- wp_prval (Econstructor cnd es (Tnamed cls)) Q.

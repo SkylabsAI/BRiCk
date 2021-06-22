@@ -236,7 +236,7 @@ Section with_cpp.
    *)
   Fixpoint bind_vars (args : list (ident * type)) (locs : list ptr) (r : region) (Q : region -> FreeTemps -> mpred) : mpred :=
     match args , locs with
-    | nil , nil => Q r (fun x => x)
+    | nil , nil => Q r FreeTemps.id
     | (x,ty) :: xs , p :: vs  =>
       bind_vars xs vs (Rbind_check x p r) Q
     | _ , _ => ERROR "bind_vars: argument mismatch"

@@ -69,6 +69,87 @@ Section destroy.
        \post this |-> tblockR ty
      ]]]
    *)
+  #[program] Fixpoint destruct_val (dispatch : bool) (t : type) (this : ptr) {struct t} : FreeTemps.t :=
+    match t with
+    | Tqualified _ t => destruct_val dispatch t this
+    | Tnamed cls =>
+      match σ.(genv_tu) !! cls with
+      | Some (Gstruct s) =>
+        (** when [dispatch:=true], we should use virtual dispatch
+            to invoke the destructor.
+         *)
+        if dispatch && has_virtual_dtor s then
+          ltac:(exists (fun Q =>
+          resolve_dtor cls this (fun fimpl impl_class this' =>
+            let ty := Tfunction Tvoid nil in
+            |> mspec σ.(genv_tu).(globals) (Tnamed impl_class) ty ti (Vptr fimpl) (this' :: nil) (fun _ => Q))%I))
+        else
+          (* NOTE the setup with explicit destructors (even when those destructors are trivial)
+                  abstracts away some of the complexities of the underlying C++ semantics that
+                  the semantics itself seems less than clear about. [CITATION NEEDED]
+
+             TODO let's find some justification in the standard.
+           *)
+          (* In the current implementation, we generate destructor even when they are implicit
+             to make the framework a bit more uniform (all objects have destructors) and allow
+             for direct desructor calls, e.g. [c.~C()], which are encoded as
+             [Emember_call ... "~C" ..] *)
+          (let dtor := s.(s_dtor) in
+           let ty := Tfunction Tvoid nil in (** NOTE this implicitly requires all destructors to have C calling convention *)
+           ltac:(exists (fun Q => |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global s.(s_dtor)) (this :: nil) (fun _ => Q))%I))
+
+      | Some (Gunion u) =>
+          (* unions can not have [virtual] destructors, so we directly invoke
+             the destructor.
+           *)
+          (let dtor := u.(u_dtor) in
+           let ty := Tfunction Tvoid nil in
+           ltac:(exists (fun Q =>
+           |> mspec σ.(genv_tu).(globals) (Tnamed cls) ty ti (Vptr $ _global u.(u_dtor)) (this :: nil) (fun _ => Q)))%I)
+      | _ => ltac:(exists (fun _ => False%I))
+      end
+    | Tarray t sz =>
+      ltac:(exists (fun Q =>
+      (* NOTE when destroying an array, elements of the array are destroyed with non-virtual dispatch. *)
+      fold_right (fun i Q => valid_ptr (this .[ t ! Z.of_nat i ]) **
+         destruct_val false t (this .[ t ! Z.of_nat i ]) Q) Q (List.rev (seq 0 (N.to_nat sz)))))
+    | _ => ltac:(exists (fun Q =>
+      (* |={↑pred_ns}=> *) this |-> anyR (erase_qualifiers t) 1 ** (this |-> tblockR (erase_qualifiers t) 1 -* Q)))
+      (* emp *)
+    end%I.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation.
+    intros. induction (rev (seq 0 (N.to_nat sz))); simpl.
+    solve_proper.
+    red. red. intros.
+    rewrite IHl; eauto.
+  Defined.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation.
+    intros.
+    (** this seems tractable *)
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+  Next Obligation. solve_proper. Qed.
+
+  (*
   Fixpoint destruct_val (dispatch : bool) (t : type) (this : ptr) (Q : mpred)
            {struct t}
   : mpred :=
@@ -116,6 +197,7 @@ Section destroy.
       (* |={↑pred_ns}=> *) this |-> anyR (erase_qualifiers t) 1 ** (this |-> tblockR (erase_qualifiers t) 1 -* Q)
       (* emp *)
     end%I.
+*)
 
   Lemma destruct_val_frame dispatch : forall ty this Q Q',
       Q -* Q' |-- destruct_val dispatch ty this Q -* destruct_val dispatch ty this Q'.
@@ -150,7 +232,8 @@ Section destroy.
   (** [delete_val dispatch ty this Q] destructs [this] (of type [t]) and then
       frees the underlying memory
    *)
-  Definition delete_val (ty : type) (this : ptr) (Q : mpred) : mpred :=
-    destruct_val false ty this (this |-> tblockR (erase_qualifiers ty) 1 ** Q).
+  #[program] Definition delete_val (ty : type) (this : ptr) : FreeTemps :=
+    λne Q, destruct_val false ty this (this |-> tblockR (erase_qualifiers ty) 1 ** Q).
+  Next Obligation. solve_proper. Qed.
 
 End destroy.

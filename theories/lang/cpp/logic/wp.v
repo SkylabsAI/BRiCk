@@ -23,9 +23,7 @@ Set Primitive Projections.
  *)
 Definition epred `{Σ : cpp_logic thread_info} := mpred.
 Global Bind Scope bi_scope with epred.
-
-Definition FreeTemps `{Σ : cpp_logic thread_info} := epred -> mpred.
-Notation FreeTemp := FreeTemps.
+Notation epredO := mpredO (only parsing).
 (*
 Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
 | Top
@@ -33,36 +31,42 @@ Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
 (*Global Bind Scope bi_scope with FreeTemps. *)
  *)
 (* TEMPORARY *)
-Instance FreeTemps_Equiv `{Σ : cpp_logic thread_info} : Equiv FreeTemps := fun P Q => forall e, P e -|- Q e.
-Instance FreeTemps_refl `{Σ : cpp_logic thread_info} : @Reflexive FreeTemps (≡).
-Proof. red. red. red. reflexivity. Qed.
-Declare Scope free_scope.
-Delimit Scope free_scope with free.
 
 Module FreeTemps.
 Section FreeTemps.
   Context `{Σ : cpp_logic thread_info}.
 
+  Definition t : Type := epredO -n> mpredO.
+
+  Instance FreeTemps_Equiv : Equiv t := fun P Q => forall e, P e -|- Q e.
+  Instance FreeTemps_refl : @Reflexive t (≡).
+  Proof. red. red. red. reflexivity. Qed.
+
   (** [no_temps] is the unit of [FreeTemps], it signals that there are no
       resources to destroy.
    *)
-  Definition id : FreeTemps := fun x => x.
+  Definition id : t.
+  Proof. exists (fun x => x). solve_proper. Defined.
 
-  (** [par_FreeTemps a b] means that [a] and [b] should both be destroyed
+  (** [par a b] means that [a] and [b] should both be destroyed
       but the order that they are destroyed is not defined.
    *)
-  Definition par (a b : FreeTemps) : FreeTemps.
+  Definition par (a b : t) : t.
   Admitted.
-  (** [seq_FreeTemps a b] means that [a] must be destroyed *before* [b].
+  (** [seq a b] means that [a] must be destroyed *before* [b].
    *)
-  Definition seq (a b : FreeTemps) : FreeTemps :=
-    fun P => a (b P).
+  Definition seq (a b : t) : t.
+  Proof. exists (fun P => a (b P)). solve_proper. Defined.
 
-  Definition wand (f1 f2 : FreeTemp) : mpred :=
+  Definition wand (f1 f2 : t) : mpred :=
     (Forall x y, (x -* y) -* f1 x -* f2 y).
 
   Theorem id_wand : |-- wand id id.
   Proof. rewrite /wand/id. iIntros (??) "$". Qed.
+
+  (** TODO necessary, but not provable *)
+  Lemma wand_refl ft : |-- wand ft ft.
+  Proof. Admitted.
 
   Theorem seq_wand f1 f1' f2 f2' :
     wand f1 f1' |-- wand f2 f2' -* wand (seq f1 f2) (seq f1' f2').
@@ -77,12 +81,15 @@ Section FreeTemps.
 
 End FreeTemps.
 End FreeTemps.
+Notation FreeTemps := FreeTemps.t.
+Notation FreeTemp := FreeTemps.t (only parsing).
 
 (* Notations *)
+Declare Scope free_scope.
+Delimit Scope free_scope with free.
 Infix "|*|" := FreeTemps.par (at level 30) : free_scope.
 Infix ">*>" := FreeTemps.seq (at level 30) : free_scope.
-Bind Scope free_scope with FreeTemp.
-Bind Scope free_scope with FreeTemps.
+Bind Scope free_scope with FreeTemps.t.
 
 (** Statements *)
 (* continuations
@@ -579,7 +586,7 @@ Section with_cpp.
     Definition wpe (vc : ValCat) (e : Expr) (Q :val -> FreeTemps -> mpred) : mpred :=
       match vc with
       | Lvalue => @wp_lval resolve M ti ρ e (fun p => Q (Vptr p))
-      | Prvalue => @wp_prval resolve M ti ρ e (fun p free frees => Q (Vptr p) (fun x => free (frees x)))
+      | Prvalue => @wp_prval resolve M ti ρ e (fun p free frees => Q (Vptr p) (free >*> frees))%free
       | Xvalue => @wp_xval resolve M ti ρ e (fun p => Q (Vptr p))
       end.
 
@@ -646,13 +653,13 @@ Section with_cpp.
 
   (** * Statements *)
 
-  Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (fun x => P (Q x)) k.
+  Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (P >*> Q) k.
   Proof using .
     rewrite /Kfree/Kat_exit/KP/=. constructor => rt.
     by rewrite /=.
   Qed.
 
-  Lemma Kfree_emp : forall k, Kfree (fun x => x) k -|- k.
+  Lemma Kfree_emp : forall k, Kfree FreeTemps.id k -|- k.
   Proof using .
       by rewrite /Kfree/Kat_exit/KP/=; constructor => rt; rewrite /=.
   Qed.
@@ -724,7 +731,7 @@ Section with_cpp.
     Qed.
   End wp.
 
-  (* this is the low-level specificaiton of C++ code blocks.
+  (* this is the low-level specification of C++ code blocks.
    *
    * [addr] represents the address of the entry point of the code.
    * note: the [list ptr] will be related to the register set.

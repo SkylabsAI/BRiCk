@@ -104,7 +104,7 @@ Module Type Init.
       | Tbool as rty
       | Tfloat _ as rty =>
         let rty := erase_qualifiers rty in
-        Forall p : ptr, p |-> uninitR rty 1 -* Q p (delete_val ti rty p) (fun x => x)
+        Forall p : ptr, p |-> uninitR rty 1 -* Q p (delete_val ti rty p) FreeTemps.id
       | Tarray ty sz =>
         False (* default_initialize_array default_initialize ty sz p Q *)
       | Tnullptr => UNSUPPORTED "default initialization of [nullptr_t]"
@@ -161,21 +161,21 @@ Module Type Init.
       | Tnamed _ => wp_init addr init k
         (* NOTE because we are initializing an object, we drop the destruction of the temporary *)
 
-      | Treference _ =>
+      | Treference _ as ty =>
         if alloc_ref then
           wp_lval init (fun p free =>
                           addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -*
-                          k (fun x => addr |-> primR ty 1 (Vptr p) ** x) free)
+                          k (delete_val ti ty addr) free)
         else
-          wp_lval init (fun p free => [| p = addr |] -* k (fun x => x) free)
+          wp_lval init (fun p free => [| p = addr |] -* k FreeTemps.id free)
 
       | Trv_reference _ as ty =>
         if alloc_ref then
           wp_lval init (fun p free =>
                           addr |-> primR ty 1 (Vptr p) -*
-                          k (fun x => addr |-> primR ty 1 (Vptr p) ** x) free)
+                          k (delete_val ti ty addr) free)
         else
-          wp_lval init (fun p free => [| p = addr |] -* k (fun x => x) free)
+          wp_lval init (fun p free => [| p = addr |] -* k FreeTemps.id free)
 
       | Tfunction _ _ => False (* functions not supported *)
 
@@ -185,7 +185,26 @@ Module Type Init.
       end.
 
     Lemma wp_initialize_frame ar obj ty e Q Q' :
-      (Forall free frees, Q free frees -* Q' free frees) |-- wp_initialize ar ty obj e Q -* wp_initialize ar ty obj e Q'.
+      (Forall free free' frees frees', FreeTemps.wand free free' -* FreeTemps.wand frees frees' -* Q free frees -* Q' free' frees') |-- wp_initialize ar ty obj e Q -* wp_initialize ar ty obj e Q'.
+    Proof using.
+      rewrite /wp_initialize.
+      case_eq (drop_qualifiers ty) =>/=; intros; eauto;
+        try solve [ iIntros "a"; iApply wp_prval_frame; try reflexivity;
+                    iIntros (v ? fs) "X %"; iApply "a"; iApply "X"; eauto ].
+      { rewrite /wp_init. iIntros "a". iApply wp_prval_frame => //.
+        iIntros (???) "X %"; subst. iApply "a". 3:{ iApply "X"; eauto. }
+      { iIntros "a". rewrite /wp_init.
+        destruct ar; iApply wp_lval_frame; try reflexivity;
+          [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
+      { iIntros "a".
+        destruct ar; iApply wp_lval_frame; try reflexivity;
+          [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
+    Qed.
+
+
+
+    Lemma wp_initialize_frame ar obj ty e Q Q' :
+      (Forall free free' frees frees', FreeTemps.wand free free' -* FreeTemps.wand frees frees' -* Q free frees -* Q' free' frees') |-- wp_initialize ar ty obj e Q -* wp_initialize ar ty obj e Q'.
     Proof using.
       rewrite /wp_initialize.
       case_eq (drop_qualifiers ty) =>/=; intros; eauto;
@@ -212,13 +231,16 @@ Module Type Init.
   End with_resolve.
 
   Theorem wpi_frame (thread_info : biIndex) (Σ : cpp_logic thread_info) (σ1 σ2 : genv) (M : coPset) (ti : thread_info) (ρ : region)
-          (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : FreeTemps → mpredI) :
-    genv_leq σ1 σ2 → Forall f1 f2, FreeTemps.wand f1 f2 -* k1 f1 -* k2 f2 |-- wpi M ti ρ cls this e k1 -* wpi M ti ρ cls this e k2.
+          (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : mpredI) :
+    genv_leq σ1 σ2 → k1 -* k2 |-- wpi M ti ρ cls this e k1 -* wpi M ti ρ cls this e k2.
   Proof.
     intros. assert (σ1 = σ2) by admit. subst.
     rewrite /wpi.
     iIntros "X"; iApply wp_initialize_frame.
+    About wp_initialize_frame.
     iIntros (??). iApply "X".
+    Search FreeTemps.wand.
+    Lemma wand_refl ft : |-- FreeTemps.wand ft ft.
     (** TODO this is blocked on Properness of continuations, maybe [FreeTemp] should build this in? *)
   Admitted.
 

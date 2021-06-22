@@ -39,11 +39,12 @@ Section with_resolve.
         wp_initialize M ti ρ false t a e Qarg **
         wp_args' ts es (fun ps frees =>
                          Forall free free',
-                         Qarg free free' -* Q (a :: ps) ((fun x => free (free' x)) :: frees))
+                         Qarg free free' -* Q (a :: ps) ((free >*> free')%free :: frees))
     | _ , _ => False (* mismatched arguments and parameters. *)
     end.
-  Definition wp_args (ts : list type) (es : list Expr) (Q : list ptr -> FreeTemps -> mpred) : mpred :=
-    wp_args' ts es (fun ps frees => Q ps (fun x => ([∗list] f ∈ frees, f emp) ** x)).
+  #[program] Definition wp_args (ts : list type) (es : list Expr) (Q : list ptr -> FreeTemps -> mpred) : mpred :=
+    wp_args' ts es (fun ps (frees : list FreeTemps.t) => Q ps (λne x, ([∗list] f ∈ frees, (f : FreeTemps.t) emp) ** x)).
+  Next Obligation. solve_proper. Qed.
 
   Lemma wp_args_frame_strong : forall ts es Q Q',
       (Forall vs free, [| length vs = length es |] -* Q vs free -* Q' vs free) |-- wp_args ts es Q -* wp_args ts es Q'.
