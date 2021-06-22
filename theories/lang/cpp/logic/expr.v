@@ -95,7 +95,7 @@ Module Type Expr.
         is_primitive ty ->
       wp_operand e (fun v frees =>
          Forall p : ptr, p |-> primR ty 1 v -*
-                           Q p (delete_val ty p) frees)
+                           Q p (FreeTemps.delete ty p) frees)
      |-- wp_prval e Q.
 
     (** There is a relationship in the other direction as well, but it isn't
@@ -773,7 +773,7 @@ Module Type Expr.
              match arg_types fty with
              | Some targs =>
                wp_operand f (fun f free_f => wp_args targs es (fun vs free =>
-                  |> fspec (normalize_type fty) ti f vs (fun p => Q p (delete_val ty p) (free >*> free_f))))
+                  |> fspec (normalize_type fty) ti f vs (fun p => Q p (FreeTemps.delete ty p) (free >*> free_f))))
              | _ => False
              end
            | _ => False
@@ -1131,7 +1131,7 @@ DONE ***)
              match resolve.(genv_tu) !! cnd with
              | Some cv =>
                |> mspec (Tnamed cls) (type_of_value cv) ti (Vptr $ _global cnd) (addr :: ls)
-                     (fun p => Q p (delete_val (Tnamed cls) p) frees)
+                     (fun p => Q p (FreeTemps.delete (Tnamed cls) p) frees)
              | _ => False
              end)
       |-- wp_prval (Econstructor cnd es (Tnamed cls)) Q.

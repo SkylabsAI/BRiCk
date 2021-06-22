@@ -79,15 +79,15 @@ Module Type Init.
 
       Lemma default_initialize_array_frame : ∀ sz Q Q' (p : ptr),
           (Forall f, Q f -* Q' f)
-            |-- <pers> (Forall p Q Q', (Forall f, Q f -* Q' f) -* default_initialize ty p Q -* default_initialize ty p Q')
-                         -* default_initialize_array sz p Q -* default_initialize_array sz p Q'.
+          |-- <pers> (Forall p Q Q', (Forall f, Q f -* Q' f) -* default_initialize ty p Q -* default_initialize ty p Q')
+                  -* default_initialize_array sz p Q -* default_initialize_array sz p Q'.
       Proof.
         intros sz Q Q' p; rewrite /default_initialize_array.
-        generalize dependent (p .[ ty ! Z.of_N sz ] |-> validR).
+        generalize dependent (p .[ ty ! Z.of_N sz ] |-> validR); generalize dependent FreeTemps.id.
         induction (seqN 0 sz) =>/=; intros.
         - iIntros "X #Y a b"; iApply "X"; iApply "a"; eauto.
-        - iIntros "F #Hty". iApply "Hty". iIntros (?). (* iApply IHl. ; eauto. *)
-      Admitted.
+        - iIntros "F #Hty". iApply "Hty". iIntros (?). iDestruct (IHl with "F") as "K"; iApply "K". done.
+      Qed.
     End default_initialize.
 
     (** [default_initialize ty p Q] default initializes the memory at [p] according to
@@ -104,7 +104,7 @@ Module Type Init.
       | Tbool as rty
       | Tfloat _ as rty =>
         let rty := erase_qualifiers rty in
-        Forall p : ptr, p |-> uninitR rty 1 -* Q p (delete_val ti rty p) FreeTemps.id
+        Forall p : ptr, p |-> uninitR rty 1 -* Q p (FreeTemps.delete rty p) FreeTemps.id
       | Tarray ty sz =>
         False (* default_initialize_array default_initialize ty sz p Q *)
       | Tnullptr => UNSUPPORTED "default initialization of [nullptr_t]"
@@ -119,19 +119,6 @@ Module Type Init.
       | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
       | Tqualified _ ty => default_initialize ty Q
       end.
-
-    Lemma default_initialize_frame:
-      ∀ ty Q Q',
-        Forall p f fs, Q p f fs -* Q' p f fs
-        |-- default_initialize ty Q -* default_initialize ty Q'.
-    Proof.
-      induction ty; simpl;
-        try solve [ intros; iIntros "a b c"; iApply "a"; iApply "b"; eauto | eauto ].
-(*
-      iIntros (? ? ?) "X"; iApply (default_initialize_array_frame with "X").
-      iModIntro. iIntros (???). iApply IHty.
-*)
-    Admitted.
 
     (* [wp_initialize ar ty addr init Q] uses the expression [init] to initialize
        an object of type [ty] at location [addr]. Setting [ar:=true] means that
@@ -165,7 +152,7 @@ Module Type Init.
         if alloc_ref then
           wp_lval init (fun p free =>
                           addr |-> primR (erase_qualifiers ty) 1 (Vptr p) -*
-                          k (delete_val ti ty addr) free)
+                          k (FreeTemps.delete ty addr) free)
         else
           wp_lval init (fun p free => [| p = addr |] -* k FreeTemps.id free)
 
@@ -173,7 +160,7 @@ Module Type Init.
         if alloc_ref then
           wp_lval init (fun p free =>
                           addr |-> primR ty 1 (Vptr p) -*
-                          k (delete_val ti ty addr) free)
+                          k (FreeTemps.delete ty addr) free)
         else
           wp_lval init (fun p free => [| p = addr |] -* k FreeTemps.id free)
 
@@ -184,65 +171,57 @@ Module Type Init.
       | Tfloat _ => False (* floating point numbers are not supported *)
       end.
 
-    Lemma wp_initialize_frame ar obj ty e Q Q' :
-      (Forall free free' frees frees', FreeTemps.wand free free' -* FreeTemps.wand frees frees' -* Q free frees -* Q' free' frees') |-- wp_initialize ar ty obj e Q -* wp_initialize ar ty obj e Q'.
-    Proof using.
+    Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : _) : mpred :=
+        let p' := thisp ., offset_for cls init.(init_path) in
+        wp_initialize true (erase_qualifiers init.(init_type)) p' init.(init_init) (fun _ free => interp ti free Q).
+
+  End with_resolve.
+
+  Section frames.
+    Context `{Σ : cpp_logic thread_info} {σ1 σ2 :genv}.
+    Variables (M : coPset) (ti : thread_info) (ρ : region).
+    Hypothesis MOD : genv_leq σ1 σ2.
+
+    Lemma default_initialize_frame ty : forall Q Q',
+        (Forall p f fs, Q p f fs -* Q' p f fs)
+        |-- default_initialize (σ:=σ1) ty Q -* default_initialize (σ:=σ2) ty Q'.
+    Proof.
+      induction ty; simpl;
+        try solve [ intros; iIntros "a b" (?) "c"; iApply "a"; iApply "b"; eauto | eauto ].
+    Admitted. (* [uninitR] frame *)
+
+    Lemma wp_initialize_frame ar obj ty e (Q Q' : FreeTemp -> FreeTemps -> epred) :
+      (Forall free frees, Q free frees -* Q' free frees)
+      |-- wp_initialize (σ:=σ1) M ti ρ ar ty obj e Q -* wp_initialize (σ:=σ2) M ti ρ ar ty obj e Q'.
+    Proof using. (*
       rewrite /wp_initialize.
       case_eq (drop_qualifiers ty) =>/=; intros; eauto;
         try solve [ iIntros "a"; iApply wp_prval_frame; try reflexivity;
                     iIntros (v ? fs) "X %"; iApply "a"; iApply "X"; eauto ].
-      { rewrite /wp_init. iIntros "a". iApply wp_prval_frame => //.
-        iIntros (???) "X %"; subst. iApply "a". 3:{ iApply "X"; eauto. }
-      { iIntros "a". rewrite /wp_init.
-        destruct ar; iApply wp_lval_frame; try reflexivity;
-          [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
-      { iIntros "a".
-        destruct ar; iApply wp_lval_frame; try reflexivity;
-          [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
-    Qed.
-
-
-
-    Lemma wp_initialize_frame ar obj ty e Q Q' :
-      (Forall free free' frees frees', FreeTemps.wand free free' -* FreeTemps.wand frees frees' -* Q free frees -* Q' free' frees') |-- wp_initialize ar ty obj e Q -* wp_initialize ar ty obj e Q'.
-    Proof using.
-      rewrite /wp_initialize.
-      case_eq (drop_qualifiers ty) =>/=; intros; eauto;
-        try solve [ iIntros "a"; iApply wp_prval_frame; try reflexivity;
-                    iIntros (v ? fs) "X %"; iApply "a"; iApply "X"; eauto ].
       { iIntros "a".
         destruct ar; iApply wp_lval_frame; try reflexivity;
           [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
       { iIntros "a".
         destruct ar; iApply wp_lval_frame; try reflexivity;
           [ iIntros (v f) "X Y" | iIntros (v f) "X %"]; iApply "a"; iApply "X"; eauto. }
-    Qed.
+    Qed. *) Admitted. (* [anyR] frame *)
 
     Lemma wp_initialize_wand ar obj ty e Q Q' :
-      wp_initialize ar ty obj e Q |--(Forall free frees, Q free frees -* Q' free frees) -* wp_initialize ar ty obj e Q'.
+      wp_initialize (σ:=σ1) M ti ρ ar ty obj e Q
+      |--(Forall free frees, Q free frees -* Q' free frees) -* wp_initialize (σ:=σ2) M ti ρ ar ty obj e Q'.
     Proof using.
       iIntros "A B"; iRevert "A"; iApply wp_initialize_frame; eauto.
     Qed.
 
-    Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : _) : mpred :=
-        let p' := thisp ., offset_for cls init.(init_path) in
-        wp_initialize true (erase_qualifiers init.(init_type)) p' init.(init_init) (fun _ free => free Q).
+    Theorem wpi_frame (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : mpredI) :
+      k1 -* k2 |-- wpi (σ:=σ1) M ti ρ cls this e k1 -* wpi (σ:=σ2) M ti ρ cls this e k2.
+    Proof.
+      intros.
+      rewrite /wpi.
+      (*  iIntros (??). by iApply interp_frame.
+    Qed. *) Admitted. (* path [genv] extension *)
 
-  End with_resolve.
-
-  Theorem wpi_frame (thread_info : biIndex) (Σ : cpp_logic thread_info) (σ1 σ2 : genv) (M : coPset) (ti : thread_info) (ρ : region)
-          (cls : globname) (this : ptr) (e : Initializer) (k1 k2 : mpredI) :
-    genv_leq σ1 σ2 → k1 -* k2 |-- wpi M ti ρ cls this e k1 -* wpi M ti ρ cls this e k2.
-  Proof.
-    intros. assert (σ1 = σ2) by admit. subst.
-    rewrite /wpi.
-    iIntros "X"; iApply wp_initialize_frame.
-    About wp_initialize_frame.
-    iIntros (??). iApply "X".
-    Search FreeTemps.wand.
-    Lemma wand_refl ft : |-- FreeTemps.wand ft ft.
-    (** TODO this is blocked on Properness of continuations, maybe [FreeTemp] should build this in? *)
-  Admitted.
+  End frames.
 
 End Init.
 

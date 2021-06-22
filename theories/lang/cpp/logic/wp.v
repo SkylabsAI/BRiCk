@@ -24,42 +24,26 @@ Set Primitive Projections.
 Definition epred `{Σ : cpp_logic thread_info} := mpred.
 Global Bind Scope bi_scope with epred.
 Notation epredO := mpredO (only parsing).
-(*
-Inductive FreeTemps `{Σ : cpp_logic thread_info} :=
-| Top
-| Then (_ : list FreeTemps) (_ : FreeTemps).
-(*Global Bind Scope bi_scope with FreeTemps. *)
- *)
-(* TEMPORARY *)
 
 Module FreeTemps.
 Section FreeTemps.
   Context `{Σ : cpp_logic thread_info}.
 
-  Definition t : Type := epredO -n> mpredO.
+  Inductive t : Type :=
+  | id (* = fun x => x *)
+  | delete (ty : type) (p : ptr) (* = delete_val ty p  *)
+  | seq (f g : t) (* = fun x => f $ g x *)
+  | par (f g : t)
+    (* = fun x => Exists Qf Qg, f Qf ** g Qg ** (Qf -* Qg -* x)
+       (simplified)
+       fun x => f emp ** g emp ** x
+     *)
+  .
 
-  Instance FreeTemps_Equiv : Equiv t := fun P Q => forall e, P e -|- Q e.
-  Instance FreeTemps_refl : @Reflexive t (≡).
-  Proof. red. red. red. reflexivity. Qed.
+  #[global] Instance t_Equiv : Equiv t := @eq _.
 
-  (** [no_temps] is the unit of [FreeTemps], it signals that there are no
-      resources to destroy.
-   *)
-  Definition id : t.
-  Proof. exists (fun x => x). solve_proper. Defined.
-
-  (** [par a b] means that [a] and [b] should both be destroyed
-      but the order that they are destroyed is not defined.
-   *)
-  Definition par (a b : t) : t.
-  Admitted.
-  (** [seq a b] means that [a] must be destroyed *before* [b].
-   *)
-  Definition seq (a b : t) : t.
-  Proof. exists (fun P => a (b P)). solve_proper. Defined.
-
-  Definition wand (f1 f2 : t) : mpred :=
-    (Forall x y, (x -* y) -* f1 x -* f2 y).
+  (*
+  Definition wand (f1 f2 : t) : mpred := [| f1 = f2 |].
 
   Theorem id_wand : |-- wand id id.
   Proof. rewrite /wand/id. iIntros (??) "$". Qed.
@@ -78,6 +62,7 @@ Section FreeTemps.
 
   Axiom par_wand : forall f1 f1' f2 f2',
     wand f1 f1' |-- wand f2 f2' -* wand (seq f1 f2) (par f1' f2').
+*)
 
 End FreeTemps.
 End FreeTemps.
@@ -91,86 +76,7 @@ Infix "|*|" := FreeTemps.par (at level 30) : free_scope.
 Infix ">*>" := FreeTemps.seq (at level 30) : free_scope.
 Bind Scope free_scope with FreeTemps.t.
 
-(** Statements *)
-(* continuations
- * C++ statements can terminate in 4 ways.
- *
- * note(gmm): technically, they can also raise exceptions; however,
- * our current semantics doesn't capture this. if we want to support
- * exceptions, we should be able to add another case,
- * `k_throw : val -> mpred`.
- *)
-Variant ReturnType : Set :=
-| Normal
-| Break
-| Continue
-| ReturnVal (_ : ptr)
-| ReturnVoid
-.
-
-Definition rt_biIndex : biIndex :=
-  {| bi_index_type := ReturnType
-   ; bi_index_inhabited := populate Normal
-   ; bi_index_rel := @eq ReturnType
-   ; bi_index_rel_preorder := _ |}.
-
-Section Kpred.
-  Context `{Σ : cpp_logic thread_info}.
-
-  Definition KpredI : bi := monPredI rt_biIndex mpredI.
-  #[local] Notation Kpred := KpredI.
-  Definition KP (P : _) : KpredI := @MonPred rt_biIndex _ P _.
-  Arguments KP _%I.
-
-  Instance Kpred_fupd: FUpd KpredI :=
-    funI l r Q => KP (fun v => |={l,r}=> Q v).
-
-  Definition void_return (P : mpred) : KpredI :=
-    KP (funI rt =>
-          match rt with
-          | Normal | ReturnVoid => P
-          | _ => False
-          end).
-
-  Definition val_return (P : _ -> mpred) : KpredI :=
-    KP (funI rt =>
-        match rt with
-        | ReturnVal v => P v
-        | _ => False
-        end).
-
-  Definition Kseq (Q : Kpred -> mpred) (k : Kpred) : Kpred :=
-    KP (funI rt =>
-        match rt with
-        | Normal => Q k
-        | rt => k rt
-        end).
-
-  (* loop with invariant `I` *)
-  Definition Kloop (I : mpred) (Q : Kpred) : Kpred :=
-    KP (funI rt =>
-        match rt with
-        | Break | Normal => Q Normal
-        | Continue => I
-        | rt => Q rt
-        end).
-
-  Definition Kat_exit (Q : mpred -> mpred) (k : Kpred) : Kpred :=
-    KP (funI rt => Q (k rt)).
-
-  Definition Kfree (free : FreeTemp) : Kpred -> Kpred :=
-    Kat_exit (fun P => free P).
-
-  #[global] Instance mpred_Kpred_BiEmbed : BiEmbed mpredI KpredI := _.
-
-  (* NOTE KpredI does not embed into mpredI because it doesn't respect
-     existentials.
-   *)
-End Kpred.
-#[global] Notation Kpred := (bi_car KpredI).
-#[global,deprecated(since="2021-02-15",note="use KpredI")] Notation KpredsI := KpredI (only parsing).
-#[global,deprecated(since="2021-02-15",note="use Kpred")] Notation Kpreds := Kpred (only parsing).
-
+Module WPE.
 Section with_cpp.
   Context `{Σ : cpp_logic thread_info}.
 
@@ -363,6 +269,7 @@ Section with_cpp.
     forall σ1 σ2 M ti ρ e k1 k2,
       genv_leq σ1 σ2 ->
       Forall v f fs, k1 v f fs -* k2 v f fs |-- @wp_prval σ1 M ti ρ e k1 -* @wp_prval σ2 M ti ρ e k2.
+
   Global Instance Proper_wp_prval :
     Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==>
             pointwise_relation _ (pointwise_relation _ (pointwise_relation _ lentails)) ==> lentails)
@@ -418,6 +325,15 @@ Section with_cpp.
     : mpred :=
     wp_prval M ti ρ e (fun p free frees => [| p = into |] -* Q free frees).
 
+  Theorem wp_init_frame :
+    forall σ1 σ2 M ti ρ v e (k1 k2 : FreeTemp -> FreeTemps -> epred),
+      genv_leq σ1 σ2 ->
+      Forall f fs, k1 f fs -* k2 f fs |-- @wp_init σ1 M ti ρ v e k1 -* @wp_init σ2 M ti ρ v e k2.
+  Proof.
+    intros. rewrite /wp_init.
+    iIntros "x"; iApply wp_prval_frame => //.
+    iIntros (???) "y z"; iApply "x"; by iApply "y".
+  Qed.
 
   (* evaluate a prvalue that "computes the value of an operand of an operator"
    *)
@@ -652,16 +568,45 @@ Section with_cpp.
   Qed.
 
   (** * Statements *)
+  (* continuations
+   * C++ statements can terminate in 4 ways.
+   *
+   * note(gmm): technically, they can also raise exceptions; however,
+   * our current semantics doesn't capture this. if we want to support
+   * exceptions, we should be able to add another case,
+   * `k_throw : val -> mpred`.
+   *)
+  Variant ReturnType : Set :=
+  | Normal
+  | Break
+  | Continue
+  | ReturnVal (_ : ptr)
+  | ReturnVoid
+  .
 
-  Lemma Kfree_Kfree : forall k P Q, Kfree P (Kfree Q k) -|- Kfree (P >*> Q) k.
-  Proof using .
-    rewrite /Kfree/Kat_exit/KP/=. constructor => rt.
-    by rewrite /=.
-  Qed.
+  Definition rt_biIndex : biIndex :=
+    {| bi_index_type := ReturnType
+       ; bi_index_inhabited := populate Normal
+       ; bi_index_rel := @eq ReturnType
+       ; bi_index_rel_preorder := _ |}.
 
-  Lemma Kfree_emp : forall k, Kfree FreeTemps.id k -|- k.
-  Proof using .
-      by rewrite /Kfree/Kat_exit/KP/=; constructor => rt; rewrite /=.
+  Definition KpredI : bi := monPredI rt_biIndex mpredI.
+  #[local] Notation Kpred := KpredI.
+  Definition KP (P : _) : KpredI := @MonPred rt_biIndex _ P _.
+  Arguments KP _%I.
+
+  Instance Kpred_fupd: FUpd KpredI :=
+    funI l r Q => KP (fun v => |={l,r}=> Q v).
+
+  Definition Kat_exit (Q : mpred -> mpred) (k : KpredI) : KpredI :=
+    KP (funI rt => Q (k rt)).
+
+  Lemma Kat_exit_frame b b' (Q Q' : KpredI) :
+    (Forall rt, Q rt -* Q' rt)
+      |-- (Forall f f', (f -* f') -* b f -* b' f') -*
+      Forall rt, Kat_exit b Q rt -* Kat_exit b' Q' rt.
+  Proof.
+    iIntros "a b" (rt); destruct rt => /=; iApply "b"; iApply "a".
   Qed.
 
   (* evaluate a statement *)
@@ -676,12 +621,6 @@ Section with_cpp.
     forall σ1 σ2 M ti ρ s (k1 k2 : KpredI),
       genv_leq σ1 σ2 ->
       (Forall rt, k1 rt -* k2 rt) |-- @wp σ1 M ti ρ s k1 -* @wp σ2 M ti ρ s k2.
-
-  #[global] Instance Kseq_mono : Proper (((⊢) ==> (⊢)) ==> (⊢) ==> (⊢)) (@Kseq _ Σ).
-  Proof.
-    constructor => rt; rewrite /Kseq/KP/=.
-    destruct rt; try apply H; apply H0.
-  Qed.
 
   #[global] Instance Proper_wp :
     Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (⊢) ==> (⊢))
@@ -707,8 +646,6 @@ Section with_cpp.
     Proof.
       rewrite -{2}wp_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_wand with "Hwp"). auto.
-      iIntros (rt) "x";
-      rewrite monPred_at_fupd. eauto.
     Qed.
     Lemma wp_fupd k : WP (|={M}=> k) |-- WP k.
     Proof. iIntros "Hwp". by iApply (wp_shift with "[$Hwp]"). Qed.
@@ -806,5 +743,7 @@ Section with_cpp.
   Proof. intros; apply fspec_frame. Qed.
 
 End with_cpp.
+End WPE.
 
+Export WPE.
 Export stdpp.coPset.
