@@ -880,7 +880,7 @@ Section with_cpp.
     Proof. move=>P Q /type_of_spec_ne. exact: cc_type_of_spec. Qed.
 
     #[global] Instance length_fs_arguments_ne (n : nat) :
-      Proper (dist n ==> eq) (fun P => length (fs_arguments P)).
+      Proper (dist n ==> eq) (fun P => length (to_list $ fs_arguments P)).
     Proof. move=>P Q /type_of_spec_ne. exact: length_type_of_spec. Qed.
   End ofe.
 

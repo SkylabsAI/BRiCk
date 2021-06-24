@@ -178,7 +178,7 @@ Instance: EqDecision BuiltinFn.
 Proof. solve_decision. Defined.
 
 (** * Value Categories *)
-Variant ValCat : Set := Lvalue | Rvalue | Xvalue.
+Variant ValCat : Set := Lvalue | Prvalue | Xvalue.
 Instance: EqDecision ValCat.
 Proof. solve_decision. Defined.
 
@@ -212,6 +212,8 @@ Inductive type : Set :=
 
 | Tvar (_ : bs) (* a reference to a type variable *)
 | Tspecialize (_ : bs) (_ : talist)
+
+| Tdependent (* a reference to an unnamed type variable *)
 
 (* architecture-specific types; currently unused.
    some Tarch types, like ARM SVE, are "sizeless", hence [option size]. *)
@@ -251,8 +253,8 @@ with Expr : Set :=
 | Epostdec (_ : Expr) (_ : type)
   (* ^ special unary operators *)
 
-| Eseqand (_ _ : Expr) (_ : type)
-| Eseqor  (_ _ : Expr) (_ : type)
+| Eseqand (_ _ : Expr) (* type = Tbool *)
+| Eseqor  (_ _ : Expr) (* type = Tbool *)
 | Ecomma (vc : ValCat) (e1 e2 : Expr) (* type = type_of e2 *)
   (* ^ these are specialized because they have special control flow semantics *)
 
@@ -271,7 +273,7 @@ with Expr : Set :=
 | Esize_of (_ : type + Expr) (_ : type)
 | Ealign_of (_ : type + Expr) (_ : type)
 | Econstructor (_ : globname) (_ : celist) (_ : type)
-| Eimplicit (_ : Expr) (_ : type)
+| Eimplicit (e : Expr) (* type = type_of e *)
 | Eimplicit_init (_ : type)
 | Eif       (_ _ _ : Expr) (_ : type)
 
@@ -283,11 +285,10 @@ with Expr : Set :=
        (alloc_ty : type)
        (array_size : option Expr) (init : option Expr) (_ : type)
 | Edelete (is_array : bool) (delete_fn : option (obj_name * type)) (arg : Expr)
-          (deleted_type : type) (dtor : option obj_name) (_ : type)
+          (deleted_type : type) (_ : type)
 
-| Eandclean (_ : Expr) (_ : type)
-| Ematerialize_temp (_ : Expr) (_ : type)
-| Ebind_temp (_ : Expr) (_ : obj_name) (_ : type)
+| Eandclean (e : Expr) (* type = type_of e *)
+| Ematerialize_temp (e : Expr) (* type = type_of e *)
 
 | Ebuiltin (_ : BuiltinFn) (_ : type)
 | Eatomic (_ : AtomicOp) (_ : celist) (_ : type)
@@ -343,7 +344,7 @@ with Cast : Set :=
 | Creinterpret (_ : type)
 | Cstatic      (from to : globname)
 | Cdynamic     (from to : globname)
-| Cconst       (_ : type).
+| Cconst       (_ : type)
 
 with template_arg : Set :=
 | template_type (_ : type)
@@ -354,6 +355,10 @@ with talist : Set :=
 | tacons (_ : template_arg) (_ : talist)
 .
 Instance type_inhabited : Inhabited type := populate Tvoid.
+#[global] Instance tlist_inhabited : Inhabited tlist := populate tnil.
+#[global] Instance talist_inhabited : Inhabited talist := populate tanil.
+#[global] Instance celist_inhabited : Inhabited celist := populate cenil.
+
 
 #[global,program] Instance Seq_talist : Sequence talist :=
 {| to_list := fix go a := match a with
