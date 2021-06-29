@@ -2,6 +2,37 @@ Require Import bedrock.lang.cpp.parser.
 
 Local Open Scope bs_scope.
 
+(*
+template<typename T>
+void bar() {
+  T t = 0;
+  foo(t + t);
+  foo(T(0)); // i lack sufficient information to distinguish this
+             // from the above
+}
+
+struct S {
+  int x;
+  S(int y):x(y) {}
+  S operator+(S s) { return S(1); }
+};
+void foo(S&) { }
+void foo(S&&) { }
+
+struct X {
+  int x;
+  X(int y):x(y) {}
+  int operator+(int s) { return 1; }
+};
+void foo(X&) { }
+void foo(X&&) { }
+
+void test() {
+  bar<S>();
+  bar<int>();
+}
+*)
+
 Definition bar_S :=
             (Sseq (
                 (Sdecl (
@@ -214,7 +245,8 @@ Module TEST2_1.
     end.
 
   Record EXPR {t : type} {ts : list type} : Type := mkExpr
-  { E_valcat : ValCat ; E_expr : nfun (length ts) Expr
+  { E_valcat : ValCat
+  ; E_expr : nfun (length ts) Expr
   ; E_type_ok : OK t E_expr
   }.
   Arguments EXPR _ _ : clear implicits.
@@ -248,20 +280,54 @@ Module TEST2_1.
   Notation "'CONTEXT' e << e1 >>" := (@COER _ [_] e e1 ltac:(solve_ob)).
   Notation "'CONTEXT' e << e1 ; e2 >>" := (@COER _ [_;_] e e1 ltac:(solve_ob) e2 ltac:(solve_ob)).
 
+  (*
+  Ctor T Tint :=
+    \arg{n} "" (Vint n)
+    \post{r}[Vptr r] r |-> T 1 n
+  Movable T :=
+    \arg{p} "" (Vptr p)
+    \pre p |-> T 1 x ...
+  Definition Ctor (T : type) (ls : list type) := EXPR T ls.
+  Definition MoveCtor (T : type) := EXPR T (Trv_ref T).
+  Definition Fun (_ : bs) (T : type) (ls : list type) := EXPR T ls.
+   *)
 
-  #[program] Definition bar_ :=
+  (*
+  Option 1:
+    - directly generate the HOAS representation ([bar_] below) in C++
+  Option 2:
+    - define a new [expr] type (and [type], etc)
+    - write a C++ function to generate this type
+    - write a type of instantiations
+    - implement substitution
+
+  to prove: foo<int>
+  1. prove a generic foo
+  2. apply the proof to foo<int> and get the substitution
+  3. prove the assumed pre-condition
+   *)
+
+(*
+  Definition OK_SPEC (E : EXPR t [t1;t2]) (SPEC : WithPrePost) : Prop :=
+    forall a b,
+      wp_initialize t1 a (fun av free => wp_initialize t2 b (fun bv free' => [[SPEC]] av bv))
+      |-- wp_initialize t (COER (T : EXPR t [t1;t2]) a b).
+ *)
+
+  Definition bar_ :=
     fun (T Tadd Tfoo1 : type)
     (T_add : EXPR Tadd [T; T])
     (foo_1 : EXPR Tfoo1 [Tadd])
     (t : type)
     (T_ctor1 : EXPR t [Tint W32 Signed])
+    (T_init_int : EXPR t [Tint W32 Signed])
     (Tfoo2 : type)
     (foo_2 : EXPR Tfoo2 [t]) =>
     (Sseq (
          (Sdecl (
               (Dvar "t"
                     T
-                    (Some (CONTEXT T_ctor1 << (Prvalue, Eint 0%Z (Tint W32 Signed)) >>.2))) :: nil)) ::
+                    (Some (CONTEXT T_init_int << (Prvalue, Eint 0%Z (Tint W32 Signed)) >>.2))) :: nil)) ::
          (let (vc,e) :=
               CONTEXT foo_1 << CONTEXT T_add <<
                                (Lvalue, Evar (Lname "t") T) ;
@@ -272,6 +338,7 @@ Module TEST2_1.
               CONTEXT foo_2 << CONTEXT T_ctor1 << (Prvalue, (Eint 0%Z (Tint W32 Signed))) >> >>
           in Sexpr vc e) :: nil)).
 
+  (*
   Goal exists a b c d e f g h i,
       bar_ a b c d e f g h i = bar_int.
   Proof.
@@ -288,7 +355,14 @@ Module TEST2_1.
     Unshelve.
     all: simpl; eauto.
   Defined.
+   *)
 
+  (*
+  a + b ->        // no guarantee
+  a.operator+(b) // guarantees evaluating a before b
+   *)
+
+  (*
   Goal exists a b c d e f g h i,
       bar_ a b c d e f g h i = bar_S.
   Proof.
@@ -304,9 +378,160 @@ Module TEST2_1.
     repeat f_equal.
     (* pre-C++17, the syntax [T x = 0] produces an elidable temporary.
        the distinction can be addressed by splitting the syntax of the initializers and
-       producings 
+       producings
      *)
-
+*)
 End TEST2_1.
 
 
+(** TEST 2.2
+    This just extends TEST 2.1 and revises [EXPR] to put the return type inside
+    [EXPR].
+ *)
+Module TEST2_2.
+  Fixpoint OK (ret : type) {ls : list type} : nfun (length ls) Expr -> Prop :=
+    match ls as ls return nfun (length ls) Expr -> Prop with
+    | nil => fun E => type_of E = ret
+    | t :: ts => fun E => forall e, type_of e.2 = t -> @OK ret ts (E e)
+    end.
+
+  Record EXPR {ts : list type} : Type := mkExpr
+  { E_type : type (* uncertain how to express this sort of thing... *)
+  ; E_expr : nfun (length ts) Expr
+  ; E_type_ok : OK E_type E_expr
+  }.
+  Arguments EXPR _ : clear implicits.
+
+  Fixpoint APPLY (ret : type) (ls : list type) : Type :=
+    match ls as ls return Type with
+    | nil => (ValCat * Expr)%type
+    | t :: ts => forall e : ValCat * Expr, type_of e.2 = t -> @APPLY ret ts
+    end.
+
+  Fixpoint inst (vc : type) {ret ts} : nfun (length ts) Expr -> @APPLY ret ts :=
+    match ts as ts return (nfun (length ts) Expr) -> @APPLY ret ts with
+    | nil => fun (e : nfun 0 Expr) => (match vc with
+                                   | Tref _ => Lvalue
+                                   | Trv_ref _ => Xvalue
+                                   | _ => Prvalue
+                                   end, e)
+    | t :: ts => fun (e : nfun (S (length ts)) Expr) x _ => @inst vc ret ts (e x)
+    end.
+
+  Definition COER {ts} (e : EXPR ts) : @APPLY e.(E_type) ts :=
+    inst e.(E_type) e.(E_expr).
+
+  Lemma type_of_COER_0 (e : EXPR []) : type_of (COER e).2 = e.(E_type).
+  Proof. apply e. Qed.
+  Lemma type_of_COER_1 t1 (e : EXPR [t1]) e1 pf1 : type_of (COER e e1 pf1).2 = e.(E_type).
+  Proof. apply e; eauto. Qed.
+  Lemma type_of_COER_2 t1 t2 (e : EXPR [t1;t2]) e1 pf1 e2 pf2 : type_of (COER e e1 pf1 e2 pf2).2 = e.(E_type).
+  Proof. apply e; eauto. Qed.
+
+  Ltac solve_ob :=
+    intros; try solve [ reflexivity | apply type_of_COER_0 | apply type_of_COER_1 | apply type_of_COER_2 ].
+
+  Notation "'CONTEXT' e []" := (@COER [] e).
+  Notation "'CONTEXT' e << e1 >>" := (@COER [_] e e1 ltac:(solve_ob)).
+  Notation "'CONTEXT' e << e1 ; e2 >>" := (@COER [_;_] e e1 ltac:(solve_ob) e2 ltac:(solve_ob)).
+
+  (*
+  Ctor T Tint :=
+    \arg{n} "" (Vint n)
+    \post{r}[Vptr r] r |-> T 1 n
+  Movable T :=
+    \arg{p} "" (Vptr p)
+    \pre p |-> T 1 x ...
+  Definition Ctor (T : type) (ls : list type) := EXPR T ls.
+  Definition MoveCtor (T : type) := EXPR T (Trv_ref T).
+  Definition Fun (_ : bs) (T : type) (ls : list type) := EXPR T ls.
+   *)
+
+  (*
+  Option 1:
+    - directly generate the HOAS representation ([bar_] below) in C++
+  Option 2:
+    - define a new [expr] type (and [type], etc)
+    - write a C++ function to generate this type
+    - write a type of instantiations
+    - implement substitution
+
+  to prove: foo<int>
+  1. prove a generic foo
+  2. apply the proof to foo<int> and get the substitution
+  3. prove the assumed pre-condition
+   *)
+  Require Import bedrock.lang.cpp.logic.
+
+  Definition OK_SPEC `{Σ : cpp_logic thread_info} {σ : genv} {t1 t2} (E : EXPR [t1;t2]) (SPEC : WithPrePost mpredI) : Prop :=
+    forall M (ti : thread_info) ρ p1 p2 p Q (a b : ValCat * Expr) pfa pfb ,
+      wp_initialize M ti ρ t1 p1 a.2 (fun free => wp_initialize M ti ρ t2 p2 b.2 (fun free' => WppD SPEC [Vptr p1; Vptr p2] (fun r => Q emp)))
+      |-- wp_initialize M ti ρ E.(E_type) p (COER E a pfa b pfb).2 Q.
+
+  Arguments E_type {_} _.
+  Coercion E_type : EXPR >-> type.
+
+  Definition bar_ :=
+    fun (T : type)
+    (T_init_int : EXPR [Tint W32 Signed])
+    (T_add : EXPR [T; T])
+    (foo_1 : EXPR [E_type T_add])
+    (T_ctor1 : EXPR [Tint W32 Signed])
+    (foo_2 : EXPR [E_type T_ctor1]) =>
+    (Sseq (
+         (Sdecl (
+              (Dvar "t"
+                    T
+                    (Some (CONTEXT T_init_int << (Prvalue, Eint 0%Z (Tint W32 Signed)) >>.2))) :: nil)) ::
+         (let (vc,e) :=
+              CONTEXT foo_1 << CONTEXT T_add <<
+                               (Lvalue, Evar (Lname "t") T) ;
+                               (Lvalue, Evar (Lname "t") T) >> >>
+          in
+          Sexpr vc e) ::
+         (let (vc,e) :=
+              CONTEXT foo_2 << CONTEXT T_ctor1 << (Prvalue, (Eint 0%Z (Tint W32 Signed))) >> >>
+          in Sexpr vc e) :: nil)).
+
+  Goal exists a b c d e f,
+      bar_ a b c d e f = bar_int.
+  Proof.
+    rewrite /bar_int.
+    eexists.
+    eexists (@mkExpr [_] _ (fun l => l.2) _).
+    eexists (@mkExpr [_;_] _ (fun l r => Ebinop Badd (Ecast Cl2r l _) (Ecast Cl2r r _) _) _).
+    eexists (@mkExpr [_] _ (fun l => Ecall _ [l] _) _).
+    eexists (@mkExpr [_] _ (fun l => l.2) _).
+    eexists (@mkExpr [_] _ (fun l => Ecall _ [(_, Ecast Cnoop l _)] _) _).
+    rewrite /bar_/=.
+    repeat f_equal.
+    Unshelve.
+    all: simpl; eauto.
+    all: simpl; eauto.
+  Defined.
+(*
+  a + b ->        // no guarantee
+  a.operator+(b) // guarantees evaluating a before b
+*)
+  Goal exists a b c d e f,
+      bar_ a b c d e f = bar_S.
+  Proof.
+    rewrite /bar_S.
+    eexists.
+    eexists (@mkExpr [_] _ (fun l => Eandclean (Econstructor _ [(Xvalue, Ematerialize_temp (Econstructor _ [l] _))] _)) _).
+    eexists (@mkExpr [_;_] _ (fun l r => Emember_call _ l.1 l.2 [(Prvalue, Econstructor _ [(_, Ecast Cnoop r _)] _)] _) _).
+    eexists (@mkExpr [_] _ (fun l => Eandclean $ Ecall _ [(Xvalue, Ematerialize_temp l.2)] _) _).
+    eexists (@mkExpr [_] _ (fun l => Econstructor _ [l] _) _).
+    eexists (@mkExpr [_] _ (fun l => Eandclean $ Ecall _ [(Xvalue, Ematerialize_temp l.2)] _) _).
+    rewrite /bar_ /=.
+    repeat f_equal.
+    Unshelve.
+    all: simpl; eauto.
+    all: eauto.
+    (* pre-C++17, the syntax [T x = 0] produces an elidable temporary.
+       the distinction can be addressed by splitting the syntax of the initializers and
+       producings
+     *)
+  Qed.
+
+End TEST2_2.
