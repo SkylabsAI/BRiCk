@@ -16,88 +16,89 @@ Declare Scope fspec_scope.
 Delimit Scope fspec_scope with fspec.
 Bind Scope fspec_scope with WithPrePost.
 
+Module V1.
+  Parameter PROP : bi.
+
+  Definition WPP := (list val -> Prop) -> (val -> PROP) -> PROP.
+
+  Definition add_arg (s : names.ident) (v : val) (wpp : WPP) : WPP :=
+    fun argsP post => wpp (fun args => argsP (v :: args)) post.
+  Definition add_pre (P : PROP) (wpp : WPP) : WPP :=
+    fun argsP post => wpp argsP post ** P.
+  Definition add_post (P : PROP) (wpp : WPP) : WPP :=
+    fun argsP post => wpp argsP (fun result => P -* post result).
+  Definition add_with {T : Type} (wpp : T -> WPP) : WPP :=
+    fun argsP post => Exists (x : T), wpp x argsP post.
+  Definition post_ret (v : val) (Q : PROP) : WPP :=
+    fun argP post => [| argP nil |] ** (Q -* post v).
+  Definition finish (wpp : WPP) : list val -> (val -> PROP) -> PROP :=
+    fun vs post => wpp (eq vs) post.
+
+  Parameters PRE POST RET : PROP.
+  Eval cbv beta iota zeta delta -[bi_wand bi_sep bi_emp] in
+      add_with (fun x : ptr => add_arg "x" (Vptr x) (add_pre PRE (add_post POST (post_ret (Vint 0) RET)))).
+End V1.
+
+Module V2.
+  Parameter PROP : bi.
+
+  Definition WPP := (list val -> ((val -> PROP) -> PROP) -> PROP) -> PROP.
+
+  Definition add_arg (s : names.ident) (v : val) (wpp : WPP) : WPP :=
+    fun Q => wpp $ fun args post => Q (v :: args) post.
+  Definition add_pre (P : PROP) (wpp : WPP) : WPP :=
+    fun Q => wpp $ fun args post => P -* Q args post.
+  Definition add_post (P : PROP) (wpp : WPP) : WPP :=
+    fun Q => wpp $ fun args post => Q args (fun result => P -* post result).
+  Definition add_with {T : Type} (wpp : T -> WPP) : WPP :=
+    fun Q => Forall x : T, wpp x Q.
+  Definition post_ret {t : tele} (v : t -t> val) (P : t -t> PROP) : WPP :=
+    fun Q => Q nil (fun XX => telescopes.bi_tforall (fun x : t => tele_app P x -* XX (tele_app v x))).
+  Definition finish (RET : ((val -> PROP) -> PROP) -> PROP) (wpp : WPP) : list val -> (val -> PROP) -> PROP.
+    refine (fun vs post => wpp (fun vs' post' => [| vs = vs' |] ** RET (fun retP => post' (fun v => retP v -* post v)))).
+  Defined.
+
+  Parameters PRE POST RET : PROP.
+  Eval cbv beta iota zeta delta -[bi_wand bi_sep bi_emp] in
+      fun RETURN => finish RETURN $ add_with (fun x : ptr => add_arg "x" (Vptr x) (add_pre PRE (add_post POST (post_ret (t:=TeleS (fun _ : Z => TeleO)) (fun z => Vint z) (fun z => RET))))).
+
+End V2.
+
+
 Section with_Σ.
   Context `{PROP : bi}.
 
   Local Notation WithPrePost := (WithPrePost PROP) (only parsing).
 
   Definition add_pre (P : PROP) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre  := tele_map (fun '(args,X) => (args, P ** X)) wpp.(wpp_pre)
-     ; wpp_post := wpp.(wpp_post)
-     |}.
+    fun args Q => P ** wpp args Q.
 
   Definition add_args (ls : list val) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre  := tele_map (fun '(args,X) => (ls ++ args, X)) wpp.(wpp_pre)
-     ; wpp_post := wpp.(wpp_post)
-    |}.
+    fun args Q => Exists args', [| args = ls ++ args' |] ** wpp args' Q.
 
   Definition add_arg (s : names.ident) (v : val) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre  := tele_map (fun '(args,X) => (v :: args, X)) wpp.(wpp_pre)
-     ; wpp_post := wpp.(wpp_post)
-    |}.
+    fun args Q => Exists args', [| args = v :: args' |] ** wpp args' Q.
 
   Definition add_post (P : PROP) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre  := wpp.(wpp_pre)
-     ; wpp_post :=
-         tele_map (WithEx_map (fun r Q => (r,P ** Q))) wpp.(wpp_post)
-    |}.
+    fun args Q => wpp args (fun res => P ** Q res).
 
   Definition add_require (P : Prop) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre := tele_map (fun '(args,X) => (args, [| P |] ** X)) wpp.(wpp_pre)
-     ; wpp_post := wpp.(wpp_post)
-    |}.
+    fun args Q => [| P |] ** wpp args Q.
 
   Definition add_persist (P : PROP) (wpp : WithPrePost) : WithPrePost :=
-    {| wpp_with := wpp.(wpp_with)
-     ; wpp_pre := tele_map (fun '(args,X) => (args, □ P ** X)) wpp.(wpp_pre)
-     ; wpp_post := wpp.(wpp_post)
-    |}.
+    fun args Q => □ P ** wpp args Q.
 
   Definition add_prepost (P : PROP) (wpp : WithPrePost) : WithPrePost :=
     add_pre P (add_post P wpp).
 
   Definition post_void (t : tele) (Q : t -t> PROP) : WithPrePost :=
-    {| wpp_with := TeleO
-     ; wpp_pre := (nil, emp)%I
-     ; wpp_post := {| we_ex := t
-                    ; we_post := tele_map (fun Q => (Vvoid, Q)) Q |} |}.
+    fun args Q' => [| args = nil |] ** (telescopes.bi_tforall (fun args => tele_app Q args -* Q' Vvoid))%I.
 
   Definition post_ret (t : tele) (Q : t -t> val * PROP) : WithPrePost :=
-    {| wpp_with := TeleO
-     ; wpp_pre := (nil, emp)%I
-     ; wpp_post := {| we_ex := t
-                    ; we_post := Q |} |}.
+    fun args Q' => [| args = nil |] ** (telescopes.bi_tforall (fun exs => let '(v,P) := tele_app Q exs in P -* Q' v))%I.
 
-  Definition add_with {t : tele} (wpp : t -t> WithPrePost) : WithPrePost.
-  refine
-    {| wpp_with := tele_append t (tele_map wpp_with wpp)
-     ; wpp_pre  := _
-     ; wpp_post := _
-     |}.
-  { refine ((fix go (t : tele)  :=
-              match t as t
-                    return forall (wpp : t -t> WithPrePost),
-                  tele_append t (tele_map wpp_with wpp) -t> list val * PROP
-              with
-              | TeleO => fun wpp => wpp.(wpp_pre)
-              | TeleS rst => fun wpp x => go (rst x) (wpp x)
-              end) t wpp).
-  }
-  { refine ((fix go (t : tele)  :=
-              match t as t
-                    return forall (wpp : t -t> WithPrePost),
-                  tele_append t (tele_map wpp_with wpp) -t> _
-              with
-              | TeleO => fun wpp => wpp.(wpp_post)
-              | TeleS rst => fun wpp x => go (rst x) (wpp x)
-              end) t wpp).
-  }
-  Defined.
+  Definition add_with {t : tele} (wpp : t -t> WithPrePost) : WithPrePost :=
+    fun args Q => telescopes.bi_texist (fun exs => tele_app wpp exs args Q).
 
   Definition with_tele (t : telescopes.tele) (f : telescopes.tele_arg t -> WithPrePost)
   : WithPrePost :=
@@ -241,16 +242,15 @@ Section with_Σ.
 
   Import heap_notations heap_pred.
 
-Goal WithPrePost mpredI.
-refine (
-  \pre emp
-  \post  emp
-).
-(* Show Proof. *)
-Abort.
+  Declare Reduction red_spec :=
+    cbv beta iota zeta delta [ add_pre post_void telescopes.bi_tforall tele_fold tele_bind tele_app ].
 
-Goal WithPrePost mpredI.
-refine (
+  Example _1 : WithPrePost mpredI :=
+    \pre emp
+    \post  emp.
+  Eval cbv beta iota zeta delta [ _1 add_pre post_void telescopes.bi_tforall tele_fold tele_bind tele_app ] in _1.
+
+  Example _2 : WithPrePost mpredI :=
    \with (I J : mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
    \prepost emp
    \require True
@@ -262,24 +262,21 @@ refine (
    \prepost{q1 q2} p |-> R q1 q2 0
    \pre{q3 q4} p |-> R q3 q4 0
    \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post {x} [ Vint x ] emp).
-(* Show Proof. *)
-Abort.
+   \post {x} [ Vint x ] emp.
 
-Goal WithPrePost mpredI.
-refine (
-   \with (I J : mpred)
-   \with  (a : nat)
-   \prepost emp
-   \with (z : nat)
-   \prepost emp
-   \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post{r}[ r ] emp).
-(* Show Proof. *)
-Abort.
+  Eval cbv beta iota zeta delta [ _2 add_pre post_void telescopes.bi_tforall tele_fold tele_bind tele_app add_prepost add_persist add_require add_with telescopes.bi_texist add_post with_require_fspec with_arg_fspec add_arg add_args with_prepost_fspec with_pre_fspec post_ret
+                                ] in _2.
 
-Goal WithPrePost mpredI.
-refine (
+  Example _3 : WithPrePost mpredI :=
+    \with (I J : mpred)
+    \with  (a : nat)
+    \prepost emp
+    \with (z : nat)
+    \prepost emp
+    \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
+    \post{r}[ r ] emp.
+
+  Example _4 : WithPrePost mpredI :=
    \with (I J : mpred) (n : nat)
    \with  (a : nat)
    \let x := 3%nat
@@ -295,23 +292,14 @@ refine (
    \arg{(zz : Z)} "foo" (Vint zz)
    \prepost emp
    \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
-   \post emp).
-(* Show Proof. *)
-Abort.
+   \post emp.
 
-Goal WithPrePost mpredI.
-refine (
+  Example _5 : WithPrePost mpredI :=
     \pre emp ** Exists y : nat, [| y = 3 |]
-    \post{}[Vptr nullptr] emp).
-(* Show Proof. *)
-Abort.
+    \post{}[Vptr nullptr] emp.
 
-
-Goal WithPrePost mpredI.
-refine (
+  Example _6 : WithPrePost mpredI :=
     \pre |==> True ** |={∅,⊤}=> False
-    \post{}[Vptr nullptr] emp).
-(* Show Proof. *)
-Abort.
+    \post{}[Vptr nullptr] emp.
 
 End with_Σ.

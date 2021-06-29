@@ -25,8 +25,8 @@ Arguments UNSUPPORTED {_ _} _%bs.
 (** * Wrappers to build [function_spec] from a [WithPrePost] *)
 
 (* A specification for a function (with explicit thread info) *)
-Definition TSFunction@{X Z Y} `{Σ : cpp_logic} {cc : calling_conv}
-    (ret : type) (targs : list type) (PQ : thread_info -> WithPrePost@{X Z Y} mpredI)
+Definition TSFunction `{Σ : cpp_logic} {cc : calling_conv}
+    (ret : type) (targs : list type) (PQ : thread_info -> WithPrePost mpredI)
     : function_spec :=
   {| fs_cc        := cc
    ; fs_return    := ret
@@ -34,8 +34,8 @@ Definition TSFunction@{X Z Y} `{Σ : cpp_logic} {cc : calling_conv}
    ; fs_spec ti   := WppD (PQ ti) |}.
 
 (* A specification for a function  *)
-Definition SFunction@{X Z Y} `{Σ : cpp_logic} {cc : calling_conv}
-    (ret : type) (targs : list type) (PQ : WithPrePost@{X Z Y} mpredI)
+Definition SFunction `{Σ : cpp_logic} {cc : calling_conv}
+    (ret : type) (targs : list type) (PQ : WithPrePost mpredI)
     : function_spec :=
   {| fs_cc        := cc
    ; fs_return    := ret
@@ -43,54 +43,40 @@ Definition SFunction@{X Z Y} `{Σ : cpp_logic} {cc : calling_conv}
    ; fs_spec _    := WppD PQ |}.
 
 (* A specification for a constructor *)
-Definition SConstructor@{X Z Y} `{Σ : cpp_logic, resolve : genv} {cc : calling_conv}
-    (class : globname) (targs : list type) (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
+Definition SConstructor `{Σ : cpp_logic, resolve : genv} {cc : calling_conv}
+    (class : globname) (targs : list type) (PQ : ptr -> WithPrePost mpredI)
     : function_spec :=
   let this_type := Qmut (Tnamed class) in
-  let map_pre this '(args, P) :=
-    (Vptr this :: args,
-     this |-> tblockR (Tnamed class) 1 ** P)
-  in
   SFunction (cc:=cc) (Qmut Tvoid) (Qconst (Tpointer this_type) :: targs)
-    {| wpp_with := TeleS (fun this : ptr => (PQ this).(wpp_with))
-     ; wpp_pre this := tele_map (map_pre this) (PQ this).(wpp_pre)
-     ; wpp_post this := (PQ this).(wpp_post)
-     |}.
+            $ fun args POST =>
+                Exists (this : ptr) (rest : _),
+                [| args = Vptr this :: rest |] ** this |-> tblockR (Tnamed class) 1 ** PQ this rest POST.
 
 (* A specification for a destructor *)
 Definition SDestructor@{X Z Y} `{Σ : cpp_logic, resolve : genv} {cc : calling_conv}
-    (class : globname) (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
+    (class : globname) (PQ : ptr -> WithPrePost mpredI)
     : function_spec :=
   let this_type := Qmut (Tnamed class) in
-  let map_pre this '(args, P) := (Vptr this :: args, P) in
-  let map_post (this : ptr) '{| we_ex := pwiths ; we_post := Q|} :=
-    {| we_ex := pwiths
-     ; we_post := tele_map (fun '(result, Q) =>
-      (result, this |-> tblockR (Tnamed class) 1 ** Q)) Q
-     |}
-  in
   (** ^ NOTE the size of an object might be different in the presence
       of virtual base classes. *)
-  SFunction@{X Z Y} (cc:=cc) (Qmut Tvoid) (Qconst (Tpointer this_type) :: nil)
-    {| wpp_with := TeleS (fun this : ptr => (PQ this).(wpp_with))
-     ; wpp_pre this := tele_map (map_pre this) (PQ this).(wpp_pre)
-     ; wpp_post this := tele_map (map_post this) (PQ this).(wpp_post)
-    |}.
+  SFunction (cc:=cc) (Qmut Tvoid) (Qconst (Tpointer this_type) :: nil) $
+           fun args POST =>
+             Exists (this : ptr) (rest : _),
+             [| args = Vptr this :: rest |] ** PQ this rest (fun result => this |-> tblockR (Tnamed class) 1 ** POST result).
 
 (* A specification for a method *)
-#[local] Definition SMethod_wpp@{X Z Y} `{Σ : cpp_logic}
-    (wpp : ptr -> WithPrePost@{X Z Y} mpredI) : WithPrePost@{X Z Y} mpredI :=
-  let map_pre this pair := (this :: pair.1, pair.2) in
-  {| wpp_with := TeleS (fun this : ptr => (wpp this).(wpp_with))
-   ; wpp_pre this := tele_map (map_pre (Vptr this)) (wpp this).(wpp_pre)
-   ; wpp_post this := (wpp this).(wpp_post)
-   |}.
-Definition SMethod@{X Z Y} `{Σ : cpp_logic} {cc : calling_conv}
+#[local] Definition SMethod_wpp `{Σ : cpp_logic}
+ (wpp : ptr -> WithPrePost mpredI) : WithPrePost mpredI :=
+  fun args POST =>
+    Exists (this : ptr) (rest : _),
+    [| args = Vptr this :: rest |] ** wpp this rest POST.
+
+Definition SMethod `{Σ : cpp_logic} {cc : calling_conv}
     (class : globname) (qual : type_qualifiers) (ret : type) (targs : list type)
-    (PQ : ptr -> WithPrePost@{X Z Y} mpredI) : function_spec :=
+    (PQ : ptr -> WithPrePost mpredI) : function_spec :=
   let class_type := Tnamed class in
   let this_type := Tqualified qual class_type in
-  SFunction@{X Z Y} (cc:=cc) ret (Qconst (Tpointer this_type) :: targs)
+  SFunction (cc:=cc) ret (Qconst (Tpointer this_type) :: targs)
     (SMethod_wpp PQ).
 
 Section with_cpp.
