@@ -105,12 +105,11 @@ End wpp_ofe.
 Arguments WithPrePostGO : clear implicits.
 Notation WithPrePostO PROP := (WithPrePostGO PROP (list val) val).
 
-(** TODO port this
 (** Universe polymorphic relations between WPPs. *)
-Definition wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} {PROP : bi} (R : relation PROP)
+Definition wppg_relation@{A R} {PROP : bi} (R : relation PROP)
     {ARGS : Type@{A}} {RESULT : Type@{R}}
-    (wpp1 : WithPrePostG@{X1 Z1 Y1 A R} PROP ARGS RESULT)
-    (wpp2 : WithPrePostG@{X2 Z2 Y2 A R} PROP ARGS RESULT) : Prop :=
+    (wpp1 : WithPrePostG@{A R} PROP ARGS RESULT)
+    (wpp2 : WithPrePostG@{A R} PROP ARGS RESULT) : Prop :=
   (** We use a single [K] rather than pointwise equal [K1], [K2] for
       compatibility with [fs_entails], [fs_impl]. *)
   forall xs K, R (WppGD wpp1 xs K) (WppGD wpp2 xs K).
@@ -121,9 +120,9 @@ Notation wppg_entails := (wppg_relation bi_entails) (only parsing).
 Notation wppg_dist n := (wppg_relation (dist n)) (only parsing).
 Notation wppg_equiv := (wppg_relation equiv) (only parsing).
 
-Definition wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} {PROP : bi} (R : relation PROP)
-    (wpp1 : WithPrePost@{X1 Z1 Y1} PROP)
-    (wpp2 : WithPrePost@{X2 Z2 Y2} PROP) : Prop :=
+Definition wpp_relation {PROP : bi} (R : relation PROP)
+    (wpp1 : WithPrePost PROP)
+    (wpp2 : WithPrePost PROP) : Prop :=
   (** Can generate nicer goals compared to [:= wppg_entails ...]. *)
   forall xs K, R (WppD wpp1 xs K) (WppD wpp2 xs K).
 #[global] Instance: Params (@wpp_relation) 2 := {}.
@@ -134,13 +133,12 @@ Notation wpp_dist n := (wpp_relation (dist n)) (only parsing).
 Notation wpp_equiv := (wpp_relation equiv) (only parsing).
 
 Section wpp_relations.
-  Universe X1 X2 Z1 Z2 Y1 Y2.
   Context `{!BiEntailsN PROP}.
 
   Lemma wppg_equiv_spec@{A R} {ARGS : Type@{A}} {RESULT : Type@{R}} wpp1 wpp2 :
-    @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} PROP (≡) ARGS RESULT wpp1 wpp2 <->
-    @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} PROP (⊢) ARGS RESULT wpp1 wpp2 /\
-    @wppg_relation@{X2 X1 Z2 Z1 Y2 Y1 A R} PROP (⊢) ARGS RESULT wpp2 wpp1.
+    @wppg_relation@{A R} PROP (≡) ARGS RESULT wpp1 wpp2 <->
+    @wppg_relation@{A R} PROP (⊢) ARGS RESULT wpp1 wpp2 /\
+    @wppg_relation@{A R} PROP (⊢) ARGS RESULT wpp2 wpp1.
   Proof.
     split.
     - intros Hwpp. by split=>vs K; rewrite (Hwpp vs K).
@@ -148,14 +146,14 @@ Section wpp_relations.
   Qed.
 
   Lemma wpp_equiv_spec wpp1 wpp2 :
-    @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} PROP (≡) wpp1 wpp2 <->
-    @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} PROP (⊢) wpp1 wpp2 /\
-    @wpp_relation@{X2 X1 Z2 Z1 Y2 Y1} PROP (⊢) wpp2 wpp1.
-  Proof. apply wppg_equiv_spec. Qed.
+    @wpp_relation PROP (≡) wpp1 wpp2 <->
+    @wpp_relation PROP (⊢) wpp1 wpp2 /\
+    @wpp_relation PROP (⊢) wpp2 wpp1.
+  Proof. eapply @wppg_equiv_spec. Qed.
 
   Lemma wppg_equiv_dist@{A R} {ARGS : Type@{A}} {RESULT : Type@{R}} wpp1 wpp2 :
-    @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} PROP (≡) ARGS RESULT wpp1 wpp2 <->
-    ∀ n, @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} PROP (dist n) ARGS RESULT wpp1 wpp2.
+    @wppg_relation@{A R} PROP (≡) ARGS RESULT wpp1 wpp2 <->
+    ∀ n, @wppg_relation@{A R} PROP (dist n) ARGS RESULT wpp1 wpp2.
   Proof.
     split.
     - intros Hwpp n vs K. apply equiv_dist, Hwpp.
@@ -163,16 +161,16 @@ Section wpp_relations.
   Qed.
 
   Lemma wpp_equiv_dist wpp1 wpp2 :
-    @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} PROP (≡) wpp1 wpp2 <->
-    ∀ n, @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} PROP (dist n) wpp1 wpp2.
-  Proof. apply wppg_equiv_dist. Qed.
+    @wpp_relation PROP (≡) wpp1 wpp2 <->
+    ∀ n, @wpp_relation PROP (dist n) wpp1 wpp2.
+  Proof. apply @wppg_equiv_dist. Qed.
 
   Notation entailsN := (@entailsN PROP).
 
   Lemma wppg_dist_entailsN@{A R} {ARGS : Type@{A}} {RESULT : Type@{R}} wpp1 wpp2 n :
-    @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} _ (dist n) ARGS RESULT wpp1 wpp2 <->
-    @wppg_relation@{X1 X2 Z1 Z2 Y1 Y2 A R} _ (entailsN n) ARGS RESULT wpp1 wpp2 /\
-    @wppg_relation@{X2 X1 Z2 Z1 Y2 Y1 A R} _ (entailsN n) ARGS RESULT wpp2 wpp1.
+    @wppg_relation@{A R} _ (dist n) ARGS RESULT wpp1 wpp2 <->
+    @wppg_relation@{A R} _ (entailsN n) ARGS RESULT wpp1 wpp2 /\
+    @wppg_relation@{A R} _ (entailsN n) ARGS RESULT wpp2 wpp1.
   Proof.
     split.
     - intros Hwpp. by split=>vs K; apply dist_entailsN; rewrite (Hwpp vs K).
@@ -180,10 +178,9 @@ Section wpp_relations.
   Qed.
 
   Lemma wpp_dist_entailsN wpp1 wpp2 n :
-    @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} _ (dist n) wpp1 wpp2 <->
-    @wpp_relation@{X1 X2 Z1 Z2 Y1 Y2} _ (entailsN n) wpp1 wpp2 /\
-    @wpp_relation@{X2 X1 Z2 Z1 Y2 Y1} _ (entailsN n) wpp2 wpp1.
-  Proof. apply wppg_dist_entailsN. Qed.
+    @wpp_relation _ (dist n) wpp1 wpp2 <->
+    @wpp_relation _ (entailsN n) wpp1 wpp2 /\
+    @wpp_relation _ (entailsN n) wpp2 wpp1.
+  Proof. apply @wppg_dist_entailsN. Qed.
 
 End wpp_relations.
-*)
