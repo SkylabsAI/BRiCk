@@ -238,13 +238,3 @@ Axiom eval_unop_not:
     has_type (Vint b) (Tint w sgn) ->
     @eval_unop genv Ubnot (Tint w sgn) (Tint w sgn)  (Vint a) (Vint b).
 
-(** for pre- and post- increment/decrement, this function determines the type
-    of the [1] that is added or subtracted
- *)
-Fixpoint companion_type (t : type) : option type :=
-  match t with
-  | Tpointer _ => Some (Tint int_bits Signed)
-  | Tint _ _ => Some t
-  | Tqualified _ t => companion_type t
-  | _ => None
-  end.

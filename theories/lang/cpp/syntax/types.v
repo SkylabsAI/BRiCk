@@ -398,3 +398,14 @@ Definition T_int : type := Tint int_bits Signed.
 Notation T_schar := (Tchar char_bits Signed) (only parsing).
 Notation T_uchar := (Tchar char_bits Unsigned) (only parsing).
 
+
+(** for pre- and post- increment/decrement, this function determines the type
+    of the [1] that is added or subtracted
+ *)
+Fixpoint companion_type (t : type) : option type :=
+  match t with
+  | Tpointer _ => Some (Tint int_bits Signed)
+  | Tint _ _ => Some t
+  | Tqualified _ t => companion_type t
+  | _ => None
+  end.
