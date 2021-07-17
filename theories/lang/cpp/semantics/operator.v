@@ -24,9 +24,13 @@ Local Open Scope Z_scope.
 #[global] Notation Hnf tm :=
   ltac:(let H := eval hnf in tm in exact H) (only parsing).
 
+Module Type OPERATOR_PARAMS (Import V : VALUES_INTF).
   (** operator semantics *)
   Parameter eval_unop : forall {resolve : genv}, UnOp -> forall (argT resT : type) (arg res : val), Prop.
   Parameter eval_binop_pure : forall {resolve : genv}, BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
+End OPERATOR_PARAMS.
+
+Module Type OPERATOR_MIXIN (Import V : VALUES_INTF) (Import O : OPERATOR_PARAMS V).
 (** Integral conversions *)
 Definition conv_int (from to : type) (v v' : val) : Prop :=
   match drop_qualifiers from , drop_qualifiers to with
@@ -53,7 +57,8 @@ Definition conv_int (from to : type) (v v' : val) : Prop :=
   end.
 Arguments conv_int !_ !_ _ _ /.
 
-#[local] Definition eval_int_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
+Module auxiliary.
+Definition eval_int_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
   forall resolve w (s : signed) (a b c : Z),
     has_type (Vint a) (Tint w s) ->
     has_type (Vint b) (Tint w s) ->
@@ -65,7 +70,7 @@ Arguments conv_int !_ !_ _ _ /.
     eval_binop_pure (resolve:=resolve) bo (Tint w s) (Tint w s) (Tint w s) (Vint a) (Vint b) (Vint c).
 
 (* this is bitwise operators *)
-#[local] Definition eval_int_bitwise_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
+Definition eval_int_bitwise_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
   forall resolve w (s : signed) (a b c : Z),
     has_type (Vint a) (Tint w s) ->
     has_type (Vint b) (Tint w s) ->
@@ -78,7 +83,7 @@ Arguments conv_int !_ !_ _ _ /.
    unscoped), usual arithmetic conversions are performed on both
    operands following the rules for arithmetic operators. The values
    are compared after conversions. *)
-#[local] Definition eval_int_rel_op (bo : BinOp) {P Q : Z -> Z -> Prop}
+Definition eval_int_rel_op (bo : BinOp) {P Q : Z -> Z -> Prop}
            (o : forall a b : Z, {P a b} + {Q a b}) : Prop :=
   forall resolve w s a b (av bv : Z) (c : Z),
     a = Vint av ->
@@ -88,7 +93,7 @@ Arguments conv_int !_ !_ _ _ /.
     c = (if o av bv then 1 else 0)%Z ->
     eval_binop_pure (resolve:=resolve) bo (Tint w s) (Tint w s) Tbool a b (Vint c).
 
-#[local] Definition eval_int_rel_op_int (bo : BinOp) {P Q : Z -> Z -> Prop}
+Definition eval_int_rel_op_int (bo : BinOp) {P Q : Z -> Z -> Prop}
            (o : forall a b : Z, {P a b} + {Q a b}) : Prop :=
   forall resolve w s a b (av bv : Z) (c : Z),
     a = Vint av ->
@@ -97,6 +102,14 @@ Arguments conv_int !_ !_ _ _ /.
     has_type b (Tint w s) ->
     c = (if o av bv then 1 else 0)%Z ->
     eval_binop_pure (resolve:=resolve) bo (Tint w s) (Tint w s) (T_int) a b (Vint c).
+End auxiliary.
+
+End OPERATOR_MIXIN.
+
+Module Type OPERATOR_AXIOMS (Import V : VALUES_INTF)
+  (Import O : OPERATOR_PARAMS V) (Import OM : OPERATOR_MIXIN V O).
+
+Import auxiliary.
 
 Axiom eval_not_bool : forall resolve a,
     eval_unop (resolve:=resolve) Unot Tbool Tbool (Vbool a) (Vbool (negb a)).
@@ -222,3 +235,11 @@ Axiom eval_unop_not:
     has_type (Vint b) (Tint w sgn) ->
     @eval_unop genv Ubnot (Tint w sgn) (Tint w sgn)  (Vint a) (Vint b).
 
+End OPERATOR_AXIOMS.
+
+(* Collect all the axioms. *)
+
+Module Type OPERATOR_INTF_FUNCTOR (V : VALUES_INTF) := OPERATOR_PARAMS V <+ OPERATOR_MIXIN V <+ OPERATOR_AXIOMS V.
+Module Type OPERATOR_INTF := VALUES_INTF <+ OPERATOR_INTF_FUNCTOR.
+
+Module Export OPERATOR_INTF_AXIOM <: OPERATOR_INTF := VALUES_INTF_AXIOM <+ OPERATOR_INTF_FUNCTOR.
