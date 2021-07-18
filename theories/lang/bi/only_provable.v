@@ -181,6 +181,15 @@ Section bi.
   Global Instance only_provable_plain `{BiPlainly PROP} P :
     Plain (PROP:=PROP) [| P |].
   Proof. apply _. Qed.
+
+  (**
+  Technically redundant, but since it's unconditional and keyed it will speed up
+  successful searches and decrease term size, and should not slow down
+  unsuccessful searches for opaque predicates.
+  *)
+  Global Instance only_provable_fractional P :
+    Fractional (PROP:=PROP) (λ _, [| P |]).
+  Proof. apply _. Qed.
 End bi.
 #[global] Hint Resolve only_provable_intro : core.
 
