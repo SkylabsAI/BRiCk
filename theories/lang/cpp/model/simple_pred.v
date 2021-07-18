@@ -214,7 +214,8 @@ Module SimpleCPP.
     Global Existing Instance live_alloc_id_timeless.
 
     Definition live_ptr (p : ptr) :=
-      default False%I (live_alloc_id <$> ptr_alloc_id p).
+      default_false live_alloc_id $ ptr_alloc_id p.
+    Instance live_ptr_timeless p : Timeless (live_ptr p) := _.
     Axiom nullptr_live : |-- live_ptr nullptr.
     Typeclasses Opaque live_ptr.
 
