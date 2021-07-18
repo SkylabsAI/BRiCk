@@ -63,6 +63,7 @@ theories/lang/prelude/addr.v
 theories/lang/algebra/telescopes.v
 
 # BI-polymorphic modules
+theories/lang/bi/derived_connectives.v
 theories/lang/bi/entailsN.v
 theories/lang/bi/big_op.v
 theories/lang/bi/laterable.v

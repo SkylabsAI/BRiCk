@@ -14,6 +14,7 @@ Require Import bedrock.lang.bi.cancelable_invariants.
 Require Import bedrock.lang.cpp.logic.own_instances.
 
 From bedrock.prelude Require Import base option.
+From bedrock.lang.bi Require Import prelude derived_connectives.
 Require Import bedrock.lang.cpp.arith.z_to_bytes.
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import mpred pred.
