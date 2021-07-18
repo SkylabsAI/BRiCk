@@ -209,14 +209,38 @@ Module SimpleCPP.
   Section with_cpp.
     Context `{Σ : cpp_logic}.
 
+    Parameter pers_live_alloc_id : alloc_id -> mpred.
+    Axiom pers_live_alloc_id_persistent : forall aid, Persistent (pers_live_alloc_id aid).
+    Axiom pers_live_alloc_id_affine : forall aid, Affine (pers_live_alloc_id aid).
+    Axiom pers_live_alloc_id_timeless : forall aid, Timeless (pers_live_alloc_id aid).
+    Global Existing Instances
+      pers_live_alloc_id_persistent
+      pers_live_alloc_id_affine
+      pers_live_alloc_id_timeless.
+
     Parameter live_alloc_id : alloc_id -> mpred.
     Axiom live_alloc_id_timeless : forall aid, Timeless (live_alloc_id aid).
     Global Existing Instance live_alloc_id_timeless.
 
+    Axiom pers_live_alloc_id_live_alloc_id : forall a, pers_live_alloc_id a |-- live_alloc_id a.
+
+    Definition pers_live_ptr (p : ptr) :=
+      default_false pers_live_alloc_id $ ptr_alloc_id p.
+    Instance pers_live_ptr_persistent p : Persistent (pers_live_ptr p) := _.
+    Instance pers_live_ptr_affine p : Affine (pers_live_ptr p) := _.
+    Instance pers_live_ptr_timeless p : Timeless (pers_live_ptr p) := _.
+
     Definition live_ptr (p : ptr) :=
       default_false live_alloc_id $ ptr_alloc_id p.
     Instance live_ptr_timeless p : Timeless (live_ptr p) := _.
+
     Axiom nullptr_live : |-- live_ptr nullptr.
+
+    Lemma pers_live_ptr_live_ptr p : pers_live_ptr p |-- live_ptr p.
+    Proof.
+      rewrite /pers_live_ptr /live_ptr; case: ptr_alloc_id => [a | //].
+      apply pers_live_alloc_id_live_alloc_id.
+    Qed.
     Typeclasses Opaque live_ptr.
 
     (** pointer validity *)
