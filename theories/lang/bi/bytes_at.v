@@ -4,30 +4,31 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From iris Require Import bi.bi.
-From bedrock Require Import IrisBridge.
 Require Import bedrock.prelude.addr.
+From bedrock.lang Require Import bi.prelude.
 Import ChargeNotation.
+
 Local Open Scope N_scope.
 Section lift.
   Context {PROP: bi}.
-  Variable byte_at : forall (hpa:paddr) (hpaFrac : Qp) (value : N), PROP.
+  Variable byte_at : forall (hpa : paddr) (hpaFrac : Qp) (value : N), PROP.
 
   Local Fixpoint lift_aux n (pa : paddr) (q:Qp) (v : N) :=
     match n with
     | O => byte_at pa q v
-    | S n => let bytesize :N := (2 ^ (N.of_nat n)) in
+    | S n => let bytesize : N := 2 ^ (N.of_nat n) in
             let bitsize := 8 * bytesize in
             lift_aux n pa q (N.land v (2 ^ bitsize - 1))
             ** lift_aux n (pa+bytesize) q (N.shiftr v bitsize)
     end.
 
   (* byte by byte, layout the bits of [v] starting at [paddr], msb first, using the [byte_at] parameter to lay out each byte *)
-  Definition bytes_at (nbytes:N) (pa : paddr) (q:Qp) (v : N) :=
-    lift_aux (N.to_nat (BinNatDef.N.log2 nbytes)) pa q v.
+  Definition bytes_at (nbytes : N) (pa : paddr) (q : Qp) (v : N) :=
+    lift_aux (N.to_nat (N.log2 nbytes)) pa q v.
 
   Section test.
 
-    Let short_at (pa : paddr) (q:Qp) (v : N) : PROP :=
+    Let short_at (pa : paddr) (q : Qp) (v : N) : PROP :=
       byte_at pa q (N.land v (2^8 - 1))
       ** byte_at (pa + 1)%N q (N.shiftr v 8).
 
