@@ -12,7 +12,10 @@
 #include "clang/Basic/Version.inc"
 #include <algorithm>
 
-// TODO this should be replaced by something else.
+#if 0
+// Ideally, we could use clang's [NamedDecl::printQualifiedName] function
+// but this generates names that include spaces which doesn't work well
+// with Coq's notation mechanism.
 void
 print_path(CoqPrinter &print, const DeclContext *dc, bool end = true) {
     if (dc == nullptr || isa<TranslationUnitDecl>(dc)) {
@@ -58,6 +61,24 @@ print_path(CoqPrinter &print, const DeclContext *dc, bool end = true) {
         }
     }
 }
+#endif
+
+/**
+ * Print a human-readable name *without spaces*.
+ *
+ * This is useful for generating Coq notation.
+ */
+void
+print_name(const NamedDecl *decl, CoqPrinter &print) {
+    auto nm = decl->getQualifiedNameAsString();
+    replace(nm.begin(), nm.end(), ' ', '_');
+    // NOTE we need to print a leading '::' because if [nm]
+    // is a single string, e.g. [Foo], then Coq will start
+    // interpreting it as a keyword which is problematic.
+    // This might be fixed with:
+    //    https://github.com/coq/ceps/pull/41
+    print.output() << "::" << nm;
+}
 
 void
 write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
@@ -67,15 +88,19 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
     for (auto def : mod.definitions()) {
         if (const FieldDecl *fd = dyn_cast<FieldDecl>(def)) {
             print.output() << "Notation \"'";
-            print_path(print, fd->getParent(), true);
-            print.output() << fd->getNameAsString() << "'\" :=" << fmt::nbsp;
+            print_name(fd, print);
+            //print_path(print, fd->getParent(), true);
+            //fd->printName(print.output().nobreak());
+            print.output() << "'\" :=" << fmt::nbsp;
             cprint.printField(fd, print);
             print.output() << " (in custom cppglobal at level 0)." << fmt::line;
         } else if (const RecordDecl *rd = dyn_cast<RecordDecl>(def)) {
-            if (!rd->isAnonymousStructOrUnion() &&
-                rd->getNameAsString() != "") {
+            if (!rd->isAnonymousStructOrUnion() && rd->getIdentifier()) {
+
                 print.output() << "Notation \"'";
-                print_path(print, rd, false);
+                print_name(rd, print);
+                //print_path(print, rd, false);
+                //rd->printName(print.output().nobreak());
                 print.output() << "'\" :=" << fmt::nbsp;
 
                 cprint.printTypeName(rd, print);
@@ -84,11 +109,12 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
             }
 
             for (auto fd : rd->fields()) {
-                if (fd->getName() != "") {
+                if (fd->getIdentifier()) {
                     print.output() << "Notation \"'";
-                    print_path(print, rd, true);
-                    print.output()
-                        << fd->getNameAsString() << "'\" :=" << fmt::nbsp;
+                    print_name(fd, print);
+                    //print_path(print, rd, true);
+                    //fd->printQualifiedName(print.output().nobreak());
+                    print.output() << "'\" :=" << fmt::nbsp;
                     cprint.printField(fd, print);
                     print.output()
                         << " (in custom cppglobal at level 0)." << fmt::line;
@@ -98,15 +124,24 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
             // todo(gmm): skipping due to function overloading
         } else if (const TypedefDecl *td = dyn_cast<TypedefDecl>(def)) {
             print.output() << "Notation \"'";
-            print_path(print, td->getDeclContext(), true);
-            print.output() << td->getNameAsString() << "'\" :=" << fmt::nbsp;
+            print_name(td, print);
+            // print_path(print, td->getDeclContext(), true);
+            //td->printQualifiedName(print.output().nobreak());
+            print.output() << "'\" :=" << fmt::nbsp;
             cprint.printQualType(td->getUnderlyingType(), print);
             print.output() << " (in custom cppglobal at level 0)." << fmt::line;
         } else if (isa<VarDecl>(def) || isa<EnumDecl>(def) ||
                    isa<EnumConstantDecl>(def)) {
+        } else if (auto ta = dyn_cast<TypeAliasDecl>(def)) {
+            print.output() << "Notation \"'";
+            print_name(ta, print);
+            //def->printQualifiedName(print.output().nobreak());
+            print.output() << "'\" :=" << fmt::nbsp;
+            cprint.printQualType(ta->getUnderlyingType(), print);
+            print.output() << " (in custom cppglobal at level 0)." << fmt::line;
         } else {
             using namespace logging;
-            log(Level::VERBOSE) << "unknown declaration type "
+            log(Level::VERBOSE) << "Unknown declaration type "
                                 << def->getDeclKindName() << "\n";
         }
     }
