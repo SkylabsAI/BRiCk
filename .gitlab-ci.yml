@@ -54,7 +54,7 @@ stages:
   rules:
     - if: $CI_MERGE_REQUEST_IID
     - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH # == $CI_DEFAULT_BRANCH
+    #- if: $CI_COMMIT_BRANCH # == $CI_DEFAULT_BRANCH
   script:
     - mkdir -p build
     - echo "fmdeps/cpp2v-core:$(git rev-parse HEAD)" | tee build/gitshas.txt
@@ -70,18 +70,18 @@ stages:
       - build/cpp2v
       - build/bedrock
 
-.test:
-  stage: test
-  script:
-    - coqc -v
-    - opam list
-    - ./build/cpp2v --cpp2v-version 0 --
-    - PATH=`llvm-config-${LLVM_MAJ_VER} --bindir`:`pwd`/build:$PATH make -C cpp2v-tests -j ${NJOBS} TIMED=1 QPATH=`pwd`/build/bedrock
-  only:
-    - merge_requests
-  except:
-    variables:
-      - $CI_MERGE_REQUEST_TITLE =~ /^WIP:/
+# .test:
+#   stage: test
+#   script:
+#     - coqc -v
+#     - opam list
+#     - ./build/cpp2v --cpp2v-version 0 --
+#     - PATH=`llvm-config-${LLVM_MAJ_VER} --bindir`:`pwd`/build:$PATH make -C cpp2v-tests -j ${NJOBS} TIMED=1 QPATH=`pwd`/build/bedrock
+#   only:
+#     - merge_requests
+#   except:
+#     variables:
+#       - $CI_MERGE_REQUEST_TITLE =~ /^WIP:/
 
 build_latest:
   extends: .build
@@ -97,87 +97,87 @@ build_latest:
     reports:
       dotenv: build.env
 
-build_alternate:
-  extends: .build
-  image: ${alt_main_docker_img}
-  variables:
-    LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
+# build_alternate:
+#   extends: .build
+#   image: ${alt_main_docker_img}
+#   variables:
+#     LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
 
-test_latest:
-  extends: .test
-  image: ${cur_main_docker_img}
-  dependencies:
-    - build_latest
-  variables:
-    LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
+# test_latest:
+#   extends: .test
+#   image: ${cur_main_docker_img}
+#   dependencies:
+#     - build_latest
+#   variables:
+#     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
 
-test_alternate:
-  extends: .test
-  image: ${alt_main_docker_img}
-  dependencies:
-    - build_alternate
-  variables:
-    LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
+# test_alternate:
+#   extends: .test
+#   image: ${alt_main_docker_img}
+#   dependencies:
+#     - build_alternate
+#   variables:
+#     LLVM_MAJ_VER: ${LLVM_ALT_MAJ_VER}
 
-prepare_env:
-  image: ${cur_main_docker_img}
-  stage: prepare_env_for_downstream
-  needs:
-    - build_latest
-  variables:
-    LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
-  script:
-    # The branch of cpp2v is by default master,
-    # but if CI::cpp2v-same-branch label is specified,
-    # the same branch name as the current MR
-    - if [[ $CI_MERGE_REQUEST_LABELS =~ .*CI::cpp2v-same-branch.* ]]; then echo "CPP2V_BRANCH=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" >> build.env; else echo "CPP2V_BRANCH=master" >> build.env; fi
-    - echo "ARTIFACT_JOB_ID=$ARTIFACT_JOB_ID" >> build.env
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_TAG
-    - if: '$CI_COMMIT_BRANCH == "master"'
-  artifacts:
-    reports:
-      dotenv: build.env
+# prepare_env:
+#   image: ${cur_main_docker_img}
+#   stage: prepare_env_for_downstream
+#   needs:
+#     - build_latest
+#   variables:
+#     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
+#   script:
+#     # The branch of cpp2v is by default master,
+#     # but if CI::cpp2v-same-branch label is specified,
+#     # the same branch name as the current MR
+#     - if [[ $CI_MERGE_REQUEST_LABELS =~ .*CI::cpp2v-same-branch.* ]]; then echo "CPP2V_BRANCH=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" >> build.env; else echo "CPP2V_BRANCH=master" >> build.env; fi
+#     - echo "ARTIFACT_JOB_ID=$ARTIFACT_JOB_ID" >> build.env
+#   rules:
+#     - if: $CI_MERGE_REQUEST_IID
+#     - if: $CI_COMMIT_TAG
+#     - if: '$CI_COMMIT_BRANCH == "master"'
+#   artifacts:
+#     reports:
+#       dotenv: build.env
 
-build_cpp2v:
-  stage: build_proofs_downstream
-  needs:
-    - prepare_env
-  trigger:
-    project: bedrocksystems/cpp2v
-    strategy: depend
-    # If CPP2V_BRANCH is not master, .gitlab-ci.yml in the cpp2v branch has
-    # to be modified to allow build_latest on branches.
-    branch: $CPP2V_BRANCH
-    # Currently, the whole pipeline succeeds even if the cpp2v build fails
-  variables:
-    UPSTREAM_CPP2V_CORE_JOB_ID: $ARTIFACT_JOB_ID
-  rules:
-    - if: $CI_MERGE_REQUEST_IID
-    - if: $CI_COMMIT_TAG
-    - if: '$CI_COMMIT_BRANCH == "master"'
+# build_cpp2v:
+#   stage: build_proofs_downstream
+#   needs:
+#     - prepare_env
+#   trigger:
+#     project: bedrocksystems/cpp2v
+#     strategy: depend
+#     # If CPP2V_BRANCH is not master, .gitlab-ci.yml in the cpp2v branch has
+#     # to be modified to allow build_latest on branches.
+#     branch: $CPP2V_BRANCH
+#     # Currently, the whole pipeline succeeds even if the cpp2v build fails
+#   variables:
+#     UPSTREAM_CPP2V_CORE_JOB_ID: $ARTIFACT_JOB_ID
+#   rules:
+#     - if: $CI_MERGE_REQUEST_IID
+#     - if: $CI_COMMIT_TAG
+#     - if: '$CI_COMMIT_BRANCH == "master"'
 
-.release:
-  stage: release
-  script:
-    - cp -r build cpp2v-core
-  artifacts:
-    name: cpp2v-${LLVM_MAJ_VER}
-    paths:
-      - cpp2v-core/cpp2v
-      - cpp2v-core/bedrock
-  only:
-    - tags
-    - master
+# .release:
+#   stage: release
+#   script:
+#     - cp -r build cpp2v-core
+#   artifacts:
+#     name: cpp2v-${LLVM_MAJ_VER}
+#     paths:
+#       - cpp2v-core/cpp2v
+#       - cpp2v-core/bedrock
+#   only:
+#     - tags
+#     - master
 
-release_latest:
-  extends: .release
-  image: ${cur_main_docker_img}
-  dependencies:
-    - build_latest
-  variables:
-    LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
+# release_latest:
+#   extends: .release
+#   image: ${cur_main_docker_img}
+#   dependencies:
+#     - build_latest
+#   variables:
+#     LLVM_MAJ_VER: ${LLVM_CUR_MAJ_VER}
 
 # release_alternate:
 #   extends: .release
