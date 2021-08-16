@@ -612,7 +612,13 @@ Module SimpleCPP.
       [∗list] o ↦ v ∈ vs, byte_ (a+N.of_nat o)%N v q.
 
     Instance bytes_timeless a rv q : Timeless (bytes a rv q) := _.
+
+    (* The next line fails with [Typeclasses Opaque byte_]. *)
     Instance bytes_fractional a vs : Fractional (bytes a vs) := _.
+    (* To fix that, we either need eta-reduction in TC search or we must change
+    [byte_fractional] to: *)
+    (* Instance byte_fractional {a rv} : Fractional (λ q, byte_ a rv q) := _. *)
+
     Instance bytes_as_fractional a vs q :
       AsFractional (bytes a vs q) (bytes a vs) q.
     Proof. exact: Build_AsFractional. Qed.
