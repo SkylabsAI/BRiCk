@@ -215,9 +215,9 @@ Module Type Expr.
     Axiom wp_lval_subscript : forall e i t Q,
       (Exists Qbase Qidx,
        (if is_pointer (type_of e) then
-         wp_prval e Qbase ** wp_prval i Qidx
+         wp_lval e Qbase ** wp_prval i Qidx
        else
-         wp_prval e Qidx ** wp_prval i Qbase) **
+         wp_prval e Qidx ** wp_lval i Qbase) **
       Forall base free idx free',
          Qbase base free -* Qidx idx free' -*
          (Exists i, [| idx = Vint i |] **
@@ -231,9 +231,9 @@ Module Type Expr.
     Axiom wp_xval_subscript : forall e i t Q,
       (Exists Qbase Qidx,
        (if is_pointer (type_of e) then
-         wp_prval e Qbase ** wp_prval i Qidx
+         wp_xval e Qbase ** wp_prval i Qidx
        else
-         wp_prval e Qidx ** wp_prval i Qbase) **
+         wp_prval e Qidx ** wp_xval i Qbase) **
       Forall base free idx free',
          Qbase base free -* Qidx idx free' -*
           (* TODO: here and elsewhere, consider avoiding locations and switching to *)
@@ -241,7 +241,7 @@ Module Type Expr.
             ((valid_ptr (basep .., o_sub resolve (erase_qualifiers t) i) ** True) //\\
             Q (Vptr (basep .., o_sub resolve (erase_qualifiers t) i)) (free' ** free)))) *)
           (Exists i, [| idx = Vint i |] **
-           let addr := _eqv base .[ erase_qualifiers t ! i ] in
+           let addr := base .[ erase_qualifiers t ! i ] in
            valid_ptr addr ** Q addr (free' |*| free)))
       |-- wp_xval (Esubscript e i t) Q.
 
