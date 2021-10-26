@@ -676,15 +676,9 @@ Module Type Expr.
            else wp el (fun v free' => Q v (free' >*> free)))
         |-- wp (Eif tst th el ty) Q.
 
-    Axiom wp_lval_condition :
-      ltac:(let v := eval unfold wp_cond in (wp_cond wp_lval) in
-                exact v).
-    Axiom wp_xval_condition :
-      ltac:(let v := eval unfold wp_cond in (wp_cond wp_xval) in
-            exact v).
-    Axiom wp_prval_condition :
-      ltac:(let v := eval unfold wp_cond in (wp_cond wp_prval) in
-                exact v).
+    Axiom wp_lval_condition : Reduce (wp_cond wp_lval).
+    Axiom wp_xval_condition : Reduce (wp_cond wp_xval).
+    Axiom wp_prval_condition : Reduce (wp_cond wp_prval).
     Axiom wp_init_condition : forall ty ty' addr tst th el Q,
         wp_prval tst (fun v1 free =>
            Exists c : bool, [| is_true v1 = Some c |] **
