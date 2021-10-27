@@ -23,7 +23,7 @@
 (* NOTES FOR MAINTAINER: this is the iProp instances for invariants. This is
   needed when mpred is still iProp. Once mpred is fixed to monPred, then this
   can be removed. *)
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 
 Require Import bedrock.lang.bi.cancelable_invariants.
 Require Import bedrock.lang.bi.invariants.
@@ -33,7 +33,7 @@ Require Import bedrock.lang.cpp.logic.iprop_own.
 (* Copy from
   https://gitlab.mpi-sws.org/iris/iris/-/blob/7ccdfe0df5832b69742306302144b5358c9ed843/iris/base_logic/lib/invariants.v *)
 Section inv.
-  Context `{!invG Σ}.
+  Context `{!invGS Σ}.
   Implicit Types (P : iProp Σ).
 
   #[local] Lemma own_inv_to_inv M P: own_inv M P -∗ inv M P.
@@ -61,7 +61,7 @@ Typeclasses Transparent cinv_own cinv.
 (* Copy from
   https://gitlab.mpi-sws.org/iris/iris/-/blob/7ccdfe0df5832b69742306302144b5358c9ed843/iris/base_logic/lib/cancelable_invariants.v *)
 Section cinv.
-  Context `{!invG Σ, !cinvG Σ}.
+  Context `{!invGS Σ, !cinvG Σ}.
   Implicit Types (P : iProp Σ).
   (*** Allocation rules. *)
   (** The "strong" variants permit any infinite [I], and choosing [P] is delayed

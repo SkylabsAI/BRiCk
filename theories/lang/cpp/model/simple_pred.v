@@ -7,8 +7,7 @@ From iris.algebra Require Import excl gmap.
 From iris.algebra.lib Require Import frac_auth.
 From iris.bi Require Import monpred.
 From iris.bi.lib Require Import fractional.
-From iris.proofmode Require Import tactics.
-From iris_string_ident Require Import ltac2_string_ident.
+From iris.proofmode Require Import proofmode.
 
 Require Import bedrock.lang.bi.cancelable_invariants.
 Require Import bedrock.lang.cpp.logic.own_instances.
@@ -21,7 +20,7 @@ From bedrock.lang.cpp.logic Require Import mpred pred.
 Implicit Types (vt : validity_type) (σ resolve : genv).
 
 (* todo: does this not exist as a library somewhere? *)
-Definition fractionalR (V : Type) : cmraT :=
+Definition fractionalR (V : Type) : cmra :=
   prodR fracR (agreeR (leibnizO V)).
 Definition frac {V : Type} (q : Qp) (v : V) : fractionalR V :=
   (q, to_agree v).
@@ -107,7 +106,7 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
   Definition _cpp_ghost := cpp_ghost.
 
   Class cppG' (Σ : gFunctors) : Type :=
-    { heapG :> inG Σ (gmapR addr (fractionalR runtime_val'))
+    { heapGS :> inG Σ (gmapR addr (fractionalR runtime_val'))
       (* ^ this represents the contents of physical memory *)
     ; ghost_memG :> inG Σ (gmapR ptr (fractionalR val))
       (* ^ this represents the contents of the C++ runtime that might
@@ -123,7 +122,7 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
     ; codeG :> inG Σ (gmapUR ptr (agreeR (leibnizO (Func + Method + Ctor + Dtor))))
       (* ^ this carries the (compiler-supplied) mapping from C++ locations
          to the code stored at that location *)
-    ; has_inv :> invG Σ
+    ; has_inv :> invGS Σ
     ; has_cinv :> cinvG Σ
     }.
 

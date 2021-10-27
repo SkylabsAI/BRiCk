@@ -20,8 +20,7 @@ From iris.base_logic.lib Require Export iprop.
 (* TODO: ^^ only needed to export uPredI, should be removed. *)
 Require Import iris.bi.monpred.
 From iris.bi.lib Require Import fractional.
-From iris.proofmode Require Import tactics.
-From iris_string_ident Require Import ltac2_string_ident.
+From iris.proofmode Require Import proofmode.
 
 Require Import bedrock.lang.bi.cancelable_invariants.
 Export ChargeNotation.
@@ -872,7 +871,7 @@ Section with_cpp.
           * etrans. by apply HPQ. done.
       - intros n P Q []. split. done. by apply dist_S.
     Qed.
-    Canonical Structure function_specO := OfeT function_spec function_spec_ofe_mixin.
+    Canonical Structure function_specO := Ofe function_spec function_spec_ofe_mixin.
 
     #[global] Instance type_of_spec_ne (n : nat) :
       Proper (dist n ==> eq) type_of_spec.

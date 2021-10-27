@@ -78,3 +78,14 @@ Module ChargeNotation.
     (at level 85, no associativity, only parsing).
 
 End ChargeNotation.
+
+
+(* Compatibility definitions *)
+Module Export DeprecationAdapters.
+  Import ChargeNotation.
+  #[deprecated(since="20211101", note="Use fupd_mask_subseteq instead")]
+  Lemma fupd_intro_mask' (PROP : bi) `(H : BiFUpd PROP) (E1 E2 : coPset.coPset) :
+    E2 ⊆ E1 → |-@{PROP} (|={E1,E2}=> |={E2,E1}=> emp).
+  Proof. apply fupd_mask_subseteq. Qed.
+  #[global] Arguments fupd_intro_mask' {PROP H} _ _ _.
+End DeprecationAdapters.
