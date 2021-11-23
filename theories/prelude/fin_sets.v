@@ -118,7 +118,9 @@ Section set_map.
       pattern X. apply set_ind; clear X; first by intros ?? ->.
       { by rewrite size_empty. }
       intros x X Hni IH.
-      rewrite set_map_union set_map_singleton.
+      (** This line fails currently *)
+      have -> : set_map f ({[x]} ∪ X) = (set_map f {[x]}) ∪ set_map f X.
+      rewrite set_map_singleton.
       rewrite (comm union) size_union_alt.
       intros Hsz.
       assert (size (set_map (D := D) f X) = 0) as Hsz0 by lia.
