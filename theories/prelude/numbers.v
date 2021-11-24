@@ -24,6 +24,18 @@ https://gitlab.mpi-sws.org/iris/iris/-/blob/master/docs/proof_guide.md
 (* TODO Maybe this should be removed *)
 #[global] Coercion Z.of_N : N >-> Z.
 
+(** [bool] *)
+
+Instance andb_right_id : RightId (=) true andb := andb_true_r.
+Instance andb_left_id : LeftId (=) true andb := andb_true_l.
+Instance andb_right_absorb : RightAbsorb (=) false andb := andb_false_r.
+Instance andb_left_absorb : LeftAbsorb (=) false andb := andb_false_l.
+
+Instance orb_right_id : RightId (=) false orb := orb_false_r.
+Instance orb_left_id : LeftId (=) false orb := orb_false_l.
+Instance orb_right_absorb : RightAbsorb (=) true orb := orb_true_r.
+Instance orb_left_absorb : LeftAbsorb (=) true orb := orb_true_l.
+
 (** * Natural numbers [nat] *)
 
 Instance Nat_add_assoc : Assoc (=) Nat.add := Nat.add_assoc.
@@ -108,6 +120,38 @@ Instance N_shiftr_right_id : RightId (=) 0%N N.shiftr := N.shiftr_0_r.
 
 Instance N_succ_inj : Inj (=) (=) N.succ.
 Proof. intros n1 n2. lia. Qed.
+
+(** [N] *)
+
+Infix "||" := N.lor : N_scope.
+Infix "&&" := N.land : N_scope.
+Infix "\" := N.ldiff : N_scope.
+(*
+Infix "<<" := N.shiftl (only parsing) : N_scope.
+Infix "≫" := N.shiftr (only parsing) : N_scope.
+*)
+
+Instance N_lor_right_id : RightId (=) 0%N N.lor := N.lor_0_r.
+Instance N_lor_left_id : LeftId (=) 0%N N.lor := N.lor_0_l.
+
+Instance N_land_left_absorb : LeftAbsorb (=) 0%N N.land := N.land_0_l.
+Instance N_land_right_absorb : RightAbsorb (=) 0%N N.land := N.land_0_r.
+
+Instance N_shiftl_right_id : RightId (=) 0%N N.shiftl := N.shiftl_0_r.
+Instance N_shiftr_right_id : RightId (=) 0%N N.shiftr := N.shiftr_0_r.
+Instance N_shiftl_left_absorb : LeftAbsorb (=) 0%N N.shiftl := N.shiftl_0_l.
+Instance N_shiftr_left_absorb : LeftAbsorb (=) 0%N N.shiftr := N.shiftr_0_l.
+
+Hint Resolve N.le_0_l | 0 : core.
+
+(** Shorter and more memorable name. *)
+Lemma N_ext n m : (∀ i, N.testbit n i = N.testbit m i) -> n = m.
+Proof. apply N.bits_inj_iff. Qed.
+Lemma N_ext_iff n m : (∀ i, N.testbit n i = N.testbit m i) <-> n = m.
+Proof. apply N.bits_inj_iff. Qed.
+
+Lemma pow2N_spec n : pow2N n = (2 ^ n)%N.
+Proof. by rewrite pow2N_eq. Qed.
 
 (** Misc cancellation lemmas for odd operators *)
 Lemma N_succ_pos_pred p : N.succ_pos (Pos.pred_N p) = p.
@@ -394,3 +438,30 @@ Section with_Z.
     have := Z_ones_nonneg _ Hbits. lia.
   Qed.
 End with_Z.
+
+(** [Qp] *)
+
+#[global] Instance Qp_mul_left_id : LeftId (=) 1%Qp Qp_mul := Qp_mul_1_l.
+#[global] Instance Qp_mul_right_id : RightId (=) 1%Qp Qp_mul := Qp_mul_1_r.
+#[global] Instance Qp_div_right_id : RightId (=) 1%Qp Qp_div := Qp_div_1.
+
+(** [Qp_add_all q0 {[q1, ..., qn]}] is [q0 + q1 + ... + qn] *)
+Definition Qp_add_all `{Elements Qp C} (q0 : Qp) (Qs : C) : Qp :=
+  set_fold (fun q acc => acc + q)%Qp q0 Qs.
+
+(** [Qp_sub_all q0 {[q1, ..., qn]}] is [Some (q0 - q1 - ... - qn)] if
+the sum is [>0]; otherwise, it is [None] *)
+Definition Qp_sub_all `{Elements Qp C} (q0 : Qp) (Qs : C) : option Qp :=
+  set_fold (fun q acc => q' ← acc; (q' - q)%Qp) (Some q0) Qs.
+
+Section Qp_all.
+  Context {C} `{!Elements Qp C}.
+  Implicit Types (p q : Qp) (Qs : C).
+  Local Open Scope Qp_scope.
+
+  Lemma Qp_sub_all_add_all p Qs : Qp_sub_all (Qp_add_all p Qs) Qs = Some p.
+  Abort.
+
+  Lemma Qp_sub_all_Some p Qs r : Qp_sub_all p Qs = Some r <-> p = Qp_add_all r Qs.
+  Abort.
+End Qp_all.
