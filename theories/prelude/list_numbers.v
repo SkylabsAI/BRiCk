@@ -55,6 +55,9 @@ Section seqN.
     by rewrite /seqN fmap_lengthN /lengthN seq_length N2Nat.id.
   Qed.
 
+  Lemma seqN_length len start : length (seqN start len) = N.to_nat len.
+  Proof. by rewrite length_lengthN seqN_lengthN. Qed.
+
   Lemma NoDup_seqN j n : NoDup (seqN j n).
   Proof. apply /NoDup_fmap_2 /NoDup_seq. Qed.
 End seqN.
