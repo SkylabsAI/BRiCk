@@ -6,6 +6,7 @@
  *)
 Require Export stdpp.numbers.
 Require Export bedrock.prelude.base.
+Require Import bedrock.prelude.reserved_notation.
 Require Import bedrock.prelude.bool.
 #[local] Set Printing Coercions.	(** Readability *)
 
@@ -131,27 +132,11 @@ Infix "<<" := N.shiftl (only parsing) : N_scope.
 Infix "≫" := N.shiftr (only parsing) : N_scope.
 *)
 
-Instance N_lor_right_id : RightId (=) 0%N N.lor := N.lor_0_r.
-Instance N_lor_left_id : LeftId (=) 0%N N.lor := N.lor_0_l.
-
-Instance N_land_left_absorb : LeftAbsorb (=) 0%N N.land := N.land_0_l.
-Instance N_land_right_absorb : RightAbsorb (=) 0%N N.land := N.land_0_r.
-
-Instance N_shiftl_right_id : RightId (=) 0%N N.shiftl := N.shiftl_0_r.
-Instance N_shiftr_right_id : RightId (=) 0%N N.shiftr := N.shiftr_0_r.
-Instance N_shiftl_left_absorb : LeftAbsorb (=) 0%N N.shiftl := N.shiftl_0_l.
-Instance N_shiftr_left_absorb : LeftAbsorb (=) 0%N N.shiftr := N.shiftr_0_l.
-
-Hint Resolve N.le_0_l | 0 : core.
-
 (** Shorter and more memorable name. *)
 Lemma N_ext n m : (∀ i, N.testbit n i = N.testbit m i) -> n = m.
 Proof. apply N.bits_inj_iff. Qed.
 Lemma N_ext_iff n m : (∀ i, N.testbit n i = N.testbit m i) <-> n = m.
 Proof. apply N.bits_inj_iff. Qed.
-
-Lemma pow2N_spec n : pow2N n = (2 ^ n)%N.
-Proof. by rewrite pow2N_eq. Qed.
 
 (** Misc cancellation lemmas for odd operators *)
 Lemma N_succ_pos_pred p : N.succ_pos (Pos.pred_N p) = p.
@@ -239,6 +224,9 @@ Definition pow2N_aux : seal pow2N_def. Proof. by eexists. Qed.
 Definition pow2N := pow2N_aux.(unseal).
 Definition pow2N_eq : pow2N = _ := pow2N_aux.(seal_eq).
 #[global] Hint Opaque pow2N : typeclass_instances.
+
+Lemma pow2N_spec n : pow2N n = (2 ^ n)%N.
+Proof. by rewrite pow2N_eq. Qed.
 
 (** * Integers *)
 
