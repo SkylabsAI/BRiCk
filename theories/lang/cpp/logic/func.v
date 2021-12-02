@@ -140,40 +140,13 @@ Section with_cpp.
            (Q : region -> FreeTemps -> mpred) : mpred :=
     match args , vals with
     | nil , nil => Q ρ FreeTemps.id
-    | (x,ty) :: xs , v :: vs  =>
-      let rty := erase_qualifiers ty in
-      match rty with
-      | Tqualified _ t => ERROR "unreachable" (* unreachable *)
-      | Tref    ty
-      | Trv_ref ty =>
-        let rty := Tref $ erase_qualifiers ty in
-        match v with
-        | Vptr p =>
-          Forall a, a |-> primR rty 1 (Vref p) -*
-          bind_vars xs vs (Rbind x a ρ) (fun r free => Q r (FreeTemps.delete rty a >*> free))
-          (* NOTE: when we create a reference, we always use [Tref] *)
-        | _ => ERROR $ "non-pointer passed for reference"
-        end
-      | Tnamed nm =>
-        match v with
-        | Vptr p => bind_vars xs vs (Rbind x p ρ) Q
-        | _ => ERROR $ "non-pointer passed for aggregate (named " ++ nm ++ ")"
-        end
-      | _              =>
-        Forall a : ptr, a |-> primR rty 1 v -*
-        bind_vars xs vs (Rbind x a ρ) (fun r free => Q r (FreeTemps.delete rty a >*> free))
-      end
-
-    (* the (more) correct definition would rely on the caller to create primitive
-       values (in the logic). See the note on [wp_args']. The corresponding implementation
-       here would be the following:
+    | (x,_) :: xs , v :: vs  =>
       match v with
-      | Vptr p => bind_vars xs vs (Rbind x p r) Q
+      | Vptr p => bind_vars xs vs (Rbind x p ρ) Q
       | _ => ERROR "non-pointer passed to function (the caller is responsible for constructing objects)"
       end
-     *)
     | _ , _ => ERROR "bind_vars: argument mismatch"
-    end%I%bs.
+    end%I.
 
   Lemma bind_vars_frame : forall ts args ρ Q Q',
         Forall ρ free, Q ρ free -* Q' ρ free
@@ -182,12 +155,8 @@ Section with_cpp.
     induction ts; destruct args => /= *; eauto.
     { iIntros "A B"; iApply "A"; eauto. }
     { iIntros "A B". destruct a.
-      destruct (erase_qualifiers t);
-        try solve
-            [ iIntros (?) "X"; iDestruct ("B" with "X") as "B"; iRevert "B";
-              iApply IHts; iIntros (? ?) "Z"; iApply "A"; iFrame
-            | destruct v; eauto; iIntros (?) "a"; iSpecialize ("B" with "a"); iRevert "B"; iApply IHts; iIntros (??); iApply "A"
-            | destruct v; eauto; iRevert "B"; iApply IHts; eauto ]. }
+      destruct v; eauto.
+      iRevert "B"; by iApply IHts. }
   Qed.
 
   (** * Weakest preconditions of the flavors of C++ "functions"  *)
