@@ -274,13 +274,13 @@ Module Type Expr__newdelete.
                (* v---- Calling destructor with object pointer *)
                delete_val true destroyed_type obj_ptr
                  (fun this' ty =>
-                    Exists storage_ptr sz, [| size_of ty = Some sz |] **
-                      (* v---- Token for converting obj memory to storage memory *)
-                      provides_storage storage_ptr this' ty **
+                    Exists sz, [| size_of ty = Some sz |] **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [delete_val]. *)
-                      (storage_ptr |-> blockR sz 1 -*
+                      (Forall storage_ptr,
+                        storage_ptr |-> blockR sz 1 -*
+                        provides_storage storage_ptr this' ty -*
                        (* v---- Calling deallocator with storage pointer *)
                        fspec delete_fn.2 (Vptr $ _global delete_fn.1)
                              (Vptr storage_ptr :: nil) (fun _ => Q Vvoid free)))))
