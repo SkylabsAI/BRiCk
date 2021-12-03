@@ -766,9 +766,10 @@ Module Type Expr.
       match unptr pfty with
       | Some fty =>
         let fty := normalize_type fty in
+        Exists fp, [| f = Vptr fp |] **
         match arg_types fty with
         | Some targs =>
-          wp_args targs es $ fun vs free => |> fspec fty f vs (fun v => Q v free)
+          wp_args targs es $ fun vs free => |> fspec fty fp vs (fun v => Q v free)
         | _ => False
         end
       | None => False
@@ -806,9 +807,10 @@ Module Type Expr.
     Definition wp_mcall (f : val) (this : ptr) (this_type : type) (fty : type) (es : list Expr)
                (Q : val -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
+      Exists fp, [| f = Vptr fp|] **
       match arg_types fty with
       | Some targs =>
-        wp_args targs es $ fun vs free => |> mspec this_type fty f (Vptr this :: vs) (fun v => Q v free)
+        wp_args targs es $ fun vs free => |> mspec this_type fty fp (Vptr this :: vs) (fun v => Q v free)
       | _ => False
       end.
 

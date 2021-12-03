@@ -43,7 +43,7 @@ Section destroy.
       match σ.(genv_tu) !! cls with
       | Some (Gstruct s) =>
          (* NOTE the setup with explicit destructors (even when those destructors are trivial)
-                  abstracts away some of the complexities of the underlying C++ semantics that
+                 abstracts away some of the complexities of the underlying C++ semantics that
                   the semantics itself seems less than clear about. [CITATION NEEDED]
 
              TODO let's find some justification in the standard. *)
