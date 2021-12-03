@@ -754,7 +754,7 @@ Section with_cpp.
    *)
   Parameter fspec
     : forall (tt : type_table) (fun_type : type)
-        (addr : val) (ls : list val) (Q : val -> epred), mpred.
+        (addr : ptr) (ls : list val) (Q : val -> epred), mpred.
 
   Axiom fspec_complete_type : forall te ft a ls Q,
       fspec te ft a ls Q
@@ -793,7 +793,7 @@ Section with_cpp.
   Qed.
 
   Section fspec.
-    Context {tt : type_table} {tf : type} (addr : val) (ls : list val).
+    Context {tt : type_table} {tf : type} (addr : ptr) (ls : list val).
     Local Notation WP := (fspec tt tf addr ls) (only parsing).
     Implicit Types Q : val → epred.
 
@@ -819,11 +819,11 @@ Section with_cpp.
            to an member pointer or vice versa.
    *)
   Definition mspec (tt : type_table) (this_type : type) (fun_type : type)
-    : val -> list val -> (val -> epred) -> mpred :=
+    : ptr -> list val -> (val -> epred) -> mpred :=
     fspec tt (Tmember_func this_type fun_type).
 
   Lemma mspec_frame:
-    ∀ (t : type) (l : list val) (v : val) (t0 : type) (t1 : type_table) (Q Q' : val -> _),
+    ∀ (t : type) (l : list val) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : val -> _),
       Forall v, Q v -* Q' v |-- mspec t1 t t0 v l Q -* mspec t1 t t0 v l Q'.
   Proof. intros; apply fspec_frame. Qed.
 

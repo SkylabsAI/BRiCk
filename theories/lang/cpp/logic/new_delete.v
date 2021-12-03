@@ -121,7 +121,7 @@ Module Type Expr__newdelete.
                 permits the assumption. *)
             wp_args targs new_args (fun vs free =>
               Exists sz al, [| size_of aty = Some sz |] ** [| align_of aty = Some al |] **
-                |> fspec nfty (Vptr $ _global new_fn.1) (Vn sz :: vs) (fun res =>
+                |> fspec nfty (_global new_fn.1) (Vn sz :: vs) (fun res =>
                       Exists storage_ptr : ptr,
                         [| res = Vptr storage_ptr |] **
                         if bool_decide (storage_ptr = nullptr) then
@@ -192,7 +192,7 @@ Module Type Expr__newdelete.
                              dynamically allocated arrays.
                      *)
                     Forall sz',
-                      |> fspec nfty (Vptr $ _global new_fn.1) (Vn (sz' + sz) :: vs) (fun res =>
+                      |> fspec nfty (_global new_fn.1) (Vn (sz' + sz) :: vs) (fun res =>
                         Exists storage_ptr : ptr,
                           [| res = Vptr storage_ptr |] **
                           if bool_decide (storage_ptr = nullptr) then
@@ -333,8 +333,7 @@ Module Type Expr__newdelete.
              then
                (* this conjunction justifies the compiler calling the delete function
                   or not calling it. *)
-                 (fspec dfty (Vptr $ _global delete_fn.1)
-                        (v :: nil) (fun _ => Q Vvoid free))
+                 (fspec dfty (_global delete_fn.1) (v :: nil) (fun _ => Q Vvoid free))
                ∧ Q Vvoid free
              else
                (* v---- Calling destructor with object pointer *)
@@ -364,8 +363,7 @@ Module Type Expr__newdelete.
              then
                (* this conjunction justifies the compiler calling the delete function
                   or not calling it. *)
-                 (fspec dfty (Vptr $ _global delete_fn.1)
-                        (v :: nil) (fun _ => Q Vvoid free))
+                 (fspec dfty (_global delete_fn.1) (v :: nil) (fun _ => Q Vvoid free))
                ∧ Q Vvoid free
              else (
                Exists array_size,
@@ -389,7 +387,7 @@ Module Type Expr__newdelete.
                        (* v---- Calling deallocator with storage pointer.
                           Note: we rely on the AST to have correctly resolved this since the dispatch is statically known.
                         *)
-                       fspec dfty (Vptr $ _global delete_fn.1)
+                       fspec dfty (_global delete_fn.1)
                              (Vptr storage_ptr :: nil) (fun v => Q Vvoid free)))))
         |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
 
