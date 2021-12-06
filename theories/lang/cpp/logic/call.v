@@ -34,7 +34,7 @@ Section with_resolve.
      passing convention.
   *)
   (** TODO [Q] could be [list ptr -> FreeTemps -> mpred] *)
-  Fixpoint wp_args' (ts : list type) (es : list Expr) (Q : list val -> list FreeTemps -> mpred)
+  Fixpoint wp_args' (ts : list type) (es : list Expr) (Q : list ptr -> list FreeTemps -> mpred)
   : mpred :=
     match ts , es with
     | nil , nil => Q nil nil

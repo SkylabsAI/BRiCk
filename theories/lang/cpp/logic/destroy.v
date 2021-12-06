@@ -23,7 +23,7 @@ Section destroy.
     (* NOTE using [Tfunction Tvoid nil] implicitly requires all destructors
        to have C calling convention. *)
     mspec σ.(genv_tu).(globals) ty (Tfunction Tvoid nil)
-                                (Vptr dtor) (Vptr this :: nil)
+                                dtor (this :: nil) (* NOTE this is the correct calling convention for member functions *)
                                 (fun _ => this |-> tblockR ty 1 ** Q).
 
 (** [destroy_val ty this Q] destructs [this] (which has [ty] as its most specific type).
