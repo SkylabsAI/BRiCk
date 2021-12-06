@@ -120,7 +120,7 @@ Variant ReturnType : Set :=
 | Normal
 | Break
 | Continue
-| ReturnVal (_ : val)
+| ReturnVal (_ : ptr)
 | ReturnVoid
 .
 
@@ -148,7 +148,7 @@ Section Kpred.
           | _ => False
           end).
 
-  Definition val_return (P : val -> mpred) : KpredI :=
+  Definition val_return (P : ptr -> mpred) : KpredI :=
     KP (funI rt =>
         match rt with
         | ReturnVal v => P v
@@ -733,7 +733,7 @@ Section with_cpp.
    *)
   Parameter fspec
     : forall (tt : type_table) (fun_type : type)
-        (addr : ptr) (ls : list val) (Q : val -> epred), mpred.
+        (addr : ptr) (ls : list ptr) (Q : ptr -> epred), mpred.
 
   Axiom fspec_complete_type : forall te ft a ls Q,
       fspec te ft a ls Q
@@ -772,9 +772,9 @@ Section with_cpp.
   Qed.
 
   Section fspec.
-    Context {tt : type_table} {tf : type} (addr : ptr) (ls : list val).
+    Context {tt : type_table} {tf : type} (addr : ptr) (ls : list ptr).
     Local Notation WP := (fspec tt tf addr ls) (only parsing).
-    Implicit Types Q : val → epred.
+    Implicit Types Q : ptr → epred.
 
     Lemma fspec_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
     Proof. iIntros "Hwp HK".
@@ -798,11 +798,11 @@ Section with_cpp.
            to an member pointer or vice versa.
    *)
   Definition mspec (tt : type_table) (this_type : type) (fun_type : type)
-    : ptr -> list val -> (val -> epred) -> mpred :=
+    : ptr -> list ptr -> (ptr -> epred) -> mpred :=
     fspec tt (Tmember_func this_type fun_type).
 
   Lemma mspec_frame:
-    ∀ (t : type) (l : list val) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : val -> _),
+    ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
       Forall v, Q v -* Q' v |-- mspec t1 t t0 v l Q -* mspec t1 t t0 v l Q'.
   Proof. intros; apply fspec_frame. Qed.
 

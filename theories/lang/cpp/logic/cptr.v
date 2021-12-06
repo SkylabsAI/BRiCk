@@ -26,7 +26,7 @@ Section defs.
     { fs_cc : calling_conv
     ; fs_return : type
     ; fs_arguments : list type
-    ; fs_spec : list val -d> (val -> mpred) -d> mpredO
+    ; fs_spec : list ptr -d> (ptr -> mpred) -d> mpredO
     }.
 
   #[global] Instance function_spec_inhabited : Inhabited function_spec :=
