@@ -83,8 +83,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
     Vint (if b then 1 else 0).
   Definition Vnat (b : nat) : val :=
     Vint (Z.of_nat b).
-  Definition Vn (b : N) : val :=
-    Vint (Z.of_N b).
+  Notation Vn x := (Vint (Z.of_N x)).
   Notation Vz := Vint (only parsing).
 
   (** we use [Vundef] as our value of type [void] *)

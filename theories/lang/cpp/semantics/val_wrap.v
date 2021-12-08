@@ -9,5 +9,5 @@ From bedrock.lang.cpp Require Import semantics.values.
 
 Module Type val_wrapper.
   Include wrapper.
-  Definition to_V : t -> val := Vn ∘ to_N.
+  Definition to_V (x : t) : val := Vn (to_N x).
 End val_wrapper.
