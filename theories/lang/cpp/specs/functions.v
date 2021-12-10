@@ -35,8 +35,8 @@ Definition SConstructor@{X Z Y} `{Σ : cpp_logic, resolve : genv} {cc : calling_
     (class : globname) (targs : list type) (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
     : function_spec :=
   let this_type := Qmut (Tnamed class) in
-  let map_pre this '(args, P) :=
-    (Vptr this :: args,
+  let map_pre (this : ptr) '(args, P) :=
+    (this :: args,
      this |-> tblockR (Tnamed class) 1 ** P)
   in
   SFunction (cc:=cc) (Qmut Tvoid) (Qconst (Tpointer this_type) :: targs)
@@ -50,7 +50,7 @@ Definition SDestructor@{X Z Y} `{Σ : cpp_logic, resolve : genv} {cc : calling_c
     (class : globname) (PQ : ptr -> WithPrePost@{X Z Y} mpredI)
     : function_spec :=
   let this_type := Qmut (Tnamed class) in
-  let map_pre this '(args, P) := (Vptr this :: args, P) in
+  let map_pre (this : ptr) '(args, P) := (this :: args, P) in
   let map_post (this : ptr) '{| we_ex := pwiths ; we_post := Q|} :=
     {| we_ex := pwiths
      ; we_post := tele_map (fun '(result, Q) =>
@@ -71,8 +71,8 @@ Definition SDestructor@{X Z Y} `{Σ : cpp_logic, resolve : genv} {cc : calling_c
 #[local] Definition SMethodOptCast_wpp@{X Z Y} `{Σ : cpp_logic}
     (base_to_derived : option offset) (wpp : ptr -> WithPrePost@{X Z Y} mpredI)
     : WithPrePost@{X Z Y} mpredI :=
-  let map_pre this pair :=
-      (Vptr (if base_to_derived is Some o then (this ., o ) else this) :: pair.1, pair.2) in
+  let map_pre (this : ptr) pair :=
+      ((if base_to_derived is Some o then (this ., o ) else this) :: pair.1, pair.2) in
   {| wpp_with := TeleS (fun this : ptr => (wpp this).(wpp_with))
    ; wpp_pre this := tele_map (map_pre this) (wpp this).(wpp_pre)
    ; wpp_post this := (wpp this).(wpp_post)
@@ -252,20 +252,20 @@ Section with_cpp.
     #[global] Instance: Params (@SMethodCast) 8 := {}.
     #[global] Instance: Params (@SMethod) 7 := {}.
     #[global] Instance SMethodCast_ne' cast n :
-      Proper (dist (A:=ptr -d> WithPrePostO mpredI) n ==> dist n)
+      Proper (dist (A:=ptr -d> WithPrePostGO mpredI (list ptr) ptr) n ==> dist n)
         (SMethodCast (cc:=cc) class cast qual ret targs).
     Proof. repeat intro. by apply SMethodCast_ne. Qed.
     #[global] Instance SMethod_ne' n :
-      Proper (dist (A:=ptr -d> WithPrePostO mpredI) n ==> dist n)
+      Proper (dist (A:=ptr -d> WithPrePostGO mpredI (list ptr) ptr) n ==> dist n)
         (SMethod (cc:=cc) class qual ret targs).
     Proof. repeat intro. by apply SMethod_ne. Qed.
 
     #[global] Instance SMethodCast_proper' cast :
-      Proper (equiv (A:=ptr -d> WithPrePostO mpredI) ==> equiv)
+      Proper (equiv (A:=ptr -d> WithPrePostGO mpredI (list ptr) ptr) ==> equiv)
         (SMethodCast (cc:=cc) class cast qual ret targs).
     Proof. exact: ne_proper. Qed.
     #[global] Instance SMethod_proper' :
-      Proper (equiv (A:=ptr -d> WithPrePostO mpredI) ==> equiv)
+      Proper (equiv (A:=ptr -d> WithPrePostGO mpredI (list ptr) ptr) ==> equiv)
         (SMethod (cc:=cc) class qual ret targs).
     Proof. exact: ne_proper. Qed.
 
