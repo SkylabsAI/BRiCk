@@ -13,10 +13,6 @@ From bedrock.lang.cpp.logic Require heap_pred.
 
 Set Universe Polymorphism.
 
-Declare Scope fspec_scope.
-Delimit Scope fspec_scope with fspec.
-Bind Scope fspec_scope with WithPrePost.
-
 (** Generic Notation *)
 Reserved Notation "'\with' x .. y X"
    (at level 10, x closed binder, y closed binder, X at level 200, right associativity,
@@ -70,7 +66,7 @@ Reserved Notation "'\post' { x .. y } [ r ] post"
 
 Reserved Notation "'\post' { } [ r ] post"
   (at level 10, r at level 200, no associativity,
-   post at level 200, only parsing).
+   post at level 200).
 
 Reserved Notation "'\post' [ r ] post"
   (at level 10, r at level 200, no associativity,

@@ -300,9 +300,8 @@ number of nodes in a BST:
 unsigned int Tree::count() const;
 ]]
  *)
-From bedrock.lang.cpp.specs Require Import cpp_specs elaborate.
 Definition count_spec (this : ptr) : WithPrePost mpredI :=
-  elaborated nil (Tint W32 Unsigned) $
+  cpp_spec nil (Tint W32 Unsigned) $
   \with (q : Qp) (t : tree Z)
   \prepost this |-> treeR (fun q z => uintR q z) q t
   \post[Vint (trim 32 (count t))] emp.
@@ -334,7 +333,7 @@ On duplicate keys, [insert] does nothing (we treat the tree as a set rather
 than a multiset).
  *)
 Definition insert_spec (this : ptr) : WithPrePost mpredI :=
-  elaborated (Tint W32 Unsigned :: nil) Tbool $
+  cpp_spec (Tint W32 Unsigned :: nil) Tbool $
   \with (t : tree Z)
   \arg{x} "x" (Vint x)
   \pre this |-> ZbstR 1 t
@@ -355,7 +354,7 @@ Fixpoint insert x (t : tree Z) : tree Z :=
   end.
 
 Definition insert_spec' (this : ptr) : WithPrePost mpredI :=
-  elaborated [Tint W32 Unsigned] Tvoid $
+  cpp_spec [Tint W32 Unsigned] Tvoid $
   \with (t : tree Z)
   \arg{x} "x" (Vint x)
   \pre this |-> ZbstR 1 t
@@ -464,7 +463,7 @@ Definition borrow_from (all borrow : mpred) : mpred :=
 Using borrow, we can write the specification for [lookup]:
  *)
 Definition lookup_spec (this : ptr) : WithPrePost mpredI :=
-  elaborated [Tint W32 Unsigned; Tref (Tpointer (Tnamed _Entry))] Tbool $
+  cpp_spec [Tint W32 Unsigned; Tref (Tpointer (Tnamed _Entry))] Tbool $
   \arg{x} "x" (Vint x)
   \arg{out} "out" (Vptr out)
   \with (q : Qp) (t : tree (Entry Z))

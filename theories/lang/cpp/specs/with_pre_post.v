@@ -32,7 +32,7 @@ Section with_prop.
   Record WithExG@{X Z Y R} {RESULT : Type@{R}} : Type :=
     { we_ex   : tele@{X}
     ; we_post : tele_fun@{X Z Y} we_ex (RESULT * PROP) }.
-  Global Arguments WithExG : clear implicits.
+  #[global] Arguments WithExG : clear implicits.
 
   Definition WithExG_map@{X Z Y T U} {T : Type@{T}} {U : Type@{U}} (f : T -> PROP -> U * PROP)
     (we : WithExG@{X Z Y T} T) : WithExG@{X Z Y U} U :=
@@ -43,7 +43,7 @@ Section with_prop.
     { wpp_with : tele@{X}
     ; wpp_pre  : tele_fun@{X Z Y} wpp_with (ARGS * PROP)
     ; wpp_post : tele_fun@{X Z Y} wpp_with (WithExG@{X Z _ _} RESULT)}.
-  Global Arguments WithPrePostG : clear implicits.
+  #[global] Arguments WithPrePostG : clear implicits.
 
   (** Mnemonic: WppGD stands for "[WithPrePostG]'s denotation" *)
   Definition WppGD@{X Z Y A R} {ARGS RESULT} (wpp : WithPrePostG@{X Z Y A R} ARGS RESULT) (params : ARGS)
@@ -75,8 +75,8 @@ Arguments wpp_with {PROP ARGS RESULT} _: assert.
 Arguments wpp_pre {PROP ARGS RESULT} _: assert.
 Arguments wpp_post {PROP ARGS RESULT} _: assert.
 
-Global Arguments WppGD {PROP ARGS RESULT} !wpp _ _ / : assert.
-Global Arguments WppD {PROP} !wpp _ _ / : assert.
+#[global] Arguments WppGD {PROP ARGS RESULT} !wpp _ _ / : assert.
+#[global] Arguments WppD {PROP} !wpp _ _ / : assert.
 
 Module Export wpp_ofe.
 Section wpp_ofe.
@@ -191,7 +191,7 @@ Section with_AR.
   (** [add_with] adds ghost variables scoped over the pre-
       and post-conditions.
    *)
-  Definition add_with@{X Z Y A R} {t : tele@{X}} (wpp : tele_fun@{X Y Y} t (WithPrePostG@{X Z Y A R} PROP A R)) : WithPrePostG@{X Z Y A R} PROP A R.
+  Definition add_with@{} {t : tele@{X}} (wpp : tele_fun@{X Y Y} t (WithPrePostG@{X Z Y A R} PROP A R)) : WithPrePostG@{X Z Y A R} PROP A R.
     refine
       {| wpp_with := tele_append@{Z Z X} t (tele_map wpp_with wpp)
        ; wpp_pre  := _
@@ -218,35 +218,35 @@ Section with_AR.
   Defined.
 
   (** [add_pre P wpp] adds [P] as a pre-condition to [wpp] *)
-  Definition add_pre (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
+  Definition add_pre@{} (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre  := tele_map (fun '(args,X) => (args, P ** X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
     |}.
 
   (** [add_require P wpp] adds [P] as a pure pre-condition to [wpp] *)
-  Definition add_require (P : Prop) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
+  Definition add_require@{} (P : Prop) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre := tele_map (fun '(args,X) => (args, [| P |] ** X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
     |}.
 
   (** [add_require P wpp] adds [P] as a persistent pre-condition to [wpp] *)
-  Definition add_persist (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
+  Definition add_persist@{} (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre := tele_map (fun '(args,X) => (args, □ P ** X)) wpp.(wpp_pre)
      ; wpp_post := wpp.(wpp_post)
     |}.
 
   (** [add_post P wpp] adds [P] as a post-condition to [wpp] *)
-  Definition add_post (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
+  Definition add_post@{} (P : PROP) (wpp : WPP A R) : WithPrePostG@{X Z Y A R} PROP A R :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre  := wpp.(wpp_pre)
      ; wpp_post := tele_map (WithExG_map (fun r Q => (r,P ** Q))) wpp.(wpp_post)
     |}.
 
   (** [add_prepost P wpp] adds [P] as a pre- and post-condition to [wpp] *)
-  Definition add_prepost (P : PROP) (wpp : WPP A R) : WPP@{X Z Y A R} A R :=
+  Definition add_prepost@{} (P : PROP) (wpp : WPP A R) : WPP@{X Z Y A R} A R :=
     add_pre P (add_post P wpp).
 
   (** [add_arg x v wpp] adds an argument (named [x]) with value [v] to
@@ -254,7 +254,7 @@ Section with_AR.
 
       NOTE this requires that the arguments are a [list]
    *)
-  Definition add_arg (s : names.ident) (v : A)
+  Definition add_arg@{} (s : names.ident) (v : A)
              (wpp : WPP@{X Z Y A R} (list A) R) : WPP@{X Z Y A R} (list A) R :=
     {| wpp_with := wpp.(wpp_with)
      ; wpp_pre  := tele_map (fun '(args,X) => (v :: args, X)) wpp.(wpp_pre)
@@ -266,7 +266,7 @@ Section with_AR.
       NOTE this requires that the arguments are a [list], but this could be
            something with a unit.
    *)
-  Definition post_ret {t : tele} (Q : t -t> R * PROP) : WPP@{X Z Y A R} (list A) R :=
+  Definition post_ret@{} {t : tele} (Q : t -t> R * PROP) : WPP@{X Z Y A R} (list A) R :=
     {| wpp_with := TeleO
      ; wpp_pre := (nil, emp%I)
      ; wpp_post := {| we_ex := t
@@ -278,8 +278,7 @@ Section with_AR.
       NOTE this requires that the arguments are a [list], but this could be
            something with a unit.
    *)
-  Definition post_void (void : R) (t : tele) (Q : tele_fun@{X _ Z} t PROP) : WPP@{X Z Y A R} (list A) R :=
+  Definition post_void@{} (void : R) (t : tele) (Q : tele_fun@{X _ Z} t PROP) : WPP@{X Z Y A R} (list A) R :=
     post_ret (t:=t) (tele_map (fun Q => (void, Q)) Q).
 
 End with_AR.
-
