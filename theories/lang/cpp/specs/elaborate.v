@@ -58,6 +58,9 @@ Section with_cpp.
     #[global] Instance add_require_Elaborate {P} `{Elaborate wpp} : Elaborate (add_require P wpp) :=
       add_require P elaborated.
 
+    #[global] Instance add_persist_Elaborate {P} `{Elaborate wpp} : Elaborate (add_persist P wpp) :=
+      add_persist P elaborated.
+
     #[global] Instance add_pre_Elaborate {P} `{Elaborate wpp} : Elaborate (add_pre P wpp) :=
       add_pre P elaborated.
 
@@ -76,21 +79,23 @@ Section with_cpp.
   Section with_R.
     Polymorphic Universe R.
     Variable R : Type@{R}.
-  Class ElaborateArg@{X Z Y} (ty : type) (x : names.ident) (v : val) : Type :=
-    elaborated_arg : WithPrePostG@{X Z Y Set R} mpredI (list ptr) R -> WithPrePostG@{X Z Y Set R} mpredI (list ptr) R.
 
-  #[global] Instance Tint_ElaborateArg  {sz sgn x v} : ElaborateArg (Tint sz sgn) x v :=
-    add_prim_arg (Tint sz sgn) x v.
-  #[global] Instance Tptr_ElaborateArg {ty x v} : ElaborateArg (Tptr ty) x v :=
-    add_prim_arg (Tptr ty) x v.
-  #[global] Instance Tbool_ElaborateArg {x v} : ElaborateArg Tbool x v :=
-    add_prim_arg Tbool x v.
-  #[global] Instance Tnamed_ElaborateArg {cls x p} : ElaborateArg (Tnamed cls) x (Vptr p) :=
-    with_pre_post.add_arg x p.
-  #[global] Instance Tref_ElaborateArg {ty x p} : ElaborateArg (Tref ty) x (Vptr p) :=
-    with_pre_post.add_arg x p.
-  #[global] Instance Trv_ref_ElaborateArg {ty x p} : ElaborateArg (Trv_ref ty) x (Vptr p) :=
-    with_pre_post.add_arg x p.
+    (** This class provides a mechanism to elaborate an argument *)
+    Class ElaborateArg@{X Z Y} (ty : type) (x : names.ident) (v : val) : Type :=
+      elaborated_arg : WithPrePostG@{X Z Y Set R} mpredI (list ptr) R -> WithPrePostG@{X Z Y Set R} mpredI (list ptr) R.
+
+    #[global] Instance Tint_ElaborateArg  {sz sgn x v} : ElaborateArg (Tint sz sgn) x v :=
+      add_prim_arg (Tint sz sgn) x v.
+    #[global] Instance Tptr_ElaborateArg {ty x v} : ElaborateArg (Tptr ty) x v :=
+      add_prim_arg (Tptr ty) x v.
+    #[global] Instance Tbool_ElaborateArg {x v} : ElaborateArg Tbool x v :=
+      add_prim_arg Tbool x v.
+    #[global] Instance Tnamed_ElaborateArg {cls x p} : ElaborateArg (Tnamed cls) x (Vptr p) :=
+      with_pre_post.add_arg x p.
+    #[global] Instance Tref_ElaborateArg {ty x p} : ElaborateArg (Tref ty) x (Vptr p) :=
+      with_pre_post.add_arg x p.
+    #[global] Instance Trv_ref_ElaborateArg {ty x p} : ElaborateArg (Trv_ref ty) x (Vptr p) :=
+      with_pre_post.add_arg x p.
   End with_R.
   Arguments elaborated_arg {_ _ _ _ _} _.
 
@@ -105,6 +110,18 @@ Section with_cpp.
   #[global] Instance post_ret_bool_Elaborate t Q
     : Elaborate nil Tbool (post_ret (t:=t) Q) :=
     @post_prim_ret _ Tbool t Q.
+
+  #[global] Instance post_ret_ptr_Elaborate ty t Q
+    : Elaborate nil (Tptr ty) (post_ret (t:=t) Q) :=
+    @post_prim_ret _ (Tptr ty) t Q.
+
+  #[global] Instance post_ret_ref_Elaborate ty t Q
+    : Elaborate nil (Tref ty) (post_ret (t:=t) Q) :=
+    @post_prim_ret _ (Tref ty) t Q.
+
+  #[global] Instance post_ret_rv_ref_Elaborate ty t Q
+    : Elaborate nil (Trv_ref ty) (post_ret (t:=t) Q) :=
+    @post_prim_ret _ (Trv_ref ty) t Q.
 
   #[global] Instance post_ret_void_Elaborate t Q
     : Elaborate nil Tvoid (post_ret (t:=t) Q) :=
