@@ -170,7 +170,7 @@ Section with_cpp.
         let ρ := Remp None f.(f_return) in
         bind_vars f.(f_params) args ρ (fun ρ frees =>
         |> if is_void f.(f_return) then
-             wp ρ body (Kfree frees $ void_return (|={⊤}=> |> Q invalid_ptr))
+             wp ρ body (Kfree frees $ void_return (|={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p))
            else
              wp ρ body (Kfree frees $ val_return (fun x => |={⊤}=> |> Q x)))
       | Builtin builtin =>
@@ -200,7 +200,7 @@ Section with_cpp.
         let ρ := Remp (Some thisp) m.(m_return) in
         bind_vars m.(m_params) rest_vals ρ (fun ρ frees =>
         |> if is_void m.(m_return) then
-             wp ρ body (Kfree frees (void_return (|={⊤}=> |> Q invalid_ptr)))
+             wp ρ body (Kfree frees (void_return (|={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p)))
            else
              wp ρ body (Kfree frees (val_return (fun x => |={⊤}=> |>Q x))))
       | _ => False
@@ -448,7 +448,7 @@ Section with_cpp.
           |> let ρ := Remp (Some thisp) Tvoid in
              bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
                (wp_struct_initializer_list cls ρ ctor.(c_class) thisp inits
-                  (wp ρ body (Kfree frees (void_return (|={⊤}=> |> Q invalid_ptr))))))
+                  (wp ρ body (Kfree frees (void_return (|={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p))))))
         | Some (Gunion union) =>
         (* this is a union *)
           thisp |-> tblockR ty 1 **
@@ -458,7 +458,7 @@ Section with_cpp.
           |> let ρ := Remp (Some thisp) Tvoid in
              bind_vars ctor.(c_params) rest_vals ρ (fun ρ frees =>
                (wp_union_initializer_list union ρ ctor.(c_class) thisp inits
-                  (wp ρ body (Kfree frees (void_return (|={⊤}=> |> Q invalid_ptr))))))
+                  (wp ρ body (Kfree frees (void_return (|={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p))))))
         | Some _ =>
           ERROR $ "constructor for non-aggregate (" ++ ctor.(c_class) ++ ")"
         | None => False
@@ -518,7 +518,7 @@ Section with_cpp.
                (* ^ the identity of the object is destroyed *)
                   (wpd_bases dtor.(d_class) thisp (List.map fst s.(s_bases))
                   (* ^ the base classes are destroyed (reverse order) *)
-                     (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |={⊤}=> |> Q invalid_ptr)))
+                     (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p)))
                      (* ^ the operations above destroy each object returning its memory to
                         the abstract machine. Then the abstract machine gives this memory
                         back to the program.
@@ -533,7 +533,7 @@ Section with_cpp.
                automatically where they can prove the active entry has a trivial destructor.
              *)
             |={⊤}=> thisp |-> tblockR (Tnamed dtor.(d_class)) 1 **
-                   (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |={⊤}=> |> Q invalid_ptr)
+                   (thisp |-> tblockR (Tnamed dtor.(d_class)) 1 -* |={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p)
           | _ => None
           end%I
       in
