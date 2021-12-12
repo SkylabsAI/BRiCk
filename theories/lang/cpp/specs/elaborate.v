@@ -98,6 +98,15 @@ Section with_cpp.
       with_pre_post.add_arg x p.
     #[global] Instance Trv_ref_ElaborateArg {ty x p} : ElaborateArg (Trv_ref ty) x (Vptr p) :=
       with_pre_post.add_arg x p.
+    #[global] Instance Qmut_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qmut ty) x v :=
+      elaborated_arg.
+    #[global] Instance Qconst_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qconst ty) x v :=
+      elaborated_arg.
+    #[global] Instance Qconst_volatile_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qconst_volatile ty) x v :=
+      elaborated_arg.
+    #[global] Instance Qmut_volatile_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qmut_volatile ty) x v :=
+      elaborated_arg.
+
   End with_R.
   Arguments elaborated_arg {_ _ _ _ _} _.
 
