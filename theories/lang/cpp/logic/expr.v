@@ -743,18 +743,17 @@ Module Type Expr.
        because they are shared between function and member function calls.
      *)
     Definition xval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-      Exists p, res |-> primR ty 1 (Vref p) ** Q p.
+      Exists p, res |-> primR (Tref ty) 1 (Vref p) ** Q p.
     Definition lval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-      Exists p, res |-> primR ty 1 (Vref p) ** Q p.
+      Exists p, res |-> primR (Tref ty) 1 (Vref p) ** Q p.
     Definition operand_receive (ty : type) (res : ptr) (Q : val -> (FreeTemps -> FreeTemps) -> mpred) : mpred :=
-      match ty with
-      | Tvoid =>
-        [| res = invalid_ptr |] ** Q Vvoid (fun x => x)
-      | _ =>
-        Exists v, res |-> primR ty 1 v ** Q v (fun x => x)
-      end.
+      Exists v, res |-> primR ty 1 v ** Q v (fun x => x).
     Definition init_receive (ty : type) (addr : ptr) (res : ptr) (Q : FreeTemp -> mpred) : mpred :=
       ([| addr = res |] -* Q (FreeTemps.delete ty addr)).
+    #[global] Arguments xval_receive _ _ _ /.
+    #[global] Arguments lval_receive _ _ _ /.
+    #[global] Arguments operand_receive _ _ _ /.
+    #[global] Arguments init_receive _ _ _ _ /.
 
     (** [wp_call pfty f es Q] calls [f] taking the arguments from the
         evaluations of [es] and then acts like [Q].
@@ -783,12 +782,12 @@ Module Type Expr.
 
     Axiom wp_lval_call : forall f (es : list Expr) Q (ty : type),
         wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (lval_receive (Tref ty) res $ fun v => Q v (free_args >*> free_f)))
+           Reduce (lval_receive ty res $ fun v => Q v (free_args >*> free_f)))
         |-- wp_lval (Ecall f es ty) Q.
 
     Axiom wp_xval_call : forall f (es : list Expr) Q (ty : type),
         wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (xval_receive (Trv_ref ty) res $ fun v => Q v (free_args >*> free_f)))
+           Reduce (xval_receive ty res $ fun v => Q v (free_args >*> free_f)))
         |-- wp_xval (Ecall f es ty) Q.
 
     Axiom wp_operand_call : forall ty f es Q,
