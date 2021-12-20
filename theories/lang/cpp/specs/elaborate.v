@@ -140,6 +140,8 @@ Section with_cpp.
 
 End with_cpp.
 
+#[global] Hint Mode Elaborate + + + + + : typeclass_instances.
+
 Arguments cpp_spec {_ Σ} ts rt wpp {_}.
 
 #[global] Hint Extern 0 (tforallT ?X) => simpl; intros : typeclass_instances.
