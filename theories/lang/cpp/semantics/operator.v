@@ -20,8 +20,8 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 #[local] Open Scope Z_scope.
 
 Module Type OPERATOR_INTF_FUNCTOR
-  (Import P : PTRS_INTF)
-  (Import INTF : VALUES_INTF_FUNCTOR PTRS_INTF_AXIOM).
+  (P : PTRS_INTF)
+  (Import INTF : VALUES_INTF_FUNCTOR P).
   (** operator semantics *)
   Parameter eval_unop : forall {resolve : genv}, UnOp -> forall (argT resT : type) (arg res : val), Prop.
   Parameter eval_binop_pure : forall {resolve : genv}, BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
@@ -220,3 +220,4 @@ Fixpoint companion_type (t : type) : option type :=
   | Tqualified _ t => companion_type t
   | _ => None
   end.
+
