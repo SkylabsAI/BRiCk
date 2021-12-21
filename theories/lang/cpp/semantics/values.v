@@ -46,9 +46,8 @@ Module Type RAW_BYTES.
   *)
 End RAW_BYTES.
 
-Module Type VAL_MIXIN.
-  Declare Module Export PTRS : PTRS.
-  Declare Module Export RAW_BYTES : RAW_BYTES.
+Module Type VAL_MIXIN (Import P : PTRS).
+  Include RAW_BYTES.
   (** * Values
       Primitive abstract C++ runtime values come in two flavors.
       - pointers (also used for references)
@@ -129,8 +128,8 @@ Module Type VAL_MIXIN.
     end.
 End VAL_MIXIN.
 
-Module Type RAW_BYTES_VAL.
-  Declare Module Export VALS : VAL_MIXIN.
+Module Type RAW_BYTES_VAL (Import P : PTRS).
+  Include VAL_MIXIN P.
   (** [raw_bytes_of_val σ ty v rs] states that the value [v] of type
       [ty] is represented by the raw bytes in [rs]. What this means
       depends on the type [ty]. *)
@@ -168,8 +167,8 @@ Module Type RAW_BYTES_VAL.
     genv -> globname -> gmap ident (list raw_byte) -> list raw_byte -> Prop.
 End RAW_BYTES_VAL.
 
-Module Type RAW_BYTES_MIXIN.
-  Declare Module Export RAW_BYTES_VAL : RAW_BYTES_VAL.
+Module Type RAW_BYTES_MIXIN (Import P : PTRS).
+  Include RAW_BYTES_VAL P.
 
   Inductive val_related : genv -> type -> val -> val -> Prop :=
   | Veq_refl σ ty v: val_related σ ty v v
@@ -233,8 +232,8 @@ Module Type RAW_BYTES_MIXIN.
   Qed.
 End RAW_BYTES_MIXIN.
 
-Module Type HAS_TYPE.
-  Declare Module Export VALS : VAL_MIXIN.
+(* Could be inlined with RAW_BYTES_VAL. *)
+Module Type HAS_TYPE (Import P : PTRS) (Import V : VAL_MIXIN P).
   (** typedness of values
       note that only primitives fit into this, there is no [val] representation
       of aggregates, except through [Vptr p] with [p] pointing to the contents.
@@ -291,8 +290,8 @@ Module Type HAS_TYPE.
       has_type x (Tqualified q t).
 End HAS_TYPE.
 
-Module Type HAS_TYPE_MIXIN.
-  Declare Module Export HAS_TYPE : HAS_TYPE.
+Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import V : VAL_MIXIN P).
+  Include HAS_TYPE P V.
 
   Lemma has_bool_type : forall z,
     0 <= z < 2 <-> has_type (Vint z) Tbool.
@@ -390,6 +389,8 @@ Module Type HAS_TYPE_MIXIN.
   Arguments conv_int !_ !_ _ _ /.
 End HAS_TYPE_MIXIN.
 
+Module Type VALUES_DEFS (P : PTRS_INTF) := RAW_BYTES_VAL P <+ HAS_TYPE P.
+Module Type VALUES_INTF_FUNCTOR (P : PTRS_INTF) := RAW_BYTES_MIXIN P <+ HAS_TYPE_MIXIN P.
 (* Collect all the axioms. *)
 (* Module Type VALUES_DEFS (MP : PTRS_INTF).
   Module R. Include RAW_BYTES. End R.
@@ -418,7 +419,7 @@ End VALUES_DEFS'. *)
   Module RD. Include RAW_BYTES_VAL with Module V := V. End RD.
   Module HT. Include HAS_TYPE with Module V := V. End HT.
 End VALUES_DEFS. *)
-Module Type VALUES_DEFS (MP : PTRS_INTF).
+(* Module Type VALUES_DEFS (MP : PTRS_INTF).
   Module RAW_BYTES_VAL. Include RAW_BYTES_VAL with Module VALS.PTRS := MP. End RAW_BYTES_VAL.
   Module HAS_TYPE. Include HAS_TYPE with Module VALS := RAW_BYTES_VAL.VALS. End HAS_TYPE.
 End VALUES_DEFS.
@@ -434,7 +435,7 @@ Module Type VALUES_INTF_FUNCTOR (MP : PTRS_INTF).
   Module Export HAS_TYPE'.
     Include HAS_TYPE_MIXIN with Module HAS_TYPE := HAS_TYPE.
   End HAS_TYPE'.
-End VALUES_INTF_FUNCTOR.
+End VALUES_INTF_FUNCTOR. *)
 
 Declare Module Export PTRS_INTF_AXIOM : PTRS_INTF.
 
