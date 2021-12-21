@@ -21,5 +21,6 @@
    -w +deprecated-hint-without-locality
    -w +unknown-option
   ))
+  ; -w -masking-absolute-name
  (theories bedrock.prelude)
 )
