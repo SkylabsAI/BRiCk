@@ -27,23 +27,33 @@ Section with_cpp.
   #[local] Unset Universe Minimization ToSet.
   Set Printing Universes.
 
-  Polymorphic Universes X Y Z.
+  Polymorphic Universes X Z Y.
   (* Universe in notations are refreshed, so this does not work *)
   (* #[local] Notation WPP := (WithPrePostG@{X Z Y Set Set} mpredI). *)
 
-  Definition add_prim_arg@{R} {R : Type@{R}} (t : type) (s : names.ident) (v : val)
+  Definition add_prim_arg@{R u} {R : Type@{R}} (t : type) (s : names.ident) (v : val)
              (wpp : WithPrePostG@{X Z Y Set R} mpredI (list ptr) R)
   : WithPrePostG@{X Z Y Set R}  mpredI (list ptr) R :=
-    add_with@{X Z Y Set R} (t:=TeleS (fun _ : ptr => TeleO))
+    add_with@{X Z Y Set R u} (t:=TeleS (fun _ : ptr => TeleO))
              (fun p : ptr => with_pre_post.add_arg (A:=ptr) s p (add_pre (_at p (primR t 1 v))
                                                                       (with_pre_post.add_post (_at p (anyR t 1)) wpp))).
 
-  Definition post_prim_ret@{A} {A : Type@{A}} (ty : type) (t : tele@{X}) (Q : t -t> val * mpredI)
+  Set Printing Universes.
+  Unset Printing Notations.
+
+  Definition post_prim_ret@{A} {A : Type@{A}} (ty : type) (t : tele@{X}) (Q : tele_fun@{X Z Z} t (val * mpredI))
   : WithPrePostG@{X Z Y A Set} mpredI (list A) ptr :=
     {| wpp_with := TeleO
      ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := TeleS (fun _ : ptr => t)
-                    ; we_post := fun p => tele_map@{bi.u0 _ Z Z X} (fun '(v,Q) => (p, _at p (primR ty 1 v) ** Q)) Q |} |}.
+                    ; we_post := fun p => tele_map@{_ _ _ _ X} (fun '(v,Q) => (p, _at p (primR ty 1 v) ** Q)) Q |} |}.
+
+  Definition post_prim_void@{A} {A : Type@{A}} (ty : type) (t : tele@{X}) (Q : tele_fun@{X Z Z} t mpredI)
+  : WithPrePostG@{X Z Y A Set} mpredI (list A) ptr :=
+    {| wpp_with := TeleO
+     ; wpp_pre := (nil, emp)%I
+     ; wpp_post := {| we_ex := TeleS (fun _ : ptr => t)
+                    ; we_post := fun p => tele_map@{_ _ _ _ X} (fun Q => (p, _at p (primR Tvoid 1 Vvoid) ** Q)) Q |} |}.
 
   Class Elaborate (ts : list type) (rt : type) (wpp : WithPrePostG@{X Z Y Set Set} mpredI (list val) val) :=
     cpp_spec : WithPrePostG@{X Z Y Set Set} mpredI (list ptr) ptr.
@@ -51,7 +61,6 @@ Section with_cpp.
   Section parametric.
     Variables (ts : list type) (rt : type).
     #[local] Notation Elaborate := (Elaborate ts rt).
-
 
     #[global] Instance add_with_Elaborate {t} `{X : tforallT (fun args => Elaborate (tele_app wpp args))}
       : Elaborate (add_with (t:=t) wpp) :=
@@ -72,9 +81,10 @@ Section with_cpp.
     #[global] Instance add_prepost_Elaborate {P} `{Elaborate wpp} : Elaborate (add_prepost P wpp) :=
       add_prepost P cpp_spec.
 
-  End parametric.
+    #[global] Instance let_pre_spec_Elaborate {wpp} {X : Elaborate wpp} : Elaborate (let_pre_spec wpp) :=
+      X.
 
-(*  #[global] Existing Instances add_with_Elaborate add_require_Elaborate add_pre_Elaborate add_post_Elaborate add_prepost_Elaborate. *)
+  End parametric.
 
   Set Printing Universes.
 
@@ -114,6 +124,7 @@ Section with_cpp.
     : Elaborate (ty :: ts) rt (add_arg x v wpp) :=
     elaborated_arg cpp_spec.
 
+  Set Printing Universes.
   #[global] Instance post_ret_int_Elaborate {sz sgn} t Q
     : Elaborate nil (Tint sz sgn) (post_ret (t:=t) Q) :=
     @post_prim_ret _ (Tint sz sgn) t Q.
@@ -134,17 +145,19 @@ Section with_cpp.
     : Elaborate nil (Trv_ref ty) (post_ret (t:=t) Q) :=
     @post_prim_ret _ (Trv_ref ty) t Q.
 
-  #[global] Instance post_ret_void_Elaborate t Q
-    : Elaborate nil Tvoid (post_ret (t:=t) Q) :=
-    @post_prim_ret _ Tvoid t Q.
+  #[global] Instance post_void_Elaborate t Q
+    : Elaborate nil Tvoid (post_void (t:=t) Q) :=
+    @post_prim_void _ Tvoid t Q.
 
 End with_cpp.
 
 #[global] Hint Mode Elaborate + + + + + : typeclass_instances.
 
-Arguments cpp_spec {_ Σ} ts rt wpp {_}.
+Arguments cpp_spec {_ Σ} ts%list_scope rt wpp%pre_spec {_}.
 
-#[global] Hint Extern 0 (tforallT ?X) => simpl; intros : typeclass_instances.
+#[global] Hint Extern 0 (tforallT ?X) => cbn [ tforallT tele_app ] ; intros : typeclass_instances.
+
+#[global] Hint Opaque add_arg post_ret post_void add_pre add_post add_prepost add_require add_with let_pre_spec : typeclass_instances.
 
 Section tests.
   Context `{Σ : cpp_logic}.
@@ -157,13 +170,13 @@ Section tests.
     rewrite /add_arg_Elaborate/post_ret_int_Elaborate/cpp_spec/elaborated_arg/Tint_ElaborateArg/Tptr_ElaborateArg/=.
   Abort.
 
-  Goal forall p q OPAQUE,
-      OPAQUE (cpp_spec (Tint W64 Signed :: Tptr (Tnamed "X") :: nil) (Tint W64 Signed)
+  Goal forall p OPAQUE,
+      OPAQUE (cpp_spec (Σ:=Σ) (Tint W64 Signed :: Tptr (Tnamed "X") :: nil) Tvoid
                          (add_with (t:=TeleS (fun _ => TeleO))
                                    (fun z => add_arg "x" (Vint z)
-                                                  (add_arg "y" (Vptr p) (post_ret (t:=TeleO) (Vint q, emp%I)))))).
+                                                  (add_arg "y" (Vptr p) (post_void (t:=TeleO) (emp%I)))))).
   Proof.
-    rewrite /add_with_Elaborate/add_arg_Elaborate/post_ret_int_Elaborate/cpp_spec/elaborated_arg/Tint_ElaborateArg/Tptr_ElaborateArg/=.
+    rewrite /add_with_Elaborate/add_arg_Elaborate/post_void_Elaborate/cpp_spec/elaborated_arg/Tint_ElaborateArg/Tptr_ElaborateArg/=.
   Abort.
 
 End tests.

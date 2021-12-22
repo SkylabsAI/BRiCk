@@ -191,9 +191,9 @@ Section with_AR.
   (** [add_with] adds ghost variables scoped over the pre-
       and post-conditions.
    *)
-  Definition add_with@{} {t : tele@{X}} (wpp : tele_fun@{X Y Y} t (WithPrePostG@{X Z Y A R} PROP A R)) : WithPrePostG@{X Z Y A R} PROP A R.
+  Definition add_with@{u} {t : tele@{X}} (wpp : tele_fun@{X u u} t (WithPrePostG@{X Z Y A R} PROP A R)) : WithPrePostG@{X Z Y A R} PROP A R.
     refine
-      {| wpp_with := tele_append@{Z Z X} t (tele_map wpp_with wpp)
+      {| wpp_with := tele_append@{_ _ X} t (tele_map wpp_with wpp)
        ; wpp_pre  := _
        ; wpp_post := _
       |}.
