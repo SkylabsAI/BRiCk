@@ -397,4 +397,11 @@ Definition T_int : type := Tint int_bits Signed.
 
 Notation T_schar := (Tchar char_bits Signed) (only parsing).
 Notation T_uchar := (Tchar char_bits Unsigned) (only parsing).
-
+Notation Ti8 := (Tint W8 Signed).
+Notation Tu8 := (Tint W8 Unsigned).
+Notation Ti16 := (Tint W16 Signed).
+Notation Tu16 := (Tint W16 Unsigned).
+Notation Ti32 := (Tint W32 Signed).
+Notation Tu32 := (Tint W32 Unsigned).
+Notation Ti64 := (Tint W64 Signed).
+Notation Tu64 := (Tint W64 Unsigned).
