@@ -45,9 +45,11 @@ Section pre_specs.
      ; wpp_post := {| we_ex := t
                     ; we_post := Q |} |}.
 
+  (*
   Definition with_tele (t : telescopes.tele) (f : telescopes.tele_arg t -> WithPrePostG@{X Z Y Set Set} PROP (list val) val)
     : WithPrePostG@{X Z Y Set Set} PROP (list val) val :=
     add_with@{X Z Y Set Set} (t:=telescopes.TeleS (fun x : telescopes.tele_arg t => telescopes.TeleO)) f.
+   *)
 
   (* Markers to help notation printing. *)
   Definition let_pre_spec@{} (X : WithPrePostG@{X Z Y Set Set} PROP (list val) val)
@@ -73,10 +75,10 @@ Section pre_specs.
 
 End pre_specs.
 
-Arguments with_tele _ _ _ : clear implicits.
+(* Arguments with_tele _ _ _ : clear implicits. *)
 
 Strategy expand
-   [ add_pre add_require add_arg add_post add_prepost with_tele ].
+   [ add_pre add_require add_arg add_post add_prepost (* with_tele *) ].
 (** Make sure to list all identity functions above. And in the same order, for clarity. *)
 Strategy expand
    [ let_pre_spec with_arg_pre_spec with_pre_pre_spec with_prepost_pre_spec with_require_pre_spec with_persist_pre_spec exactWpp ].
@@ -85,7 +87,7 @@ Notation "'\with' x .. y X" :=
   (add_with (t:=TeleS (fun x => .. (TeleS (fun y => TeleO)) ..))
             (fun x => .. (fun y => X%pre_spec) ..)).
 
-Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X)).
+(* Notation "'\withT' ts <- t X" := (@with_tele _ t (fun ts => X)). *)
 
 Notation "'\prepost' pp X" := (add_prepost pp%I X%pre_spec).
 
