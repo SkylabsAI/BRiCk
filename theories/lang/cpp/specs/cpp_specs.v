@@ -20,6 +20,7 @@ Set Printing Universes.
 Declare Scope pre_spec_scope.
 Delimit Scope pre_spec_scope with pre_spec.
 Bind Scope pre_spec_scope with WithPrePost.
+Bind Scope pre_spec_scope with WithPrePostG.
 
 Section pre_specs.
   Context `{PROP : bi}.
