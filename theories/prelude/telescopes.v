@@ -24,8 +24,8 @@ Definition tele_fun_pointwise@{X Z Y} {t : tele@{X}} {A : Type@{Z}}
 
     To apply this, use [tapplyT].
  *)
-Fixpoint tforallT {TT : tele} : (TT -> Type) -> Type :=
-  match TT as TT return (TT -> Type) -> Type with
+Fixpoint tforallT@{X Y} {TT : tele@{X}} : (TT -> Type@{Y}) -> Type@{Y} :=
+  match TT as TT return (TT -> Type@{Y}) -> Type@{Y} with
   | TeleO => fun F => F TargO
   | TeleS f => fun F => forall x, tforallT (fun arg => F (TargS x arg))
   end.
