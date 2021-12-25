@@ -32,6 +32,10 @@ Reserved Infix "`land`" (at level 40, left associativity).
 Reserved Infix "`ldiff`" (at level 40, left associativity).
 Reserved Infix "\" (at level 40, left associativity).	(** cf [∖] *)
 
+(** Must agree with [iris.algebra.ofe] *)
+Reserved Notation "x ≡{ n }≡ y"
+  (at level 70, n at next level, format "x  ≡{ n }≡  y").
+
 (** ** Iris big ops *)
 (**
  * We stick with the levels and associativity used in Iris' big ops

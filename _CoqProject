@@ -39,6 +39,26 @@ theories/prelude/letstar.v
 theories/prelude/reserved_notation.v
 
 theories/prelude/base.v
+
+theories/prelude/word/zlib/base.v
+theories/prelude/word/zlib/pow2.v
+theories/prelude/word/zlib/mod_pow2.v
+theories/prelude/word/zlib/bit.v
+theories/prelude/word/zlib/twosc.v
+theories/prelude/word/zlib/eqmod.v
+theories/prelude/word/zlib.v
+
+theories/prelude/word/base.v
+theories/prelude/word/finite.v
+theories/prelude/word/const.v
+theories/prelude/word/add.v
+theories/prelude/word/aux_arg.v
+theories/prelude/word/num.v
+theories/prelude/word/zify.v
+theories/prelude/word/type.v
+theories/prelude/word/aux.v
+theories/prelude/word.v
+
 theories/prelude/option.v
 theories/prelude/addr.v
 theories/prelude/numbers.v
