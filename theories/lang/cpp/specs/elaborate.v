@@ -26,6 +26,7 @@ Section with_cpp.
   #[local] Set Universe Polymorphism.
   #[local] Unset Universe Minimization ToSet.
   Set Printing Universes.
+  (* )Unset Printing Notations. (* useful if you need to look at universe annotations *) *)
 
   Polymorphic Universes X Z Y.
   (* Universe in notations are refreshed, so this does not work *)
@@ -38,8 +39,6 @@ Section with_cpp.
              (fun p : ptr => with_pre_post.add_arg (A:=ptr) s p (add_pre (_at p (primR t 1 v))
                                                                       (with_pre_post.add_post (_at p (anyR t 1)) wpp))).
 
-  Set Printing Universes.
-  Unset Printing Notations.
 
   Definition post_prim_ret@{A} {A : Type@{A}} (ty : type) (t : tele@{X}) (Q : tele_fun@{X Z Z} t (val * mpredI))
   : WithPrePostG@{X Z Y A Set} mpredI (list A) ptr :=
@@ -86,8 +85,6 @@ Section with_cpp.
 
   End parametric.
 
-  Set Printing Universes.
-
   Section with_R.
     Polymorphic Universe R.
     Variable R : Type@{R}.
@@ -124,7 +121,6 @@ Section with_cpp.
     : Elaborate (ty :: ts) rt (add_arg x v wpp) :=
     elaborated_arg cpp_spec.
 
-  Set Printing Universes.
   #[global] Instance post_ret_int_Elaborate {sz sgn} t Q
     : Elaborate nil (Tint sz sgn) (post_ret (t:=t) Q) :=
     @post_prim_ret _ (Tint sz sgn) t Q.
@@ -145,13 +141,21 @@ Section with_cpp.
     : Elaborate nil (Trv_ref ty) (post_ret (t:=t) Q) :=
     @post_prim_ret _ (Trv_ref ty) t Q.
 
-  #[global] Instance post_void_Elaborate t Q
+  #[global] Instance post_void_Elaborate t (Q : tele_fun@{X Z Z} _ _)
     : Elaborate nil Tvoid (post_void (t:=t) Q) :=
     @post_prim_void _ Tvoid t Q.
 
+  #[global] Instance post_void_qual_Elaborate ty tq t (Q : tele_fun@{X Z Z} _ _) (X : Elaborate nil ty (post_void (t:=t) Q))
+    : Elaborate nil (Tqualified tq ty) (post_void (t:=t) Q) :=
+    X.
+
+  #[global] Instance post_ret_qual_Elaborate ty tq t (Q : tele_fun@{X Z Z} _ _) (X : Elaborate nil ty (post_ret (t:=t) Q))
+    : Elaborate nil (Tqualified tq ty) (post_ret (t:=t) Q) :=
+    X.
+
 End with_cpp.
 
-#[global] Hint Mode Elaborate + + + + + : typeclass_instances.
+#[global] Hint Mode Elaborate - - + + ! : typeclass_instances.
 
 Arguments cpp_spec {_ Σ} ts%list_scope rt wpp%pre_spec {_}.
 

@@ -91,9 +91,9 @@ Reserved Notation "'\args{' x .. y '}' ls X"
    format "'[v' '[hv  ' '\args{' x  ..  y '}'  '/' ls  ']' '//' X ']'").
 
 Reserved Notation "'\arg' nm v X"
-  (at level 10, nm at level 0, X at level 200, right associativity,
+  (at level 10, nm at level 0, v at level 0, X at level 200, right associativity,
    format "'[v' '\arg'  nm  v  '//' X ']'").
 
 Reserved Notation "'\arg{' x .. y } nm v X"
-  (at level 10, nm at level 0, x binder, y binder, X at level 200, right associativity,
+  (at level 10, nm at level 0, v at level 0, x binder, y binder, X at level 200, right associativity,
    format "'[v' '\arg{' x  ..  y '}'  nm  v  '//' X ']'").

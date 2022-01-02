@@ -27,6 +27,7 @@ Section pre_specs.
 
   Polymorphic Universes X Z Y.
 
+  Set Printing Universes.
   Definition add_arg@{} (s : names.ident) (v : val) (wpp : WithPrePostG@{X Z Y Set Set} PROP (list val) val)
     : WithPrePostG@{X Z Y Set Set} PROP (list val) val :=
     {| wpp_with := wpp.(wpp_with)
@@ -34,7 +35,7 @@ Section pre_specs.
      ; wpp_post := wpp.(wpp_post)
     |}.
 
-  Definition post_void {t : tele} (Q : t -t> PROP) : WithPrePostG@{X Z Y Set Set} PROP (list val) val :=
+  Definition post_void@{u} {t : tele} (Q : tele_fun@{X u u} t PROP) : WithPrePostG@{X Z Y Set Set} PROP (list val) val :=
     {| wpp_with := TeleO
      ; wpp_pre := (nil, emp)%I
      ; wpp_post := {| we_ex := t
