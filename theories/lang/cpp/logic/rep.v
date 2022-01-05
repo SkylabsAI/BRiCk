@@ -468,6 +468,11 @@ Section with_cpp.
       _at l (P -* Q) -|- _at l P -* _at l Q.
   Proof. by rewrite !_at_loc Rep_wand_force. Qed.
 
+  Lemma box_at_sep p R1 R2 :
+    □ (_at p (R1 ** R2)) -|-
+    □ (_at p R1) ** □ (_at p R2).
+  Proof. by rewrite _at_sep bi.intuitionistically_sep. Qed.
+
   Lemma _at_pers (l : ptr) R : _at l (<pers> R) -|- <pers> _at l R.
   Proof. by rewrite !_at_loc monPred_at_persistently. Qed.
 
