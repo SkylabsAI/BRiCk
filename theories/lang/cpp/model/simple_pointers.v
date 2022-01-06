@@ -115,6 +115,24 @@ Module SIMPLE_PTRS_IMPL <: PTRS_INTF.
   Notation "p .., o" := (_offset_ptr p o) : ptr_scope.
   #[local] Open Scope ptr_scope.
 
+  #[global] Instance _offset_ptr_inj_offset o : Inj eq eq (flip _offset_ptr o).
+  Proof.
+    intros p1 p2. destruct p1 as [[]|] eqn:?, p2 as [[]|] eqn:?, o eqn:? => //= Heq.
+    all: try by [simplify_eq; repeat f_equal => //=; try congruence; try lia].
+    all: subst.
+    (* Nope, because in most cases the combined pointers are [None] *)
+    admit.
+    admit.
+    admit.
+  Admitted.
+
+  #[global] Instance _offset_ptr_inj_ptr p : Inj eq eq (_offset_ptr p).
+  Proof.
+    intros o1 o2; destruct p as [[]|], o1, o2 => //=.
+    (* DITTO: Nope, because in most cases the combined pointers are [None] *)
+  Admitted.
+  #[global] Existing Instance _offset_ptr_inj_ptr.
+
   Lemma offset_ptr_id p : p .., o_id = p.
   Proof. apply offset_ptr_raw_id. Qed.
 

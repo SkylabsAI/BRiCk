@@ -542,6 +542,24 @@ Module PTRS_IMPL <: PTRS_INTF.
     repeat (lia || f_equiv).
   Qed.
 
+  #[global] Instance _offset_ptr_inj_offset o : Inj eq eq (flip _offset_ptr o).
+  Proof.
+    intros p1 p2.
+    destruct p1 eqn:?, p2 eqn:?, o eqn:? => //= Heq; repeat case_match; subst => //.
+    (* Nope, because in most cases the combined pointers are [None] *)
+    1-3: admit.
+    { simplify_eq. (* Hard, we need injectivity of merging... *)
+    }
+  Admitted.
+
+  #[global] Instance _offset_ptr_inj_ptr p : Inj eq eq (_offset_ptr p).
+  Proof.
+    intros o1 o2; destruct p as [[]|], o1, o2 => //=.
+    (* DITTO: Nope, because in most cases the combined pointers are [None] *)
+  Admitted.
+  #[global] Existing Instance _offset_ptr_inj_ptr.
+
+
   Include PTRS_DERIVED_MIXIN.
   Include PTRS_MIXIN.
 End PTRS_IMPL.

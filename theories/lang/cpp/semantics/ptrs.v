@@ -162,6 +162,10 @@ Module Type PTRS.
   Axiom offset_ptr_id : forall p, p .., o_id = p.
   Axiom offset_ptr_dot : forall p o1 o2,
     p .., (o1 .., o2) = p .., o1 .., o2.
+  Axiom _offset_ptr_inj_ptr : ∀ p, Inj eq eq (_offset_ptr p).
+  #[global] Existing Instance _offset_ptr_inj_ptr.
+  (* Rephrase more explicitly. *)
+  Axiom _offset_ptr_inj_offset : ∀ o, Inj eq eq (flip _offset_ptr o).
 
   (** C++ provides a distinguished pointer [nullptr] that is *never
       dereferenceable*
@@ -313,6 +317,9 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   *)
   Canonical Structure ptrO := leibnizO ptr.
   #[global] Instance ptr_inhabited : Inhabited ptr := populate nullptr.
+
+  Lemma offset_ptr_inj_contra (p p' : ptr) (o : offset) : p <> p' -> p .., o <> p' .., o.
+  Proof. by intros Hne Heq%_offset_ptr_inj_offset. Qed.
 
   (** ** [same_address] lemmas *)
 
