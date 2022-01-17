@@ -3,10 +3,12 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
+Require Import iris.proofmode.tactics.
 Require Import bedrock.lang.algebra.telescopes.
 Require Import bedrock.lang.bi.telescopes.
 Require Import bedrock.lang.cpp.semantics.values.
 Require Import bedrock.lang.cpp.logic.entailsN.
+Require Import bedrock.lang.cpp.logic.cptr.
 Import ChargeNotation.
 
 #[local] Set Universe Polymorphism.
@@ -46,8 +48,8 @@ Section with_prop.
   #[global] Arguments WithPrePostG : clear implicits.
 
   (** Mnemonic: WppGD stands for "[WithPrePostG]'s denotation" *)
-  Definition WppGD@{X Z Y A R} {ARGS RESULT} (wpp : WithPrePostG@{X Z Y A R} ARGS RESULT) (params : ARGS)
-             (Q : RESULT -> PROP) : PROP :=
+  Definition WppGD@{X Z Y A R} {ARGS RESULT} (wpp : WithPrePostG@{X Z Y A R} ARGS RESULT)
+             (params : ARGS) (Q : RESULT -> PROP) : PROP :=
     tbi_exist@{X Z Y} (tele_bind (TT:=wpp.(wpp_with)) (fun args =>
       let P := tele_app wpp.(wpp_pre) args in
       let Q' := tele_app wpp.(wpp_post) args in
@@ -60,6 +62,73 @@ Section with_prop.
   Definition WithPrePost@{X Z Y} := WithPrePostG@{X Z Y _ _} (list ptr) ptr.
   Definition WppD@{X Z Y} := (WppGD@{X Z Y _ _} (ARGS := list ptr) (RESULT := ptr)).
   Definition WithEx_map@{X Z Y} := WithExG_map@{X Z Y _ _} (T := ptr) (U := ptr).
+
+  #[universes(polymorphic=yes)] Universes A R.
+
+  Context {ARGS : Type@{A}} {RESULT : Type@{R}}.
+
+  (**
+      [statisfies wpp wp] asserts that [wp] satisfies the specification [wpp].
+      This form avoids quantification over the continuation and therefore leads to more
+      direct proofs.
+
+      TODO: Looking for a better name for this
+   *)
+  Definition satisfies@{X Z Y} (wpp : WithPrePostG@{X Z Y A R} ARGS RESULT) (wp : ARGS -> (RESULT -> PROP) -> PROP) : PROP :=
+    tbi_forall@{X Z Y} (tele_bind (fun x : wpp.(wpp_with) =>
+                  let (args, P) := tele_app wpp.(wpp_pre) x in
+                  let wex := tele_app wpp.(wpp_post) x in
+                  P -* wp args (fun res => tbi_exist@{X Z Y} (tele_bind (fun y : wex.(we_ex) =>
+                                                     let (r, Q) := tele_app wex.(we_post) y in
+                                                     [| res = r |] ** Q))))).
+
+  Definition wppG_impl_satisfies@{X Z Y u} (a b : WithPrePostG@{X Z Y A R} ARGS RESULT) :
+        satisfies@{X Z Y} a (WppGD b)
+    |-- Forall args K, WppGD@{X Z Y A R} a args K -* WppGD@{X Z Y A R} b args K.
+  Proof.
+    destruct a, b. rewrite /satisfies/WppGD /=.
+
+    iIntros "X" (Q args) "Z".
+
+    rewrite tbi_exist_exist.
+    iDestruct "Z" as (ghost) "Z".
+    rewrite tele_app_bind.
+
+    iDestruct "Z" as "[-> [b  Z]]".
+    rewrite tbi_forall_forall.
+    iSpecialize ("X" $! ghost).
+    rewrite tele_app_bind.
+    case_match; rewrite /=.
+    iDestruct ("X" with "b") as "X".
+    rewrite tbi_exist_exist.
+    iDestruct "X" as (resg) "X".
+    rewrite tele_app_bind.
+    rewrite tbi_exist_exist.
+    iExists resg.
+    iDestruct "X" as "[-> X]".
+    rewrite tele_app_bind.
+
+    iSplit; eauto.
+    iDestruct "X" as "[$ X]".
+    destruct (tele_app wpp_post0 ghost).
+    destruct (tele_app wpp_post1 resg).
+    simpl.
+    rewrite !tbi_forall_forall.
+    iIntros (x).
+    iSpecialize ("X" $! x).
+    rewrite !tele_map_app.
+    destruct (tele_app we_post1 x).
+    iIntros "b".
+    iSpecialize ("X" with "b").
+    rewrite tbi_exist_exist.
+    iDestruct "X" as (y) "X".
+    iSpecialize ("Z" $! y).
+    rewrite tele_map_app.
+    rewrite tele_app_bind.
+    destruct (tele_app we_post0 y).
+    iDestruct "X" as "[-> b]". iApply "Z"; eauto.
+  Qed.
+
 End with_prop.
 
 Arguments WithPrePostG : clear implicits.
