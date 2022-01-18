@@ -744,25 +744,6 @@ Module Type Expr.
         http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0145r3.pdf
      *)
 
-    (* TODO fix this comment.
-       Due to our non-standard calling convention (the fact that [fspec]
-       "returns" a [val] rather than a [ptr]), there is some processing
-       that we must do to the result. We consolidate these definitions here
-       because they are shared between function and member function calls.
-     *)
-    Definition xval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-      Exists p, res |-> primR (Tref ty) 1 (Vref p) ** Q p.
-    Definition lval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-      Exists p, res |-> primR (Tref ty) 1 (Vref p) ** Q p.
-    Definition operand_receive (ty : type) (res : ptr) (Q : val -> (FreeTemps -> FreeTemps) -> mpred) : mpred :=
-      Exists v, res |-> primR ty 1 v ** Q v (fun x => x).
-    Definition init_receive (ty : type) (addr : ptr) (res : ptr) (Q : FreeTemp -> mpred) : mpred :=
-      ([| addr = res |] -* Q (FreeTemps.delete ty addr)).
-    #[global] Arguments xval_receive _ _ _ /.
-    #[global] Arguments lval_receive _ _ _ /.
-    #[global] Arguments operand_receive _ _ _ /.
-    #[global] Arguments init_receive _ _ _ _ /.
-
     (** [wp_call pfty f es Q] calls [f] taking the arguments from the
         evaluations of [es] and then acts like [Q].
         [pfty] is the type that the call is being carried out using,
@@ -800,7 +781,7 @@ Module Type Expr.
 
     Axiom wp_operand_call : forall ty f es Q,
         wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (operand_receive ty res $ fun v ft => Q v (ft $ free_args >*> free_f)))
+           Reduce (operand_receive ty res $ fun v => Q v (free_args >*> free_f)))
        |-- wp_operand (Ecall f es ty) Q.
 
     Axiom wp_init_call : forall f es Q (addr : ptr) ty,
@@ -838,7 +819,7 @@ Module Type Expr.
 
     Axiom wp_operand_member_call : forall ty fty f vc obj es Q,
         wp_glval vc obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
-           operand_receive ty res $ fun v ft => Q v (ft $ free_args >*> free_this))
+           operand_receive ty res $ fun v => Q v (free_args >*> free_this))
         |-- wp_operand (Emember_call (inl (f, Direct, fty)) vc obj es ty) Q.
 
     Axiom wp_init_member_call : forall f fty es (addr : ptr) ty vc obj Q,
@@ -877,7 +858,7 @@ Module Type Expr.
 
     Axiom wp_operand_virtual_call : forall ty fty f vc obj es Q,
         wp_glval vc obj (fun this free_this => wp_virtual_call f this (type_of obj) fty es $ fun res free_args =>
-           operand_receive ty res $ fun v ft => Q v (ft $ free_args >*> free_this))
+           operand_receive ty res $ fun v => Q v (free_args >*> free_this))
         |-- wp_operand (Emember_call (inl (f, Virtual, fty)) vc obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall f fty es (addr : ptr) ty vc obj Q,
