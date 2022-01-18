@@ -153,7 +153,7 @@ Module Type Init.
                (k : ptr -> FreeTemp -> FreeTemps -> epred) : mpred :=
       Forall p, wp_initialize ty p init (fun frees => k p (FreeTemps.delete ty p) frees).
 
-    (** [wpi cls this init Q] evaluates the initializer [init] form the
+    (** [wpi cls this init Q] evaluates the initializer [init] from the
         object [thisp] (of type [Tnamed cls]) and then proceeds as [Q].
 
         NOTE that temporaries introduced by the evaluation of [init] are cleaned

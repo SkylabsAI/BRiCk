@@ -257,7 +257,10 @@ Module Type Expr__newdelete.
         Definition delete_val (default : obj_name * type) (ty : type) (p : ptr) (Q : mpred) : mpred :=
           let del_type := Tfunction Tvoid (Tptr Tvoid :: nil) in
           (** TODO this should use [operand_receive Tvoid] *)
-          let del '(fn, ty) := alloc_pointer p (fun p' free => fspec ty (_global fn) (p' :: nil) (fun p => interp free Q)) in
+          let del '(fn, ty) :=
+              alloc_pointer p (fun p' free => fspec ty (_global fn) (p' :: nil) (fun p =>
+                operand_receive Tvoid p (fun _ => interp free Q)))
+          in
           match erase_qualifiers ty with
           | Tnamed nm =>
             match resolve.(genv_tu).(globals) !! nm with
@@ -275,7 +278,7 @@ Module Type Expr__newdelete.
         Proof.
           rewrite /delete_val; intros.
           iIntros "X"; repeat case_match; eauto; iApply alloc_pointer_frame; iIntros (??);
-          iApply fspec_frame; iIntros (?); iApply interp_frame; done.
+          iApply fspec_frame; iIntros (?); iApply operand_receive_frame; iIntros (?); iApply interp_frame; done.
         Qed.
 
         (** [resolve_dtor ty this Q] resolves the destructor for the object [this] (of type [ty]).
@@ -411,7 +414,7 @@ Module Type Expr__newdelete.
                         *)
                        alloc_pointer storage_ptr (fun p FR =>
                          fspec delete_fn.2 (_global delete_fn.1)
-                             (p :: nil) (fun v => interp FR $ Q Vvoid free))))))
+                             (p :: nil) (fun p => operand_receive Tvoid p (fun _ => interp FR $ Q Vvoid free)))))))
         |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
 
         Section NOTE_potentially_relaxing_array_delete.
