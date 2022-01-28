@@ -143,6 +143,21 @@ Section with_cpp.
     : Elaborate nil (Trv_ref ty) (post_ret (t:=t) Q) :=
     @post_prim_ret _ (Tref ty) t Q.
 
+  Definition post_ret_named_Elaborate cls t Q p QQ :
+    Elaborate nil (Tnamed cls) (post_ret (t:=t) Q) :=
+    {| wpp_with := TeleO
+     ; wpp_pre := ([], emp%I)
+     ; wpp_post :=
+         {| we_ex := t
+          ; we_post := tele_bind (fun args => (tele_app p args, tele_app QQ args))
+          |}
+     |}.
+
+  #[local] Definition decompose_post {TT : telescopes.tele} Q (p : telescopes.tele_fun TT ptr) (QQ : telescopes.tele_fun TT mpredI) : Prop  :=
+    telescopes.tforall (TT:=TT) (fun args =>
+                                   telescopes.tele_app Q args = (Vptr (telescopes.tele_app (TT:=TT) p args), telescopes.tele_app (TT:=TT) QQ args)).
+
+
   #[global] Instance post_void_Elaborate t (Q : tele_fun@{X Z Z} _ _)
     : Elaborate nil Tvoid (post_void (t:=t) Q) :=
     @post_prim_void _ Tvoid t Q.
@@ -156,6 +171,13 @@ Section with_cpp.
     X.
 
 End with_cpp.
+
+#[global] Hint Extern 0 (@Elaborate ?ti ?sigma nil (Tnamed ?cls) (post_ret (t:=?t) ?Q)) =>
+  let F := constr:(ltac:(red; simpl; intros; reflexivity) : @decompose_post _ _ t Q _ _) in
+  match type of F with
+  |  @decompose_post _ _ _ _ ?p ?qq =>
+     exact (@post_ret_named_Elaborate ti sigma cls t Q p qq)
+  end : typeclass_instances.
 
 #[global] Hint Mode Elaborate - - + + ! : typeclass_instances.
 
