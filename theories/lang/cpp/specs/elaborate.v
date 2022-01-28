@@ -96,15 +96,17 @@ Section with_cpp.
     #[global] Instance Tint_ElaborateArg  {sz sgn x v} : ElaborateArg (Tint sz sgn) x v :=
       add_prim_arg (Tint sz sgn) x v.
     #[global] Instance Tptr_ElaborateArg {ty x v} : ElaborateArg (Tptr ty) x v :=
-      add_prim_arg (Tptr ty) x v.
+      add_prim_arg (Tptr $ erase_qualifiers ty) x v.
     #[global] Instance Tbool_ElaborateArg {x v} : ElaborateArg Tbool x v :=
       add_prim_arg Tbool x v.
     #[global] Instance Tnamed_ElaborateArg {cls x p} : ElaborateArg (Tnamed cls) x (Vptr p) :=
       with_pre_post.add_arg x p.
-    #[global] Instance Tref_ElaborateArg {ty x p} : ElaborateArg (Tref ty) x (Vptr p) :=
-      with_pre_post.add_arg x p.
-    #[global] Instance Trv_ref_ElaborateArg {ty x p} : ElaborateArg (Trv_ref ty) x (Vptr p) :=
-      with_pre_post.add_arg x p.
+
+    #[global] Instance Tref_ElaborateArg {ty x p} : ElaborateArg (Tref ty) x (Vref p) :=
+      add_prim_arg (Tref $ erase_qualifiers ty) x (Vref p).
+    #[global] Instance Trv_ref_ElaborateArg {ty x p} : ElaborateArg (Trv_ref ty) x (Vref p) :=
+      add_prim_arg (Tref $ erase_qualifiers ty) x (Vref p).
+
     #[global] Instance Qmut_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qmut ty) x v :=
       elaborated_arg.
     #[global] Instance Qconst_ElaborateArg {ty x v} (E : ElaborateArg ty x v) : ElaborateArg (Qconst ty) x v :=
