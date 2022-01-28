@@ -70,7 +70,7 @@ Module Type Expr__newdelete.
       #[local] Notation Tbyte := (Tint W8 Unsigned) (only parsing).
 
       Definition alloc_size_t (sz : N) (Q : ptr -> (mpred -> mpred) -> mpred) : mpred :=
-        Forall p, p |-> primR Tsize_t 1 (Vn sz) -* Q p (fun Q => p |-> anyR Tsize_t 1 ** Q).
+        Forall p : ptr, p |-> primR Tsize_t 1 (Vn sz) -* Q p (fun Q => p |-> anyR Tsize_t 1 ** Q).
 
       Section new.
         (** [new (...) C(...)] <https://eel.is/c++draft/expr.new>
@@ -127,7 +127,7 @@ Module Type Expr__newdelete.
                 permits the assumption. *)
             wp_args targs new_args (fun vs free =>
                 Exists sz al, [| size_of aty = Some sz |] ** [| align_of aty = Some al |] **
-                alloc_size_t sz (fun p FR =>
+                Reduce (alloc_size_t sz (fun p FR =>
                 |> fspec nfty (_global new_fn.1) (p :: vs) (fun res => FR $
                       Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                         if bool_decide (storage_ptr = nullptr) then
@@ -159,7 +159,7 @@ Module Type Expr__newdelete.
                                                 *)
                                                obj_ptr |-> new_tokenR aty -*
                                                Q (Vptr obj_ptr) (free' >*> free))
-                                  end)))))
+                                  end))))))
         |-- wp_operand (Enew new_fn new_args aty None oinit) Q.
 
         Axiom wp_operand_array_new :
@@ -198,7 +198,7 @@ Module Type Expr__newdelete.
                              dynamically allocated arrays.
                      *)
                     Forall sz',
-                      alloc_size_t (sz' + sz) (fun psz FR =>
+                      Reduce (alloc_size_t (sz' + sz) (fun psz FR =>
                       |> fspec nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
                         Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                           if bool_decide (storage_ptr = nullptr) then
@@ -235,7 +235,7 @@ Module Type Expr__newdelete.
                                                       obj_ptr |-> new_tokenR array_ty -*
                                                       Q (Vptr obj_ptr)
                                                         (free'' >*> free' >*> free))
-                                   end)))))
+                                   end))))))
         |-- wp_operand (Enew new_fn new_args aty (Some array_size) oinit) Q.
       End new.
 
@@ -386,9 +386,7 @@ Module Type Expr__newdelete.
              then
                (* this conjunction justifies the compiler calling the delete function
                   or not calling it. *)
-               alloc_pointer obj_ptr (fun p FR =>
-                 (fspec dfty (_global delete_fn.1)
-                        (p :: nil) (fun _ => interp FR $ Q Vvoid free)))
+                  delete_val delete_fn destroyed_type nullptr (Q Vvoid free)
                ∧ Q Vvoid free
              else (
                Exists array_size,
@@ -412,9 +410,9 @@ Module Type Expr__newdelete.
                        (* v---- Calling deallocator with storage pointer.
                           Note: we rely on the AST to have correctly resolved this since the dispatch is statically known.
                         *)
-                       alloc_pointer storage_ptr (fun p FR =>
+                       Reduce (alloc_pointer storage_ptr (fun p FR =>
                          fspec delete_fn.2 (_global delete_fn.1)
-                             (p :: nil) (fun p => operand_receive Tvoid p (fun _ => interp FR $ Q Vvoid free)))))))
+                             (p :: nil) (fun p => operand_receive Tvoid p (fun _ => interp FR $ Q Vvoid free))))))))
         |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
 
         Section NOTE_potentially_relaxing_array_delete.
