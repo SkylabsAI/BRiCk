@@ -129,7 +129,7 @@ Module Type Expr__newdelete.
                 Exists sz al, [| size_of aty = Some sz |] ** [| align_of aty = Some al |] **
                 alloc_size_t sz (fun p FR =>
                 |> fspec nfty (_global new_fn.1) (p :: vs) (fun res => FR $
-                      Exists storage_ptr : ptr, res |-> primR (Tptr Tbyte) 1 (Vptr storage_ptr) **
+                      Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                         if bool_decide (storage_ptr = nullptr) then
                           Q (Vptr storage_ptr) free
                         else
@@ -200,7 +200,7 @@ Module Type Expr__newdelete.
                     Forall sz',
                       alloc_size_t (sz' + sz) (fun psz FR =>
                       |> fspec nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
-                        Exists storage_ptr : ptr, res |-> primR (Tptr Tbyte) 1 (Vptr storage_ptr) **
+                        Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                           if bool_decide (storage_ptr = nullptr) then
                             Q (Vptr storage_ptr) free
                           else
