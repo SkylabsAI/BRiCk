@@ -141,7 +141,7 @@ Section with_cpp.
 
   #[global] Instance post_ret_rv_ref_Elaborate ty t Q
     : Elaborate nil (Trv_ref ty) (post_ret (t:=t) Q) :=
-    @post_prim_ret _ (Trv_ref ty) t Q.
+    @post_prim_ret _ (Tref ty) t Q.
 
   #[global] Instance post_void_Elaborate t (Q : tele_fun@{X Z Z} _ _)
     : Elaborate nil Tvoid (post_void (t:=t) Q) :=
