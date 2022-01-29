@@ -10,8 +10,8 @@ Require Import iris.proofmode.proofmode.	(** Early to get the right [ident] *)
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Import
-  pred path_pred heap_pred wp builtins
-  layout initializers destroy arr.
+  pred path_pred heap_pred wp builtins cptr
+  layout initializers destroy.
 Require Import bedrock.lang.cpp.heap_notations.
 
 
