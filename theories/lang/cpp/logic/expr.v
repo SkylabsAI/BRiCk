@@ -638,8 +638,8 @@ Module Type Expr.
 
     (* [Cbase2derived] casts from a base class to a derived class.
      *)
-    Axiom wp_lval_cast_base2derived : forall e ty Q,
-      wp_lval e (fun addr free =>
+    Axiom wp_lval_cast_base2derived : forall vc e ty Q,
+      wp_glval vc e (fun addr free =>
         match drop_qualifiers (type_of e), drop_qualifiers ty with
         | Tnamed base, Tnamed derived => (*<-- is this the only case here?*)
           Exists path : @class_derives resolve derived base,
@@ -647,10 +647,10 @@ Module Type Expr.
           valid_ptr addr' ** Q addr' free
         | _, _ => False
         end)
-      |-- wp_lval (Ecast Cbase2derived Lvalue e ty) Q.
+      |-- wp_lval (Ecast Cbase2derived vc e ty) Q.
 
-    Axiom wp_xval_cast_base2derived : forall e ty Q,
-      wp_xval e (fun addr free =>
+    Axiom wp_xval_cast_base2derived : forall vc e ty Q,
+      wp_glval vc e (fun addr free =>
         match drop_qualifiers (type_of e), drop_qualifiers ty with
         | Tnamed base, Tnamed derived => (*<-- is this the only case here?*)
           Exists path : @class_derives resolve derived base,
@@ -658,7 +658,7 @@ Module Type Expr.
           valid_ptr addr' ** Q addr' free
         | _, _ => False
         end)
-      |-- wp_xval (Ecast Cbase2derived Xvalue e ty) Q.
+      |-- wp_xval (Ecast Cbase2derived vc e ty) Q.
 
     Axiom wp_operand_cast_base2derived : forall e ty Q,
       wp_operand e (fun addr free =>
