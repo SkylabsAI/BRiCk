@@ -979,9 +979,9 @@ Module Type Expr.
            | Some cv =>
              addr |-> tblockR (Tnamed cls) 1 -*
              (* ^^ The semantics currently has constructors take ownership of a [tblockR] *)
-             wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es (fun v free =>
+             wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es (fun p free =>
                (* in the semantics, constructors return [void] *)
-               [| v = invalid_ptr |] ** Q (FreeTemps.delete (Tnamed cls) addr) free)
+               p |-> primR Tvoid 1 Vvoid ** Q (FreeTemps.delete (Tnamed cls) addr) free)
            | _ => False
            end
       |-- wp_init addr (Econstructor cnd es (Tnamed cls)) Q.
