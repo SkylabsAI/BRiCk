@@ -102,36 +102,26 @@ End ChargeNotation.
 
 (** Big separating conjunction *)
 
-Notation "'[∗' 'list]' i ↦ x ∈ l , P" := (big_opL bi_sep (λ i x, P) l) (only parsing) : bi_scope.
 Notation "'[**' 'list]' i |-> x ∈ l , P" := (big_opL bi_sep (λ i x, P) l) : bi_scope.
 
-Notation "'[∗' 'list]' x ∈ l , P" := (big_opL bi_sep (λ _ x, P) l) (only parsing) : bi_scope.
 Notation "'[**' 'list]' x ∈ l , P" := (big_opL bi_sep (λ _ x, P) l) : bi_scope.
 
-Notation "'[∗' 'map]' k ↦ x ∈ m , P" := (big_opM bi_sep (λ k x, P) m) (only parsing) : bi_scope.
 Notation "'[**' 'map]' k |-> x ∈ m , P" := (big_opM bi_sep (λ k x, P) m) : bi_scope.
 
-Notation "'[∗' 'map]' x ∈ m , P" := (big_opM bi_sep (λ _ x, P) m) (only parsing) : bi_scope.
 Notation "'[**' 'map]' x ∈ m , P" := (big_opM bi_sep (λ _ x, P) m) : bi_scope.
 
-Notation "'[∗' 'set]' x ∈ X , P" := (big_opS bi_sep (λ x, P) X) (only parsing) : bi_scope.
 Notation "'[**' 'set]' x ∈ X , P" := (big_opS bi_sep (λ x, P) X) : bi_scope.
 
-Notation "'[∗' 'mset]' x ∈ X , P" := (big_opMS bi_sep (λ x, P) X) (only parsing) : bi_scope.
 Notation "'[**' 'mset]' x ∈ X , P" := (big_opMS bi_sep (λ x, P) X) : bi_scope.
 
 (** Big conjunction *)
 
-Notation "'[∧' 'list]' i ↦ x ∈ l , P" := (big_opL bi_and (λ i x, P) l) (only parsing) : bi_scope.
 Notation "'[/\' 'list]' i |-> x ∈ l , P" := (big_opL bi_and (λ i x, P) l) : bi_scope.
 
-Notation "'[∧' 'list]' x ∈ l , P" := (big_opL bi_and (λ _ x, P) l) (only parsing) : bi_scope.
 Notation "'[/\' 'list]' x ∈ l , P" := (big_opL bi_and (λ _ x, P) l) : bi_scope.
 
 (** Big disjunction *)
 
-Notation "'[∨' 'list]' i ↦ x ∈ l , P" := (big_opL bi_or (λ i x, P) l) (only parsing) : bi_scope.
 Notation "'[\/' 'list]' i |-> x ∈ l , P" := (big_opL bi_or (λ i x, P) l) : bi_scope.
 
-Notation "'[∨' 'list]' x ∈ l , P" := (big_opL bi_or (λ _ x, P) l) (only parsing) : bi_scope.
 Notation "'[\/' 'list]' x ∈ l , P" := (big_opL bi_or (λ _ x, P) l) : bi_scope.
