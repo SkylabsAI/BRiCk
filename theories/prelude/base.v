@@ -14,6 +14,25 @@ From bedrock.prelude Require Export stdpp_ssreflect tc_cond_type notations.
   delete alter partial_alter dom merge union_with intersection_with difference_with
   sqsubseteq meet join top bottom elements size : typeclass_instances.
 
+#[global] Hint Extern 100 (TCEq ?a ?b) =>
+    try (assert_fails (has_evar a);
+         let a := eval vm_compute in a in change_no_check (TCEq a b)
+        );
+    try (assert_fails (has_evar b);
+         let b := eval vm_compute in b in
+           (* Do not undo progress on [a] *)
+           lazymatch goal with
+           |- TCEq ?a _ =>
+             change_no_check (TCEq a b)
+           end
+        );
+    lazymatch goal with
+      |- TCEq ?a ?b =>
+        unify a b;
+        apply ((@TCEq_refl _ a) <: (TCEq a b))
+    end
+  : typeclass_instances.
+
 (** Workaround https://github.com/coq/coq/issues/4230. Taken from Software Foundations. *)
 #[global] Remove Hints Bool.trans_eq_bool : core.
 
