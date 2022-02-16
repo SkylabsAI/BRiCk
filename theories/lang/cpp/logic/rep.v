@@ -19,7 +19,7 @@ Implicit Types (σ resolve : genv) (p : ptr) (o : offset).
   * assert properties of the heap
   *)
 Canonical Structure ptr_bi_index : biIndex :=
-  BiIndex ptr _ eq _.
+  BiIndex ptr _ eq (_ : PreOrder eq).
 
 (** The tactic [intros ->%ptr_rel_elim] is much faster than [intros
     ->] when introducing [p1 ⊑ p2] (when the latter works at all). *)
@@ -35,7 +35,7 @@ Bind Scope bi_scope with Rep.
 Section defs.
   Context `{Σ : cpp_logic}.
 
-  Definition as_Rep (P : ptr -> mpred) : Rep := MonPred P _.
+  Definition as_Rep (P : ptr -> mpred) : Rep := MonPred P (_ : (Proper (eq ==> _) _)).
 
   (** [_at base R] states that [R base] holds.
 
