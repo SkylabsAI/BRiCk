@@ -10,9 +10,12 @@ From stdpp Require Export prelude countable.
 From bedrock.prelude Require Export stdpp_ssreflect tc_cond_type notations.
 
 #[global] Hint Opaque empty union intersection difference singleton subseteq disj_union
-  singletonMS elem_of disjoint filter up_close lookup lookup_total singletonM insert
+  singletonMS elem_of
+  filter up_close lookup lookup_total singletonM insert
   delete alter partial_alter dom merge union_with intersection_with difference_with
   meet join top bottom elements size : typeclass_instances.
+
+(* TODO: [disjoint], [sqsubseteq] *)
 
 #[global] Hint Extern 100 (TCEq ?a ?b) =>
     try (assert_fails (has_evar a);
