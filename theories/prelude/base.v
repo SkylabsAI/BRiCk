@@ -12,7 +12,7 @@ From bedrock.prelude Require Export stdpp_ssreflect tc_cond_type notations.
 #[global] Hint Opaque empty union intersection difference singleton subseteq disj_union
   singletonMS elem_of disjoint filter up_close lookup lookup_total singletonM insert
   delete alter partial_alter dom merge union_with intersection_with difference_with
-  sqsubseteq meet join top bottom elements size : typeclass_instances.
+  meet join top bottom elements size : typeclass_instances.
 
 #[global] Hint Extern 100 (TCEq ?a ?b) =>
     try (assert_fails (has_evar a);
