@@ -214,6 +214,10 @@ Section preimage.
   Context `(f : A → B).
   Implicit Types (a : A) (b : B).
 
+  Definition preimage (b : B) : list A.
+    refine (filter (λ x : A, _) (enum A)).
+  (* Gives: *)
+  (* TypeError: Cannot read property 'before' of null *)
   Definition preimage b : list A := filter (λ a, f a = b) (enum A).
 
   Lemma elem_of_preimage a b :
