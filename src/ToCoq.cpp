@@ -68,7 +68,11 @@ ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
 
             fmt << fmt::line
                 << "Definition module : translation_unit := " << fmt::indent
-                << fmt::line << "Eval reduce_translation_unit in decls"
+#if 0
+           	    << fmt::line << "Eval reduce_translation_unit in decls"
+#else
+                << fmt::line << "decls"
+#endif
                 << fmt::nbsp;
 
             print.begin_list();
