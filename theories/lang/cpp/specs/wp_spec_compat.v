@@ -180,9 +180,9 @@ Section wpspec_ofe.
 End wpspec_ofe.
 End wpspec_ofe.
 Arguments WpSpecO : clear implicits.
-Notation WithPrePostO PROP := (WpSpecO PROP val val).
+Notation WithPrePostO PROP := (WpSpecO PROP ptr ptr).
 
-(** Universe polYmorphic relations between WPPs. *)
+(** Relations between WPPs. *)
 Definition wpspec_relation {PROP : bi} (R : relation PROP)
     {ARGS : Type} {RESULT : Type}
     (wpp1 : WpSpec PROP ARGS RESULT)

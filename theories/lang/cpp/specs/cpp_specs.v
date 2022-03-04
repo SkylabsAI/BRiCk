@@ -18,10 +18,11 @@ Set Printing Universes.
 Notation WithPrePostG := WpSpec (only parsing).
 Bind Scope pre_spec_scope with WpSpec.
 
-Notation WpSpec_cpp := (WpSpec mpredI val val) (only parsing).
+Notation WpSpec_cpp_val := (WpSpec mpredI val val) (only parsing).
+Notation WpSpec_cpp := (WpSpec mpredI ptr ptr) (only parsing).
 
 #[deprecated(since="2022-02-13",note="use [WpSpec_cpp]")]
-Notation WithPrePost PROP := (WpSpec PROP val val) (only parsing).
+Notation WithPrePost PROP := (WpSpec PROP ptr ptr) (only parsing).
 
 (* These two classes provide automatic coercions between [ptr] and [val] and [Z] and [val]
  *)
@@ -39,7 +40,7 @@ Section with_Σ.
   Context `{Σ : cpp_logic ti}.
 
   Import heap_notations heap_pred.
-  #[local] Notation WPP := (WpSpec mpredI val val).
+  #[local] Notation WPP := (WpSpec_cpp_val).
 
   Fail Fail Definition _1 : WPP :=
     \pre emp
