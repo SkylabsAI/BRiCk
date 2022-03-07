@@ -26,12 +26,12 @@ Section with_resolve.
      [wp_args' ts es Q] evaluates the arguments [es] to a function taking types [ts]
      and invokes [Q] with the values and the temporary destruction expression.
 
+     > When a function is called, each parameter ([dcl.fct]) is initialized
+     > ([dcl.init], [class.copy.ctor]) with its corresponding argument.
+
      This is encapsulated because the order of evaluation of function arguments is not
      specified in C++.
      NOTE this definition is *not* sound in the presence of exceptions.
-
-     NOTE that this deviates from the standard because it uses a different parameter
-     passing convention.
   *)
   (** TODO [Q] could be [list ptr -> FreeTemps -> mpred] *)
   Fixpoint wp_args' (ts : list type) (es : list Expr) (Q : list ptr -> list FreeTemps -> mpred)
@@ -39,10 +39,6 @@ Section with_resolve.
     match ts , es with
     | nil , nil => Q nil nil
     | t :: ts , e :: es =>
-     (* the (more) correct definition would use initialization semantics for each expression.
-        > When a function is called, each parameter ([dcl.fct]) is initialized ([dcl.init], [class.copy.ctor])
-        > with its corresponding argument.
-      *)
       Exists Qarg,
         wp_call_initialize t e Qarg **
         wp_args' ts es (fun vs frees' =>
