@@ -644,7 +644,6 @@ Proof.
   simpl. change ([v]) with (nil ++ [v]).
   iIntros "[-> A]". rewrite arg_ok. iExists _; iSplitR; eauto.
 Qed.
-
 Lemma spec_add_pre {PROP : bi} {ARG RESULT : Type} : forall P (PQ : WpSpec PROP ARG RESULT) args K,
     P ∗ PQ args K ⊢ add_pre P PQ args K.
 Proof.
