@@ -62,7 +62,7 @@ stages:
 
 
 dune-build:
-  extends: .base
+  extends: .latest
   stage: dune-build
   script:
     # Create Directory structure for dune
