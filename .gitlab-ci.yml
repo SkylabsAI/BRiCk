@@ -61,7 +61,7 @@ stages:
   - dune-build
 
 
-.dune-build:
+dune-build:
   extends: .base
   stage: dune-build
   script:
