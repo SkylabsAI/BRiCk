@@ -69,7 +69,7 @@ dune-build:
     - mkdir -p /tmp/build-dir/fmdeps/ && cp -ra $CI_PROJECT_DIR /tmp/build-dir/fmdeps/
     - mkdir -p ~/.cache/
     - cp -a $CI_PROJECT_DIR/dune-cache ~/.cache/dune || true
-    - cd /tmp/build-dir/fmdeps/
+    - cd /tmp/build-dir/fmdeps/cpp2v-core
     # Create dune_project file
     - egrep -v '^;' dune-project.template > dune-project
     - dune build
