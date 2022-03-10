@@ -69,15 +69,13 @@ dune-build:
     - mkdir -p /tmp/build-dir/fmdeps/ && cp -ra $CI_PROJECT_DIR /tmp/build-dir/fmdeps/
     - mkdir -p ~/.cache/
     - mv $CI_PROJECT_DIR/_cache_dune ~/.cache/dune || true
-    - ls ~/.cache/dune || true
     - cd /tmp/build-dir/
     - egrep -v '^;' fmdeps/cpp2v-core/dune-project.template > dune-project # Create dune_project file
     - ln -sf fmdeps/cpp2v-core/coq-cpp2v-bin.opam coq-cpp2v-bin.opam
+    - echo $DUNE_CACHE_ROOT
     - dune build --cache=enabled --display short 
-    - ls ~/.cache/dune || true  # check if cache is available
     - rm -rf $CI_PROJECT_DIR/_cache_dune || true  
     - mv ~/.cache/dune $CI_PROJECT_DIR/_cache_dune
-    - ls $CI_PROJECT_DIR/_cache_dune
     - du -sh $CI_PROJECT_DIR/_cache_dune  # cache size
   cache:
     paths:
