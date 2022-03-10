@@ -67,6 +67,7 @@ dune-build:
   script:
     # Create Directory structure for dune
     - mkdir -p /tmp/build-dir/fmdeps/ && cp -ra $CI_PROJECT_DIR /tmp/build-dir/fmdeps/
+    - ls ~/.cache || true
     - mkdir -p ~/.cache/
     - cp -af $CI_PROJECT_DIR/_cache ~/.cache/dune || true
     - ls ~/.cache/dune || true
