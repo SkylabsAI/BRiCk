@@ -67,21 +67,21 @@ dune-build:
   script:
     # Create Directory structure for dune
     - mkdir -p /tmp/build-dir/fmdeps/ && cp -ra $CI_PROJECT_DIR /tmp/build-dir/fmdeps/
-    - ls ~/.cache || true
     - mkdir -p ~/.cache/
-    - cp -af $CI_PROJECT_DIR/_cache ~/.cache/dune || true
+    - mv $CI_PROJECT_DIR/_cache_dune ~/.cache/dune || true
     - ls ~/.cache/dune || true
     - cd /tmp/build-dir/
     - egrep -v '^;' fmdeps/cpp2v-core/dune-project.template > dune-project # Create dune_project file
     - ln -sf fmdeps/cpp2v-core/coq-cpp2v-bin.opam coq-cpp2v-bin.opam
     - dune build --cache=enabled --display short 
     - ls ~/.cache/dune || true  # check if cache is available
-    - cp -af ~/.cache/dune $CI_PROJECT_DIR/_cache
-    - ls $CI_PROJECT_DIR/_cache
-    - du -sh $CI_PROJECT_DIR/_cache  # cache size
+    - rm -rf $CI_PROJECT_DIR/_cache_dune || true  
+    - mv ~/.cache/dune $CI_PROJECT_DIR/_cache_dune
+    - ls $CI_PROJECT_DIR/_cache_dune
+    - du -sh $CI_PROJECT_DIR/_cache_dune  # cache size
   cache:
     paths:
-      - _cache
+      - _cache_dune
     key: "$CI_JOB_NAME"
   tags:
     - fm.shared
