@@ -69,7 +69,7 @@ dune-build:
     - mkdir -p /tmp/build-dir/fmdeps/ ~/.cache/ && cp -ra $CI_PROJECT_DIR /tmp/build-dir/fmdeps/
     - mv $CI_PROJECT_DIR/_cache_dune ~/.cache/dune || true  # Move gitlab cache to dune cache directory
     - cd /tmp/build-dir/
-    - egrep -v '^;' fmdeps/cpp2v-core/dune-project.template > dune-project # Create dune_project file
+    - cp fmdeps/cpp2v-core/dune-project.template dune-project # Create dune_project file - cp since MR681
     - ln -sf fmdeps/cpp2v-core/coq-cpp2v-bin.opam coq-cpp2v-bin.opam
     - dune build --cache=enabled --display short 
     - rm -rf $CI_PROJECT_DIR/_cache_dune || true  # Ensure old cache is clear 
