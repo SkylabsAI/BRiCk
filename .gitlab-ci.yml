@@ -74,8 +74,8 @@ dune-build:
     - ln -sf fmdeps/cpp2v-core/coq-cpp2v-bin.opam coq-cpp2v-bin.opam
     - dune build --cache=enabled --display short 
     - ls ~/.cache/dune || true  # check if cache is available
-    - du -sh $CI_PROJECT_DIR/_cache  # cache size
     - cp -af ~/.cache/dune $CI_PROJECT_DIR/_cache
+    - du -sh $CI_PROJECT_DIR/_cache  # cache size
   cache:
     paths:
       - _cache
