@@ -14,6 +14,10 @@ Section with_cpp.
   Context `{Σ : cpp_logic} {σ : genv}.
 
   (** determine if an argument is already materialized in the operand style.
+
+      NOTE arrays are treated as primitives in this setup because ???,
+           but it does not really matter because functions never take
+           array arguments
    *)
   Definition mtype (t : type) : globname + type :=
     match erase_qualifiers t with
