@@ -57,6 +57,8 @@ printCastKind(Formatter& out, const CastKind ck) {
         out << "Cconstructorconversion";
     } else if (ck == CastKind::CK_BuiltinFnToFnPtr) {
         out << "Cbuiltin2function";
+    } else if (ck == CastKind::CK_NullToMemberPointer) {
+        out << "Cnull2memberp";
     } else if (ck == CastKind::CK_NullToPointer) {
         out << "Cnull2ptr";
     } else if (ck == CastKind::CK_DerivedToBase ||

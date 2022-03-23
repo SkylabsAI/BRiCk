@@ -113,6 +113,7 @@ Variant Cast : Set :=
 | Cintegral
 | Cint2bool
 | Cfloat2int
+| Cnull2memberp
 | Cnull2ptr
 | Cbuiltin2function
 | Cconstructorconversion
