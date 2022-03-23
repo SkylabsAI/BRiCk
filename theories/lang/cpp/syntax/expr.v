@@ -34,10 +34,6 @@ Variant BinOp : Set :=
 | Bshr
 | Bsub
 | Bxor (* ^ *)
-(*
-| Bdotp (* .* *)
-| Bdotip (* ->* *)
-*)
 .
 #[global] Instance: EqDecision BinOp.
 Proof. solve_decision. Defined.
