@@ -34,8 +34,10 @@ Variant BinOp : Set :=
 | Bshr
 | Bsub
 | Bxor (* ^ *)
+(*
 | Bdotp (* .* *)
 | Bdotip (* ->* *)
+*)
 .
 #[global] Instance: EqDecision BinOp.
 Proof. solve_decision. Defined.
@@ -159,6 +161,11 @@ Inductive Expr : Set :=
 | Eread_ref (e : Expr) (* type = type_of e *)
 | Ederef (e : Expr) (_ : type) (* XXX type = strip [Tptr] from [type_of e] *)
 | Eaddrof (e : Expr) (* type = Tptr (type_of e) *)
+  (* v-- [objp->*memberp]; XXX type = strip [Tmember_pointer] from [type_of memberp] *)
+| Ememberp_arrow (objp : Expr) (memberp : Expr) (_ : type)
+  (* v-- [objp.*memberp]; XXX type = strip [Tmember_pointer] from [type_of memberp] *)
+| Ememberp_dot (obj : Expr) (memberp : Expr) (_ : type)
+| Ememberp_addrof (*cls : globname*) (e : Expr) (_ : type) (* XXX we should just extract the mangled class name; I couldn't get it working yet. *)
 | Eassign (e _ : Expr) (_ : type) (* XXX type = type_of e *)
 | Eassign_op (_ : BinOp) (e _ : Expr) (_ : type) (* XXX = type_of e *)
   (* ^ these are specialized because they are common *)

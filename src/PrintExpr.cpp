@@ -210,8 +210,6 @@ public:
             CASE(Shr, "Bshr")
             CASE(Sub, "Bsub")
             CASE(Xor, "Bxor")
-            CASE(PtrMemD, "Bdotp")
-            CASE(PtrMemI, "Bdotip")
 #undef CASE
         default:
             logging::unsupported() << "defaulting binary operator\n";
@@ -271,6 +269,14 @@ public:
             ACASE(Shr, Bshr)
             ACASE(Sub, Bsub)
             ACASE(Xor, Bxor)
+        case BinaryOperatorKind::BO_PtrMemD:
+            print.ctor("Ememberp_dot");
+            // TODO (JH): [assert(...)] that checks we're generating a reasonable AST
+            break;
+        case BinaryOperatorKind::BO_PtrMemI:
+            print.ctor("Ememberp_arrow");
+            // TODO (JH): [assert(...)] that checks we're generating a reasonable AST
+            break;
         default:
             print.ctor("Ebinop");
             printBinaryOperator(expr->getOpcode(), expr->getOpcodeStr(), print,
@@ -322,9 +328,22 @@ public:
                             OpaqueNames& li) {
         switch (expr->getOpcode()) {
         case UnaryOperatorKind::UO_AddrOf:
-            print.ctor("Eaddrof");
-            cprint.printExpr(expr->getSubExpr(), print, li);
-            print.end_ctor(); // elide type
+            // This logic is taken from the implementation of the clang compiler
+            // function [VisitUnaryAddrOf], located in
+            // <https://clang.llvm.org/doxygen/CGExprScalar_8cpp_source.html>
+            if (isa<MemberPointerType>(expr->getType())) {
+                print.ctor("Ememberp_addrof");
+                cprint.printExpr(expr->getSubExpr(), print, li);
+                // NOTE (JH): for now we simply duplicate the entire [Tmember_pointer] in
+                // the [Expr]ession; this can probably be optimized s.t. we only emit the
+                // mangled class name.
+                done(expr, print, cprint);
+            } else {
+                print.ctor("Eaddrof");
+                cprint.printExpr(expr->getSubExpr(), print, li);
+                print.end_ctor(); // elide type
+            }
+
             return;
         case UnaryOperatorKind::UO_Deref:
             print.ctor("Ederef");

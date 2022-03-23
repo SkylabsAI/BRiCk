@@ -19,6 +19,9 @@ Fixpoint type_of (e : Expr) : type :=
   | Eread_ref e => type_of e
   | Ederef _ t => t
   | Eaddrof e => Tptr (type_of e)
+  | Ememberp_arrow _ _ t => t
+  | Ememberp_dot _ _ t => t
+  | Ememberp_addrof (*cls e*) _ t => t (*Tmember_pointer cls (type_of e)*)
   | Eassign _ _ t
   | Eassign_op _ _ _ t
   | Epreinc _ t
