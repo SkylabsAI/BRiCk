@@ -609,6 +609,68 @@ Section with_cpp.
     iIntros "A B"; iRevert "A"; iApply wp_glval_frame; eauto.
   Qed.
 
+  (* Opaque wrapper of [False]: this represents a [False] obtained by type mismatch
+     between the desired pointer-to-member and the [Evar] referring to the member
+     *or* by the evaluation of [e] to a non-[Vmemberp] value using [wp_operand].
+   *)
+  Definition wp_memberp_mismatch
+             {resolve : genv} (r : region)
+             (cls : globname) (ty : type) (e : Expr)
+    : (field -> FreeTemps -> mpred) -> mpred := funI _ => False.
+  #[global] Arguments wp_memberp_mismatch : simpl never.
+
+  (** Member pointers *)
+  Definition wp_memberp
+             {resolve : genv} (r : region)
+             (cls : globname) (ty : type) (e : Expr)
+             (Q : field -> FreeTemps -> mpred)
+    : mpred :=
+    match e with
+    | Enull => Q (null_memberp cls) FreeTemps.id
+    | Evar (Gname qualified_field_nm) ty' =>
+        (* NOTE (JH): For now we conservatively support only those cases
+           in which the member-pointer is a direct member of the [cls];
+           this allows us to proceed without checking the [genv].
+         *)
+        if bool_decide (ty = ty') && bool_decide (BS.prefix cls qualified_field_nm)
+        then let field_nm := BS.substring (BS.length cls)
+                                            (BS.length qualified_field_nm)
+                                            qualified_field_nm in
+             Q (Build_field cls field_nm) FreeTemps.id
+        else wp_memberp_mismatch r cls ty e Q
+    | _ => wp_operand
+             r e (fun v free =>
+                    match v with
+                    | Vmemberp f => Q f free
+                    | _ => wp_memberp_mismatch r cls ty e Q
+                    end)
+    end.
+
+  #[local] Ltac solve_wp_operand_wand :=
+    let value := fresh "value" in
+    let free := fresh "free" in
+    iApply (wp_operand_wand with "Operand");
+    iIntros (value free); by destruct value.
+  Theorem wp_memberp_frame {resolve : genv} r e cls ty Q Q' :
+    (Forall f free, Q f free -* Q' f free) |-- wp_memberp r cls ty e Q -* wp_memberp r cls ty e Q'.
+  Proof.
+    destruct e; simpl; iIntros "HQ Operand". all: try solve_wp_operand_wand.
+    - (* [Evar (Gname _) _] *)
+      destruct v; first by solve_wp_operand_wand.
+      destruct (bool_decide (ty = t));
+        [rewrite andb_true_l | rewrite left_absorb];
+        last by (rewrite /wp_memberp_mismatch).
+      destruct (bool_decide _);
+        by [iApply "HQ" | rewrite /wp_memberp_mismatch].
+    - (* [Enull] *) by iApply "HQ".
+  Qed.
+
+  Theorem wp_memberp_wand {resolve : genv} r cls ty e Q Q' :
+    wp_memberp r cls ty e Q |-- (Forall f free, Q f free -* Q' f free) -* wp_memberp r cls ty e Q'.
+  Proof.
+    iIntros "A B"; iRevert "A"; iApply wp_memberp_frame; eauto.
+  Qed.
+
   (** Discarded values.
       Sometimes expressions are evaluated only for their side-effects.
       https://eel.is/c++draft/expr#context-2

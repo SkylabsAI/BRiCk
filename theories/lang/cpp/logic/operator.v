@@ -61,6 +61,9 @@ Section with_Σ.
     by rewrite offset_ptr_id.
   Qed.
 
+  (* TODO: Add support for [Beq]/[Bneq] on pointer-to-members
+     (cf. <https://eel.is/c++draft/expr.eq#4>)
+   *)
   (** Skeleton for [Beq] and [Bneq] axioms on pointers.
 
    This specification follows the C++ standard

@@ -52,6 +52,7 @@ Module Type Expr.
     #[local] Notation wp_initialize := (wp_initialize ρ).
     #[local] Notation wp_discard := (wp_discard ρ).
     #[local] Notation wp_glval := (wp_glval ρ).
+    #[local] Notation wp_memberp := (wp_memberp ρ).
     #[local] Notation wp_args := (wp_args ρ).
     #[local] Notation fspec := (fspec resolve.(genv_tu).(globals)).
     #[local] Notation mspec := (mspec resolve.(genv_tu).(globals)).
@@ -248,6 +249,57 @@ Module Type Expr.
     Axiom wp_operand_addrof : forall e Q,
         wp_lval e (fun p free => Q (Vptr p) free)
         |-- wp_operand (Eaddrof e) Q.
+
+    (* [E1->*E2] is desugared to [( *(E1)).*E2]
+
+       <https://eel.is/c++draft/expr.mptr.oper#3>
+     *)
+    Axiom wp_lval_memberp_arrow : forall (objp memberp : Expr) ty Q,
+        (* TODO (JH): Find a better way to get the class name *)
+        match type_of memberp with
+        | Tmember_pointer cls ty =>
+          wp_lval (Ememberp_dot (Ederef objp (Tnamed cls)) memberp ty) Q
+        | _ => False
+        end
+        |-- wp_lval (Ememberp_arrow objp memberp ty) Q.
+
+    (* [E1.*E2] binds E2 - of type "pointer to member of T" - to E1 - which is
+       a glvalue of class type "T" [Note 1].
+
+       Note 1: The current axiomatiziation requires that the "pointer to member of T"
+       corresponds to a member in the class "T" itself, although the standard permits
+       members from unambiguously accessible base classes to be used as well.
+
+      <https://eel.is/c++draft/expr.mptr.oper#2>
+      <https://eel.is/c++draft/expr.mptr.oper#4>
+     *)
+    Axiom wp_lval_memberp_dot : forall (obj memberp : Expr) ty Q,
+        match type_of memberp with
+        | Tmember_pointer cls ty =>
+          wp_lval obj
+                  (fun base free1 =>
+                     wp_memberp cls ty memberp
+                                (fun m free2 =>
+                                   (* TODO (JH): valcat determined in this note:
+                                      <https://eel.is/c++draft/expr.mptr.oper#6>
+                                    *)
+                                   (* NOTE (JH): this is copied from the inner branch
+                                      of the [Emember] axioms - since we want to avoid
+                                      re-computing the [ptr]
+                                    *)
+                                   (* NOTE (JH): We explicitly omit support for
+                                      pointer-to-member functions
+                                    *)
+                                   let addr := base ,, _field m in
+                                   valid_ptr addr ** Q addr (free1 >*> free2)))
+        | _ => False
+        end
+        |-- wp_lval (Ememberp_dot obj memberp ty) Q.
+
+    (* the `&` operator - when used to construct a pointer-to-member - is a prvalue *)
+    Axiom wp_operand_memberp_addrof : forall cls ty e Q,
+        wp_memberp cls ty e (fun f free => Q (Vmemberp f) free)
+        |-- wp_operand (Ememberp_addrof e (Tmember_pointer cls ty)) Q.
 
     (** * Unary Operators
         NOTE the following axioms assume that [eval_unop] is deterministic when it is defined
@@ -487,6 +539,15 @@ Module Type Expr.
     Axiom wp_operand_cast_null : forall e t Q,
         wp_operand e Q
         |-- wp_operand (Ecast Cnull2ptr Prvalue e t) Q.
+
+    (* null pointer constants can be converted to null member pointers for any
+       pointer-to-member type.
+
+       <https://eel.is/c++draft/conv.mem#1>
+     *)
+    Axiom wp_operand_cast_null_memberp : forall cls ty e Q,
+        wp_memberp cls ty e (fun f free => Q (Vmemberp f) free)
+        |-- wp_operand (Ecast Cnull2memberp Prvalue e (Tmember_pointer cls ty)) Q.
 
     (* note(gmm): in the clang AST, the subexpression is the call.
      * in essence, [Ecast (Cuser ..)] is a syntax annotation.

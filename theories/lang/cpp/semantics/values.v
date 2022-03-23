@@ -48,8 +48,9 @@ End RAW_BYTES.
 
 Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   (** * Values
-      Primitive abstract C++ runtime values come in two flavors.
+      Primitive abstract C++ runtime values come in three main flavors.
       - pointers (also used for references)
+      - pointers-to-members
       - integers (used for everything else)
       Aggregates are not represented directly, but only by talking about
       primitive subobjects.
@@ -63,6 +64,15 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   Variant val : Set :=
   | Vint (_ : Z)
   | Vptr (_ : ptr)
+    (* [f_type] always refers to the mangled class name; [f_name = "!NULL_MEMBER_PTR"]
+       iff the value represents the (unique) null member pointer for [f_type].
+
+       QUESTION (JH): Do we want to use a special [f_name] value which clang will
+       never emit - like we do with the internal variables needed in the semantics of
+       [Earrayloop_init] (cf. [./../logic/expr.v]) - or do we want to encode this in
+       a different way?
+     *)
+  | Vmemberp (_ : field)
   | Vraw (_ : raw_byte)
   | Vundef
   .
@@ -94,6 +104,10 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
     match v with
     | Vint v => Some (bool_decide (v <> 0))
     | Vptr p => Some (bool_decide (p <> nullptr))
+      (* /----- TODO (JH): double check with the standard that this makes sense;
+         v      godbolt will happily compile code conditional on a pointer-to-member.
+       *)
+    | Vmemberp f => Some (bool_decide (f.(f_name) = null_memberp_name))
     | Vundef | Vraw _ => None
     end.
 
@@ -103,12 +117,15 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
 
   Lemma Vptr_inj p1 p2 : Vptr p1 = Vptr p2 -> p1 = p2.
   Proof. by move=> []. Qed.
+  Lemma Vmemberp_inj f1 f2 : Vmemberp f1 = Vmemberp f2 -> f1 = f2.
+  Proof. by move=> []. Qed.
   Lemma Vint_inj a b : Vint a = Vint b -> a = b.
   Proof. by move=> []. Qed.
   Lemma Vbool_inj a b : Vbool a = Vbool b -> a = b.
   Proof. by move: a b =>[] [] /Vint_inj. Qed.
 
   #[global] Instance Vptr_Inj : Inj (=) (=) Vptr := Vptr_inj.
+  #[global] Instance Vmemberp_Inj : Inj (=) (=) Vmemberp := Vmemberp_inj.
   #[global] Instance Vint_Inj : Inj (=) (=) Vint := Vint_inj.
   #[global] Instance Vbool_Inj : Inj (=) (=) Vbool := Vbool_inj.
 
@@ -119,6 +136,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   Fixpoint get_default (t : type) : option val :=
     match t with
     | Tpointer _ => Some (Vptr nullptr)
+    | Tmember_pointer cls _ => Some (Vmemberp (null_memberp cls))
     | Tint _ _ => Some (Vint 0%Z)
     | Tbool => Some (Vbool false)
     | Tnullptr => Some (Vptr nullptr)
@@ -249,6 +267,9 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
   - if [ty = Tnullptr], then [v = Vptr nullptr].
   - if [ty = Tint sz sgn], then [v] fits the appropriate bounds (see
     [has_int_type']).
+  - if [ty = Tmember_pointer cls ty], then [v = Vmemberp f]
+    + NOTE: we require that [f] is either a valid non-static field for [Tnamed cls]
+      in a given [σ : genv] *or* that it is [null_memberp cls]
   - if [ty] is a type of pointers/aggregates, we only ensure that [v = Vptr p].
     + NOTE: We require that - for a type [Tnamed nm] - the name resolves to some
       [GlobDecl] other than [Gtype] in a given [σ : genv].
@@ -261,8 +282,12 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
 
   Axiom has_type_pointer : forall v ty,
       has_type v (Tpointer ty) -> exists p, v = Vptr p.
+  Axiom has_type_memberp : forall v cls ty,
+      has_type v (Tmember_pointer cls ty) -> exists f, v = Vmemberp f.
   Axiom has_type_nullptr : forall v,
       has_type v Tnullptr -> v = Vptr nullptr.
+  Axiom has_type_null_memberp : forall v cls,
+      has_type v (Tmember_pointer cls Tnullptr) -> v = Vmemberp (null_memberp cls).
   Axiom has_type_ref : forall v ty,
       has_type v (Tref ty) -> exists p, v = Vref p /\ p <> nullptr.
   Axiom has_type_rv_ref : forall v ty,
