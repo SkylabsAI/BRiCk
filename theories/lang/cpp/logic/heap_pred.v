@@ -113,6 +113,15 @@ Section with_cpp.
     by iPureIntro.
   Qed.
 
+  #[global] Instance primR_exclusive resolve ty v1 v2 :
+    Observe2 False (primR ty 1 v1) (primR ty 1 v2).
+  Proof.
+    iIntros "H1 H2".
+    iDestruct (observe_2 [| _ = _ |] with "H1 H2") as %?. subst.
+    iCombine "H1 H2" as "H".
+    by iDestruct (observe [| _ ≤ 1 |]%Qp with "H") as %?.
+  Qed.
+
   #[global] Instance primR_observe_has_type resolve ty q v :
     Observe [| has_type v (drop_qualifiers ty) |] (primR ty q v).
   Proof. rewrite primR_eq. apply _. Qed.
