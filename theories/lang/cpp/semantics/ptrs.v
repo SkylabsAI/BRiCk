@@ -339,13 +339,38 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Canonical Structure ptrO := leibnizO ptr.
   #[global] Instance ptr_inhabited : Inhabited ptr := populate nullptr.
 
+  (** [offset_ptr_dot_flip] is more useful than [offset_ptr_dot],
+  because it enables normalizing with
+  This direction more useful direction: *)
+  Lemma offset_ptr_dot_flip (p : ptr) o1 o2 :
+    p ,, o1 ,, o2 = p ,, (o1 ,, o2).
+  Proof. by rewrite -offset_ptr_dot. Qed.
+
+  (* Specialize lemmas to avoid ambiguity; automation on pointers should not
+  apply [left_id_L] on other operations. *)
+  Notation left_id_offset := (left_id_L (A := offset) o_id o_dot).
+  Notation right_id_offset := (right_id_L (A := offset) o_id o_dot).
+  Notation assoc_offset := (assoc_L (A := offset) o_dot).
+
+  (** [ptr_laws] is a tuple of rewrite lemmas, for use with ssreflect rewrite. *)
+  Definition ptr_laws {σ} := (
+    (* Monoid *)
+    left_id_offset, right_id_offset, assoc_offset,
+    (* Monoid action *)
+    offset_ptr_dot_flip, offset_ptr_id,
+    (* o_sub collapsing *)
+    o_sub_0, o_dot_sub
+  ).
+  Tactic Notation "ptr_norm" "?" := rewrite ?ptr_laws.
+  Tactic Notation "ptr_norm" "!" := rewrite !ptr_laws.
+
   Lemma offset_ptr_sub_0 (p : ptr) ty resolve (Hsz : is_Some (size_of resolve ty)) :
     p .[ty ! 0] = p.
-  Proof. by rewrite o_sub_0 // offset_ptr_id. Qed.
+  Proof. by ptr_norm!. Qed.
 
   Lemma o_sub_sub (p : ptr) ty i j σ :
     p .[ ty ! i] .[ty ! j] = p .[ ty ! i + j].
-  Proof. by rewrite -offset_ptr_dot o_dot_sub. Qed.
+  Proof. by ptr_norm!. Qed.
 
   (** ** [same_address] lemmas *)
 
