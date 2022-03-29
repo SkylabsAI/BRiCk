@@ -339,6 +339,14 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Canonical Structure ptrO := leibnizO ptr.
   #[global] Instance ptr_inhabited : Inhabited ptr := populate nullptr.
 
+  Lemma offset_ptr_sub_0 (p : ptr) ty resolve (Hsz : is_Some (size_of resolve ty)) :
+    p .[ty ! 0] = p.
+  Proof. by rewrite o_sub_0 // offset_ptr_id. Qed.
+
+  Lemma o_sub_sub (p : ptr) ty i j σ :
+    p .[ ty ! i] .[ty ! j] = p .[ ty ! i + j].
+  Proof. by rewrite -offset_ptr_dot o_dot_sub. Qed.
+
   (** ** [same_address] lemmas *)
 
   #[global] Instance same_address_dec : RelDecision same_address.
@@ -453,10 +461,6 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     same_address (p ,, o_sub _ ty n1) (p ,, o_sub _ ty n2) -> n1 = n2.
   Proof. rewrite same_address_eq. exact: ptr_vaddr_o_sub_eq. Qed.
 
-  Lemma offset_ptr_sub_0 (p : ptr) ty resolve (Hsz : is_Some (size_of resolve ty)) :
-    p .[ty ! 0] = p.
-  Proof. by rewrite o_sub_0 // offset_ptr_id. Qed.
-
   (** [aligned_ptr] states that the pointer (if it exists in memory) has
   the given alignment.
     *)
@@ -517,10 +521,6 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     rewrite /aligned_ptr_ty Hal /aligned_ptr /=.
     naive_solver.
   Qed.
-
-  Lemma o_sub_sub (p : ptr) ty i j σ :
-    p .[ ty ! i] .[ty ! j] = p .[ ty ! i + j].
-  Proof. by rewrite -offset_ptr_dot o_dot_sub. Qed.
 
   Notation _id := o_id (only parsing).
   (** access a field *)
