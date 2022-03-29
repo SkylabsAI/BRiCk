@@ -354,12 +354,12 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
 
   (** [ptr_laws] is a tuple of rewrite lemmas, for use with ssreflect rewrite. *)
   Definition ptr_laws {σ} := (
+    (* o_sub collapsing; best attempted before associativity. *)
+    o_sub_0, o_dot_sub,
     (* Monoid *)
     left_id_offset, right_id_offset, assoc_offset,
     (* Monoid action *)
-    offset_ptr_dot_flip, offset_ptr_id,
-    (* o_sub collapsing *)
-    o_sub_0, o_dot_sub
+    offset_ptr_dot_flip, offset_ptr_id
   ).
   Tactic Notation "ptr_norm" "?" := rewrite ?ptr_laws.
   Tactic Notation "ptr_norm" "!" := rewrite !ptr_laws.
