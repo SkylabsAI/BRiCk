@@ -246,7 +246,7 @@ Module Type PTRS.
   (* [o_sub_0] axiom is required because any object is a 1-object array
      (https://eel.is/c++draft/expr.add#footnote-80).
    *)
-  Axiom o_sub_0 : ∀ {σ} ty, is_Some (size_of σ ty) -> .[ty ! 0] = o_id.
+  Axiom o_sub_0 : ∀ σ ty, is_Some (size_of σ ty) -> .[ty ! 0] = o_id.
   (* TODO: drop (is_Some (size_of σ ty)) via
      `displacement (o_sub σ ty i) = if (i = 0) then 0 else i * size_of σ ty`
    *)
@@ -355,7 +355,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   (** [ptr_laws] is a tuple of rewrite lemmas, for use with ssreflect rewrite. *)
   Definition ptr_laws {σ} := (
     (* o_sub collapsing; best attempted before associativity. *)
-    o_sub_0, o_dot_sub,
+    o_sub_0 σ, o_dot_sub,
     (* Monoid *)
     left_id_offset, right_id_offset, assoc_offset,
     (* Monoid action *)
