@@ -8,6 +8,7 @@
  * (expressed in weakest pre-condition style)
  *)
 Require Export bedrock.prelude.numbers.
+Require Import iris.proofmode.tactics.
 
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import
@@ -769,6 +770,20 @@ Module Type Expr.
       | None => False
       end.
 
+    Lemma wp_call_frame pfty f es Q Q' :
+      Forall p free, Q p free -* Q' p free |-- wp_call pfty f es Q -* wp_call pfty f es Q'.
+    Proof.
+      rewrite /wp_call.
+      case_match; eauto.
+      case_match; eauto.
+      iIntros "K X"; iDestruct "X" as (y) "X"; iExists y; iDestruct "X" as "[$ X]".
+      iRevert "X"; iApply wp_args_frame.
+      iIntros (??).
+      iIntros "X"; iNext; iRevert "X".
+      iApply fspec_frame.
+      iIntros (?); iApply "K".
+    Qed.
+
     Axiom wp_lval_call : forall f (es : list Expr) Q (ty : type),
         wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
            Reduce (lval_receive ty res $ fun v => Q v (free_args >*> free_f)))
@@ -797,6 +812,15 @@ Module Type Expr.
       | _ => None
       end.
 
+    (** [wp_mcall f this this_type fty es Q] calls member function pointed to by
+        [f] (of type [fty], after stripping the member pointer) on [this] (of
+        type [this_type]) using arguments [es] and continues with [Q].
+
+        NOTE that the AST *must* insert implicit casts for casting qualifiers so
+             that the types match up exactly up to top-level qualifiers, e.g.
+             [foo(const int)] will be passed a value of type [int] (not [const
+             int]). the issue with type-level qualifiers is addressed through
+             the use of [normalize_type] below. *)
     Definition wp_mcall (f : val) (this : ptr) (this_type : type) (fty : type) (es : list Expr)
                (Q : ptr -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
@@ -806,6 +830,19 @@ Module Type Expr.
         wp_args targs es $ fun vs free => |> mspec this_type fty fp (this :: vs) (fun v => Q v free)
       | _ => False
       end.
+
+    Lemma wp_mcall_frame f this this_type fty es Q Q' :
+      Forall p free, Q p free -* Q' p free |-- wp_mcall f this this_type fty es Q -* wp_mcall f this this_type fty es Q'.
+    Proof.
+      rewrite /wp_mcall.
+      case_match; eauto.
+      iIntros "K X"; iDestruct "X" as (y) "X"; iExists y; iDestruct "X" as "[$ X]".
+      iRevert "X"; iApply wp_args_frame.
+      iIntros (??).
+      iIntros "X"; iNext; iRevert "X".
+      iApply fspec_frame.
+      iIntros (?); iApply "K".
+    Qed.
 
     Axiom wp_lval_member_call : forall ty fty f vc obj es Q,
         wp_glval vc obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
