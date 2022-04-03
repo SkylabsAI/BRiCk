@@ -15,9 +15,6 @@ Require Import bedrock.lang.cpp.heap_notations.
 #[local] Set Printing Universes.
 #[local] Set Printing Coercions.
 
-Arguments ERROR {_ _} _%bs.
-Arguments UNSUPPORTED {_ _} _%bs.
-
 (** * Wrappers to build [function_spec] from a [WithPrePost] *)
 
 #[local] Notation SPEC := (WpSpec_cpp) (only parsing).
