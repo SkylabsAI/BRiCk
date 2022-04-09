@@ -22,6 +22,7 @@ Section with_cpp.
   Definition mtype (t : type) : globname + type :=
     match erase_qualifiers t with
     | Tnamed cls => inl cls
+    | Trv_ref ty => inr (Tref ty)
     | ty => inr ty
     end.
 
