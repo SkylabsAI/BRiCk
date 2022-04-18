@@ -122,16 +122,13 @@ Module Type Expr__newdelete.
             new_fn new_args aty Q targs sz
             (nfty := normalize_type new_fn.2)
             (_ : arg_types nfty = Some (Tnum sz Unsigned :: targs)),
-            (** TODO this needs a side-condition requiring that [new] with no
-                arguments does not return [nullptr] because the C++ standard
-                permits the assumption. *)
             wp_args targs new_args (fun vs free =>
                 Exists sz al, [| size_of aty = Some sz |] ** [| has_type sz Tsize_t |] ** [| align_of aty = Some al |] **
                 Reduce (alloc_size_t sz (fun p FR =>
                 |> fspec nfty (_global new_fn.1) (p :: vs) (fun res => FR $
                       Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                         if bool_decide (storage_ptr = nullptr) then
-                          Q (Vptr storage_ptr) free
+                          [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                         else
                           (* [blockR sz -|- tblockR aty] *)
                           (storage_ptr |-> (blockR sz 1 ** alignedR al) **
@@ -167,9 +164,6 @@ Module Type Expr__newdelete.
             new_fn new_args aty Q targs sz
             (nfty := normalize_type new_fn.2)
             (_ : arg_types nfty = Some (Tnum sz Unsigned :: targs)),
-            (** TODO this needs a side-condition requiring that [new] with no
-                arguments does not return [nullptr] because the C++ standard
-                permits the assumption. *)
             (* <https://eel.is/c++draft/expr.new#7>
                | (7) Every constant-expression in a noptr-new-declarator shall be a
                |     converted constant expression ([expr.const]) of type std​::​size_t
@@ -207,7 +201,7 @@ Module Type Expr__newdelete.
                       |> fspec nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
                         Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
                           if bool_decide (storage_ptr = nullptr) then
-                            Q (Vptr storage_ptr) free
+                            [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                           else
                             (* [blockR sz -|- tblockR (Tarray aty array_size)] *)
                             (storage_ptr |-> blockR (sz' + sz) 1 **
