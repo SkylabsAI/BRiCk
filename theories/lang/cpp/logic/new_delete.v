@@ -126,7 +126,7 @@ Module Type Expr__newdelete.
                 arguments does not return [nullptr] because the C++ standard
                 permits the assumption. *)
             wp_args targs new_args (fun vs free =>
-                Exists sz al, [| size_of aty = Some sz |] ** [| align_of aty = Some al |] **
+                Exists sz al, [| size_of aty = Some sz |] ** [| has_type sz Tsize_t |] ** [| align_of aty = Some al |] **
                 Reduce (alloc_size_t sz (fun p FR =>
                 |> fspec nfty (_global new_fn.1) (p :: vs) (fun res => FR $
                       Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
@@ -192,6 +192,11 @@ Module Type Expr__newdelete.
                   Exists sz al,
                     let array_ty := Tarray aty array_sizeN in
                     [| size_of array_ty = Some sz |] **
+                    [| has_type (2 * sz)%N Tu64 |] **
+                    (* ^^ the overhead, [sz'] below, is less than or equal the
+                    size of the object, and the sum of the overhead and the
+                    allocation size must fit in a `size_t`. See
+                     https://eel.is/c++draft/expr.new#16 for more information *)
                     [| align_of aty = Some al |] **
                     (* NOTE: This is [Forall sz'] because the C++ Abstract Machine can choose
                              however many bytes it wants to use for metadata when handling
