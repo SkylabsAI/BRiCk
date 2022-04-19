@@ -239,8 +239,8 @@ Module Type Expr__newdelete.
       End new.
 
       Section delete.
-        Definition alloc_pointer (p : ptr) (Q : ptr -> FreeTemp -> mpred) : mpred :=
-          Forall p, p |-> primR (Tptr Tvoid) 1 (Vptr p) -* Q p (FreeTemps.delete (Tptr Tvoid) p).
+        Definition alloc_pointer (pv : ptr) (Q : ptr -> FreeTemp -> mpred) : mpred :=
+          Forall p : ptr, p |-> primR (Tptr Tvoid) 1 (Vptr pv) -* Q p (FreeTemps.delete (Tptr Tvoid) p).
 
         Lemma alloc_pointer_frame : forall p Q Q',
             Forall p fr, Q p fr -* Q' p fr |-- alloc_pointer p Q -* alloc_pointer p Q'.
