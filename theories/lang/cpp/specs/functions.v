@@ -17,7 +17,7 @@ Require Import bedrock.lang.cpp.heap_notations.
 
 (** * Wrappers to build [function_spec] from a [WithPrePost] *)
 
-#[local] Notation SPEC := (WpSpec_cpp) (only parsing).
+#[local] Notation SPEC := (WpSpec_cpp_ptr) (only parsing).
 
 (* A specification for a function  *)
 Definition SFunction `{Σ : cpp_logic} {cc : calling_conv}

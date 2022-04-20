@@ -15,9 +15,7 @@ Section with_cpp.
 
   (** determine if an argument is already materialized in the operand style.
 
-      NOTE arrays are treated as primitives in this setup because ???,
-           but it does not really matter because functions never take
-           array arguments
+      NOTE arrays are treated as primitives because they are passed as pointers
    *)
   Definition mtype (t : type) : globname + type :=
     match erase_qualifiers t with
@@ -50,9 +48,9 @@ Section with_cpp.
         end
     end.
 
-  (** [cpp_spec ret ts wpp] is the elaborated version of the [wpp]
+  (** [cpp_spec ret ts spec] is the elaborated version of the [spec]
       (operand-based) spec that is based on materialized values.
    *)
-  Definition cpp_spec (ret : type) (ts : list type) (wpp : WpSpec_cpp_val) : WpSpec_cpp :=
+  Definition cpp_spec (ret : type) (ts : list type) (wpp : WpSpec_cpp_val) : WpSpec_cpp_ptr :=
     elaborate ret ts wpp nil.
 End with_cpp.

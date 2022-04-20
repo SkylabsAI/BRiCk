@@ -19,9 +19,9 @@ Notation WithPrePostG := WpSpec (only parsing).
 Bind Scope pre_spec_scope with WpSpec.
 
 Notation WpSpec_cpp_val := (WpSpec mpredI val val) (only parsing).
-Notation WpSpec_cpp := (WpSpec mpredI ptr ptr) (only parsing).
+Notation WpSpec_cpp_ptr := (WpSpec mpredI ptr ptr) (only parsing).
 
-#[deprecated(since="2022-02-13",note="use [WpSpec_cpp]")]
+#[deprecated(since="2022-02-13",note="use [WpSpec_cpp_ptr]")]
 Notation WithPrePost PROP := (WpSpec PROP ptr ptr) (only parsing).
 
 (* These two classes provide automatic coercions between [ptr] and [val] and [Z] and [val]
@@ -42,11 +42,11 @@ Section with_Σ.
   Import heap_notations heap_pred.
   #[local] Notation WPP := (WpSpec_cpp_val).
 
-  Fail Fail Definition _1 : WPP :=
+  Succeed Definition _1 : WPP :=
     \pre emp
     \post  emp.
 
-  Fail Fail Definition _2 : WPP :=
+  Succeed Definition _2 : WPP :=
     \with (I J : mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
     \prepost emp
     \require True
@@ -59,7 +59,7 @@ Section with_Σ.
     \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
     \post {x} [ Vint x ] emp.
 
-  Fail Fail Definition _3 : WPP :=
+  Succeed Definition _3 : WPP :=
    \with (I J : mpred)
    \with  (a : nat)
    \prepost emp
@@ -68,7 +68,7 @@ Section with_Σ.
    \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
    \post{r}[ r ] emp.
 
-  Fail Fail Definition _4 : WPP :=
+  Succeed Definition _4 : WPP :=
    \with (I J : mpred) (n : nat)
    \with  (a : nat)
    \let x := 3%nat
@@ -87,11 +87,11 @@ Section with_Σ.
    \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
    \post emp.
 
-  Fail Fail Definition _5 : WPP :=
+  Succeed Definition _5 : WPP :=
     \pre emp ** Exists y : nat, [| y = 3 |]
     \post{}[Vptr nullptr] emp.
 
-  Fail Fail Definition _6 : WPP :=
+  Succeed Definition _6 : WPP :=
     \pre |==> True ** |={∅,⊤}=> False
     \post{}[Vptr nullptr] emp.
 

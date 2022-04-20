@@ -300,7 +300,7 @@ number of nodes in a BST:
 unsigned int Tree::count() const;
 ]]
  *)
-Definition count_spec (this : ptr) : WpSpec_cpp :=
+Definition count_spec (this : ptr) :=
   cpp_spec Tint [] $
   \with (q : Qp) (t : tree Z)
   \prepost this |-> treeR (fun q z => uintR q z) q t
@@ -332,7 +332,7 @@ bool Tree::insert(int);
 On duplicate keys, [insert] does nothing (we treat the tree as a set rather
 than a multiset).
  *)
-Definition insert_spec (this : ptr) : WpSpec_cpp :=
+Definition insert_spec (this : ptr) :=
   cpp_spec Tbool [Tint] $
     \with (t : tree Z)
     \arg{x} "x" (Vint x)
@@ -353,7 +353,7 @@ Fixpoint insert x (t : tree Z) : tree Z :=
          else t
   end.
 
-Definition insert_spec' (this : ptr) : WpSpec_cpp :=
+Definition insert_spec' (this : ptr) :=
   cpp_spec Tbool [Tint] $
     \with (t : tree Z)
     \arg{x} "x" (Vint x)
@@ -462,7 +462,7 @@ Definition borrow_from (all borrow : mpred) : mpred :=
 (**
 Using borrow, we can write the specification for [lookup]:
  *)
-Definition lookup_spec (this : ptr) : WpSpec_cpp :=
+Definition lookup_spec (this : ptr) :=
   cpp_spec Tbool [Tint; Tptr Tint] $
     \arg{x} "x" (Vint x)
     \arg{out} "out" (Vptr out)
