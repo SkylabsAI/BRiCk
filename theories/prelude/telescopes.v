@@ -18,3 +18,15 @@ Fixpoint tele_append (t : tele) {struct t}: (t -t> tele) -> tele :=
 Definition tele_fun_pointwise@{X Z Y} {t : tele@{X}} {A : Type@{Z}}
     (R : A -> A -> Prop) (f g : tele_fun@{X Z Y} t A) : Prop :=
   forall x, R (tele_app f x) (tele_app g x).
+
+(** Fix inference for upstream definitions. *)
+Polymorphic Definition TargO : tele_arg TeleO := tt.
+Polymorphic Definition TargS {T} {TT : T -> tele} (a : T) (b : tele_arg (TT a)) : tele_arg (TeleS TT) :=
+  @TeleArgCons _ (λ x, tele_arg _) a b.
+
+(** Shadow iris notations using [TargO] and [Targ] *)
+Notation "'[tele_arg' x ; .. ; z ]" :=
+  (TargS x ( .. (TargS z TargO) ..))
+  (format "[tele_arg  '[hv' x ;  .. ;  z ']' ]").
+Notation "'[tele_arg' ]" := (TargO)
+  (format "[tele_arg ]").
