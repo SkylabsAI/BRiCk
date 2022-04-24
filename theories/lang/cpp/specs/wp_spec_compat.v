@@ -4,7 +4,6 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import iris.proofmode.tactics.
-Require Import bedrock.lang.algebra.telescopes.
 Require Import bedrock.lang.bi.telescopes.
 Require Import bedrock.lang.cpp.semantics.values.
 Require Import bedrock.lang.cpp.logic.entailsN.

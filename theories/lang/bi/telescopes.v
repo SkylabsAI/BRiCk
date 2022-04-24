@@ -4,10 +4,10 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *
  *)
-Require Import bedrock.lang.algebra.telescopes.
+Require iris.proofmode.class_instances.
 Require Export iris.bi.telescopes.
 Require Export bedrock.lang.bi.prelude.
-Require iris.proofmode.class_instances.
+Require Export bedrock.lang.algebra.telescopes.
 Import ChargeNotation.
 
 #[local] Set Universe Polymorphism.

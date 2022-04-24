@@ -5,7 +5,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Export stdpp.telescopes.
-Require Export bedrock.prelude.base.
+Require Import bedrock.prelude.base.
 
 #[local] Set Universe Polymorphism.
 
