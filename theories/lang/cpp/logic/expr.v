@@ -756,6 +756,11 @@ Module Type Expr.
              type [int] (not [const int]). the issue with type-level
              qualifiers is addressed through the use of [normalize_type]
              below.
+
+        NOTE Some builtin functions (`__builtin_launder` in particular)
+             violate the above rule. We address this special case using
+             [wp_operand_call_launder] below. A more uniform scheme would
+             be nice.
      *)
     Definition wp_call (pfty : type) (f : val) (es : list Expr) (Q : ptr -> FreeTemps -> epred) : mpred :=
       match unptr pfty with
@@ -768,6 +773,16 @@ Module Type Expr.
         | _ => False
         end
       | None => False
+      end.
+
+    (* in almost all circumstances, the return type of a function is the same as the
+       type of the calling expression; however, the `launder` builtin has an incorrect type
+       according to this model. In particular, launder has type [void* -> void*] but can be
+       used at any [T* -> T*] type. *)
+    Definition ret_type (ty : type) : option type :=
+      match erase_qualifiers ty with
+      | Tfunction ret _ => Some ret
+      | _ => None
       end.
 
     Lemma wp_call_frame pfty f es Q Q' :
@@ -795,8 +810,12 @@ Module Type Expr.
         |-- wp_xval (Ecall f es ty) Q.
 
     Axiom wp_operand_call : forall ty f es Q,
-        wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (operand_receive ty res $ fun v => Q v (free_args >*> free_f)))
+        match ret_type (type_of f) with
+        | Some ret =>
+          wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
+            Reduce (operand_receive ret res $ fun v => Q v (free_args >*> free_f)))
+        | None => False
+        end
        |-- wp_operand (Ecall f es ty) Q.
 
     Axiom wp_init_call : forall f es Q (addr : ptr) ty,
@@ -804,6 +823,23 @@ Module Type Expr.
           wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
              Reduce (init_receive ty addr res $ fun free => Q free (free_args >*> free_f)))
       |-- wp_init addr (Ecall f es ty) Q.
+
+    (** ** Special builtin calls
+        Clang chooses to represent builtins simply as function calls, but this
+        is not sufficient to describe the semantics of `__builtin_launder` because
+        Clang fixes its type up-front to be `void* -> void*` rather than being type
+        generic.
+     *)
+    Axiom wp_operand_call_launder : forall e Q,
+           (let t := erase_qualifiers (type_of e) in
+            match unptr t with
+            | Some ut =>
+                wp_operand e (fun v free => Exists inp, [| v = Vptr inp |] **
+                  Exists outp, provides_storage inp outp ut ** (provides_storage inp outp ut -* Q (Vptr outp) free))
+            | _ => False
+            end)
+       |-- wp_operand (Ecall (Evar (Gname "__builtin_launder") (Tptr (Tfunction (Tptr Tvoid) [Tptr Tvoid]))) [e] (type_of e)) Q.
+
 
     (** * Member calls *)
     Definition member_arg_types (fty : type) : option (list type) :=

@@ -132,10 +132,9 @@ Section with_Σ.
       |-- wp_builtin Bin_bswap128 (Tfunction Tu128 (Tu128 :: nil))
           (Vint x :: nil) Q.
 
-
   (** std::launder (http://eel.is/c++draft/ptr.launder) *)
-  Axiom wp_launder : forall ty res newp Q,
-      provides_storage res newp ty ** (provides_storage res newp ty -* Q (Vptr newp))
+  Axiom wp_launder : forall res Q,
+      Exists ty newp, provides_storage res newp ty ** (provides_storage res newp ty -* Q (Vptr newp))
       |-- wp_builtin Bin_launder (Tfunction (Tptr Tvoid) (Tptr Tvoid :: nil))
           (Vptr res :: nil) Q.
 
