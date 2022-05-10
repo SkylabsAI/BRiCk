@@ -170,68 +170,34 @@ Section wpspec_ofe.
   Context {PROP : bi} {ARGS RESULT : Type}.
   Notation WPP := (WpSpec PROP ARGS RESULT) (only parsing).
   Instance wpspec_equiv : Equiv WPP :=
-    fun wpp1 wpp2 => forall x Q, wpp1 x Q ≡ wpp2 x Q.
+    (eq ==> pointwise_relation _ (≡) ==> (≡))%signature.
   Instance wpspec_dist : Dist WPP :=
-    fun n wpp1 wpp2 => forall x Q, wpp1 x Q ≡{n}≡ wpp2 x Q.
+    fun n => (eq ==> pointwise_relation _ (dist n) ==> dist n)%signature.
 
   Lemma wpspec_ofe_mixin : OfeMixin WPP.
-  Proof. by apply (iso_ofe_mixin (A := list ARGS -d> (RESULT -> PROP) -d> PROP) wp_specD). Qed.
+  Proof.
+    (* by apply (iso_ofe_mixin (A := list ARGS -d> (RESULT -> PROP) -d> PROP) wp_specD). Qed. *) Admitted.
   Canonical Structure WpSpecO := Ofe WPP wpspec_ofe_mixin.
 End wpspec_ofe.
 End wpspec_ofe.
 Arguments WpSpecO : clear implicits.
+(*
+#[deprecated(since="2022-05-07",note="use [WpSpecO] with explicit arguments")]
 Notation WithPrePostO PROP := (WpSpecO PROP ptr ptr).
+*)
 
 (** Relations between WPPs. *)
 Definition wpspec_relation {PROP : bi} (R : relation PROP)
     {ARGS : Type} {RESULT : Type}
     (wpp1 : WpSpec PROP ARGS RESULT)
     (wpp2 : WpSpec PROP ARGS RESULT) : Prop :=
-  (** We use a single [K] rather than pointwise equal [K1], [K2] for
-      compatibility with [fs_entails], [fs_impl]. *)
-  forall xs K, R (wpp1 xs K) (wpp2 xs K).
+  forall xs K K', (forall r, R (K r) (K' r)) -> R (wpp1 xs K) (wpp2 xs K').
 #[global] Instance: Params (@wpspec_relation) 4 := {}.
 
 Notation wpspec_entailsN n := (wpspec_relation (entailsN n)) (only parsing).
 Notation wpspec_entails := (wpspec_relation bi_entails) (only parsing).
 Notation wpspec_dist n := (wpspec_relation (dist n)) (only parsing).
 Notation wpspec_equiv := (wpspec_relation equiv) (only parsing).
-
-Section wpspec_relations.
-  Context `{!BiEntailsN PROP}.
-
-  Lemma wpspec_equiv_spec {ARGS : Type} {RESULT : Type} wpp1 wpp2 :
-    @wpspec_relation PROP (≡) ARGS RESULT wpp1 wpp2 <->
-    @wpspec_relation PROP (⊢) ARGS RESULT wpp1 wpp2 /\
-    @wpspec_relation PROP (⊢) ARGS RESULT wpp2 wpp1.
-  Proof.
-    split.
-    - intros Hwpp. by split=>vs K; rewrite (Hwpp vs K).
-    - intros [] vs K. by split'.
-  Qed.
-
-  Lemma wpspec_equiv_dist {ARGS : Type} {RESULT : Type} wpp1 wpp2 :
-    @wpspec_relation PROP (≡) ARGS RESULT wpp1 wpp2 <->
-    ∀ n, @wpspec_relation PROP (dist n) ARGS RESULT wpp1 wpp2.
-  Proof.
-    split.
-    - intros Hwpp n vs K. apply equiv_dist, Hwpp.
-    - intros Hwpp vs K. apply equiv_dist=>n. apply Hwpp.
-  Qed.
-
-  Notation entailsN := (@entailsN PROP).
-
-  Lemma wpspec_dist_entailsN {ARGS : Type} {RESULT : Type} wpp1 wpp2 n :
-    @wpspec_relation _ (dist n) ARGS RESULT wpp1 wpp2 <->
-    @wpspec_relation _ (entailsN n) ARGS RESULT wpp1 wpp2 /\
-    @wpspec_relation _ (entailsN n) ARGS RESULT wpp2 wpp1.
-  Proof.
-    split.
-    - intros Hwpp. by split=>vs K; apply dist_entailsN; rewrite (Hwpp vs K).
-    - intros [] vs K. by apply dist_entailsN.
-  Qed.
-
-End wpspec_relations.
 
 Require Import iris.proofmode.tactics.
 
@@ -442,6 +408,9 @@ Section post_val.
     end.
   #[global] Coercion _postD : _post >-> Funclass.
 
+  #[global] Instance _post_dist : Dist _post :=
+    fun n => (eq ==> pointwise_relation _ (dist n) ==> dist n)%signature.
+
   Lemma _postD_frame p ls : forall K K',
       (∀ r, K r -∗ K' r) ⊢ _postD p ls K -∗ _postD p ls K'.
   Proof.
@@ -632,8 +601,65 @@ Section bind.
       iExists a. eauto.
   Qed.
 
+  #[global] Instance wp_spec_bind_ne n :
+    Proper (dist n ==> eq ==> pointwise_relation _ (dist n) ==> dist n) wp_spec_bind.
+  Proof.
+    do 9 red. rewrite /wp_spec_bind/=.
+    intros; subst. f_equiv. apply H; eauto. intro. apply H1; eauto.
+  Qed.
+
 End bind.
 
+#[global] Instance add_with_ne PROP A R T n :
+  Proper (pointwise_relation _ (dist n) ==> dist n) (@add_with PROP A R T).
+Proof.
+  do 7 red; rewrite /add_with/wpspec_relation/=; intros.
+  f_equiv. f_equiv. by apply H.
+Qed.
+#[global] Instance add_pre_ne PROP A R n :
+  Proper (dist n ==> dist n ==> dist n) (@add_pre PROP A R).
+Proof.
+  do 8 red; rewrite /add_pre/wpspec_relation/=; intros.
+  change [x] with ([x] ++ nil).
+  change [y] with ([y] ++ nil).
+  rewrite !pres_ok.
+  f_equiv. simpl. solve_proper. by apply H0.
+Qed.
+#[global] Instance add_post_with_ne PROP A R n :
+  Proper (pointwise_relation _ (dist n) ==> dist n ==> dist n)
+         (@add_post_with PROP A R).
+Proof.
+  do 8 red; rewrite /add_post/wpspec_relation/=; intros.
+  change [x] with (nil ++ [x]).
+  change [y] with (nil ++ [y]).
+  rewrite !posts_ok.
+  apply H0; eauto. intros; f_equiv; eauto.
+  solve_proper.
+Qed.
+#[global] Instance add_post_ne PROP A R n :
+  Proper (dist n ==> dist n ==> dist n)
+         (@add_post PROP A R).
+Proof.
+  repeat red; intros.
+  apply add_post_with_ne; eauto.
+  red. eauto.
+Qed.
+#[global] Instance list_sep_into_ne {PROP : bi} n : Proper (Forall2 (dist n) ==> dist n ==> dist n) (@list_sep_into PROP).
+Proof.
+  do 3 red; induction 1; simpl; eauto.
+  intros. apply IHForall2. solve_proper.
+Qed.
+#[global] Instance add_arg_ne {PROP : bi} {A R} (x : A) n : Proper (dist n ==> dist n) (@add_arg PROP A R x).
+Proof.
+  do 2 red. rewrite /add_arg/=. intros.
+  do 5 red. simpl. intros; subst.
+  change [x] with (nil ++ [x]).
+  rewrite !arg_ok.
+  f_equiv. red. intros. f_equiv. apply H; eauto.
+Qed.
+#[global] Instance wp_specD_ne {PROP : bi} {A R} n
+  : Proper (dist n ==> eq ==> pointwise_relation _ (dist n) ==> dist n) (@wp_specD PROP A R).
+Proof. do 4 red; intros; apply H; eauto. Qed.
 
 Lemma spec_add_with {PROP : bi} {ARG RESULT : Type} : forall T (PQ : T -> WpSpec PROP ARG RESULT) args K,
     (∃ x, wp_specD (PQ x) args K) ⊢ add_with PQ args K.

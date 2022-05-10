@@ -20,13 +20,22 @@ Require Import bedrock.lang.cpp.heap_notations.
 #[local] Notation SPEC := (WpSpec_cpp_ptr) (only parsing).
 
 (* A specification for a function  *)
-Definition SFunction `{Σ : cpp_logic} {cc : calling_conv}
+#[program] Definition SFunction `{Σ : cpp_logic} {cc : calling_conv}
     (ret : type) (targs : list type) (PQ : SPEC)
     : function_spec :=
   {| fs_cc        := cc
    ; fs_return    := ret
    ; fs_arguments := targs
    ; fs_spec      := wp_specD PQ |}.
+Next Obligation.
+  do 3 red. intros; subst. rewrite /wp_specD. iApply spec_internal_frame.
+  iIntros (?); iApply H0.
+Qed.
+Next Obligation.
+  do 3 red; intros; subst. rewrite /wp_specD.
+  split'; iApply spec_internal_frame; iIntros (?);
+    specialize (H0 r); rewrite H0; eauto.
+Qed.
 
 (* A specification for a constructor *)
 Definition SConstructor `{Σ : cpp_logic, resolve : genv} {cc : calling_conv}
@@ -104,7 +113,8 @@ Section with_cpp.
     #[global] Instance: Params (@SFunction) 5 := {}.
     #[global] Instance SFunction_ne : NonExpansive (SFunction (cc:=cc) ret targs).
     Proof.
-      intros n wpp1 wpp2 Hwpp. split; by rewrite/type_of_spec/=.
+      intros n wpp1 wpp2 Hwpp.
+      constructor; eauto; simpl.
     Qed.
 
     #[global] Instance SFunction_proper :

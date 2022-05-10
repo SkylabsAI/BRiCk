@@ -28,7 +28,7 @@ Section with_cpp.
       assuming that [wpp] takes the arguments in [args] (in reverse order) and the
       remaining arguments in [ts].
    *)
-  Fixpoint elaborate (ret : type) (ts : list type) (wpp : WpSpec_cpp_val) (args : list val) : WpSpec mpredI ptr ptr :=
+  Fixpoint elaborate (ret : type) (ts : list type) (args : list val) (wpp : WpSpec_cpp_val) : WpSpec mpredI ptr ptr :=
     match ts with
     | nil =>
         match mtype ret with
@@ -40,17 +40,38 @@ Section with_cpp.
     | t :: ts =>
         match mtype t with
         | inl cls =>
-            add_with (fun pv : ptr => add_arg pv (elaborate ret ts wpp (args ++ [Vptr pv])))
+            add_with (fun pv : ptr => add_arg pv (elaborate ret ts (args ++ [Vptr pv]) wpp))
         | inr t =>
             add_with (fun pv : ptr => add_with (fun v : val => add_arg pv (
                                            add_pre (_at pv (primR t 1 v)) (add_post (Exists v, _at pv (primR t 1 v))
-                                                                                    (elaborate ret ts wpp (args ++ [v]))))))
+                                                                                    (elaborate ret ts (args ++ [v]) wpp)))))
         end
     end.
 
   (** [cpp_spec ret ts spec] is the elaborated version of the [spec]
       (operand-based) spec that is based on materialized values.
    *)
-  Definition cpp_spec (ret : type) (ts : list type) (wpp : WpSpec_cpp_val) : WpSpec_cpp_ptr :=
-    elaborate ret ts wpp nil.
+  Definition cpp_spec (ret : type) (ts : list type) : WpSpec_cpp_val -> WpSpec_cpp_ptr :=
+    elaborate ret ts nil.
+
+  (** * Theory *)
+
+
+  #[global] Instance elaborate_ne n ret ts : forall vs,
+    Proper (dist n ==> dist n) (elaborate ret ts vs).
+  Proof.
+    induction ts; simpl; intros.
+    { case_match;  do 3 red; intros; apply wp_spec_bind_ne; eauto.
+      do 5 red. simpl; intros; subst.
+      f_equiv. f_equiv.
+      f_equiv. apply H1.
+      do 5 red; intros; subst. simpl. f_equiv.
+      red; intros. f_equiv. apply H1. }
+    { red. red.
+      case_match; intros; f_equiv.
+      { red. intros; f_equiv. apply IHts. auto. }
+      { red; intros; f_equiv. red. intros.
+        f_equiv. f_equiv. f_equiv. apply IHts. auto. } }
+  Qed.
+
 End with_cpp.
