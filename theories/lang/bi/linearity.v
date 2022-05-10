@@ -119,6 +119,7 @@ Section uPred.
     bi_affine_emp_forall_only_provable (uPred_affine M).
 End uPred.
 
+(* Ralf suggests splitting this. *)
 (** *** Lift over [monPred] instances declared above. *)
 Section monPred_lift.
   Context (PROP : bi).
