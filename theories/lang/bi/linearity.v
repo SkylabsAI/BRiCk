@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020-2021 BedRock Systems, Inc.
+ * Copyright (c) 2020-2022 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -7,6 +7,7 @@
 (**
 Import this module to make uPred mostly non-affine, while still assuming [▷ emp
 ⊣⊢ emp] and other principles that do not cause leaks.
+Dropping resources remains possible, but must be done explicitly.
 
 All changes to [typeclass_instances] will not propagate to your clients:
 technically, they have [#[export]] visibility.
@@ -51,12 +52,9 @@ Section with_later_emp.
   #[local] Lemma timeless_emp_with_later_emp : Timeless emp.
   Proof. by rewrite /Timeless -except_0_intro Hlater_emp. Qed.
 
-  #[local] Instance affine_later_emp_with_later_emp : Affine (▷ emp).
-  Proof. by rewrite /Affine Hlater_emp. Qed.
-
   #[local] Lemma affine_later_with_later_emp {P : PROP} `{!Affine P} :
     Affine (▷ P).
-  Proof. intros. by rewrite /Affine (affine P) (affine (▷ emp)). Qed.
+  Proof. intros. by rewrite /Affine (affine P) Hlater_emp. Qed.
 
   #[local] Lemma persistent_affine_laterable (P : PROP) :
     Persistent P → Affine P → Laterable P.
@@ -91,9 +89,6 @@ Section uPred_with_later_emp.
 
   #[export] Instance timeless_emp_uPred : Timeless (PROP := uPredI M) emp.
   Proof. apply timeless_emp_with_later_emp, later_emp_uPred. Qed.
-
-  #[export] Instance affine_later_emp_uPred : Affine (PROP := uPredI M) (▷ emp).
-  Proof. apply affine_later_emp_with_later_emp, later_emp_uPred. Qed.
 
   #[export] Instance affine_later_uPred P :
     Affine P → Affine (▷ P).
