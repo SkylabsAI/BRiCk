@@ -97,6 +97,9 @@ Section uPred_with_later_emp.
   #[export] Instance persistent_affine_laterable_upred P :
     Persistent P → Affine P → Laterable P.
   Proof. apply persistent_affine_laterable, later_emp_uPred. Qed.
+
+  Lemma affine_iprop P : P ⊢ emp.
+  Proof. apply affine, @absorbing_bi, uPred_affine. Qed.
 End uPred_with_later_emp.
 
 (** *** Other instances that we derive from affinity but seem safe. *)
@@ -144,4 +147,10 @@ Section monPred_lift.
     Persistent P → Affine P → Laterable P.
   Proof. intros. apply: intuitionistic_laterable. Qed.
   (** Liftings for [BiPositive] and [BiEmpForallOnlyProvable] are declared elsewhere. *)
+
+  (* To compose with [affine_iprop] or similar. *)
+  Lemma affine_monPred P
+    (Haff : ∀ Q, Q ⊢@{PROP} emp):
+    P ⊢ emp.
+  Proof. apply affine, @absorbing_bi, monPred_bi_affine => Q. apply Haff. Qed.
 End monPred_lift.
