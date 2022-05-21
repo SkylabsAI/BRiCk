@@ -152,24 +152,27 @@ Section finite_preimage.
   End finite_preimage_inj.
 End finite_preimage.
 
-Class FinDom A B C M `{Lookup A B (M B)} `{Dom (M B) C} `{ElemOf A C} := {
-  elem_of_dom_nomap (a : A) (m : M B) :
-    a ∈ dom C m ↔ is_Some (m !! a);
+#[global] Instance fn_lookup `{Finite A} {B} : Lookup A B (A -> B) := λ a f, Some (f a).
+
+Class FinDom K A KA KS `{Lookup K A KA} `{Dom KA KS} `{ElemOf K KS} := {
+  elem_of_dom_nomap (k : K) (m : KA) :
+    k ∈ dom KS m ↔ is_Some (m !! k);
 }.
+
 Section fin_domain.
-  Context `{FinDom A B C M}.
+  Context `{FinDom K A KA KS}.
   #[local] Set Default Proof Using "Type*".
-  Implicit Types (m : M B) (a : A) (b : B).
-  #[global] Instance set_unfold_enum_domain m a P :
-    SetUnfoldElemOf a (dom C m) P →
-    SetUnfold (is_Some (m !! a)) P.
+  Implicit Types (m : KA) (k : K) (a : A).
+  #[global] Instance set_unfold_enum_domain m k P :
+    SetUnfoldElemOf k (dom KS m) P →
+    SetUnfold (is_Some (m !! k)) P.
   Proof. constructor. rewrite -elem_of_dom_nomap. set_solver. Qed.
 End fin_domain.
 
 Section fin_domain.
   Context `{FinSet A C}.
   Context `{Lookup A B (M B)} `{Dom (M B) C}.
-  Context `{!FinDom A B C M}.
+  Context `{!FinDom A B (M B) C}.
   Implicit Types (m : M B) (a : A) (b : B).
 
   Context `{EqDecision B}.
@@ -214,8 +217,7 @@ Section finite_preimage.
   #[local] Set Default Proof Using "Type*".
 
   (* Instance fn_lookup_total : LookupTotal A B (A -> B) := λ a f, f a. *)
-  #[global] Instance fn_lookup : Lookup A B (A -> B) := λ a f, Some (f a).
-  #[global] Instance finite_finitedomain : FinDom A B (list A) (λ B, A -> B).
+  #[global] Instance finite_finitedomain : FinDom A B (A -> B) (list A).
   Proof.
     constructor; intros; split; first done.
     set_solver.
@@ -231,7 +233,7 @@ Section map_preimage.
   (* Context {K A : Type} `{FinMap K M} (m : M A). *)
   #[local] Set Default Proof Using "Type*".
   (* Context `(∀ A : Type, Dom (M A) D). *)
-  #[global] Instance gmap_finitedomain : FinDom K A D M.
+  #[global] Instance gmap_finitedomain : FinDom K A (M A) D.
   (* XXX fix set_solver. *)
   Proof. constructor; intros; apply /elem_of_dom. Qed.
 End map_preimage.
