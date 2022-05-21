@@ -162,7 +162,9 @@ Class FinDom K A KA KS `{Lookup K A KA} `{Dom KA KS} `{ElemOf K KS} := {
 Section fin_domain.
   Context `{FinDom K A KA KS}.
   #[local] Set Default Proof Using "Type*".
+
   Implicit Types (m : KA) (k : K) (a : A).
+
   #[global] Instance set_unfold_enum_domain m k P :
     SetUnfoldElemOf k (dom KS m) P →
     SetUnfold (is_Some (m !! k)) P.
@@ -170,12 +172,10 @@ Section fin_domain.
 End fin_domain.
 
 Section fin_domain.
-  Context `{FinSet A C}.
-  Context `{Lookup A B (M B)} `{Dom (M B) C}.
-  Context `{!FinDom A B (M B) C}.
-  Implicit Types (m : M B) (a : A) (b : B).
-
-  Context `{EqDecision B}.
+  Context `{EqDecision B} `{FinSet A C}.
+  Context `{Lookup A B MB} `{Dom MB C}.
+  Context `{!FinDom A B MB C}.
+  Implicit Types (m : MB) (a : A) (b : B).
 
   Definition preimage m b : C :=
     filter (λ a, m !! a = Some b) (dom C m).
