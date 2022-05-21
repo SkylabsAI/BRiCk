@@ -154,26 +154,32 @@ End finite_preimage.
 
 Class FinDom A B C M `{Lookup A B (M B)} `{Dom (M B) C} `{ElemOf A C} := {
   elem_of_dom_nomap (a : A) (m : M B) :
-    is_Some (m !! a) ↔ a ∈ dom C m;
+    a ∈ dom C m ↔ is_Some (m !! a);
 }.
-
 Section fin_domain.
   Context `{FinDom A B C M}.
   #[local] Set Default Proof Using "Type*".
   Implicit Types (m : M B) (a : A) (b : B).
-
   #[global] Instance set_unfold_enum_domain m a P :
     SetUnfoldElemOf a (dom C m) P →
     SetUnfold (is_Some (m !! a)) P.
-  Proof. constructor. rewrite elem_of_dom_nomap. set_solver. Qed.
+  Proof. constructor. rewrite -elem_of_dom_nomap. set_solver. Qed.
+End fin_domain.
+
+Section fin_domain.
+  Context `{FinSet A C}.
+  Context `{Lookup A B (M B)} `{Dom (M B) C}.
+  Context `{!FinDom A B C M}.
+  Implicit Types (m : M B) (a : A) (b : B).
 
   Context `{EqDecision B}.
-  Context `{Filter A C}.
 
   Definition preimage m b : C :=
     filter (λ a, m !! a = Some b) (dom C m).
 
-  Context `{FinSet A C} `{FinSet B D}.
+  #[local] Set Default Proof Using "Type*".
+
+  Context `{FinSet B D}.
   Implicit Type (bs : D).
 
   Definition preimage_set m bs : C :=
@@ -181,42 +187,38 @@ Section fin_domain.
 
   Lemma preimage_eq_1 m b a :
     a ∈ preimage m b → m !! a = Some b.
-  Proof.
-    rewrite /preimage.
-    set_unfold.
-    set_solver. Qed.
+  Proof. set_solver. Qed.
 
-  Lemma preimage_eq_2 a b :
-    m !! b = Some a → b ∈ preimage a.
+  Lemma preimage_eq_2 m a b :
+    m !! a = Some b → a ∈ preimage m b.
   Proof.
-    rewrite /preimage elem_of_list_filter. intros ?; split; auto.
-    by eapply finite_mapping.
+    rewrite /preimage elem_of_filter. intros ?; split; auto.
+    exact /elem_of_dom_nomap.
 
     (* rewrite /preimage.
     set_unfold.
     by eapply finite_mapping. *)
   Qed.
 
-  Lemma preimage_eq a b :
-    b ∈ preimage a ↔ m !! b = Some a.
+  Lemma preimage_eq m a b :
+    a ∈ preimage m b ↔ m !! a = Some b.
   Proof. split; [ apply preimage_eq_1 | apply preimage_eq_2 ]. Qed.
 
 End fin_domain.
 
-#[global] Instance dom_fun_gset `{Finite A} {B : Type} : Dom (A -> B) (gset A) :=
-  λ _, list_to_set (enum A).
+#[global] Instance dom_fun_gset `{Finite A} {B : Type} : Dom (A -> B) (list A) :=
+  λ _, enum A.
 
 Section finite_preimage.
   Context `{Finite A} {B : Type} (f : A -> B).
   #[local] Set Default Proof Using "Type*".
 
   (* Instance fn_lookup_total : LookupTotal A B (A -> B) := λ a f, f a. *)
-  Instance fn_lookup : Lookup A B (A -> B) := λ a f, Some (f a).
-  #[refine] Instance finite_finitedomain : FiniteDomain (M := λ B, A -> B) f :=
-  { enum_domain := enum _ }.
+  #[global] Instance fn_lookup : Lookup A B (A -> B) := λ a f, Some (f a).
+  #[global] Instance finite_finitedomain : FinDom A B (list A) (λ B, A -> B).
   Proof.
-    intros; split. set_solver.
-    by econstructor.
+    constructor; intros; split; first done.
+    set_solver.
   Qed.
 
   (* #[refine] *)
@@ -224,32 +226,14 @@ Section finite_preimage.
 End finite_preimage.
 
 Section map_preimage.
-  Context {K A : Type} `{FinMap K M} (m : M A).
+  Context `{FinMapDom K M D} {A : Type}.
+  Implicit Type (m : M A).
+  (* Context {K A : Type} `{FinMap K M} (m : M A). *)
   #[local] Set Default Proof Using "Type*".
-  #[refine] Instance gmap_finitedomain : FiniteDomain m :=
-  { enum_domain := fst <$> map_to_list m }.
+  (* Context `(∀ A : Type, Dom (M A) D). *)
+  #[global] Instance gmap_finitedomain : FinDom K A D M.
   (* XXX fix set_solver. *)
-  Proof.
-    rewrite /is_Some => k; split; last set_solver.
-
-    Succeed by move=> [? /elem_of_map_to_list]; apply: elem_of_list_fmap_1.
-    intros [??].
-    Succeed set_unfold; eexists (_, _); naive_solver.
-    Succeed rewrite elem_of_list_fmap; eexists (_, _);
-      rewrite elem_of_map_to_list; eauto.
-    by rewrite elem_of_list_fmap; eexists (k, x);
-      rewrite elem_of_map_to_list.
-  Qed.
-      (* eauto.
-      Set Typeclasses Debug.
-      set_unfold.
-      eexists.
-      intuition eauto.
-      naive_solver.
-      destruct H7.
-      exists (k, x).
-      split; eauto.
-  Qed. *)
+  Proof. constructor; intros; apply /elem_of_dom. Qed.
 End map_preimage.
 
 Section finite_preimage_set.
