@@ -152,28 +152,44 @@ Section finite_preimage.
   End finite_preimage_inj.
 End finite_preimage.
 
-#[global] Instance fn_lookup `{Finite A} {B} : Lookup A B (A -> B) := λ a f, Some (f a).
-
 Class FinDom K A KA KS `{Lookup K A KA} `{Dom KA KS} `{ElemOf K KS} := {
   elem_of_dom_nomap (k : K) (m : KA) :
     k ∈ dom KS m ↔ is_Some (m !! k);
 }.
 
+#[global] Instance fn_lookup_total {A B} : LookupTotal A B (A → B) := λ a f, f a.
+#[global] Instance fn_lookup {A B} : Lookup A B (A → B) := λ a f, Some (f a).
+#[global] Instance set_unfold_lookup {A B} (a : A) (f : A → B) :
+  SetUnfold (is_Some (f !! a)) True.
+Proof. by constructor. Qed.
+Section finite_fun.
+  Context `{Finite A} {B : Type}.
+
+  #[global] Instance dom_fun_gset : Dom (A → B) (list A) :=
+    λ _, enum A.
+
+  #[global] Instance finite_finitedomain : FinDom A B (A → B) (list A).
+  Proof using Type*. constructor; set_solver. Qed.
+End finite_fun.
+
+#[global] Instance gmap_finitedomain `{FinMapDom K M D} {A} :
+  FinDom K A (M A) D.
+Proof using Type*. constructor; intros; apply /elem_of_dom. Qed.
+
 Section fin_domain.
   Context `{FinDom K A KA KS}.
-  #[local] Set Default Proof Using "Type*".
 
   Implicit Types (m : KA) (k : K) (a : A).
-
+(*
   #[global] Instance set_unfold_enum_domain m k P :
     SetUnfoldElemOf k (dom KS m) P →
     SetUnfold (is_Some (m !! k)) P.
-  Proof. constructor. rewrite -elem_of_dom_nomap. set_solver. Qed.
+  Proof using Type*. constructor. rewrite -elem_of_dom_nomap. set_solver. Qed. *)
 End fin_domain.
 
 Section fin_domain.
-  Context `{EqDecision B} `{FinSet A C}.
-  Context `{Lookup A B MB} `{Dom MB C}.
+  Context `{!EqDecision B} `{FinSet A C}.
+  Context `{!Lookup A B MB} `{!Dom MB C}.
   Context `{!FinDom A B MB C}.
   Implicit Types (m : MB) (a : A) (b : B).
 
@@ -194,49 +210,12 @@ Section fin_domain.
 
   Lemma preimage_eq_2 m a b :
     m !! a = Some b → a ∈ preimage m b.
-  Proof.
-    rewrite /preimage elem_of_filter. intros ?; split; auto.
-    exact /elem_of_dom_nomap.
-
-    (* rewrite /preimage.
-    set_unfold.
-    by eapply finite_mapping. *)
-  Qed.
+  Proof. by rewrite /preimage elem_of_filter elem_of_dom_nomap. Qed.
 
   Lemma preimage_eq m a b :
     a ∈ preimage m b ↔ m !! a = Some b.
   Proof. split; [ apply preimage_eq_1 | apply preimage_eq_2 ]. Qed.
-
 End fin_domain.
-
-#[global] Instance dom_fun_gset `{Finite A} {B : Type} : Dom (A -> B) (list A) :=
-  λ _, enum A.
-
-Section finite_preimage.
-  Context `{Finite A} {B : Type} (f : A -> B).
-  #[local] Set Default Proof Using "Type*".
-
-  (* Instance fn_lookup_total : LookupTotal A B (A -> B) := λ a f, f a. *)
-  #[global] Instance finite_finitedomain : FinDom A B (A -> B) (list A).
-  Proof.
-    constructor; intros; split; first done.
-    set_solver.
-  Qed.
-
-  (* #[refine] *)
-  (* #[global] Instance finite_finitedomain : FinMapDom A (λ B, A -> B) (gset A). *)
-End finite_preimage.
-
-Section map_preimage.
-  Context `{FinMapDom K M D} {A : Type}.
-  Implicit Type (m : M A).
-  (* Context {K A : Type} `{FinMap K M} (m : M A). *)
-  #[local] Set Default Proof Using "Type*".
-  (* Context `(∀ A : Type, Dom (M A) D). *)
-  #[global] Instance gmap_finitedomain : FinDom K A (M A) D.
-  (* XXX fix set_solver. *)
-  Proof. constructor; intros; apply /elem_of_dom. Qed.
-End map_preimage.
 
 Section finite_preimage_set.
   Context `{FinSet A C} `{FinSet B D}.
