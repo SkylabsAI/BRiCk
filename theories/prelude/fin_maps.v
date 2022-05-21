@@ -27,6 +27,13 @@ Section fin_maps.
   Implicit Type (m : M A).
   #[local] Set Default Proof Using "Type*".
 
+  #[global] Instance set_unfold_elem_of_map_to_list ka m P :
+    SetUnfold (m !! ka.1 = Some ka.2) (P ka) →
+    SetUnfoldElemOf ka (map_to_list m) (P ka).
+  Proof. constructor. destruct ka. rewrite elem_of_map_to_list. set_solver. Qed.
+
+  (* Lifting [elem_of_list_to_map] seems harder? *)
+
   Lemma map_positive m1 m2 : m1 ∪ m2 = ∅ → m1 = ∅ ∧ m2 = ∅.
   Proof.
     intros Heq. pose proof map_positive_l _ _ Heq as ->.
