@@ -6,7 +6,9 @@
  *)
 
 From stdpp Require Export finite.
-From bedrock.prelude Require Import base bool numbers list_numbers gmap list fin_sets.
+From stdpp Require Import functions.
+From bedrock.prelude Require Import base bool numbers list_numbers fin_maps
+  gmap list fin_sets.
 From bedrock.prelude.axioms Require Import funext.
 
 #[local] Open Scope N_scope.
@@ -149,6 +151,93 @@ Section finite_preimage.
     Proof. constructor. rewrite finite_inverse_inj_Some_equiv. set_solver. Qed.
   End finite_preimage_inj.
 End finite_preimage.
+
+Class FiniteDomain {A B M} `{Lookup A B (M B)} (m : M B) := {
+  enum_domain : list A;
+  finite_mapping (a : A) :
+    is_Some (m !! a) ↔ a ∈ enum_domain;
+}.
+#[global] Arguments enum_domain {A B M _} m {_} : assert.
+
+Section fin_domain.
+  Context `{EqDecision B}.
+  Context `{FiniteDomain A B M m}.
+  (* #[global] Instance set_unfold_enum_domain m a *)
+
+
+  (* Context (m : M B). *)
+  Definition preimage (b : B) : list A :=
+    filter (λ a, m !! a = Some b) (enum_domain m).
+
+  Context `{FinSet A C} `{FinSet B D}.
+
+  Definition preimage_set (bs : D) : C :=
+    set_concat_map preimage bs.
+
+  #[local] Set Default Proof Using "Type*".
+  Lemma preimage_eq_1 a b :
+    b ∈ preimage a → m !! b = Some a.
+  Proof. set_solver. Qed.
+
+  Lemma preimage_eq_2 a b :
+    m !! b = Some a → b ∈ preimage a.
+  Proof.
+    rewrite /preimage elem_of_list_filter. intros ?; split; auto.
+    by eapply finite_mapping.
+
+    (* rewrite /preimage.
+    set_unfold.
+    by eapply finite_mapping. *)
+  Qed.
+
+  Lemma preimage_eq a b :
+    b ∈ preimage a ↔ m !! b = Some a.
+  Proof. split; [ apply preimage_eq_1 | apply preimage_eq_2 ]. Qed.
+
+End fin_domain.
+
+Section finite_preimage.
+  Context `{Finite A} {B : Type} (f : A -> B).
+  #[local] Set Default Proof Using "Type*".
+
+  (* Instance fn_lookup_total : LookupTotal A B (A -> B) := λ a f, f a. *)
+  Instance fn_lookup : Lookup A B (A -> B) := λ a f, Some (f a).
+  #[refine] Instance finite_finitedomain : FiniteDomain (M := λ B, A -> B) f :=
+  { enum_domain := enum _ }.
+  Proof.
+    intros; split. set_solver.
+    by econstructor.
+  Qed.
+End finite_preimage.
+
+Section map_preimage.
+  Context {K A : Type} `{FinMap K M} (m : M A).
+  #[local] Set Default Proof Using "Type*".
+  #[refine] Instance gmap_finitedomain : FiniteDomain m :=
+  { enum_domain := fst <$> map_to_list m }.
+  (* XXX fix set_solver. *)
+  Proof.
+    rewrite /is_Some => k; split; last set_solver.
+
+    Succeed by move=> [? /elem_of_map_to_list]; apply: elem_of_list_fmap_1.
+    intros [??].
+    Succeed set_unfold; eexists (_, _); naive_solver.
+    Succeed rewrite elem_of_list_fmap; eexists (_, _);
+      rewrite elem_of_map_to_list; eauto.
+    by rewrite elem_of_list_fmap; eexists (k, x);
+      rewrite elem_of_map_to_list.
+  Qed.
+      (* eauto.
+      Set Typeclasses Debug.
+      set_unfold.
+      eexists.
+      intuition eauto.
+      naive_solver.
+      destruct H7.
+      exists (k, x).
+      split; eauto.
+  Qed. *)
+End map_preimage.
 
 Section finite_preimage_set.
   Context `{FinSet A C} `{FinSet B D}.
