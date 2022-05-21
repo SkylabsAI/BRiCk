@@ -152,32 +152,39 @@ Section finite_preimage.
   End finite_preimage_inj.
 End finite_preimage.
 
-Class FiniteDomain {A B M} `{Lookup A B (M B)} (m : M B) := {
-  enum_domain : list A;
-  finite_mapping (a : A) :
-    is_Some (m !! a) ↔ a ∈ enum_domain;
+Class FinDom A B C M `{Lookup A B (M B)} `{Dom (M B) C} `{ElemOf A C} := {
+  elem_of_dom_nomap (a : A) (m : M B) :
+    is_Some (m !! a) ↔ a ∈ dom C m;
 }.
-#[global] Arguments enum_domain {A B M _} m {_} : assert.
 
 Section fin_domain.
+  Context `{FinDom A B C M}.
+  #[local] Set Default Proof Using "Type*".
+  Implicit Types (m : M B) (a : A) (b : B).
+
+  #[global] Instance set_unfold_enum_domain m a P :
+    SetUnfoldElemOf a (dom C m) P →
+    SetUnfold (is_Some (m !! a)) P.
+  Proof. constructor. rewrite elem_of_dom_nomap. set_solver. Qed.
+
   Context `{EqDecision B}.
-  Context `{FiniteDomain A B M m}.
-  (* #[global] Instance set_unfold_enum_domain m a *)
+  Context `{Filter A C}.
 
-
-  (* Context (m : M B). *)
-  Definition preimage (b : B) : list A :=
-    filter (λ a, m !! a = Some b) (enum_domain m).
+  Definition preimage m b : C :=
+    filter (λ a, m !! a = Some b) (dom C m).
 
   Context `{FinSet A C} `{FinSet B D}.
+  Implicit Type (bs : D).
 
-  Definition preimage_set (bs : D) : C :=
-    set_concat_map preimage bs.
+  Definition preimage_set m bs : C :=
+    set_concat_map (elements ∘ preimage m) bs.
 
-  #[local] Set Default Proof Using "Type*".
-  Lemma preimage_eq_1 a b :
-    b ∈ preimage a → m !! b = Some a.
-  Proof. set_solver. Qed.
+  Lemma preimage_eq_1 m b a :
+    a ∈ preimage m b → m !! a = Some b.
+  Proof.
+    rewrite /preimage.
+    set_unfold.
+    set_solver. Qed.
 
   Lemma preimage_eq_2 a b :
     m !! b = Some a → b ∈ preimage a.
@@ -196,6 +203,9 @@ Section fin_domain.
 
 End fin_domain.
 
+#[global] Instance dom_fun_gset `{Finite A} {B : Type} : Dom (A -> B) (gset A) :=
+  λ _, list_to_set (enum A).
+
 Section finite_preimage.
   Context `{Finite A} {B : Type} (f : A -> B).
   #[local] Set Default Proof Using "Type*".
@@ -208,6 +218,9 @@ Section finite_preimage.
     intros; split. set_solver.
     by econstructor.
   Qed.
+
+  (* #[refine] *)
+  (* #[global] Instance finite_finitedomain : FinMapDom A (λ B, A -> B) (gset A). *)
 End finite_preimage.
 
 Section map_preimage.
