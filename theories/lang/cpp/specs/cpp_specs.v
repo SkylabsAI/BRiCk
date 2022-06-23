@@ -21,6 +21,11 @@ Bind Scope pre_spec_scope with WpSpec.
 Notation WpSpec_cpp_val := (WpSpec mpredI val val) (only parsing).
 Notation WpSpec_cpp_ptr := (WpSpec mpredI ptr ptr) (only parsing).
 
+#[global] Instance IA `{WA : WithArg (ARG:=val)} : WithIntArg _ _ WA :=
+  { int := Z
+  ; vint := Vint
+  }.
+
 #[deprecated(since="2022-02-13",note="use [WpSpec_cpp_ptr]")]
 Notation WithPrePost PROP := (WpSpec PROP ptr ptr) (only parsing).
 
@@ -46,12 +51,20 @@ Section with_Σ.
     \pre emp
     \post  emp.
 
+  Definition _test : WPP :=
+    \post {x} [Vint x] emp.
+
+  Definition _test2 : WPP :=
+    \arg/int<x> "foo"
+    \post [Vint x] emp.
+
   Succeed Definition _2 : WPP :=
     \with (I J : mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
     \prepost emp
     \require True
     \require{x} x = 1
     \arg{n (nn: nat)} "foo" (Vint n)
+    \arg/int<pp> "bar"
     \with (z : nat) (a : nat)
     \prepost emp
     \prepost{q1 q2} p |-> R q1 q2 0

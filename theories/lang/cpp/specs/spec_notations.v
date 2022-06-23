@@ -102,3 +102,8 @@ Reserved Notation "'\arg' nm v X"
 Reserved Notation "'\arg{' x .. y } nm v X"
   (at level 10, nm at level 0, v at level 0, x binder, y binder, X at level 200, right associativity,
    format "'[v' '\arg{' x  ..  y '}'  nm  v  '//' X ']'").
+
+(* binds a variable and adds an argument at the same time *)
+Reserved Notation "'\arg/int<' x > nm X"
+  (at level 10, nm at level 0, x binder, X at level 200, right associativity,
+   format "'[v' '\arg/int<' x '>' nm '//' X ']'").

@@ -37,6 +37,13 @@ Section with_prop.
     ; add_args : list ARG -> spec_car -> spec_car
     }.
 
+  (* This is only useful for operand style specs *)
+  Class WithIntArg {ARG : Type} `{@WithArg ARG} : Type :=
+    { int : Type
+    ; vint : int -> ARG
+    ; add_argint : int -> spec_car -> spec_car := λ (n : int), add_arg (vint n)
+    }.
+
   Class WithPost {RESULT : Type} : Type :=
     { post_car : Type
     ; start_post : post_car -> spec_car
@@ -54,6 +61,8 @@ Section with_prop.
 
   Definition add_named_arg `{WA : WithArg ARG} (nm : bs) : ARG -> spec_car -> spec_car :=
     add_arg.
+  Definition add_named_argint `{WIA : WithIntArg ARG} (nm : bs) : int -> spec_car -> spec_car :=
+    add_argint.
 
   Definition let_pre_spec {T : Type} (x : T) : T := x.
   Definition exact_spec {T : Type} (x : T) : T := x.
@@ -61,6 +70,7 @@ Section with_prop.
 End with_prop.
 Arguments SpecGen : clear implicits.
 Arguments WithArg : clear implicits.
+Arguments WithIntArg : clear implicits.
 Arguments WithPost : clear implicits.
 
 Arguments post_with {PROP spec RESULT _} [T] _ : rename.
@@ -95,6 +105,9 @@ Notation "'\arg' nm v X" := (add_named_arg nm%bs v X%pre_spec).
 
 Notation "'\arg{' x .. y } nm v X" :=
   (add_with (fun x => .. (add_with (fun y => add_named_arg nm%bs v X%pre_spec)) ..)).
+
+Notation "'\arg/int<' x > nm X" :=
+  (add_with (fun x => add_named_arg nm%bs x X%pre_spec)).
 
 Notation "'\args' v X" := (add_args v X%pre_spec).
 
