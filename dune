@@ -8,7 +8,7 @@
     (run llvm-config --libfiles))))
  (rule
   (targets cpp2v cpp2v-make.log)
-  (deps llvm-lib-path.txt %{read-lines:llvm-lib-path.txt} ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
+  (deps %{read-lines:llvm-lib-path.txt} ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
     (source_tree ../cmake) (source_tree ../include) (source_tree ../doc)
     (source_tree ../llvm-include)
     (env_var PATH) (env_var LLVM_DIR) (env_var CLANG_DIR))
