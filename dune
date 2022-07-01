@@ -1,14 +1,14 @@
 ; Explain Dune how to find and build cpp2v binary
 (subdir build
  (rule
-  (targets clang-version.txt)
-  (deps (universe))
+  (targets llvm-lib-path.txt)
+  ; (deps (universe)) ; needed?
   (action
-   (with-outputs-to clang-version.txt
-    (run clang --version))))
+   (with-outputs-to llvm-lib-path.txt
+    (run llvm-config --libfiles))))
  (rule
   (targets cpp2v cpp2v-make.log)
-  (deps clang-version.txt ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
+  (deps llvm-lib-path.txt %{read-lines:llvm-lib-path.txt} ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
     (source_tree ../cmake) (source_tree ../include) (source_tree ../doc)
     (source_tree ../llvm-include)
     (env_var PATH) (env_var LLVM_DIR) (env_var CLANG_DIR))
