@@ -8,7 +8,6 @@
 default_target: coq cpp2v
 .PHONY: default_target
 
-CMAKE=$$(which cmake)
 COQMAKEFILE=$(COQBIN)coq_makefile
 
 # To avoid "jobserver unavailable" warnings, prepend + to recursive make
@@ -43,11 +42,8 @@ all: coq cpp2v test
 # On Darwin, customize the cmake build system to use homebrew's llvm.
 SYS := $(shell uname)
 
-BUILDARG=
-BUILD_TYPE ?= Release
-
 build/Makefile: Makefile CMakeLists.txt
-	$(CMAKE) -B build $(BUILDARG) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+	cmake -B build -DCMAKE_BUILD_TYPE=Release
 
 tocoq: build/Makefile
 	+$(CPPMK) tocoq
