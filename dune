@@ -1,7 +1,7 @@
 ; Explain Dune how to find and build cpp2v binary
 (subdir build
  (rule
-  (targets cpp2v-cmake-1.log CMakeCache.txt)
+  (targets cpp2v-cmake-1.log CMakeCache.txt cmake_install.cmake)
   (deps (env_var PATH) (env_var LLVM_DIR) (env_var CLANG_DIR))
   ; How to ask dune to let `cmake` `reuse those outputs?
   (action
@@ -9,7 +9,7 @@
     (run cmake -S .. -DCMAKE_BUILD_TYPE=Release))))
  (rule
   (targets cpp2v-cmake-2.log Makefile)
-  (deps (universe) CMakeCache.txt)
+  (deps (universe) CMakeCache.txt cmake_install.cmake)
   (action
    (with-outputs-to cpp2v-cmake-2.log
     (run cmake -S .. -DCMAKE_BUILD_TYPE=Release))))
