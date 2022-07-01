@@ -1,14 +1,16 @@
 ; Explain Dune how to find and build cpp2v binary
 (subdir build
  (rule
-  (targets llvm-lib-path.txt)
-  ; (deps (universe)) ; needed?
+  (targets cpp2v-cmake.log CMakeCache.txt Makefile CMakeFiles Makefile cmake_install.cmake)
+  ; How to ask dune to let `cmake` `reuse those outputs?
+  (deps (universe)) ; needed?
   (action
-   (with-outputs-to llvm-lib-path.txt
-    (run llvm-config --libfiles))))
+   (with-outputs-to cpp2v-cmake.log
+    (run cmake -S .. -DCMAKE_BUILD_TYPE=Release))))
  (rule
   (targets cpp2v cpp2v-make.log)
-  (deps %{read-lines:llvm-lib-path.txt} ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
+  (deps Makefile CMakeFiles cmake_install.cmake
+        ../Makefile ../Makefile.doc ../CMakeLists.txt (source_tree ../src)
     (source_tree ../cmake) (source_tree ../include) (source_tree ../doc)
     (source_tree ../llvm-include)
     (env_var PATH) (env_var LLVM_DIR) (env_var CLANG_DIR))
