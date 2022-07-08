@@ -196,6 +196,14 @@ public:
         done(expr, print, cprint);
     }
 
+    void VisitStmtExpr(const StmtExpr* expr, CoqPrinter& print, ClangPrinter& cprint,
+                   const ASTContext& ctxt, OpaqueNames&) {
+        using namespace logging;
+        print.ctor("EstmtExpr");
+        cprint.printStmt(expr->getSubStmt(), print);
+        done(expr, print, cprint);
+    }
+
 #if CLANG_VERSION_MAJOR >= 11
     void VisitRecoveryExpr(const RecoveryExpr* expr, CoqPrinter& print,
                            ClangPrinter& cprint, const ASTContext&,
