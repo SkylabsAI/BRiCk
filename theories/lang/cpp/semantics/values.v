@@ -5,8 +5,9 @@
  *)
 
 (** The "operational" style definitions about C++ values. *)
-From Coq Require Import Strings.Ascii.
+From Coq Require Strings.Ascii.
 Require Import stdpp.gmap.
+Require Flocq.IEEE754.Binary.
 
 From bedrock.prelude Require Import base addr option numbers.
 
@@ -62,23 +63,31 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   *)
   Variant val : Set :=
   | Vint (_ : Z)
+  | Vfloat {prec emax} (_ : IEEE754.Binary.binary_float prec emax)
   | Vptr (_ : ptr)
   | Vraw (_ : raw_byte)
   | Vundef
   .
   #[global] Notation Vref := Vptr (only parsing).
 
+  (*
+  #[global] Instance float_eq_dec {prec emax} : EqDecision (IEEE754.Binary.binary_float prec emax).
+  Proof. red. unfold Decision. decide equality.
+  *)
+
   (* TODO Maybe this should be removed *)
   #[global] Coercion Vint : Z >-> val.
 
+  (*
   Definition val_dec : forall a b : val, {a = b} + {a <> b}.
   Proof. solve_decision. Defined.
   #[global] Instance val_eq_dec : EqDecision val := val_dec.
+  *)
   #[global] Instance val_inhabited : Inhabited val := populate (Vint 0).
 
   (** wrappers for constructing certain values *)
   Definition Vchar (a : Ascii.ascii) : val :=
-    Vint (Z.of_N (N_of_ascii a)).
+    Vint (Z.of_N (Ascii.N_of_ascii a)).
   Definition Vbool (b : bool) : val :=
     Vint (if b then 1 else 0).
   Definition Vnat (b : nat) : val :=
@@ -90,12 +99,20 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   (** we use [Vundef] as our value of type [void] *)
   Definition Vvoid := Vundef.
 
+  Definition is_fzero {prec emax} (f : Binary.binary_float prec emax) : bool :=
+    match f with
+    | Binary.B754_zero _ _ _ => true
+    | _ => false
+    end.
+
   Definition is_true (v : val) : option bool :=
     match v with
     | Vint v => Some (bool_decide (v <> 0))
     | Vptr p => Some (bool_decide (p <> nullptr))
+    | Vfloat f => Some (is_fzero f)
     | Vundef | Vraw _ => None
     end.
+  Search Binary.binary_float.
 
   (* An error used to say that [is_true] failed on the value [v] *)
   Record is_true_None (v : val) : Prop := {}.
@@ -403,3 +420,8 @@ Declare Module Export PTRS_INTF_AXIOM : PTRS_INTF.
 Module Export VALUES_INTF_AXIOM <: VALUES_INTF_FUNCTOR PTRS_INTF_AXIOM.
   Include VALUES_INTF_FUNCTOR PTRS_INTF_AXIOM.
 End VALUES_INTF_AXIOM.
+
+Require Import Flocq.IEEE754.Bits.
+
+Print b32_of_bits.
+Eval vm_compute in b32_of_bits 10000.

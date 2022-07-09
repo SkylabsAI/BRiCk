@@ -68,6 +68,10 @@ printCastKind(Formatter& out, const CastKind ck) {
         out << "C2void";
     } else if (ck == CastKind::CK_FloatingToIntegral) {
         out << "Cfloat2int";
+    } else if (ck == CastKind::CK_FloatingToBoolean) {
+        out << "Cfloat2bool";
+    } else if (ck == CastKind::CK_FloatingCast) {
+        out << "Cfloat";
     } else {
 #if CLANG_VERSION_MAJOR >= 7
         logging::unsupported() << "unsupported cast kind \""
@@ -187,12 +191,12 @@ public:
     }
 
 #if CLANG_VERSION_MAJOR >= 11
-    void VisitRecoveryExpr(const RecoveryExpr* expr, CoqPrinter& print, ClangPrinter& cprint,
-                   const ASTContext&, OpaqueNames&) {
+    void VisitRecoveryExpr(const RecoveryExpr* expr, CoqPrinter& print,
+                           ClangPrinter& cprint, const ASTContext&,
+                           OpaqueNames&) {
         using namespace logging;
         unsupported() << "Error detected when typechecking C++ code at "
-                      << cprint.sourceRange(expr->getSourceRange())
-                      << "\n"
+                      << cprint.sourceRange(expr->getSourceRange()) << "\n"
                       << "Try fixing earlier errors\n";
         print.ctor("Eunsupported");
         print.str(expr->getStmtClassName());
@@ -599,9 +603,22 @@ public:
     void VisitFloatingLiteral(const FloatingLiteral* lit, CoqPrinter& print,
                               ClangPrinter& cprint, const ASTContext&,
                               OpaqueNames&) {
-        print.ctor("Eunsupported") << fmt::nbsp << "float: \"";
-        lit->getValue().print(print.output().nobreak());
-        print.output() << "\"";
+        //print.ctor("Efloat");
+        auto val = lit->getValue();
+        auto& sem = val.getSemantics();
+        auto bits = val.getSizeInBits(sem);
+        char DST[bits];
+        val.convertToHexString(DST, (bits + 3) / 4, false,
+                               llvm::RoundingMode::NearestTiesToEven);
+        print.ctor("Efloat") << bits << fmt::nbsp << "\"";
+        std::string sout;
+        llvm::raw_string_ostream out{sout};
+        val.print(out);
+        assert(sout.back() == '\n');
+        print.output() << sout.substr(0, sout.length() - 1);
+
+        print.output() << "\"" << fmt::nbsp << "\""
+                       << DST + 4 /* strips the "0x1." */ << "\"";
         done(lit, print, cprint);
     }
 

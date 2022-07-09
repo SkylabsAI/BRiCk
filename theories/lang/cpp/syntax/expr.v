@@ -4,7 +4,10 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.prelude.base.
+From Flocq Require Binary.
 From bedrock.lang.cpp.syntax Require Import names types.
+
+Module Floats := Flocq.IEEE754.Binary.
 
 Set Primitive Projections.
 
@@ -143,6 +146,8 @@ Variant OffsetInfo : Set :=
 #[global] Instance: EqDecision OffsetInfo.
 Proof. solve_decision. Defined.
 
+Print Floats.
+
 Inductive Expr : Set :=
 | Econst_ref (_ : VarRef) (_ : type)
   (* ^ these are different because they do not have addresses *)
@@ -153,6 +158,7 @@ Inductive Expr : Set :=
 | Estring  (_ : bs) (_ : type)
 | Eint     (_ : Z) (_ : type)
 | Ebool    (_ : bool)
+| Efloat   {prec emax} (_ : @Floats.binary_float prec emax) (_ : type)
   (* ^ literals *)
 
 | Eunop    (_ : UnOp) (_ : Expr) (_ : type)
