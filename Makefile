@@ -44,7 +44,7 @@ all: coq cpp2v test
 SYS := $(shell uname)
 
 BUILDARG=
-BUILD_TYPE ?= Release
+BUILD_TYPE ?= Debug
 
 CPP2V_LOGS := cpp2v-cmake.log cpp2v-make.log
 
