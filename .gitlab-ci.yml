@@ -204,7 +204,8 @@ prepare_env:
     project: bedrocksystems/cpp2v
     # If CPP2V_BRANCH is not master, .gitlab-ci.yml in the cpp2v branch has
     # to be modified to allow build_latest on branches.
-    branch: $CPP2V_BRANCH
+    # branch: $CPP2V_BRANCH
+    branch: "downstream_cpp2v"
     # Currently, the whole pipeline succeeds even if the cpp2v build fails
   variables:
     UPSTREAM_CPP2V_CORE_JOB_ID: $ARTIFACT_JOB_ID
@@ -374,4 +375,9 @@ dune-build:
   tags:
     - ${DUNE_TAG}
   rules:
+    - if: '$CI_MERGE_REQUEST_LABELS =~ /.*CI-skip-proofs.*/'
+      when: never
+    - if: $CI_COMMIT_BRANCH # == $CI_DEFAULT_BRANCH
     - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_COMMIT_TAG
+
