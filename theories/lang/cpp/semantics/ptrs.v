@@ -352,6 +352,41 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Canonical Structure ptrO := leibnizO ptr.
   #[global] Instance ptr_inhabited : Inhabited ptr := populate nullptr.
 
+  (** ** [offset] [Equivalence] *)
+  Definition offset_cong : genv -> relation offset :=
+    fun σ o1 o2 => eval_offset σ o1 = eval_offset σ o2.
+  #[global] Instance offset_cong_equivalence {σ : genv} : Equivalence (offset_cong σ).
+  Proof.
+    constructor; red; unfold offset_cong; auto.
+    intros * Hx Hy. by rewrite Hx Hy.
+  Qed.
+
+  (** ** [ptr] [Equivalence] *)
+  Definition ptr_cong : genv -> relation ptr :=
+    fun σ p1 p2 =>
+      exists p o1 o2,
+        p1 = p ,, o1 /\
+        p2 = p ,, o2 /\
+        offset_cong σ o1 o2.
+  #[global] Instance ptr_cong_equivalence {σ : genv} : Equivalence (ptr_cong σ).
+  Proof.
+    constructor; red; unfold ptr_cong.
+    - intros p; exists p, o_id, o_id; intuition;
+        try (by rewrite offset_ptr_id).
+      done.
+    - intros p p' [p'' [o1 [o2 [Hp [Hp' Hos]]]]]; subst.
+      exists p'', o2, o1; intuition done.
+    - intros p p' p''
+             [p''' [o1 [o2 [Hp [Hp' Hos]]]]]
+             [p'''' [o1' [o2' [Hp'' [Hp''' Hos']]]]];
+        subst.
+      do 3 eexists; intuition eauto.
+      rewrite Hp''.
+      (* Leibniz equality on [_dot p o = _dot p o'] doesn't seem to hold
+         when [offset_cong o o'] does
+       *)
+  Abort.
+
   (** ** [same_address] lemmas *)
 
   #[global] Instance same_address_dec : RelDecision same_address.
