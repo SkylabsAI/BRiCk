@@ -382,25 +382,29 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
       | Some z1, Some z2 => Some (z1 + z2)
       | _, _ => None
       end.
-    (* Argh, not true!
-    TODO: strengthen
-    *)
-    #[global] Instance add_opt_inj : ∀ a, Inj eq eq (add_opt a).
-    Proof. Admitted.
+    #[global] Instance add_opt_inj a : Inj eq eq (add_opt (Some a)).
+    Proof.
+      rewrite /add_opt => -[b1|] [b2|] // [?]. f_equal. lia.
+    Qed.
     Axiom eval_offset_dot : ∀ σ (o1 o2 : offset),
       eval_offset σ (o1 ,, o2) =
       add_opt (eval_offset σ o1) (eval_offset σ o2).
     Axiom ptr_vaddr_dot : ∀ σ p o,
       Z.of_N <$> ptr_vaddr (p ,, o) =
       add_opt (Z.of_N <$> ptr_vaddr p) (eval_offset σ o).
-    Corollary ptr_vaddr_dot_derived {σ p o1 o2} :
-      ptr_vaddr (p ,, o1) = ptr_vaddr (p ,, o2) ->
-      eval_offset σ o1 = eval_offset σ o2.
+
+    (* Corollary ptr_vaddr_dot_derived {σ p o1 o2 va} :
+      same_property ptr_vaddr (p ,, o1) (p ,, o2) ->
+      ptr_vaddr p = Some va ->
+      same_property (eval_offset σ) o1 o2.
     Proof.
-      move=> /(f_equal (fmap (M := option) Z.of_N)).
-      rewrite !ptr_vaddr_dot.
+      rewrite !same_property_iff.
+      move=> /(f_equal (fmap (M := option) Z.of_N)) => + Hsome.
+      rewrite !ptr_vaddr_dot {}Hsome /=.
+      case: (eval_offset _ o1) (eval_offset _ o2) => [za|] [zb|].
+      repeat case_match.
       apply: inj.
-    Qed.
+    Qed. *)
   End implicit_type_off.
 
 
