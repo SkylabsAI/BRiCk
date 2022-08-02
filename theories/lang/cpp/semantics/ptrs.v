@@ -354,17 +354,17 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
 
   (** ** [offset] [Equivalence] *)
   Definition offset_cong : genv -> relation offset :=
-    fun σ o1 o2 => eval_offset σ o1 = eval_offset σ o2.
-  #[global] Instance offset_cong_equivalence {σ : genv} : Equivalence (offset_cong σ).
-  Proof.
-    constructor; red; unfold offset_cong; auto.
-    intros * Hx Hy. by rewrite Hx Hy.
-  Qed.
+    fun σ o1 o2 =>
+    same_property (eval_offset σ) o1 o2.
+  #[global] Instance offset_cong_equivalence {σ : genv} :
+    RelationClasses.PER (offset_cong σ).
+  Proof. apply same_property_per. Qed.
 
   (** ** [ptr] [Equivalence] *)
   Definition ptr_cong : genv -> relation ptr :=
     fun σ p1 p2 =>
-      exists p o1 o2,
+      exists p o1 o2 addr,
+        ptr_vaddr p = Some addr /\
         p1 = p ,, o1 /\
         p2 = p ,, o2 /\
         offset_cong σ o1 o2.
