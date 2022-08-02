@@ -373,34 +373,35 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     (* TODO lift *)
     Implicit Type (o : offset).
 
-    Axiom ptr_common_prefix : ∀ {p1 p2 o1 o2},
-      p1 ,, o1 = p2 ,, o2 ->
-      ∃ p oa ob,
-      p1 = p ,, oa /\ p2 = p ,, ob.
     Definition add_opt (oz1 oz2 : option Z) : option Z :=
       match oz1, oz2 with
       | Some z1, Some z2 => Some (z1 + z2)
       | _, _ => None
       end.
-    (* Argh, not true!
-    TODO: strengthen
-    *)
-    #[global] Instance add_opt_inj : ∀ a, Inj eq eq (add_opt a).
-    Proof. Admitted.
+    (* TO add. *)
     Axiom eval_offset_dot : ∀ σ (o1 o2 : offset),
       eval_offset σ (o1 ,, o2) =
       add_opt (eval_offset σ o1) (eval_offset σ o2).
+
+    Axiom ptr_common_prefix : ∀ {σ p1 p2 o1 o2},
+      p1 ,, o1 = p2 ,, o2 ->
+      ptr_cong σ p1 p2.
+    (* Argh, not true!
+    TODO: strengthen
+    *)
+    (* #[global] Instance add_opt_inj : ∀ a, Inj eq eq (add_opt a).
+    Proof. Admitted. *)
     Axiom ptr_vaddr_dot : ∀ σ p o,
       Z.of_N <$> ptr_vaddr (p ,, o) =
       add_opt (Z.of_N <$> ptr_vaddr p) (eval_offset σ o).
-    Corollary ptr_vaddr_dot_derived {σ p o1 o2} :
+    (* Corollary ptr_vaddr_dot_derived {σ p o1 o2} :
       ptr_vaddr (p ,, o1) = ptr_vaddr (p ,, o2) ->
       eval_offset σ o1 = eval_offset σ o2.
     Proof.
       move=> /(f_equal (fmap (M := option) Z.of_N)).
       rewrite !ptr_vaddr_dot.
       apply: inj.
-    Qed.
+    Qed. *)
   End implicit_type_off.
 
 
@@ -416,14 +417,18 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
              [p''' [o1 [o2 [Hp [Hp' Hos]]]]]
              [p'''' [o1' [o2' [Hp'' [Hp''' Hos']]]]].
       subst.
-      destruct (ptr_common_prefix Hp'') as (p0 & oa & ob & ? & ?); subst.
+      destruct (ptr_common_prefix Hp'') as (p0 & oa & ob & ? & ? & Hos''); subst.
       exists p0.
       exists (oa ,, o1).
       exists (ob ,, o2').
       rewrite !offset_ptr_dot.
       intuition.
-      move: Hos Hos'.
-      rewrite /offset_cong !eval_offset_dot => -> <-.
+      rewrite /offset_cong !eval_offset_dot in Hos Hos' Hos'' |- *.
+      rewrite {}Hos''; f_equiv.
+      rewrite Hos -Hos'.
+      move: Hos Hos' Hos''.
+      rewrite /offset_cong !eval_offset_dot => Hos Hos' Hos''.
+      -> <- <-.
       move: (Hp'').
       rewrite -!offset_ptr_dot.
       move=> /(f_equal ptr_vaddr) /ptr_vaddr_dot_derived.
