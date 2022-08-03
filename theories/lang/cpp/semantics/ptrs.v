@@ -389,7 +389,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     Axiom eval_offset_dot : ∀ σ (o1 o2 : offset),
       eval_offset σ (o1 ,, o2) =
       add_opt (eval_offset σ o1) (eval_offset σ o2).
-    Axiom ptr_vaddr_dot : ∀ σ p o,
+    Axiom ptr_vaddr_dot : ∀ {σ} p o,
       Z.of_N <$> ptr_vaddr (p ,, o) =
       add_opt (Z.of_N <$> ptr_vaddr p) (eval_offset σ o).
 
