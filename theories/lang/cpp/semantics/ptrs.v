@@ -356,7 +356,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Definition offset_cong : genv -> relation offset :=
     fun σ o1 o2 =>
     same_property (eval_offset σ) o1 o2.
-  #[global] Instance offset_cong_equivalence {σ : genv} :
+  #[global] Instance offset_cong_per {σ : genv} :
     RelationClasses.PER (offset_cong σ).
   Proof. apply same_property_per. Qed.
 
@@ -393,45 +393,60 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
       Z.of_N <$> ptr_vaddr (p ,, o) =
       add_opt (Z.of_N <$> ptr_vaddr p) (eval_offset σ o).
 
-    (* Corollary ptr_vaddr_dot_derived {σ p o1 o2 va} :
+    (* not used. *)
+    Corollary ptr_vaddr_dot_derived {σ p o1 o2 va} :
       same_property ptr_vaddr (p ,, o1) (p ,, o2) ->
       ptr_vaddr p = Some va ->
       same_property (eval_offset σ) o1 o2.
     Proof.
-      rewrite !same_property_iff.
-      move=> /(f_equal (fmap (M := option) Z.of_N)) => + Hsome.
+      rewrite !same_property_iff =>
+        -[va' []]
+         /(f_equal (fmap (M := option) Z.of_N)) +
+         /(f_equal (fmap (M := option) Z.of_N)) +
+         /= Hsome.
       rewrite !ptr_vaddr_dot {}Hsome /=.
-      case: (eval_offset _ o1) (eval_offset _ o2) => [za|] [zb|].
-      repeat case_match.
-      apply: inj.
-    Qed. *)
+      case: (eval_offset _ o1) (eval_offset _ o2) => [za|] [zb|] //.
+      naive_solver eauto with f_equal lia.
+    Qed.
+
   End implicit_type_off.
 
 
-  #[global] Instance ptr_cong_equivalence {σ : genv} : Equivalence (ptr_cong σ).
+  #[global] Instance ptr_cong_per {σ : genv} : RelationClasses.PER (ptr_cong σ).
   Proof.
     constructor; red; unfold ptr_cong.
-    - intros p; exists p, o_id, o_id; intuition;
-        try (by rewrite offset_ptr_id).
-      done.
     - intros p p' [p'' [o1 [o2 [Hp [Hp' Hos]]]]]; subst.
-      exists p'', o2, o1; intuition done.
+      destruct_and!.
+      exists p'', o2, o1. naive_solver.
     - intros p p' p''
-             [p''' [o1 [o2 [Hp [Hp' Hos]]]]]
-             [p'''' [o1' [o2' [Hp'' [Hp''' Hos']]]]].
+             [p''' [o1 [o2 [va [Hs [Hp [Hp' Hos]]]]]]]
+             [p'''' [o1' [o2' [va' [Hs' [Hp'' [Hp''' Hos']]]]]]].
       subst.
       destruct (ptr_common_prefix Hp'') as (p0 & oa & ob & ? & ?); subst.
       exists p0.
       exists (oa ,, o1).
       exists (ob ,, o2').
+      have : ∃ va0 oaN, ptr_vaddr p0 = Some va0 /\ eval_offset _ oa = Some oaN. {
+        move: Hs.
+        move=> /(f_equal (fmap (M := option) Z.of_N)).
+        rewrite ptr_vaddr_dot /=.
+        destruct (ptr_vaddr p0), (eval_offset _ oa); naive_solver.
+      }
+      intros (va0 & oaN & Hp0 & Hoa).
+      exists va0.
       rewrite !offset_ptr_dot.
       intuition.
-      move: Hos Hos'.
-      rewrite /offset_cong !eval_offset_dot => -> <-.
+      rewrite /offset_cong !same_property_iff !eval_offset_dot in Hos Hos' |- *.
+      move: Hos Hos' => [va1 [Ho1 Ho2]] [va2 [Ho1' Ho2']].
+      exists (oaN + va1).
+      rewrite Ho1 Hoa Ho2' /=. intuition.
       move: (Hp'').
-      rewrite -!offset_ptr_dot.
-      move=> /(f_equal ptr_vaddr) /ptr_vaddr_dot_derived.
-      by rewrite !eval_offset_dot.
+      (* Inline variant of [ptr_vaddr_dot_derived] *)
+      (* rewrite -!offset_ptr_dot. *)
+      move=> /(f_equal ptr_vaddr) /(f_equal (fmap (M := option) Z.of_N)).
+      rewrite !ptr_vaddr_dot Hp0 Hoa Ho1' Ho2 /=.
+      destruct (eval_offset _ ob) => //=.
+      move=>[?]. f_equal. lia.
     Qed.
 
   (** ** [same_address] lemmas *)
