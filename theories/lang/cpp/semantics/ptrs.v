@@ -286,15 +286,15 @@ Module Type PTRS.
       https://eel.is/c++draft/basic.compound#3).
       See discussion above.
    *)
-  Parameter ptr_vaddr : ptr -> option vaddr.
+  Parameter ptr_vaddr : ptr -> vaddr + (N * Z).
 
   (** [ptr_vaddr_nullptr] is not mandated by the standard, but valid across
       compilers we are interested in.
       The closest hint is in https://eel.is/c++draft/conv.ptr
    *)
-  Axiom ptr_vaddr_nullptr : ptr_vaddr nullptr = Some 0%N.
+  Axiom ptr_vaddr_nullptr : ptr_vaddr nullptr = inl 0%N.
 
-  Axiom global_ptr_nonnull_addr : forall tu o, ptr_vaddr (global_ptr tu o) <> Some 0%N.
+  Axiom global_ptr_nonnull_addr : forall tu o, ptr_vaddr (global_ptr tu o) <> inl 0%N.
   Axiom global_ptr_nonnull_aid : forall tu o, ptr_alloc_id (global_ptr tu o) <> Some null_alloc_id.
 
   Axiom global_ptr_inj : forall tu, Inj (=) (=) (global_ptr tu).
@@ -306,7 +306,7 @@ Module Type PTRS.
   Wrapped by [same_address_o_sub_eq]. *)
   Axiom ptr_vaddr_o_sub_eq : forall p σ ty n1 n2 sz,
     size_of σ ty = Some sz -> (sz > 0)%N ->
-    same_property ptr_vaddr (p ,, o_sub _ ty n1) (p ,, o_sub _ ty n2) ->
+    on (=) ptr_vaddr (p ,, o_sub _ ty n1) (p ,, o_sub _ ty n2) ->
     n1 = n2.
   Axiom o_dot_sub : ∀ {σ : genv} i j ty,
     (o_sub _ ty i) ,, (o_sub _ ty j) = o_sub _ ty (i + j).
@@ -337,7 +337,7 @@ Module Type PTRS_DERIVED (Import P : PTRS).
   Axiom same_alloc_eq : same_alloc = same_property ptr_alloc_id.
 
   Parameter same_address : ptr -> ptr -> Prop.
-  Axiom same_address_eq : same_address = same_property ptr_vaddr.
+  Axiom same_address_eq : same_address = on (=) ptr_vaddr.
 
 End PTRS_DERIVED.
 
@@ -356,12 +356,18 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
 
   #[global] Instance same_address_dec : RelDecision same_address.
   Proof. rewrite same_address_eq. apply _. Qed.
-  #[global] Instance same_address_per : RelationClasses.PER same_address.
-  Proof. rewrite same_address_eq. apply _. Qed.
+  #[global] Instance same_address_per : Equivalence same_address.
+  Proof. rewrite same_address_eq.
+         constructor.
+         apply on_props.on_reflexive.
+         apply on_props.on_symmetric.
+         apply on_props.on_transitive.
+  Qed.
   #[global] Instance same_address_comm : Comm iff same_address.
   Proof. apply: symmetry_iff. Qed.
   #[global] Instance same_address_RewriteRelation : RewriteRelation same_address := {}.
 
+  (*
   Lemma same_address_iff p1 p2 :
     same_address p1 p2 <-> ∃ va, ptr_vaddr p1 = Some va ∧ ptr_vaddr p2 = Some va.
   Proof. by rewrite same_address_eq same_property_iff. Qed.
@@ -373,13 +379,14 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Lemma same_address_intro p1 p2 va :
     ptr_vaddr p1 = Some va -> ptr_vaddr p2 = Some va -> same_address p1 p2.
   Proof. rewrite same_address_eq; exact: same_property_intro. Qed.
+  *)
 
   Lemma same_address_nullptr_nullptr : same_address nullptr nullptr.
-  Proof. have ? := ptr_vaddr_nullptr. exact: same_address_intro. Qed.
+  Proof. reflexivity. Qed.
 
   #[global] Instance ptr_vaddr_proper :
     Proper (same_address ==> eq) ptr_vaddr.
-  Proof. by intros p1 p2 (va&->&->)%same_address_iff. Qed.
+  Proof. intros p1 p2. rewrite same_address_eq. intro X; apply X. Qed.
 
   #[global] Instance ptr_vaddr_params : Params ptr_vaddr 1 := {}.
 
@@ -390,6 +397,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   #[global] Instance same_address_bool_comm : Comm eq same_address_bool.
   Proof. move=> p1 p2. apply bool_decide_ext, comm, _. Qed.
 
+  (*
   Lemma same_address_bool_eq {p1 p2 va1 va2} :
     ptr_vaddr p1 = Some va1 → ptr_vaddr p2 = Some va2 →
     same_address_bool p1 p2 = bool_decide (va1 = va2).
@@ -405,6 +413,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     move=> Hsm. rewrite /same_address_bool bool_decide_true; first done.
     by rewrite same_address_eq -same_property_reflexive_equiv.
   Qed.
+  *)
 
   (** ** [same_alloc] lemmas *)
 
@@ -474,7 +483,8 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   the given alignment.
     *)
   Definition aligned_ptr align p :=
-    (exists va, ptr_vaddr p = Some va /\ (align | va)%N) \/ ptr_vaddr p = None.
+    (exists va, ptr_vaddr p = inl va /\ (align | va)%N) \/
+    (exists b o, ptr_vaddr p = inr (b, o) /\ (align | o )%Z).
   Definition aligned_ptr_ty {σ} ty p :=
     exists align, align_of ty = Some align /\ aligned_ptr align p.
 
@@ -482,8 +492,11 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
     Proper (flip N.divide ==> eq ==> impl) aligned_ptr.
   Proof.
     move=> m n + _ p ->.
-    rewrite /aligned_ptr => ? [[va [P D]]|]; [left|by right].
-    eexists _; split=> //. by etrans.
+    rewrite /aligned_ptr => ? [[va [P D]]|]; [left| right].
+    - eexists _; split=> //. by etrans.
+    - destruct b as [?[? [? ?]]].
+      do 2 eexists; split; eauto. etrans; [ | eassumption ].
+      by apply N2Z_inj_divide.
   Qed.
   #[global] Instance aligned_ptr_divide_flip_mono :
     Proper (N.divide ==> eq ==> flip impl) aligned_ptr.
@@ -506,8 +519,10 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Lemma aligned_ptr_min p : aligned_ptr 1 p.
   Proof.
     rewrite /aligned_ptr.
-    case: ptr_vaddr; [|by eauto] => va.
-    eauto using N.divide_1_l.
+    case: ptr_vaddr.
+    - move => va. eauto using N.divide_1_l.
+    - intros. right. destruct b.
+      do 2 eexists; split; eauto using Z.divide_1_l.
   Qed.
 
   Lemma aligned_ptr_ty_mult_weaken {σ} m n ty p :
@@ -519,16 +534,16 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Qed.
 
   Lemma pinned_ptr_pure_aligned_divide va n p :
-    ptr_vaddr p = Some va ->
+    ptr_vaddr p = inl va ->
     aligned_ptr n p <-> (n | va)%N.
-  Proof. rewrite /aligned_ptr. naive_solver. Qed.
+  Proof. rewrite /aligned_ptr. move => ->; naive_solver. Qed.
 
   Lemma pinned_ptr_pure_divide_1 σ va n p ty
     (Hal : align_of ty = Some n) :
-    aligned_ptr_ty ty p → ptr_vaddr p = Some va → (n | va)%N.
+    aligned_ptr_ty ty p → ptr_vaddr p = inl va → (n | va)%N.
   Proof.
     rewrite /aligned_ptr_ty Hal /aligned_ptr /=.
-    naive_solver.
+    move => X Y; revert X; rewrite Y. naive_solver.
   Qed.
 
   Lemma o_sub_sub (p : ptr) ty i j σ :

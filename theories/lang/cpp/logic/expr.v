@@ -171,7 +171,7 @@ Module Type Expr.
         | Lvalue =>
           wp_lval a (fun base free =>
                        let addr := base ,, _field m in
-                       valid_ptr addr ** Q addr free)
+                       type_ptr (erase_qualifiers ty) addr ** Q addr free)
         | Xvalue => False
           (* NOTE If the object is a temporary, then the field access will also be a
              temporary. Being conservative is sensible in our semantic style.
@@ -190,7 +190,7 @@ Module Type Expr.
         | Xvalue =>
           wp_xval a (fun base free =>
                        let addr := base ,, _field m in
-                       valid_ptr addr ** Q addr free)
+                       type_ptr (erase_qualifiers ty) addr ** Q addr free)
         | _ => False
         end%I
       |-- wp_xval (Emember vc a m ty) Q.
@@ -218,7 +218,7 @@ Module Type Expr.
          Qbase base free -* Qidx idx free' -*
          (Exists i, [| idx = Vint i |] **
           let addr := _eqv base .[ erase_qualifiers t ! i ] in
-          valid_ptr addr ** Q addr (free' |*| free)))
+          type_ptr (erase_qualifiers t) addr ** Q addr (free' |*| free)))
       |-- wp_lval (Esubscript e i t) Q.
 
     (* [Esubscript e i t]
@@ -238,10 +238,18 @@ Module Type Expr.
             Q (Vptr (basep .,, o_sub resolve (erase_qualifiers t) i)) (free' ** free)))) *)
           (Exists i, [| idx = Vint i |] **
            let addr := _eqv base .[ erase_qualifiers t ! i ] in
-           valid_ptr addr ** Q addr (free' |*| free)))
+           type_ptr (erase_qualifiers t) addr ** Q addr (free' |*| free)))
       |-- wp_xval (Esubscript e i t) Q.
 
-    (* the `*` operator is an lvalue *)
+    (** the `*` operator.
+       https://eel.is/c++draft/expr.unary.op#1
+
+       > The unary * operator performs indirection: the expression to which it
+       > is applied shall be a pointer to an object type, or a pointer to a
+       > function type and the result is an lvalue referring to the object or
+       > function to which the expression points. If the type of the expression
+       > is “pointer to T”, the type of the result is “T”.
+     *)
     Axiom wp_lval_deref : forall ty e Q,
         wp_operand e (fun v free =>
                       match v with

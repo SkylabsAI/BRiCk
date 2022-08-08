@@ -309,16 +309,16 @@ Module Type CPP_LOGIC
 
     Axiom offset_pinned_ptr_pure : forall σ o z va p,
       eval_offset σ o = Some z ->
-      ptr_vaddr p = Some va ->
+      ptr_vaddr p = inl va ->
       valid_ptr (p ,, o) |--
-      [| ptr_vaddr (p ,, o) = Some (Z.to_N (Z.of_N va + z)) |].
+      [| ptr_vaddr (p ,, o) = inl (Z.to_N (Z.of_N va + z)) |].
 
     Axiom offset_inv_pinned_ptr_pure : forall σ o z va p,
       eval_offset σ o = Some z ->
-      ptr_vaddr (p ,, o) = Some va ->
+      ptr_vaddr (p ,, o) = inl va ->
       valid_ptr (p ,, o) |--
       [| 0 <= Z.of_N va - z |]%Z **
-      [| ptr_vaddr p = Some (Z.to_N (Z.of_N va - z)) |].
+      [| ptr_vaddr p = inl (Z.to_N (Z.of_N va - z)) |].
 
     Axiom provides_storage_same_address : forall storage_ptr obj_ptr ty,
       Observe [| same_address storage_ptr obj_ptr |] (provides_storage storage_ptr obj_ptr ty).
@@ -636,7 +636,7 @@ Section pinned_ptr_def.
     [pinned_ptr] will only hold on pointers that are associated to addresses,
     but other pointers exist. *)
   Definition pinned_ptr_def (va : vaddr) (p : ptr) : mpred :=
-    [| ptr_vaddr p = Some va |] ** exposed_ptr p.
+    [| ptr_vaddr p = inl va |] ** exposed_ptr p.
   Definition pinned_ptr_aux : seal pinned_ptr_def. Proof. by eexists. Qed.
   Definition pinned_ptr := pinned_ptr_aux.(unseal).
   Definition pinned_ptr_eq : pinned_ptr = _ := pinned_ptr_aux.(seal_eq).
@@ -649,24 +649,25 @@ Section pinned_ptr_def.
   Proof. rewrite pinned_ptr_eq. apply _. Qed.
 
   Lemma pinned_ptr_intro p va :
-    ptr_vaddr p = Some va -> exposed_ptr p |-- pinned_ptr va p.
+    ptr_vaddr p = inl va -> exposed_ptr p |-- pinned_ptr va p.
   Proof. rewrite pinned_ptr_eq /pinned_ptr_def. by iIntros (?) "$". Qed.
 
   #[global] Instance pinned_ptr_ptr_vaddr va p :
-    Observe [| ptr_vaddr p = Some va |] (pinned_ptr va p).
+    Observe [| ptr_vaddr p = inl va |] (pinned_ptr va p).
   Proof. rewrite pinned_ptr_eq. apply _. Qed.
 
   Lemma pinned_ptr_change_va_eq (p : ptr) (va va' : vaddr)
-    (Heq : ptr_vaddr p = Some va) :
+    (Heq : ptr_vaddr p = inl va) :
     pinned_ptr va' p |--  [| va' = va |] ** pinned_ptr va p.
   Proof.
     iIntros "#P".
-    iDestruct (observe_elim_pure (ptr_vaddr p = Some va') with "P") as %?.
+    iDestruct (observe_elim_pure (ptr_vaddr p = inl va') with "P") as %?.
+    rewrite Heq in H. inversion H; subst.
     simplify_eq. auto.
   Qed.
 
   Lemma pinned_ptr_change_va p va va'
-    (Heq : ptr_vaddr p = Some va) :
+    (Heq : ptr_vaddr p = inl va) :
     pinned_ptr va' p |-- pinned_ptr va p.
   Proof. rewrite pinned_ptr_change_va_eq //. by iIntros "[_ $]". Qed.
 
@@ -676,6 +677,7 @@ Section pinned_ptr_def.
     iIntros "#P1 #P2 !>".
     iDestruct (observe_elim_pure (_ = _) with "P1") as %?.
     iDestruct (observe_elim_pure (_ = _) with "P2") as %?; simplify_eq.
+    rewrite H in H0; inversion H0; subst.
     by [].
   Qed.
 
@@ -686,8 +688,8 @@ Section pinned_ptr_def.
   (** Just a corollary of [provides_storage_same_address] in the style of
   [provides_storage_pinned_ptr]. *)
   Lemma provides_storage_pinned_ptr_pure {storage_ptr obj_ptr aty va} :
-    ptr_vaddr storage_ptr = Some va ->
-    provides_storage storage_ptr obj_ptr aty |-- [| ptr_vaddr obj_ptr = Some va |].
+    ptr_vaddr storage_ptr = inl va ->
+    provides_storage storage_ptr obj_ptr aty |-- [| ptr_vaddr obj_ptr = inl va |].
   Proof. rewrite provides_storage_same_address. by iIntros (HP <-). Qed.
 End pinned_ptr_def.
 
@@ -704,11 +706,11 @@ Section with_cpp.
 
   Lemma valid_ptr_nonnull_nonzero p :
     p <> nullptr ->
-    valid_ptr p |-- [| ptr_vaddr p <> Some 0%N |].
+    valid_ptr p |-- [| ptr_vaddr p <> inl 0%N |].
   Proof.
     rewrite same_address_eq_null; iIntros (Hne Hiff) "!%".
     have {Hne Hiff}: ~same_address p nullptr by intuition.
-    rewrite same_address_iff ptr_vaddr_nullptr. naive_solver.
+    rewrite same_address_eq/option.on ptr_vaddr_nullptr. done.
   Qed.
 
   Lemma type_ptr_nonnull ty p :
@@ -750,9 +752,9 @@ Section with_cpp.
   Lemma offset_2_pinned_ptr_pure o1 o2 z1 z2 va p :
     eval_offset σ o1 = Some z1 ->
     eval_offset σ o2 = Some z2 ->
-    ptr_vaddr (p ,, o1) = Some va ->
+    ptr_vaddr (p ,, o1) = inl va ->
     valid_ptr p |-- valid_ptr (p ,, o1) -* valid_ptr (p ,, o2) -*
-    [| ptr_vaddr (p ,, o2) = Some (Z.to_N (Z.of_N va - z1 + z2)) |].
+    [| ptr_vaddr (p ,, o2) = inl (Z.to_N (Z.of_N va - z1 + z2)) |].
   Proof.
     iIntros (He1 He2 Hpin1) "V V1 V2".
     iDestruct (offset_inv_pinned_ptr_pure with "V1") as %[??]; [done..|].
@@ -813,7 +815,7 @@ Section with_cpp.
 
   Lemma pinned_ptr_pure_type_divide_1 va n p ty
     (Hal : align_of ty = Some n) :
-    type_ptr ty p ⊢ [| ptr_vaddr p = Some va |] -∗ [| (n | va)%N |].
+    type_ptr ty p ⊢ [| ptr_vaddr p = inl va |] -∗ [| (n | va)%N |].
   Proof.
     rewrite type_ptr_aligned_pure. iIntros "!%".
     exact: pinned_ptr_pure_divide_1.
