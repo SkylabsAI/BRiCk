@@ -479,6 +479,7 @@ Section FromToBytes.
         assert (8 * N.of_nat cnt = 0 \/ 0 < 8 * N.of_nat cnt)%N as [Hcnt | Hcnt] by lia.
         + rewrite /to_signed_bits bool_decide_eq_true_2; by lia.
         + rewrite to_signed_bits_id; intuition; [by reflexivity | ].
+          rewrite pow2_pow.
           apply Z.pow_pos_nonneg; lia.
       - apply _Z_from_bytes_unsigned_le_0s.
     Qed.
@@ -835,20 +836,25 @@ Section FromToBytes.
       assert (v < 0 \/ 0 <= v)%Z as [Hv | Hv] by lia.
       - rewrite _Z_from_to_bytes_unsigned_le_roundtrip.
         + apply to_signed_unsigned_bits_roundtrip; intuition;
-            replace (Z.of_N (8 * N.of_nat cnt) - 1)%Z
+          rewrite pow2_pow;
+          replace (Z.of_N (8 * N.of_nat cnt) - 1)%Z
               with (8 * cnt - 1)%Z; lia.
         + rewrite /trim; apply Z_mod_pos;
+            rewrite N2Zpow2_pow;
             apply Z.pow_pos_nonneg; lia.
         + rewrite /trim.
           replace (Z.of_N (8 * N.of_nat cnt))
             with (8 * cnt)%Z by lia.
-          by pose proof (Z_mod_lt v (2^(8*cnt))%Z
+          rewrite N2Zpow2_pow.
+           by pose proof (Z_mod_lt v (2^(8*cnt))%Z
                                    ltac:(apply Z.lt_gt; apply Z.pow_pos_nonneg; lia))
-            as [? ?].
-      - rewrite /trim Zmod_small; intuition; try lia.
+             as [? ?];
+           lia.
+      - rewrite /trim N2Zpow2_pow Zmod_small; intuition; try lia.
         + rewrite _Z_from_to_bytes_unsigned_le_roundtrip; try lia.
           * apply to_signed_bits_id; intuition.
             eapply Z.le_lt_trans; eauto.
+            rewrite pow2_pow.
             replace (Z.of_N (8 * N.of_nat cnt) - 1)%Z
               with (8 * cnt - 1)%Z; lia.
           * eapply Z.le_lt_trans; eauto.
@@ -874,8 +880,10 @@ Section FromToBytes.
       rewrite /trim /_Z_from_bytes_le /_Z_to_bytes_le.
       rewrite _Z_from_to_bytes_unsigned_le_roundtrip /trim //.
       - apply Z_mod_lt; rewrite Z.gt_lt_iff;
+          rewrite N2Zpow2_pow;
           apply Z.pow_pos_nonneg; lia.
-      - replace (Z.of_N (8 * N.of_nat cnt)) with (8 * cnt)%Z by lia;
+      - rewrite N2Zpow2_pow.    
+        replace (Z.of_N (8 * N.of_nat cnt)) with (8 * cnt)%Z by lia;
           apply Z_mod_lt; rewrite Z.gt_lt_iff;
           apply Z.pow_pos_nonneg; lia.
     Qed.
@@ -935,8 +943,10 @@ Section FromToBytes.
       f_equal.
       rewrite -nat_N_Z.
       case (N.of_nat (length bytes)).
+      rewrite N2Zpow2_pow.
       { lia. }
       move => ?.
+      rewrite N2Zpow2_pow.
       lia.
     Qed.
 
