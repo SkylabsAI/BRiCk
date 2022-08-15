@@ -1,5 +1,5 @@
 (include_subdirs qualified)
 (coq.theory
  (name bedrock.prelude)
- (package coq-bedrock-auto)
+ (package coq-cpp2v)
 )
