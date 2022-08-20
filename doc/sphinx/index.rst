@@ -35,6 +35,7 @@ Our full feature set (as well as known issues) can be found on the :ref:`feature
    evaluation
    undefined_behavior
    pointers
+   pointer_examples
    object_layout
    machine
    documentation
