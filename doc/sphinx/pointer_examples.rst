@@ -84,3 +84,26 @@ Example 5
 **Answer**: We believe the answer is "no", that getting to the underlying bytes *requires* a :cpp:`reinterpret_cast`.
 
 **Consequence**: What information within the pointer records whether it was derived via a :cpp:`reinterpret_cast` that could access the raw representation? Parts of the stand suggest that certain operations (e.g. cast to :cpp:`void*`) do not change the value of the pointer (`[conv.ptr#2]<https://eel.is/c++draft/conv.ptr#2>`_).
+
+
+Example 6
+==========
+
+.. code-block:: cpp
+
+   struct C { byte x; };
+   struct D { C c[2]; } d;
+
+   byte* r1 = reinterpret_cast<byte*>(&(d.c[0].x)); // `reinterpret_cast` gets to the raw representation
+   byte* r2 = r1 + sizeof(C); // defined because we are working with the raw representation
+   assert(r2 == reinterpret_cast<byte*>(d.c + 1)); // by class and array layout
+   *r2 = 0; // defined, same as `d.c[1].x = 0`
+            // the raw representation is bound only by the complete object, not by the sub-object
+
+   byte* p1 = static_cast<byte*>(&(d.c[0].x)); // `static_cast` is a no-op here
+   byte* p2 = p1 + sizeof(C); // undefined
+
+Discussion
+-----------
+
+It seems necessary to track whether a pointer is working with the raw representation or with the "structured" representation. This could be represented as :coq:`alloc_id * (path + Z)`. Another option would be :coq:`alloc_id * path * option Z` but this seems to contain unnecessary information if the comment on line 8 is correct.
