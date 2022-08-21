@@ -57,3 +57,59 @@ Question: Are allocation ids the "names of complete objects"?
 Question: Do subobjects have names? They can be named by the complete object name and the path to the object (since this path is unique). Is this the same as a pointer?
 
 Question: Pointer operations can not escape allocations, but they can "go up" through certain operations such as base-to-derived casts.
+
+
+Proposal
+==========
+
+.. code-block:: coq
+
+  Parameter alloc_id : Set. (* := N *)
+  Variant path : Set :=
+  | o_base (_ _ : globname)
+  | o_field (_ : globname) (_ : ident)
+  | o_sub (_ : type) (_ : N). (* still some oddity around [o_sub _ 0] *)
+  Parameter object_name := alloc_id * list path.
+
+  Parameter alloc_type : alloc_id -> type.
+
+  Parameter ptr : Set :=
+  | p_structured (alloc : alloc_id) (off : list path)
+    (* ^ valid when the [off] is compatible with [alloc_type(alloc)]
+      the type is the "natural" one
+    *)
+  | p_raw        (alloc : alloc_id) (off : Z)
+    (* ^ valid when [0 <= off <= sizeof(alloc_type(alloc))]
+      the type is [byte*]
+    *)
+  .
+
+  (* both validity and strict validity are defined with types, i.e.
+    - [valid_ptr ty p]
+    - [strict_valid_ptr ty p] ~ equivalent to [type_ptr ty p]
+
+    [{,strict_}valid_ptr ty p |-- {,strict_}valid_ptr (Tptr Tvoid) p]
+  *)
+
+  (* a [reinterpret_cast<byte*>(p)] *allows* you to convert a structured
+    pointer to a raw pointer.
+    a [reinterpret_cast<T*>((byte*)r)] applies to both structured and raw
+    pointers.
+    - if [r = p_raw alloc off], then you can construct any *valid* pointer
+      [p_structured alloc off'] such that [off = eval_offset off'] and
+      [off'] is compatible with [alloc_type(alloc)].
+    - if [r = p_structured alloc off], then you can construct any *valid* pointer
+      [p_structured alloc off'] based on "pointer interconvertible" and
+      [eval_offset off = eval_offset off'] and [off'] is compatible with
+      [alloc_type(alloc)].
+  *)
+
+  (* storage *)
+  Definition storage : Set := map alloc_id (list byte). (* there might be a better representation for this *)
+
+  (* one issue with this definition is with reference fields. this puts us in a situation that is
+     not standard layout, so it is not clear where to store the object bits.
+
+     A potential option is to store an additional map for reference fields. This would make the type
+     [map alloc_id (list byte * map (list path) object_name]
+   *)
