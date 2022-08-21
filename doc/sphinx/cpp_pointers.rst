@@ -59,8 +59,8 @@ Question: Do subobjects have names? They can be named by the complete object nam
 Question: Pointer operations can not escape allocations, but they can "go up" through certain operations such as base-to-derived casts.
 
 
-Proposal
-==========
+Strawman Model
+===============
 
 .. code-block:: coq
 
