@@ -101,8 +101,8 @@ Module Type PTRS.
   Pointers also have an _allocation ID_; the concept does not exist in
   the standard but is used to model provenance in many models of C
   pointers (CompCert, Krebbers, Cerberus, LLVM's twin semantics), sometimes
-  under the name of "object ID". Allocation ID of deallocated regions are never
-  reused for new regions.
+  under the name of "object ID". The allocation ID of a deallocated region
+  is never reused for new regions.
   - C++ objects form a forest of _complete objects_, and subobjects contained
     within (https://eel.is/c++draft/intro.object#2).
     All subobjects of the same complete object share the same allocation
@@ -253,7 +253,7 @@ Module Type PTRS.
      `displacement (o_sub σ ty i) = if (i = 0) then 0 else i * size_of σ ty`
    *)
 
-  (** going up and down the class hierarchy, one step at a time;
+  (** going up and down the class hierarchy, *one step at a time*;
   these offsets are only for non-virtual inheritance. *)
   Parameter o_base : genv -> forall (derived base : globname), offset.
   Parameter o_derived : genv -> forall (base derived : globname), offset.

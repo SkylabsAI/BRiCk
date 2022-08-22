@@ -194,7 +194,7 @@ Module Type CPP_LOGIC
     Axiom tptsto_live : forall {σ} ty (q : Qp) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
 
-    (** [identity σ this mdc q p] state that [p] is a pointer to a (live)
+    (** [identity σ this mdc q p] states that [p] is a pointer to a (live)
         object of type [this] that is part of an object that can be reached
         using the *path* [mdc].
         - if [mdc = []] then this object identity is not initialized yet,
