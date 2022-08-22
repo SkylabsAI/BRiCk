@@ -108,6 +108,7 @@ Module Type CPP_LOGIC
     http://eel.is/c++draft/intro.object#def:provides_storage *)
     Parameter provides_storage :
       forall (storage : ptr) (object : ptr) (object_type : type), mpred.
+    (* why not use [object : alloc_id] is it just to limit the setup? *)
 
     Axiom provides_storage_persistent :
       forall storage_ptr obj_ptr ty,
@@ -142,6 +143,7 @@ Module Type CPP_LOGIC
     Axiom tptsto_mono :
       Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (⊢)) (@tptsto).
     #[global] Existing Instances tptsto_proper tptsto_mono.
+    (* ^^ both of these do not seem necessary *)
 
     Axiom tptsto_timeless :
       forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
@@ -252,6 +254,8 @@ Module Type CPP_LOGIC
 
     (** this allows you to forget an object identity, necessary for doing
         placement [new] over an existing object.
+
+        TODO: determine if we can drop this axiom.
      *)
     Axiom identity_forget : forall σ mdc this p,
         @identity σ this mdc 1 p |-- |={↑pred_ns}=> @identity σ this nil 1 p.

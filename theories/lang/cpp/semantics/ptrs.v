@@ -26,7 +26,10 @@ Require Import iris.algebra.ofe.
 Implicit Types (σ : genv).
 
 (** ** Allocation IDs. We use them to model pointer provenance, following
-Cerberus. *)
+Cerberus.
+
+  Question: Why not include this as an axiom in the pointer model?
+ *)
 Record alloc_id := MkAllocId { alloc_id_car : N }.
 
 #[global] Instance MkAllocId_inj : Inj (=) (=) MkAllocId.
