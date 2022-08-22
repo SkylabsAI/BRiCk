@@ -288,6 +288,20 @@ Module Type PTRS.
       Not defined on all valid pointers; defined on pointers existing in C++ (
       https://eel.is/c++draft/basic.compound#3).
       See discussion above.
+
+      NOTE: This seems to be really the only thing that I find awkward
+            in the entire pointer & memory setup. It might be related to
+            the fact that it uses [vaddr] as the return type rather than
+            something more abstract. When I read [vaddr] I assume 64-bit
+            value that is a valid address and that does not seem to be
+            a requirement here since compilers do not actually have to pick
+            a true virtual address.
+            On the other hand, the benefit of the linear ordering is that
+            it seems like it could be necessary (not certain?) in order
+            to handle comparisons between past-the-end pointers and other
+            pointers. For example, that a past the end pointer can only
+            compare equal to at most one live non-past-the-end pointer seems
+            like it *could* be justified by the standard.
    *)
   Parameter ptr_vaddr : ptr -> option vaddr.
 

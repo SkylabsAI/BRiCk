@@ -343,6 +343,25 @@ Module Type CPP_LOGIC
     [1] We use "exposed" in the sense defined by the N2577 draft C standard
     (http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2577.pdf).
     See https://dl.acm.org/doi/10.1145/3290380 for an introduction.
+
+    NOTE: The relationship between [ptr_vaddr] and [exposed_aid] feels
+          somewhat awkward. We need a backing store for everything (even
+          values that are not materialized), so there needs to be a
+          function that computes a storage location from a [ptr]. This can
+          not be [ptr_vaddr], because that is partial. Connecting a [ptr] to
+          an integer virtual address only needs to happen for exposed pointers
+          so changing:
+          - [ptr_vaddr : ptr -> option vaddr] and [exposed_aid : alloc_id -> mpred]
+          into
+          - [ptr_storage : ptr -> saddr] -- the storage address of the pointer
+          - [exposed_aid : alloc_id -> vaddr -> mpred] -- the exposed address
+          feels more intuitive to me. It makes sense to expose the storage address
+          for properties such as alignedness and pointer comparison. Pointer comparison
+          can only occur in the program when [ptr_vaddr] is [Some], but alignedness
+          is a property that we really expose for all pointers, regardless of whether
+          they are materialized or exposed. The intermediate pointers MR seems to
+          give a reasonable characterization of this, but there are still subtlties
+          about it.
     *)
     Parameter exposed_aid : alloc_id -> mpred.
     Axiom exposed_aid_persistent : forall aid, Persistent (exposed_aid aid).
