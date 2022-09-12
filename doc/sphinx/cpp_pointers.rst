@@ -49,7 +49,7 @@ Additional structure, e.g. "provides storage", subobjects, types, etc, are descr
 
 Question: Are allocation ids the "names of complete objects"?
 
-Question: Do subobjects have names? They can be named by the complete object name and the path to the object (since this path is unique). Is this the same as a pointer?
+Question: Do subobjects have names? They can be named by the complete object name and the path to the object (since this path is unique).
 
 Question: Pointer operations can not escape allocations, but they can "go up" through certain operations such as base-to-derived casts.
 
