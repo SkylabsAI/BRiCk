@@ -21,11 +21,6 @@ This page provides an annotated list of the properties of the C++ pointer model.
 - Quoting the standard:
   > The value representation of pointer types is implementation-defined. Pointers to layout-compatible types shall have the same value representation and alignment requirement
 
-Notes
--------
-
-It requires a :cpp:`reinterpret_cast` to construct a pointer to the underlying memory of an object (for use with raw accesses). This seems to suggest that pointers must contain some bit of information regarding this.
-
 The C++ Memory Model
 ======================
 
