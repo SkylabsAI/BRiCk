@@ -59,29 +59,95 @@ Strawman Model
 
 .. code-block:: coq
 
-  Parameter alloc_id : Set. (* := N *)
+  (* storage *)
+  (* C++ storage addresses
+     These are distinct from (but similar to) machine addresses.
+   *)
+  Parameter saddr : Set.
+  (* the storage state of the C++ abstract machine *)
+  Definition storage : Set := map saddr byte.
+
+
+  (* object names *)
+  Parameter alloc_id : Set.
   Variant path : Set :=
   | o_base (_ _ : globname)
   | o_field (_ : globname) (_ : ident)
   | o_sub (_ : type) (_ : N). (* still some oddity around [o_sub _ 0] *)
-  Parameter object_name := alloc_id * list path.
+  Definition object_name := alloc_id * list path.
 
   Parameter alloc_type : alloc_id -> type.
 
-  Parameter ptr : Set :=
-  | p_structured (alloc : alloc_id) (off : list path)
+  (* the type of an allocation
+     NOTE: this is only a deterministic function if the type
+           is included somewhere (because any pointer can be a pointer to
+           the beginning of its raw bytes).
+   *)
+  #[local]
+  Fixpoint object_type_from (ty : type) (ps : list path) : option type :=
+    match ps with
+    | [] => Some ty
+    | p :: ps =>
+      match p with
+      | o_field cls f =>
+        (* Q: if [ty = Tarray (Tnamed base) _], is this valid?
+           - this is necessary if [o_sub ty 0] is an identity
+           - this precludes "a pointer to an array is not inter-convertible
+             to its first member" (since inter-convertible should be reflexive)
+         *)
+        if bool_decide (ty = Tnamed cls)
+        then ty' <- type_of_field cls f ;
+             object_type_from ty' ps
+        else ∅
+      | o_base base derived =>
+        (* Q: same as above *)
+        if bool_decide (ty = Tnamed base)
+        then object_type_from (Tnamed derived) ps
+        else ∅
+      | o_sub t n =>
+        match ty with (* this does not work for matricies *)
+        | Tarray t _ =>
+          if bool_decide (ty = t)
+          then object_type_from t ps
+          else ∅
+        | ty' =>
+          if bool_decide (ty = ty')
+          then object_type_from t ps
+          else ∅
+        end
+      end
+    end.
+
+  (* the type of an object *)
+  Definition object_type (o : object_name) : option type :=
+    object_type_from (alloc_type o.1) o.2.
+
+  Variant ptr : Set :=
+  | p_structured (obj : object_name) (off : Z)
     (* ^ valid when the [off] is compatible with [alloc_type(alloc)]
       the type is the "natural" one
     *)
-  | p_raw        (alloc : alloc_id) (off : Z)
-    (* ^ valid when [0 <= off <= sizeof(alloc_type(alloc))]
-      the type is [byte*]
-    *)
+  | p_null       (_ : type)
+  | p_invalid
   .
+
+  Definition ptr_type (p : ptr) : option type :=
+    match p with
+    | p_structured obj off =>
+      match object_type obj with
+      | None => { }
+      | Some ty =>
+        if bool_decide (off = 0)
+        then { ty } ∪ { byte } (* <-- this does not work *)
+        else Some byte
+      end
+    | p_null ty => Some ty
+    | p_invalid => None
+    end.
 
   (* both validity and strict validity are defined with types, i.e.
     - [valid_ptr ty p]
-    - [strict_valid_ptr ty p] ~ equivalent to [type_ptr ty p]
+    - [valid_ref ty p] ~ equivalent to [type_ptr ty p]
 
     [{,strict_}valid_ptr ty p |-- {,strict_}valid_ptr (Tptr Tvoid) p]
   *)
@@ -98,13 +164,3 @@ Strawman Model
       [eval_offset off = eval_offset off'] and [off'] is compatible with
       [alloc_type(alloc)].
   *)
-
-  (* storage *)
-  Definition storage : Set := map alloc_id (list byte). (* there might be a better representation for this *)
-
-  (* one issue with this definition is with reference fields. this puts us in a situation that is
-     not standard layout, so it is not clear where to store the object bits.
-
-     A potential option is to store an additional map for reference fields. This would make the type
-     [map alloc_id (list byte * map (list path) object_name]
-   *)
