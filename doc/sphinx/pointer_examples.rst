@@ -16,7 +16,7 @@ Example 1
    byte* b  = static_cast<byte*>(&c);
 
    if (c.x + 2 == c.y)
-      c.x[2] = 0; // undefined behavior
+      c.x[2] = 0; // UB
 
 Discussion
 ------------
@@ -37,10 +37,10 @@ Example 2
    byte* px = static_cast<byte*>(&c); // ??
    pr[2]; // legal because `pr` is a pointer to the raw representation
    assert(pr + 2 == c.x + 2);
-   // ^ guaranteed due to the layout of arrays (citation...)
-   // and the fact that there is no leading padding (citation...)
+   // ^ guaranteed due to the layout of arrays (https://eel.is/c++draft/expr.sizeof#2)
+   //   and the fact that there is no leading padding (https://eel.is/c++draft/expr.sizeof#2)
 
-   c.x[2]; // illegal [basic.compound]
+   c.x[2]; // UB [basic.compound]
 
 
 Example 3 -- Placement `new` and Provides Storage
@@ -51,7 +51,7 @@ Example 3 -- Placement `new` and Provides Storage
    byte x[100];
    byte* p = new (static_cast<void*>(x)) byte[2];
 
-   p[2]; // undefined because subscripting can not leave the range of an allocation.
+   p[2]; // UB. subscripting can not leave the range of an allocation.
 
 Example 4 -- Placement `new` and Provides Storage (without transparent replacability)
 =======================================================================================
@@ -63,7 +63,7 @@ Example 4 -- Placement `new` and Provides Storage (without transparent replacabi
    C* pc = new (static_cast<void*>(x)) C();
 
    byte* b = static_cast<byte*>(pc); // `b` is still part of the allocation for `pc`
-   b[2]; // undefined.
+   b[sizef(C)]; // UB
 
 
 Example 5
@@ -78,6 +78,9 @@ Example 5
    c.x[-offsetof(C, x)] // derive the head pointer from a field
    static_cast<byte*>(&c); // derive the root pointer from the root object
    static_cast<byte*>(c.buf); // derive the root pointer from the first field (see Example 1)
+
+Discussion
+-----------
 
 **Question**: Is it possible to get to the underlying bytes from a field of type :cpp:`byte`?
 
@@ -94,16 +97,12 @@ Example 6
    struct C { byte x; };
    struct D { C c[2]; } d;
 
-   byte* r1 = reinterpret_cast<byte*>(&(d.c[0].x)); // `reinterpret_cast` gets to the raw representation
-   byte* r2 = r1 + sizeof(C); // defined because we are working with the raw representation
+   byte* r1 = reinterpret_cast<byte*>(&(d.c[0].x));
+   byte* r2 = r1 + sizeof(C); // UB? out of bound sfor `d.c[0]`
    assert(r2 == reinterpret_cast<byte*>(d.c + 1)); // by class and array layout
-   *r2 = 0; // defined, same as `d.c[1].x = 0`
-            // the raw representation is bound only by the complete object, not by the sub-object
-
-   byte* p1 = static_cast<byte*>(&(d.c[0].x)); // `static_cast` is a no-op here
-   byte* p2 = p1 + sizeof(C); // undefined
+   *r2 = 0; // UB. pointer is limited to `d.c[0].x`
 
 Discussion
 -----------
 
-It seems necessary to track whether a pointer is working with the raw representation or with the "structured" representation. This could be represented as :coq:`alloc_id * (path + Z)`. Another option would be :coq:`alloc_id * path * option Z` but this seems to contain unnecessary information if the comment on line 8 is correct.
+:cpp:`d.c[1].x` is *not* `reachable through<https://eel.is/c++draft/basic#def:storage,reachable_through_a_pointer_value>`_ a pointer to :cpp:`d.c[0].x + sizeof(C)`.
