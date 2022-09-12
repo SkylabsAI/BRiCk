@@ -106,3 +106,5 @@ Discussion
 -----------
 
 :cpp:`d.c[1].x` is *not* `reachable through<https://eel.is/c++draft/basic#def:storage,reachable_through_a_pointer_value>`_ a pointer to :cpp:`d.c[0].x + sizeof(C)`.
+
+NOTE: there is still some disagreement about this.
