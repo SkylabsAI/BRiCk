@@ -32,13 +32,19 @@ Proof.
   abstract (by intros []).
 Defined.
 
+Definition Npow2 (n : N) := N.shiftl 1 n.
+Definition Zpow2 (n : Z) := Z.shiftl 1 n.
+
+#[global] Opaque Npow2 Zpow2. 
+#[global] Hint Opaque Npow2 Zpow2 : db_bedrock. 
+
 Definition bitsN (s : bitsize) : N :=
   match s with
-  | W8   => 8
-  | W16  => 16
-  | W32  => 32
-  | W64  => 64
-  | W128 => 128
+  | W8   => Npow2 3
+  | W16  => Npow2 4
+  | W32  => Npow2 5
+  | W64  => Npow2 6
+  | W128 => Npow2 7
   end.
 
 #[global] Instance bitsN_inj : Inj (=) (=) bitsN.
@@ -85,21 +91,10 @@ Variant endian : Set := Little | Big.
 #[global] Instance endian_dec : EqDecision endian.
 Proof. solve_decision. Defined.
 
-Definition Npow2 (n : N) := N.shiftl 1 n.
-Definition Zpow2 (n : Z) := Z.shiftl 1 n.
-
 Definition max_val (bits : bitsize) (sgn : signed) : Z :=
   match bits , sgn with
-  | W8   , Signed   => Zpow2 7 - 1
-  | W8   , Unsigned => Zpow2 8 - 1
-  | W16  , Signed   => Zpow2 15 - 1
-  | W16  , Unsigned => Zpow2 16 - 1
-  | W32  , Signed   => Zpow2 31 - 1
-  | W32  , Unsigned => Zpow2 32 - 1
-  | W64  , Signed   => Zpow2 63 - 1
-  | W64  , Unsigned => Zpow2 64 - 1
-  | W128 , Signed   => Zpow2 127 - 1
-  | W128 , Unsigned => Zpow2 128 - 1
+  | Wx   , Signed   => Zpow2 (Z.of_N (bitsN Wx) - 1) - 1
+  | Wx   , Unsigned => Zpow2 (Z.of_N (bitsN Wx)) - 1
   end.
 
 Definition min_val (bits : bitsize) (sgn : signed) : Z :=
