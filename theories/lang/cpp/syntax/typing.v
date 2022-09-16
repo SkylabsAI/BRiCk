@@ -72,7 +72,8 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tbool
   | Tvoid
   | Tfloat _
-  | Tnamed _ => t
+  | Tnamed _
+  | Tenum _ => t
   | Tarray t sz => Tarray (erase_qualifiers t) sz
   | @Tfunction cc ar t ts => Tfunction (cc:=cc) (ar:=ar) (erase_qualifiers t) (List.map erase_qualifiers ts)
   | Tmember_pointer cls t => Tmember_pointer cls (erase_qualifiers t)

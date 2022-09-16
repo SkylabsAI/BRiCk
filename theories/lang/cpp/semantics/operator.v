@@ -235,7 +235,7 @@ Fixpoint companion_type (t : type) : option type :=
   end.
 
 (* [1] is well-typed in any type that is a companion type *)
-Lemma companion_type_1 t : forall ct,
+Lemma companion_type_1 {σ : genv} t : forall ct,
     companion_type t = Some ct ->
     has_type 1 ct.
 Proof.

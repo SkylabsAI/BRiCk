@@ -52,7 +52,7 @@ Definition Sforeach (range ibegin iend : Stmt)
 Definition Talias (name : globname) {underlying : type} : type :=
   underlying.
 Definition Tenum (name : globname) {underlying : type} : type :=
-  underlying.
+  Tenum name.
 Definition Tunderlying (enum : type) {underlying : type} : type :=
   underlying.
 
