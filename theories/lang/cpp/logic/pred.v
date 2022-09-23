@@ -194,6 +194,18 @@ Module Type CPP_LOGIC
     Axiom tptsto_live : forall {σ} ty (q : Qp) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
 
+    (** [const_core σ t q p] represents the portion of the ownership (of type [t])
+        at location [p] that is retained by the abstract machine if the declaration
+        of [t] is `const`.
+        The [q] argument is used to track iterated `const`ness. For example, if you have
+        ```
+        struct C { const int x; mutable int y; int z; };
+        const C c;
+        ```
+        the program will retain [1/4] of `x`, [1] of `y`, and [1/2] of `z`.
+     *)
+    Parameter const_core : forall {σ : genv}, type -> Qp -> ptr -> mpred.
+
     (** [identity σ this mdc q p] state that [p] is a pointer to a (live)
         object of type [this] that is part of an object that can be reached
         using the *path* [mdc].

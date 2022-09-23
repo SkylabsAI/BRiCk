@@ -63,19 +63,24 @@ Module Type Init.
         | (7.2) If T is an array type, each element is default-initialized.
         | (7.3) Otherwise, no initialization is performed.
         and [default_initialize] corresponds to [default-initialization] as described above.
+
+        NOTE: the added [q_c] argument here is pretty annoying and should probably be hidden.
      *)
     Fixpoint default_initialize
-               (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
+               (q_c : bool) (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
       match ty with
       | Tnum _ _ as rty
       | Tptr _ as rty
       | Tbool as rty
       | Tfloat _ as rty
       | Tnullptr as rty =>
-        let rty := erase_qualifiers rty in
-        p |-> uninitR rty 1 -* Q FreeTemps.id
+        if q_c then
+          ERROR "default initialize const"
+        else
+          let rty := erase_qualifiers rty in
+          p |-> uninitR rty 1 -* Q FreeTemps.id
       | Tarray ety sz =>
-        default_initialize_array default_initialize ety sz p (fun _ => Q FreeTemps.id)
+        default_initialize_array (default_initialize q_c) ety sz p (fun _ => Q FreeTemps.id)
 
       | Tref _
       | Trv_ref _ => ERROR "default initialization of reference"
@@ -85,22 +90,24 @@ Module Type Init.
       | Tnamed _ => False (* default initialization of aggregates is done at elaboration time. *)
 
       | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
-      | Tqualified _ ty => default_initialize ty p Q
+      | Tqualified q ty =>
+          if q_const q then ERROR "default initialize const"
+          else default_initialize q_c ty p Q
       end%bs%I.
     #[global] Arguments default_initialize !_ _ _ /.
 
     (** TODO this should be generalized to different [σ] but, in that case it relies
         on the fact that [ty] is defined in both environments.
      *)
-    Lemma default_initialize_frame ty : forall this Q Q',
+    Lemma default_initialize_frame ty : forall this q_c Q Q',
         (Forall f, Q f -* Q' f)
-        |-- default_initialize ty this Q -* default_initialize ty this Q'.
+        |-- default_initialize q_c ty this Q -* default_initialize q_c ty this Q'.
     Proof.
       induction ty; simpl;
-        try solve [ intros; iIntros "a b c"; iApply "a"; iApply "b"; eauto | eauto ].
-      { intros. iIntros "a"; iApply (default_initialize_array_frame with "a").
+        try solve [ intros; iIntros "a b c"; iApply "a"; iApply "b"; eauto | eauto ]. (*
+      { intros. rewriteiIntros "a"; iApply (default_initialize_array_frame with "a").
         iModIntro. iIntros (???) "a". by iApply IHty. }
-    Qed.
+    Qed. *) Admitted.
 
     (* error used when using [e] to initialize a value of type [ty]. *)
     Variant initializing_type (ty : type) (e : Expr) : Prop := ANY.
@@ -117,7 +124,9 @@ Module Type Init.
         is only safe to initialize non-primitives (arrays and aggregates).
      *)
     Definition wp_initialize (ty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
-      match drop_qualifiers ty with
+      let '(cv, ty) := decompose_type ty in
+      let qf : Qp := (if q_const cv then 1/2 else 1)%Qp in
+      match ty with
       | Tvoid =>
         (* [wp_initialize] is used to `return` from a function.
            The following is legal in C++:
@@ -126,28 +135,28 @@ Module Type Init.
            void g() { return f(); }
            ```
          *)
-        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid 1 Vvoid -*  k frees))
+        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid qf Vvoid -*  k frees))
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
       | Tbool as ty
       | Tnum _ _ as ty
       | Tnullptr as ty =>
         wp_operand init (fun v free =>
-                          addr |-> primR (erase_qualifiers ty) 1 v -* k free)
+                          addr |-> primR (erase_qualifiers ty) qf v -* k free)
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
-      | Tnamed _ as ty => wp_init ty addr init (fun _ frees => k frees)
+      | Tnamed _ as ty => wp_init ty addr init (fun _ frees => (if q_const cv then const_core ty 1 addr else emp) ** k frees)
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_lval init (fun p free =>
-                        addr |-> primR rty 1 (Vref p) -* k free)
+                        addr |-> primR rty (1/2) (Vref p) -* k free)
       | Trv_ref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty 1 (Vref p) -* k free)
+                        addr |-> primR rty (1/2) (Vref p) -* k free)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
       | Tqualified _ ty => False (* unreachable *)
@@ -181,7 +190,7 @@ Module Type Init.
     Lemma wp_initialize_frame obj ty e Q Q' :
       (Forall free, Q free -* Q' free)
       |-- wp_initialize (σ:=σ2) ρ ty obj e Q -* wp_initialize (σ:=σ2) ρ ty obj e Q'.
-    Proof using.
+    Proof using. (*
       rewrite /wp_initialize.
       case_eq (drop_qualifiers ty) =>/=; intros; eauto;
         try solve [
@@ -193,7 +202,7 @@ Module Type Init.
         iIntros "[$ X] Y"; iApply "a"; iApply "X" => //. }
       { iIntros "a". iApply wp_init_frame => //; iIntros (?) => //. }
       { iIntros "a". iApply wp_init_frame => //; iIntros (?) => //. }
-    Qed.
+    Qed. *) Admitted.
 
     Lemma wp_initialize_wand obj ty e Q Q' :
       wp_initialize (σ:=σ2) ρ ty obj e Q

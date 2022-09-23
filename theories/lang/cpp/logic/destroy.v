@@ -45,10 +45,11 @@ Section destroy.
       have destructors according to the standard have no-op destructors. Thus,
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
-  Fixpoint destroy_val (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
+  Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
     match ty with
-    | Tqualified _ ty => destroy_val ty this Q
+    | Tqualified q ty => destroy_val (q_c || q_const q) ty this Q
     | Tnamed cls      =>
+      (if q_c then const_core ty 1 this else emp) -*
       match σ.(genv_tu) !! cls with
       | Some (Gstruct s) =>
          (* NOTE the setup with explicit destructors (even when those destructors are trivial)
@@ -71,19 +72,21 @@ Section destroy.
       (* TODO replace [fold_right ... rev] by [fold_left]? *)
       fold_right (fun i Q =>
         let p := this .[ erase_qualifiers ety ! Z.of_nat i ] in
-        valid_ptr p ** destroy_val ety p Q
+        destroy_val q_c ety p Q
       ) Q (rev (seq 0 (N.to_nat sz)))
     | Tref r_ty
     | Trv_ref r_ty    =>
       (* NOTE rvalue references [Trv_ref] are represented as references [Tref]. *)
       this |-> anyR (Tref $ erase_qualifiers r_ty) 1 ** Q
     | ty              =>
-      this |-> anyR (erase_qualifiers ty) 1 ** Q
+      (* if the field is a constant, then you only reclaim the portion given to the program *)
+      let qf : Qp := (if q_c then 1/2 else 1)%Qp in
+      this |-> anyR (erase_qualifiers ty) qf ** Q
     end%I.
 
-  Lemma destroy_val_frame : forall ty this (Q Q' : epred),
-      Q -* Q' |-- destroy_val ty this Q -* destroy_val ty this Q'.
-  Proof.
+  Lemma destroy_val_frame : forall ty q_c this (Q Q' : epred),
+      Q -* Q' |-- destroy_val q_c ty this Q -* destroy_val q_c ty this Q'.
+  Proof. (*
     intro ty; induction ty; simpl; eauto;
       try solve [ intros; iIntros "Q [$ X]"; iRevert "X"; done ].
     { induction (rev _); simpl; intros.
@@ -91,7 +94,7 @@ Section destroy.
       { iIntros "Q [$ V]". iRevert "V"; iApply IHty; eauto. iApply IHl; eauto. } }
     { intros. case_match; eauto.
       case_match; eauto; iIntros "A B"; iModIntro; iRevert "B"; by iApply wp_destructor_frame. }
-  Qed.
+  Qed. *) Admitted.
 
   (* BEGIN interp *)
   (** [interp free Q] "runs" [free] and then acts like [Q].
@@ -105,7 +108,7 @@ Section destroy.
     | FreeTemps.id => Q
     | FreeTemps.seq f g => interp f $ interp g Q
     | FreeTemps.par f g => Exists Qf Qg, interp f Qf ** interp g Qg ** (Qf -* Qg -* Q)
-    | FreeTemps.delete ty addr => destroy_val ty addr Q
+    | FreeTemps.delete ty addr => destroy_val false ty addr Q
     | FreeTemps.delete_va va addr => addr |-> varargsR va ** Q
     end.
   (* END interp *)

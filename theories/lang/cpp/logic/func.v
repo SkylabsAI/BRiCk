@@ -126,6 +126,9 @@ Section with_cpp.
 
   (** [bind_vars args vals r Q] preforms initialization of the parameters
       given the values being passed.
+
+      TODO: if the type is [const], we need to consume [const_core] of the definition now
+            and give it back at the end of the function
    *)
   Fixpoint bind_vars (args : list (ident * type)) (ar : function_arity) (ptrs : list ptr)
     (ρ : option ptr -> region) (Q : region -> FreeTemps -> mpred) : mpred :=
@@ -235,7 +238,7 @@ Section with_cpp.
         (* there is no initializer for this member, so we "default initialize" it
            (see https://eel.is/c++draft/dcl.init#general-7 )
          *)
-        default_initialize m.(mem_type)
+        default_initialize false m.(mem_type)
           (this ,, _field {| f_type := cls ; f_name := m.(mem_name) |})
           (fun frees => interp frees (wpi_members ρ cls this members inits Q))
       | i :: is' =>

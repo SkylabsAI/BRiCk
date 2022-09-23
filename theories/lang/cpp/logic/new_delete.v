@@ -141,7 +141,7 @@ Module Type Expr__newdelete.
                                   provides_storage storage_ptr obj_ptr aty -*
                                   match oinit with
                                   | None => (* default_initialize the memory *)
-                                    default_initialize aty obj_ptr
+                                    default_initialize false aty obj_ptr
                                                        (fun free' =>
                                                           (* Track the type we are allocating
                                                              so it can be checked at [delete]
@@ -217,7 +217,7 @@ Module Type Expr__newdelete.
                                      obj_ptr array_ty -*
                                    match oinit with
                                    | None => (* default_initialize the memory *)
-                                     default_initialize array_ty obj_ptr
+                                     default_initialize false array_ty obj_ptr
                                                         (fun free'' =>
                                                            (* Track the type we are allocating
                                                               so it can be checked at [delete]
@@ -360,7 +360,7 @@ Module Type Expr__newdelete.
                (* v---- Calling destructor with object pointer *)
                resolve_dtor destroyed_type obj_ptr (fun this' mdc_ty =>
                     this' |-> new_tokenR mdc_ty **
-                    (destroy_val mdc_ty this' $
+                    (destroy_val false mdc_ty this' $
                     Exists storage_ptr sz, [| size_of mdc_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)
                       provides_storage storage_ptr this' mdc_ty **
@@ -395,7 +395,7 @@ Module Type Expr__newdelete.
                obj_ptr |-> new_tokenR array_ty **
                (* /---- Calling destructor with object pointer
                   v     Note: virtual dispatch is not allowed for [delete[]] *)
-               destroy_val array_ty obj_ptr (
+               destroy_val false array_ty obj_ptr (
                     Exists storage_ptr (sz sz' : N),
                       [| size_of array_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)

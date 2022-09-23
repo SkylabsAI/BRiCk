@@ -69,7 +69,7 @@ Module Type Stmt.
         in
         match init with
         | Some init => wp_initialize ρ_init ty addr init $ fun frees => destroy frees
-        | None => default_initialize ty addr (fun frees => destroy frees)
+        | None => default_initialize false ty addr (fun frees => destroy frees)
         end.
 
     Lemma wp_decl_var_frame : forall x ρ ρ_init init ty (k k' : region -> FreeTemps -> epred),
@@ -99,7 +99,7 @@ Module Type Stmt.
       | Dinit ts nm ty init =>
         let do_init :=
             match init with
-            | None => default_initialize ty (_global nm) (k ρ)
+            | None => default_initialize false ty (_global nm) (k ρ)
             | Some init => wp_initialize ρ_init ty (_global nm) init (k ρ)
             end
         in
