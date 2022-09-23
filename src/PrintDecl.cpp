@@ -283,6 +283,8 @@ public:
             print.output() << fmt::nbsp;
             cprint.printQualType(field->getType(), print);
             print.output() << fmt::nbsp;
+            print.boolean(field->isMutable());
+            print.output() << fmt::nbsp;
             printFieldInitializer(field, print, cprint);
             print.output() << fmt::nbsp;
             print.ctor("Build_LayoutInfo", false)
@@ -365,7 +367,8 @@ public:
             if (base.isVirtual()) {
                 logging::unsupported()
                     << "virtual base classes not supported"
-                    << " (at " << cprint.sourceRange(decl->getSourceRange()) << ")\n";
+                    << " (at " << cprint.sourceRange(decl->getSourceRange())
+                    << ")\n";
             }
 
             auto rec = base.getType().getTypePtr()->getAsCXXRecordDecl();
