@@ -132,6 +132,9 @@ Section with_cpp.
 
   (** [bind_vars args vals r Q] preforms initialization of the parameters
       given the values being passed.
+
+      TODO: if the type is [const], we need to consume [const_core] of the definition now
+            and give it back at the end of the function
    *)
   Fixpoint bind_vars (args : list (ident * type)) (ar : function_arity) (ptrs : list ptr)
     (ρ : option ptr -> region) (Q : region -> FreeTemps -> mpred) : mpred :=
