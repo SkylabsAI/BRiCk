@@ -509,10 +509,11 @@ Module Type Expr.
         - [int] -> [short]
         - [short] -> [long]
         - [int] -> [unsigned int]
+        - [enum Xxx] -> [int]
      *)
     Axiom wp_operand_cast_integral : forall e t Q,
         wp_operand e (fun v free =>
-           Exists v', [| conv_int (type_of e) t v v' |] ** Q v' free)
+           Exists v', [| exists tu, tu ⊧ resolve /\ conv_int tu (type_of e) t v v' |] ** Q v' free)
         |-- wp_operand (Ecast Cintegral Prvalue e t) Q.
 
     Axiom wp_operand_cast_null : forall e t Q,
