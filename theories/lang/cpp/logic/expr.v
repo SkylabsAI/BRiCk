@@ -75,9 +75,24 @@ Module Type Expr.
            (Exists q, r |-> primR (Tref $ erase_qualifiers $ type_of e) q (Vptr p) ** True) //\\ Q p free)
       |-- wp_lval (Eread_ref e) Q.
 
+    (* references to constants that are declared inside the type
+       will see the underlying type. For example, in
+       ```
+       enum T : long { A , B = A + 1 };
+       ```
+       the declaration of `B` will have a reference to `A` at type
+       `long` rather than at type `T`.
+       To accomodate this, we allow the type of the constant and
+       the type of the expression to differ.
+     *)
+    Variant constant_compatible_type (tu : translation_unit) (t : type) : type -> Prop :=
+      | ccompat_refl : constant_compatible_type tu t t
+      | ccompat_enum {nm u b} (_ : tu.(globals) !! nm = Some (Genum u b)) : constant_compatible_type tu t u.
+
     (* constants are rvalues *)
-    Axiom wp_operand_constant : forall ty cnst e Q,
-      glob_def cnst = Some (Gconstant ty (Some e)) ->
+    Axiom wp_operand_constant : forall ty ty' cnst e Q,
+      glob_def cnst = Some (Gconstant ty' (Some e)) ->
+      constant_compatible_type resolve.(genv_tu) ty ty' ->
           (* evaluation of the expression does not get access to
              local variables, so it gets [Remp] rather than [ρ].
              In addition, the evaluation is done at compile-time, so we clean
