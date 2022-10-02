@@ -119,6 +119,10 @@ Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 Lemma drop_qualifiers_Tnullptr : forall [ty],
     drop_qualifiers ty = Tnullptr -> erase_qualifiers ty = Tnullptr.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+Lemma drop_qualifiers_Tenum : forall [ty nm],
+    drop_qualifiers ty = Tenum nm -> erase_qualifiers ty = Tenum nm.
+Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+
 
 Lemma drop_erase : forall t, drop_qualifiers (erase_qualifiers t) = erase_qualifiers t.
 Proof. induction t; simpl; eauto. Qed.
@@ -136,7 +140,8 @@ Ltac simpl_drop_qualifiers :=
           | rewrite (drop_qualifiers_Tmember_pointer H)
           | rewrite (drop_qualifiers_Tnullptr H)
           | rewrite (drop_qualifiers_Tvoid H)
-          | rewrite (drop_qualifiers_Tptr H) ]
+          | rewrite (drop_qualifiers_Tptr H)
+          | rewrite (drop_qualifiers_Tenum H) ]
   end.
 
 
