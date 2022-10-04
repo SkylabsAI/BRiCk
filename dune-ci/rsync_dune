@@ -10,6 +10,7 @@ exit_val=0
 
 usage()
 {
+    echo -e "\nUsage: "
     echo " ./rsync_dune <push/pull> <default/delete>"
     echo -e "\t push \t\t - Push local cache to remote cache"
     echo -e "\t pull \t\t - Pull remote cache to local cache"
