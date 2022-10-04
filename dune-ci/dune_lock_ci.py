@@ -38,17 +38,17 @@ def parse_cmd(argv):
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     # list  parser
-    trim_parser = subparsers.add_parser('dune_build_job',
+    trim_parser = subparsers.add_parser('check_dune_build_job',
                                         help='Check status for dune proof \
                                             jobs before trimming cache')
     trim_parser.add_argument('-t', '--citoken', help='gitlab token',
                              action='store', required=True, dest='citoken')
-    proof_parser = subparsers.add_parser('cleanup_job',
+    proof_parser = subparsers.add_parser('check_cleanup_job',
                                          help='check status for dune cache \
                                             trim job')
     proof_parser.add_argument('-t', '--citoken', help='gitlab token',
                               action='store', required=True, dest='citoken')
-    if not any(arg_p in ['dune_build_job', 'cleanup_job', '--help',
+    if not any(arg_p in ['check_dune_build_job', 'check_cleanup_job', '--help',
                '-h'] for arg_p in argv[1:]):
         parser.parse_args(['-h'])
     return parser.parse_args(argv[1:])
@@ -161,8 +161,8 @@ def get_dune_cleanup_status(citoken):
 
 if __name__ == "__main__":
     args = parse_cmd(sys.argv)
-    if args.command == "dune_build_job":
+    if args.command == "check_dune_build_job":
         get_dune_build_job_status(args.citoken)
-    elif args.command == "cleanup_job":
+    elif args.command == "check_cleanup_job":
         get_dune_cleanup_status(args.citoken)
     sys.exit(0)

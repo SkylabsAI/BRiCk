@@ -19,7 +19,7 @@ usage()
 }
 
 if [[ $1 == "push" ]]; then
-    RSYNC_FROM_CACHE=${RSYNC_LOCAL_CACHE}
+    RSYNC_FROM_CACHE="${RSYNC_LOCAL_CACHE}dune"
     RSYNC_TO_CACHE=${RSYNC_REMOTE_CACHE}
 elif [[ $1 == "pull" ]]; then
     RSYNC_FROM_CACHE=${RSYNC_REMOTE_CACHE}
