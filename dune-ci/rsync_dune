@@ -1,0 +1,49 @@
+#! /bin/bash
+
+# ./rsync_dune <push/pull> <default/delete>
+
+RSYNC_PATH=$(which rsync)
+
+RSYNC_REMOTE_CACHE="${DUNE_USER}@${FM_CACHE_SERVER}:${RSYNC_CACHE_PATH}/dune_cache/"
+RSYNC_LOCAL_CACHE="~/.cache/"
+exit_val=0
+
+usage()
+{
+    echo " ./rsync_dune <push/pull> <default/delete>"
+    echo -e "\t push \t\t - Push local cache to remote cache"
+    echo -e "\t pull \t\t - Pull remote cache to local cache"
+    echo -e "\t default \t - default rsync options <-raz>"
+    echo -e "\t delete  \t - rsync options with delete <-raz --delete>"
+}
+
+if [[ $1 == "push" ]]; then
+    RSYNC_FROM_CACHE=${RSYNC_LOCAL_CACHE}
+    RSYNC_TO_CACHE=${RSYNC_REMOTE_CACHE}
+elif [[ $1 == "pull" ]]; then
+    RSYNC_FROM_CACHE=${RSYNC_REMOTE_CACHE}
+    RSYNC_TO_CACHE=${RSYNC_LOCAL_CACHE}
+else
+    if [[ $(echo $1 | egrep -c "help|-h|--help") -eq 0 ]]; then
+        echo "Invalid option : $1"
+        echo "Options: push, pull"
+        exit_val=-1
+    fi
+    usage
+    exit $exit_val
+fi
+
+if [[ $2 == "default" || -z $2 ]]; then
+    RSYNC_OPTS="-raz"
+elif [[ $2 == "delete" ]]; then
+    RSYNC_OPTS="-raz --delete"
+else
+    echo "Invalid Option: $2"
+    echo "Options: default, delete"
+    usage
+    exit -1
+fi
+
+echo "RSYNC_OPTS: ${RSYNC_OPTS}"
+
+${RSYNC_PATH} ${RSYNC_OPTS} ${RSYNC_FROM_CACHE} ${RSYNC_TO_CACHE}
