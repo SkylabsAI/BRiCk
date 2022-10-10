@@ -8,5 +8,6 @@
  ; (package coq-cpp2v)            ; Adding this line will make your
  ; library installable in the package
 
+ (package coq-bedrock-auto)
  (theories bedrock.prelude)
 )
