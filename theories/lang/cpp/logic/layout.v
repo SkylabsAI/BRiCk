@@ -67,14 +67,19 @@ Section with_Σ.
   Proof. rewrite -svalidR_validR; apply _. Qed.
 
   (* TODO: Do we need type_ptrR here? *)
-  Axiom struct_to_raw : forall cls st rss q,
+  Axiom struct_to_raw : forall cls st (rss : gmap ident (list N)) q,
     glob_def σ cls = Some (Gstruct st) ->
-    st.(s_layout) = POD ->
+    st.(s_layout) = POD -> (*TODO: generalize to standard layout*)
     ([∗ list] fld ∈ st.(s_fields),
        Exists rs, [| rss !! fld.(mem_name) = Some rs |] **
-       _offsetR (_field {| f_name := fld.(mem_name) ; f_type := cls |}) (rawsR q rs))
-      ** struct_paddingR q cls -|-
-      Exists rs, rawsR q rs ** [| raw_bytes_of_struct σ cls rss rs |].
+         _offsetR (_field {| f_name := fld.(mem_name) ; f_type := cls |}) (rawsR q rs))
+      ** ([∗ list] fld ∈ st.(s_bases) ...)
+      ** struct_paddingR q cls
+      -|-
+      Exists rs,
+        [| raw_bytes_of_struct σ cls rss rs |]
+        ** type_ptrR (Tnamed cls)
+        ** rawsR q rs.
 
   #[local] Definition implicit_destruct_ty (ty : type) := anyR ty 1 |-- |={↑pred_ns}=> tblockR ty 1.
 
