@@ -19,6 +19,60 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 
 #[local] Open Scope Z_scope.
 
+Definition bitsize_max (a b : bitsize) : bitsize :=
+  match a , b with
+  | W8 , b => b
+  | a , W8 => a
+  | W16 , b => b
+  | a , W16 => a
+  | W32 , b => b
+  | a , W32 => a
+  | W64 , b => b
+  | a , W64 => a
+  | W128 , b => b
+  end.
+
+Definition bitsize_le (a b : bitsize) : bool :=
+  bool_decide (bitsN a <= bitsN b).
+
+(** Implement the following:
+https://eel.is/c++draft/expr.arith.conv#1.3
+
+
+(1.3.1) If both operands have the same type, no further conversion is needed.
+(1.3.2) Otherwise, if both operands have signed integer types or both have unsigned integer types, the operand with the type of lesser integer conversion rank is converted to the type of the operand with greater rank.
+(1.3.3) Otherwise, if the operand that has unsigned integer type has rank greater than or equal to the rank of the type of the other operand, the operand with signed integer type is converted to the type of the operand with unsigned integer type.
+(1.3.4) Otherwise, if the type of the operand with signed integer type can represent all of the values of the type of the operand with unsigned integer type, the operand with unsigned integer type is converted to the type of the operand with signed integer type.
+(1.3.5) Otherwise, both operands are converted to the unsigned integer type corresponding to the type of the operand with signed integer type.
+ *)
+Definition promote_integral (ty1 ty2 : IntegralType) : IntegralType :=
+  match ty1 , ty2 with
+  | Bool , x => x
+  | x , Bool => x
+  | Num sz1 sgn1 , Num sz2 sgn2 =>
+      if bool_decide (sgn1 = sgn2) then
+        Num (bitsize_max sz1 sz2) sgn1
+      else
+        let (ssz, usz) := match sgn1 with
+                          | Signed => (sz1, sz2)
+                          | Unsigned => (sz2, sz1)
+                          end
+        in
+        if bool_decide (bitsize_le ssz usz) then
+          Num usz Unsigned
+        else if bool_decide (bitsN ssz > bitsN usz) then
+               Num ssz Signed
+             else Num ssz Unsigned
+  end.
+
+(* if you have
+   op : T1 -> T2 -> T3
+   you do
+     let ptype := promote_integral T1 T2 in
+     fun l r => cast T3 $ op (cast ptype l) (cast ptype r)
+ *)
+
+
 Module Type OPERATOR_INTF_FUNCTOR
   (Import P : PTRS_INTF)
   (Import INTF : VALUES_INTF_FUNCTOR PTRS_INTF_AXIOM).
