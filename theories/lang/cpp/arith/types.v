@@ -78,6 +78,10 @@ Definition bitsize_max (a b : bitsize) : bitsize :=
 Definition bitsize_le (a b : bitsize) : bool :=
   bool_decide (bitsN a <= bitsN b)%N.
 
+Lemma bitsize_max_alt a b :
+  bitsize_max a b = if bitsize_le a b then b else a.
+Proof. by destruct a, b. Qed.
+
 Bind Scope N_scope with bitsize.
 
 Lemma of_size_gt_O w :
