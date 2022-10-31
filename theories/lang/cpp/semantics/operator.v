@@ -19,22 +19,6 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 
 #[local] Open Scope Z_scope.
 
-Definition bitsize_max (a b : bitsize) : bitsize :=
-  match a , b with
-  | W8 , b => b
-  | a , W8 => a
-  | W16 , b => b
-  | a , W16 => a
-  | W32 , b => b
-  | a , W32 => a
-  | W64 , b => b
-  | a , W64 => a
-  | W128 , b => b
-  end.
-
-Definition bitsize_le (a b : bitsize) : bool :=
-  bool_decide (bitsN a <= bitsN b).
-
 (** Implement the following:
 https://eel.is/c++draft/expr.arith.conv#1.3
 

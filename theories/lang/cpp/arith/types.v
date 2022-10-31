@@ -62,6 +62,22 @@ Definition bytesN (s : bitsize) : N :=
 Definition bytesZ (s : bitsize) : Z :=
   Z.of_N (bytesN s).
 
+Definition bitsize_max (a b : bitsize) : bitsize :=
+  match a , b with
+  | W8 , b => b
+  | a , W8 => a
+  | W16 , b => b
+  | a , W16 => a
+  | W32 , b => b
+  | a , W32 => a
+  | W64 , b => b
+  | a , W64 => a
+  | W128 , b => b
+  end.
+
+Definition bitsize_le (a b : bitsize) : bool :=
+  bool_decide (bitsN a <= bitsN b)%N.
+
 Bind Scope N_scope with bitsize.
 
 Lemma of_size_gt_O w :
