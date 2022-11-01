@@ -46,7 +46,7 @@ to_gd(const NamedDecl *decl) {
 }
 #endif /* CLANG_VERSION_MAJOR >= 11 */
 
-// #define CLANG_NAMES
+#define CLANG_NAMES
 #ifdef CLANG_NAMES
 void
 ClangPrinter::printTypeName(const TypeDecl *decl, CoqPrinter &print) const {
