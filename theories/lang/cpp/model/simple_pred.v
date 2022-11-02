@@ -898,6 +898,9 @@ Module SimpleCPP.
       iIntros "!%". exact: N.divide_1_l.
     Qed.
 
+    Definition const_core {σ : genv} (T : type) (q : Qp) (p : ptr) : mpred.
+    Proof. Admitted.
+        
     (* todo(gmm): this isn't accurate, but it is sufficient to show that the axioms are
     instantiatable. *)
     Definition identity {σ : genv} (this : globname) (most_derived : list globname)

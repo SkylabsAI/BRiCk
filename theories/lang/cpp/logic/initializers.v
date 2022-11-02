@@ -91,7 +91,7 @@ Module Type Init.
       | Tptr _ as rty
       | Tbool as rty
       | Tfloat _ as rty
-      | Tnullptr as rty =>
+      | Tnullptr as rty
       | Tenum _ as rty =>
         if q_c then
           ERROR "default initialize const"
