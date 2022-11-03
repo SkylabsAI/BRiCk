@@ -590,13 +590,6 @@ Definition complete_translation_unit (te : type_table) (syms : symbol_table) :=
   complete_type_table te /\ complete_symbol_table te syms.
 
 (*
-#[global] Instance complete_type_table_dec te : Decision (complete_type_table te).
-Proof.
-apply: map_Forall_dec.
-(* unshelve eapply map_Forall_dec; try apply _. *)
-*)
-
-(*
 TODOs for FM-216:
 1. prove [complete_type_table_dec] above with an efficient checker.
 2. add [bool_decide (complete_type_table globals = true] to translation_unit;
@@ -612,6 +605,108 @@ Question: do we need [complete_symbol_table]? This is not expected.
 Goal: enable recursion on proofs of [complete_type_table], e.g. for defining
 [anyR] (FM-215).
 *)
+
+Section complete_type_table_reflexive_solver.
+  Section TODO_UPSTREAM_avl_dot_v.
+      Lemma IM_Leaf_lookup_None :
+        forall {V : Type} (k : IM.key) (is_bst : IM.Raw.bst (IM.Raw.Leaf V)),
+          {| IM.this := IM.Raw.Leaf V; IM.is_bst := is_bst |} !! k = None.
+      Proof. reflexivity. Qed.
+  End TODO_UPSTREAM_avl_dot_v.
+
+  #[local]
+  Lemma te_nil_complete_type_table (te : type_table) :
+    map_to_list te = [] ->
+    complete_type_table te.
+  Proof.
+    intros Hlist.
+    rewrite /complete_type_table.
+    destruct te; cbn in *.
+    destruct this; cbn in *.
+    - unfold map_Forall=> nm gdecl Hlookup.
+      by rewrite IM_Leaf_lookup_None in Hlookup.
+    - rewrite IM.Raw.Proofs.elements_app in Hlist.
+      exfalso; eapply app_cons_not_nil; eauto.
+  Defined.
+
+  #[local]
+  Lemma invalid_decl_incomplete_type_table (te : type_table) (nm : bs) (gdecl : GlobDecl) :
+    te !! nm = Some gdecl ->
+    ¬ valid_decl te gdecl ->
+    ¬ complete_type_table te.
+  Proof.
+    intros Hdeclared Hinvalid CONTRA; apply Hinvalid.
+    unfold complete_type_table in CONTRA.
+    pose proof (map_Forall_lookup_1 (M:=IM.t)
+                  (fun (_ : bs) (d : GlobDecl) => valid_decl te d)
+                  te nm gdecl CONTRA Hdeclared)
+      as Hvalid_decl.
+    assumption.
+  Defined.
+
+  #[local]
+  Lemma type_table_map_to_list_lookup_Some (te : type_table) (nm : bs) (gdecl : GlobDecl) decls :
+    map_to_list te = (nm, gdecl) :: decls ->
+    te !! nm = Some gdecl.
+  Proof. Admitted.
+
+  (* TODO (JH): use a state monad here to construct larger validity
+     contexts using new per-[GlobDecl] checks.
+   *)
+  Definition validated_type_table : Type := ().
+  Definition vte_insert
+             (vte : validated_type_table) (te : type_table)
+             (nm : bs) (gdecl : GlobDecl) (Hgdecl : valid_decl te gdecl)
+    : validated_type_table := ().
+  (* [[[
+     te !! nm = Some gdecl ->
+     (Hgdecl : valid_decl (vte_merge vte te) gdecl) ->
+     vte_merge vte te = vte_merge (vte_insert vte te nm gdecl Hgdecl)
+                                  (delete nm te)
+     ]]]
+   *)
+  Definition vte_merge (vte : validated_type_table) (te : type_table) : type_table := te.
+
+  Program Fixpoint valid_decl_dec
+          (vte : validated_type_table) (te : type_table) (nm : bs) (gdecl : GlobDecl)
+          {measure (N.to_nat (◒ te))}
+    : { Hgdecl : valid_decl (vte_merge vte te) gdecl
+      & { vte' : validated_type_table
+        | vte' = vte_insert vte te nm gdecl Hgdecl
+        }
+      } + {¬valid_decl (vte_merge vte te) gdecl} := inleft _.
+  Next Obligation. Admitted.
+  Next Obligation. Admitted.
+
+  Program Fixpoint complete_type_table_dec
+          (vte : validated_type_table) (te : type_table)
+          {measure (N.to_nat (◒ te))}
+    : Decision (complete_type_table te) :=
+    (* TODO (JH): determine whether there is a better way to pick /some/ element to
+       check completeness for.
+     *)
+    match map_to_list te as L return _ = L -> Decision (complete_type_table te) with
+    | [] => fun Hlist => left (te_nil_complete_type_table te Hlist)
+    | (nm, gdecl) :: decls => fun Hlist =>
+      match valid_decl_dec vte te nm gdecl with
+      | inleft (existT Hgdecl (exist _ vte' Hvte')) =>
+        match complete_type_table_dec vte' (delete nm te) with
+        | left H => left H
+        | right CONTRA => right _
+        end
+      | inright CONTRA => right (invalid_decl_incomplete_type_table te nm gdecl
+                                  (type_table_map_to_list_lookup_Some te nm gdecl decls Hlist)
+                                  CONTRA)
+      end
+    end eq_refl.
+  Next Obligation.
+    (* TODO (JH): [forall nm te, nm ∈ te -> ◒ (delete nm te) < ◒ te] *)
+    intuition.
+    pose proof (type_table_map_to_list_lookup_Some te nm gdecl decls Hlist).
+  Admitted.
+  Next Obligation. intuition. Defined.
+  Next Obligation. apply measure_wf, lt_wf. Defined.
+End complete_type_table_reflexive_solver.
 
 Variant GlobalInit : Set :=
   (* initialization by an expression *)
