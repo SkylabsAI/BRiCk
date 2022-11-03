@@ -3,8 +3,10 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
+Require Import Coq.Program.Tactics.
+Require Import Coq.Program.Wf.
 Require Import stdpp.fin_maps.
-From bedrock.prelude Require Import base avl.
+From bedrock.prelude Require Import base avl list_numbers.
 From bedrock.lang.cpp.syntax Require Import names expr stmt types.
 
 #[local] Set Primitive Projections.
@@ -234,6 +236,130 @@ Proof. solve_decision. Defined.
 Definition symbol_table : Type := IM.t ObjValue.
 
 Definition type_table : Type := IM.t GlobDecl.
+
+(* Functions used to compute a tight upper bound on the fuel that would
+   be needed to complete structural recursion on a particular [GlobDecl]
+   within a given [type_table].
+ *)
+Section GlobDecl_depth.
+  #[local]
+  Lemma N_pred_le
+    (n n' : N) (p : positive)
+    (Hn : N.pos p = n) (Hn' : Pos.pred_N p = n') :
+    (N.to_nat n' <= N.to_nat n).
+  Proof. lia. Defined.
+
+  (* Consume some fuel in order to justify the lookup of an identifier from the
+     [type_table].
+   *)
+  Section GlobDecl_depth_lookup.
+    Context (FUEL : N).
+    Context (GLOBDECL_DEPTH_RECURSE :
+              forall (FUEL' : N),
+                type_table -> GlobDecl -> (N.to_nat FUEL' < N.to_nat FUEL) -> N).
+
+    Definition GlobDecl_depth_lookup
+               (fuel : N) (te : type_table) (nm : ident) (Hfuel : N.to_nat fuel <= N.to_nat FUEL)
+      : N :=
+      match fuel as F return F = _ -> N with
+      | N0 => fun _ => 0
+      | Npos pos_fuel =>
+        fun HF =>
+          let fuel' := Pos.pred_N pos_fuel in
+          let Hfuel' : (N.to_nat fuel' <= N.to_nat fuel)%nat
+            := N_pred_le fuel fuel' pos_fuel HF eq_refl in
+          let HFUEL : (N.to_nat fuel' < N.to_nat FUEL)%nat := ltac:(lia) in
+          match te !! nm with
+          | None => 0%N
+          | Some gdecl => GLOBDECL_DEPTH_RECURSE fuel' te gdecl HFUEL
+          end
+      end%N eq_refl.
+  End GlobDecl_depth_lookup.
+
+  (* Consume some fuel in order decompose the structure of a [GlobDecl], recursing if
+     necessary.
+   *)
+  Section GlobDecl_depth_recurse.
+    Context (FUEL : N).
+    Context (GLOBDECL_DEPTH_LOOKUP :
+              forall (FUEL' : N),
+                type_table -> ident -> (N.to_nat FUEL' <= N.to_nat FUEL) -> N).
+
+    Definition GlobDecl_depth_recurse
+               (fuel : N) (te : type_table) (gdecl : GlobDecl)
+               (Hfuel : N.to_nat fuel <= N.to_nat FUEL)
+      : N :=
+      let depth_from (fuel' : N) (Hfuel' : N.to_nat fuel' <= N.to_nat FUEL)
+                     {A : Type} (ls : list A) (f : A -> ident) : N :=
+        fold_right (fun a upperbound =>
+                      N.max upperbound (GLOBDECL_DEPTH_LOOKUP fuel' te (f a) Hfuel')) 0%N ls
+      in match fuel as F return F = _ -> N with
+         | 0 => fun _ => 0
+         | Npos pos_fuel =>
+           fun HF =>
+             let fuel' := Pos.pred_N pos_fuel in
+             let Hfuel' : (N.to_nat fuel' <= N.to_nat fuel)%nat
+               := N_pred_le fuel fuel' pos_fuel HF eq_refl in
+             let HFUEL : (N.to_nat fuel' <= N.to_nat FUEL)%nat := ltac:(lia) in
+             match gdecl with
+             | Gtype => 1
+             | Gunion u => 1 + depth_from fuel' HFUEL u.(u_fields) mem_name
+             | Gstruct s => 1 + N.max (depth_from fuel' HFUEL s.(s_bases) fst)
+                                      (depth_from fuel' HFUEL s.(s_fields) mem_name)
+             | Genum _ _ => 1
+             | Gconstant _ _ => 1
+             | Gtypedef _ => 1
+             end
+         end%N eq_refl.
+  End GlobDecl_depth_recurse.
+
+  (* Thread together the [lookup] and [recurse] steps into a larger fixpoint. *)
+  Program Fixpoint GlobDecl_depth_aux (fuel : N) (te : type_table) (gdecl : GlobDecl)
+    {measure (N.to_nat fuel)} : N :=
+    match fuel with
+    | 0%N
+    | 1%N => 0%N
+    | 2%N => GlobDecl_depth_recurse 2 (fun _ _ _ _ => 0%N) 1 te gdecl ltac:(lia)
+    | _ =>
+      match decide (2 < fuel)%N with
+      | left Hfuel_lb =>
+        GlobDecl_depth_recurse
+          fuel (fun fuel' te' nm Hfuel' =>
+                  GlobDecl_depth_lookup
+                    fuel' (fun fuel'' te'' gdecl' Hfuel'' =>
+                             GlobDecl_depth_aux fuel'' te'' gdecl')
+                    (N.pred fuel') te' nm ltac:(lia))
+          (N.pred fuel) te gdecl ltac:(lia)
+      | right _ => 0%N (* NOTE: This can never happen *)
+      end
+    end.
+  Next Obligation. intuition lia. Defined.
+  Next Obligation. intuition lia. Defined.
+  Next Obligation. intuition lia. Defined.
+  Next Obligation. apply measure_wf, lt_wf. Defined.
+
+  (* Use a sensible default for fuel which should be sufficient for all [type_tables]
+     in practice.
+   *)
+  Definition GlobDecl_depth (te : type_table) (gdecl : GlobDecl) : N
+    := (* NOTE (JH): In practice we expect the depth of [GlobDecl]s to be very small
+          (and likely much less than the number of [GlobDecl]s in the tranlsation unit).
+          However, we conservatively use a larger number.
+        *)
+    let DEPTH_OVERAPPROXIMATION : N := (2 * (lengthN (map_to_list te)))%N in
+    GlobDecl_depth_aux DEPTH_OVERAPPROXIMATION te gdecl.
+End GlobDecl_depth.
+
+(* Compute a tight upper bound on the fuel that would be needed to complete
+   structural recursion on an arbitrary [GlobDecl] within a given [type_table].
+ *)
+Definition GlobDecl_depth_upperbound (te : type_table) : N :=
+  fold_right
+    (fun '(nm, gdecl) fuel =>
+       (* v--- Account for a new entry of a given depth. *)
+       GlobDecl_depth te gdecl + fuel)%N
+    0%N (map_to_list te).
+#[global] Notation "'◒' te" := (GlobDecl_depth_upperbound te) (at level 0).
 
 #[global] Instance Singleton_symbol_table : SingletonM obj_name ObjValue symbol_table := _.
 #[global] Instance Singleton_type_table : SingletonM globname GlobDecl type_table := _.
