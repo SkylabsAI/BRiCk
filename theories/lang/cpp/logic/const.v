@@ -33,15 +33,25 @@ Section defs.
         | Tvoid => anyR ty (q / 2)
 
         | Tarray _ _ => False (* TODO *)
-        | Tnamed cls => False (* TODO *)
-
+        | Tnamed cls => match glob_def σ cls with
+                       | None => False
+                       | Some gd =>
+                           match gd with 
+                           | Gtype => False
+                           | Gunion _ => False
+                           | Gstruct str => False
+                           | Genum _ _ => False
+                           | Gconstant _ _ => False 
+                           | Gtypedef _ => False
+                           end
+                       end
         | Tqualified t_c ty' =>
             match t_c with
             | QCV | QC =>  const_coreR_aux n ty' (q/2)
             (* ^ assumes that there are not multiple [Tqualified] in a row *)
             | _ => const_coreR_aux n ty' q
             end
-        | Tenum _ => False (* semantics of const enum is uncelar *) 
+        | Tenum _ => False (* TODO *) 
 
         | Tmember_pointer _ _
         | Tfloat _
