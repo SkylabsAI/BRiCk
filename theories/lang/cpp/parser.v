@@ -8,7 +8,7 @@ Require Export bedrock.lang.cpp.ast.
 
 Fixpoint do_end (ty : globname) : obj_name :=
   match ty with
-  | BS.String _ BS.EmptyString => "D0Ev"
+  | BS.String "E" BS.EmptyString => "D0Ev"
   | BS.String x v => BS.String x (do_end v)
   | _ => BS.EmptyString
   end.
@@ -20,11 +20,11 @@ Fixpoint do_end (ty : globname) : obj_name :=
  *)
 Definition DTOR (ty : globname) : obj_name :=
   match ty with
-  | BS.String _ (BS.String _ ((BS.String c _) as rest)) =>
+  | BS.String _ (BS.String _ (BS.String c rest)) =>
     if bool_decide (c = "N"%byte) then
-      "_Z" ++ do_end rest
+      "_ZN" ++ do_end rest
     else
-      "_ZN" ++ rest ++ "D0Ev"
+      "_ZN" ++ BS.String c (rest ++ "D0Ev")
   | BS.String _ (BS.String _ v) => "_ZN" ++ do_end v
   | _ => "OOPS"
   end%bs.
