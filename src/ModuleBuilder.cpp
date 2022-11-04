@@ -33,8 +33,10 @@ public:
     }
 
     void VisitDecl(const Decl *d, bool) {
+#if 0
         logging::debug() << "Unknown declaration kind \""
                          << d->getDeclKindName() << "\", dropping.\n";
+#endif
     }
 
     void VisitVarTemplateDecl(const VarTemplateDecl *decl, bool) {
