@@ -17,7 +17,7 @@ From bedrock.lang.cpp Require Import
 
 
 Section defs.
-  Context `{Σ : cpp_logic}  {σ : genv}.
+  Context `{Σ : cpp_logic}  {σ : genv} {module : translation_unit}.
   
   Fixpoint const_coreR_aux (fuel : nat) (ty : type) (q : Qp) : Rep :=
     match fuel with
@@ -33,7 +33,7 @@ Section defs.
         | Tvoid => anyR ty (q / 2)
 
         | Tarray _ _ => False (* TODO *)
-        | Tnamed cls => match glob_def σ cls with
+        | Tnamed cls => match (*glob_def σ cls *) module.(globals) !! cls with
                        | None => False (* correct *)
                        | Some gd =>
                            match gd with 
@@ -92,14 +92,13 @@ Section defs.
   Proof.
     rewrite /const_coreR/=.
     case: ty; auto.
-    move=>t_c ty /(_ t_c ty) //=.
-  Qed.
-  
-    
-  
-  
 
+    - (* struct - doesn't hold *)
+      admit.
+    - move=>t_c ty /(_ t_c ty) //=.
+  Admitted.  
 
+End defs.
 
 
   
