@@ -85,7 +85,7 @@ Definition to_signed_bits (bits: N) (z: Z): Z :=
 Definition to_signed (sz: bitsize) (z: Z): Z :=
   Unfold to_signed_bits (to_signed_bits (bitsN sz) z).
 
-Local Transparent bitsZ bitsN.
+#[local] Transparent bitsZ bitsN.
 Arguments bitsZ !_/.
 Arguments Z.of_N !_/.
 Arguments bitsN !_/.
@@ -247,7 +247,7 @@ Proof.
     destruct bits; simpl in *; lia.
 Qed.
 
-Local Lemma pow2Nm1gt1 {n : N} :
+#[local] Lemma pow2Nm1gt1 {n : N} :
   (0 < n)%N -> 1 <= 2^(Z.of_N n - 1).
 Proof.
   intros Hgt0.
