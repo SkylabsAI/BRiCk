@@ -15,7 +15,7 @@ Variant bitsize : Set :=
 | W32
 | W64
 | W128.
-#[global] Instance bitsize_eq: EqDecision bitsize.
+#[global] Instance bitsize_eq_dec: EqDecision bitsize.
 Proof. solve_decision. Defined.
 #[global] Instance bitsize_countable : Countable bitsize.
 Proof.
@@ -102,7 +102,7 @@ Proof.
 Defined.
 
 Variant endian : Set := Little | Big.
-#[global] Instance endian_dec : EqDecision endian.
+#[global] Instance endian_eq_dec : EqDecision endian.
 Proof. solve_decision. Defined.
 
 Definition max_val (bits : bitsize) (sgn : signed) : Z :=
