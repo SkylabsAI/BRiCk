@@ -23,10 +23,10 @@ Section with_Σ.
 
 
   Definition CR := const_coreR (module := module) (Tnamed "_Z1C") 1.
-  Eval hnf in CR.
+  (* Eval hnf in CR. *)
 
   Definition DR := const_coreR (module := module) (Tnamed "_Z1D") 1.
-  Eval hnf in DR.
+  (* Eval hnf in DR. *)
 
 End with_Σ.
 
