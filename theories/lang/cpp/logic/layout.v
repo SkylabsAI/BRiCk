@@ -1,11 +1,10 @@
 (*
- * Copyright (c) 2020-2021 BedRock Systems, Inc.
+ * Copyright (c) 2020-2023 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From bedrock.prelude Require Import base numbers list.
 Require Import iris.proofmode.proofmode.
-From iris.bi.lib Require Import fractional.
 
 Require Import bedrock.lang.cpp.arith.z_to_bytes.
 Require Import bedrock.lang.cpp.ast.
@@ -21,45 +20,41 @@ Section with_Σ.
   Context `{Σ : cpp_logic}.
 
   (** TODO move to pred.v *)
-  Axiom struct_paddingR : forall {σ:genv}, Qp -> globname -> Rep.
+  (* TODO swap the order of [CV.t] and [globname] *)
+  Axiom struct_paddingR : forall {σ:genv}, CV.t -> globname -> Rep.
 
   (* [union_paddingR q cls active_member] is [q] fractional ownership of
      the union padding for union [cls] for the active member
      [active_member]. When there is no active member the [active_member]
      is [None], otherwise it is [Some idx] where [idx] is the numeric
      index of member field.
+
+     TODO swap the order of [CV.t] and [globname].
   *)
-  Axiom union_paddingR : forall {σ:genv}, Qp -> globname -> option nat -> Rep.
+  Axiom union_paddingR : forall {σ:genv}, CV.t -> globname -> option nat -> Rep.
 
   Context {σ : genv}.
 
-  Axiom struct_padding_fractional : forall cls, Fractional (fun q => struct_paddingR q cls).
-  Axiom struct_padding_timeless : forall q cls, Timeless  (struct_paddingR q cls).
-  Axiom struct_padding_frac_valid : forall (q : Qp) cls, Observe [| q ≤ 1 |]%Qp (struct_paddingR q cls).
-  Axiom union_padding_fractional : forall cls idx, Fractional (fun q => union_paddingR q cls idx).
-  Axiom union_padding_timeless : forall q cls idx, Timeless (union_paddingR q cls idx).
-  Axiom union_padding_frac_valid : forall (q : Qp) cls idx, Observe [| q ≤ 1 |]%Qp (union_paddingR q cls idx).
+  #[global] Declare Instance struct_padding_fractional : CFractional1 struct_paddingR.
+  #[global] Declare Instance struct_padding_timeless : Timeless2 struct_paddingR.
+  #[global] Declare Instance struct_padding_frac_valid : CFracValid1 struct_paddingR.
 
-  #[global] Existing Instances
-    struct_padding_fractional struct_padding_timeless struct_padding_frac_valid
-    union_padding_fractional union_padding_timeless union_padding_frac_valid.
+  #[global] Declare Instance union_padding_fractional : CFractional2 union_paddingR.
+  #[global] Declare Instance union_padding_timeless : Timeless3 union_paddingR.
+  #[global] Declare Instance union_padding_frac_valid : CFracValid2 union_paddingR.
 
-  #[global] Instance struct_padding_as_fractional q cls :
-    AsFractional (struct_paddingR q cls) (λ q, struct_paddingR q cls) q.
-  Proof. exact: Build_AsFractional. Qed.
-  #[global] Instance union_padding_as_fractional q cls idx :
-    AsFractional (union_paddingR q cls idx) (λ q, union_paddingR q cls idx) q.
-  Proof. exact: Build_AsFractional. Qed.
+  #[global] Instance struct_padding_as_fractional : AsCFractional1 struct_paddingR.
+  Proof. solve_as_cfrac. Qed.
+  #[global] Instance union_padding_as_fractional : AsCFractional2 union_paddingR.
+  Proof. solve_as_cfrac. Qed.
 
-  Axiom struct_paddingR_type_ptr_observe : forall q cls, Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).
-  #[global] Existing Instance struct_paddingR_type_ptr_observe.
+  #[global] Declare Instance struct_paddingR_type_ptr_observe : forall q cls, Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).
   #[global] Instance struct_paddingR_strict_valid_observe q cls : Observe svalidR (struct_paddingR q cls).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
   #[global] Instance struct_paddingR_valid_observe q cls : Observe validR (struct_paddingR q cls).
   Proof. rewrite -svalidR_validR; apply _. Qed.
 
-  Axiom union_paddingR_type_ptr_observe : forall q cls i, Observe (type_ptrR (Tnamed cls)) (union_paddingR q cls i).
-  #[global] Existing Instance union_paddingR_type_ptr_observe.
+  #[global] Declare Instance union_paddingR_type_ptr_observe : forall q cls i, Observe (type_ptrR (Tnamed cls)) (union_paddingR q cls i).
   #[global] Instance union_paddingR_strict_valid_observe q cls i : Observe svalidR (union_paddingR q cls i).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
   #[global] Instance union_paddingR_valid_observe q cls i : Observe validR (union_paddingR q cls i).

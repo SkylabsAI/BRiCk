@@ -7,7 +7,7 @@
  * Semantics of expressions
  * (expressed in weakest pre-condition style)
  *)
-Require Export bedrock.prelude.numbers.
+Require Import bedrock.prelude.numbers.
 Require Import iris.proofmode.tactics.
 
 From bedrock.lang.cpp Require Import ast semantics.
@@ -139,8 +139,8 @@ Module Type Expr.
           match drop_qualifiers ty with
           | Tarray ty' _ =>
             Forall (p : ptr) (q : Qp),
-              (p |-> cstring.R q bytes **
-               (p |-> cstring.R q bytes ={⊤}=∗ emp)) -*
+              p |-> cstring.R (CV.c q) bytes -*
+              (p |-> cstring.R (CV.c q) bytes ={⊤}=∗ emp) -*
               Q p FreeTemps.id
           | _ => False
           end
@@ -946,7 +946,7 @@ Module Type Expr.
     Axiom end_provides_storage : forall storage_ptr obj_ptr aty sz,
        size_of aty = Some sz ->
        provides_storage storage_ptr obj_ptr aty ** obj_ptr |-> anyR aty 1
-         ={⊤}=∗ (storage_ptr |-> blockR sz 1).
+         ={⊤}=∗ (storage_ptr |-> blockR sz (CV.m 1)).
 
     (** temporary expressions
        note(gmm): these axioms should be reviewed thoroughly
@@ -1352,10 +1352,10 @@ Module Type Expr.
                            to the program to make it read-only.
                          NOTE that no "correct" program will ever modify this variable
                            anyways. *)
-                      loop_index |-> primR Tu64 (1/2) idx -*
+                      loop_index |-> primR Tu64 (CV.c 1) idx -*
                       wp_initialize tu ρ ty (targetp .[ ty ! idx ]) init
                               (fun free => interp free $
-                                 loop_index |-> primR Tu64 (1/2) idx **
+                                 loop_index |-> primR Tu64 (CV.c 1) idx **
                                  rest (N.succ idx))) sz idx.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) vc src init ety ty Q,
@@ -1379,3 +1379,4 @@ End Expr.
 Declare Module E : Expr.
 
 Export E.
+Export cv.

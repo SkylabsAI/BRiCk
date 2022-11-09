@@ -100,11 +100,11 @@ Section FreeTemps.
    *)
   Definition seqs : list t -> t := fold_right FreeTemps.seq FreeTemps.id.
 
-  (** [seqsR ls] is the [FreeTemp] representing the destruction
+  (** [seqs_rev ls] is the [FreeTemp] representing the destruction
       of each element in [ls] sequentially from right-to-left, i.e.
       the first element in the list is destructed last.
    *)
-  Definition seqsR : list t -> t := foldl (fun a b => FreeTemps.seq b a) FreeTemps.id.
+  Definition seqs_rev : list t -> t := foldl (fun a b => FreeTemps.seq b a) FreeTemps.id.
 
 End FreeTemps.
 End FreeTemps.

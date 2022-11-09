@@ -6,10 +6,12 @@
 
 Require Import iris.proofmode.proofmode.
 Require Import bedrock.lang.bi.ChargeCompat.
-Require Export bedrock.lang.bi.atomic1.
+Require Import bedrock.lang.bi.atomic1.
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred wp call.
+
+Export bedrock.lang.bi.atomic1.
 
 #[local] Open Scope Z_scope.
 
@@ -17,7 +19,7 @@ Section with_Σ.
   Context `{cpp_logic thread_info} {resolve : genv} (tu : translation_unit).
   Variables (M : coPset) (ρ : region).
 
-  Implicit Type (Q : val → mpred).
+  Implicit Type (Q : val → mpred). (* atomics do not throw *)
 
   #[local] Notation wp_prval := (wp_prval tu ρ).
   #[local] Notation wp_operand := (wp_operand tu ρ).
