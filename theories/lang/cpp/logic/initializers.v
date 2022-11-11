@@ -142,8 +142,8 @@ Module Type Init.
         can be used to initialize all values (including references) whereas [wp_init]
         is only safe to initialize non-primitives (arrays and aggregates).
      *)
-    Definition wp_initialize (ty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
-      let '(cv, ty) := decompose_type ty in
+    Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
+      let '(cv, ty) := decompose_type qty in
       let qf : Qp := (if q_const cv then 1/2 else 1)%Qp in
       match ty with
       | Tvoid =>
@@ -166,7 +166,7 @@ Module Type Init.
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
-      | Tnamed _ as ty => wp_init ty addr init (fun _ frees => (if q_const cv then const_core ty 1 addr else emp) ** k frees)
+      | Tnamed _ as ty => wp_init qty addr init (fun _ frees => (if q_const cv then const_core ty 1 addr else emp) ** k frees)
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
       | Tref ty =>
@@ -195,7 +195,7 @@ Module Type Init.
      *)
     Definition wpi (cls : globname) (thisp : ptr) (init : Initializer) (Q : epred) : mpred :=
         let p' := thisp ,, offset_for cls init.(init_path) in
-        wp_initialize (erase_qualifiers init.(init_type)) p' init.(init_init) (fun free => interp free Q).
+        wp_initialize init.(init_type) p' init.(init_init) (fun free => interp free Q).
     #[global] Arguments wpi _ _ _ _ /.
 
   End with_resolve.
