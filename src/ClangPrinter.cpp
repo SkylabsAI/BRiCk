@@ -17,66 +17,9 @@
 
 using namespace clang;
 
-ClangPrinter::ClangPrinter(clang::CompilerInstance *compiler,
-                           clang::ASTContext *context)
-    : compiler_(compiler), context_(context) {
-    mangleContext_ =
-        ItaniumMangleContext::create(*context, compiler->getDiagnostics());
-}
-
 unsigned
 ClangPrinter::getTypeSize(const BuiltinType *t) const {
     return this->context_->getTypeSize(t);
-}
-
-void
-ClangPrinter::printObjName(const ValueDecl *decl, CoqPrinter &print, bool raw) {
-    assert(!raw && "printing raw object names is no longer supported");
-
-    // All enumerations introduce types, but only some of them have names.
-    // While positional names work in scoped contexts, they generally
-    // do not work in extensible contexts (e.g. the global context)
-    //
-    // To address this, we use the name of their first declation.
-    // To avoid potential clashes (since the first declaration might be
-    // a term name and not a type name), we prefix the symbol with a dot,
-    // e.g.
-    // [enum { X , Y , Z };] -> [.X]
-    // note that [MangleContext::mangleTypeName] does *not* follow this
-    // strategy.
-
-    if (auto ecd = dyn_cast<EnumConstantDecl>(decl)) {
-        // While they are values, they are not mangled because they do
-        // not end up in the resulting binary. Therefore, we need a special
-        // case.
-        auto ed = dyn_cast<EnumDecl>(ecd->getDeclContext());
-        print.ctor("Cenum_const", false);
-        printTypeName(ed, print);
-        print.output() << " \"";
-        ecd->printName(print.output().nobreak());
-        print.output() << "\"";
-        print.end_ctor();
-    } else if (auto dd = dyn_cast<CXXDestructorDecl>(decl)) {
-        // NOTE we implement our own destructor mangling because
-        // we are not guaranteed to be able to generate the
-        // destructor for every aggregate and our current setup requires
-        // that all aggregates have named destructors.
-        //
-        // An alternative (cleaner) solution is to extend the type
-        // of names to introduce a distinguished name for destructors.
-        // Doing this is a bit more invasive.
-        print.ctor("DTOR", false);
-        printTypeName(dd->getParent(), print);
-        print.end_ctor();
-    } else if (mangleContext_->shouldMangleDeclName(decl)) {
-        print.output() << "\"";
-        mangleContext_->mangleName(to_gd(decl), print.output().nobreak());
-        print.output() << "\"";
-    } else {
-        print.output() << "\"";
-        decl->printName(print.output().nobreak());
-        print.output() << "\"";
-    }
 }
 
 namespace {

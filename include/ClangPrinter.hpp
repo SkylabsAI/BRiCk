@@ -87,5 +87,5 @@ public:
 private:
     clang::CompilerInstance* compiler_;
     clang::ASTContext* context_;
-    clang::MangleContext* mangleContext_;
+    void* mangleContext_;
 };
