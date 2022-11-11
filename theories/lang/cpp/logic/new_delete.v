@@ -369,7 +369,7 @@ Module Type Expr__newdelete.
                     this' |-> new_tokenR 1 mdc_ty **
                     (* v---- because dispatch could be virtual, the translation unit
                              used to destroy the object may need to be different *)
-                    Exists tu', denoteModule tu' ** destroy_val tu' mdc_ty this' (
+                    Exists tu', denoteModule tu' ** destroy_val tu' false mdc_ty this' (
                     Exists storage_ptr sz, [| size_of mdc_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)
                       provides_storage storage_ptr this' mdc_ty **
@@ -406,7 +406,7 @@ Module Type Expr__newdelete.
                obj_ptr |-> new_tokenR 1 array_ty **
                (* /---- Calling destructor with object pointer
                   v     Note: virtual dispatch is not allowed for [delete[]] *)
-               destroy_val tu array_ty obj_ptr (
+               destroy_val tu false array_ty obj_ptr (
                     Exists storage_ptr (sz sz' : N),
                       [| size_of array_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)
