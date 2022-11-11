@@ -272,30 +272,28 @@ printSimpleContext(const DeclContext *dc, CoqPrinter &print,
         print.output() << "E";
         return compound + 1;
     } else if (auto ns = dyn_cast<NamespaceDecl>(dc)) {
+        auto rem = ns->isAnonymousNamespace() ? remaining : remaining + 1;
+
         auto compound = printSimpleContext(ns->getDeclContext(), print, cprint,
-                                           mangle, remaining + 1);
+                                           mangle, rem);
         if (not ns->isAnonymousNamespace()) {
             auto name = ns->getNameAsString();
             print.output() << name.length() << name;
-        } else if (not ns->decls_empty()) {
-            // a proposed scheme is to use the name of the first declaration.
-            print.output() << "~<TODO>";
-            // TODO
-            // ns->field_begin()->printName(print.output().nobreak());
+            return compound + 1;
         } else {
-            print.output() << "~<empty>";
-            logging::unsupported()
-                << "empty anonymous namespaces are not supported."
-                << " (at " << cprint.sourceRange(ns->getSourceRange()) << ")\n";
+            return compound;
         }
-        if (remaining == 0 && 0 < compound)
-            print.output() << "E";
-        return compound + 1;
     } else if (auto rd = dyn_cast<RecordDecl>(dc)) {
         // NOTE: this occurs when you have a forward declaration,
         // e.g. [struct C;], or when you have a compiler builtin.
         // We need to mangle the name, but we can't really get any help
         // from clang.
+
+        auto get_first_decl = [rd]() {
+            auto x = dyn_cast<ValueDecl>(rd->getNextDeclInContext());
+            return x->getType().getTypePtr()->getAsRecordDecl() == rd ? x :
+                                                                        nullptr;
+        };
 
         auto compound = printSimpleContext(rd->getDeclContext(), print, cprint,
                                            mangle, remaining + 1);
@@ -305,15 +303,31 @@ printSimpleContext(const DeclContext *dc, CoqPrinter &print,
         } else if (auto tdn = rd->getTypedefNameForAnonDecl()) {
             auto s = tdn->getNameAsString();
             print.output() << s.length() << s;
-            //tdn->printName(print.output().nobreak());
+        } else if (auto vd = get_first_decl()) {
+            // if the next declaration is a declaration of this type, then use the
+            // name of the declaration
+            std::string name = "$" + vd->getNameAsString();
+            print.output() << name.length() << name;
         } else if (not rd->field_empty()) {
-            print.output() << ".";
-            rd->field_begin()->printName(print.output().nobreak());
+            auto x = rd->field_begin()->getNameAsString();
+            print.output() << x.length() + 1 << "." << x;
+        } else if (rd->getParent()->isRecord() or
+                   rd->getParent()->isFunctionOrMethod()) {
+            int idx = 0;
+            for (auto d : rd->getParent()->decls()) {
+                if (d == rd)
+                    break;
+                ++idx;
+            }
+            std::string name = ".{" + std::to_string(idx) + "}";
+            print.output() << name.length() << name;
         } else {
-            // TODO this isn't technically sound
-            print.output() << "~<empty>";
+            // NOTE this isn't technically sound
+            std::string name = ".{}";
+            print.output() << name.length() << name;
             logging::unsupported()
-                << "empty anonymous records are not supported. (at "
+                << "empty anonymous records are only supported in records and "
+                   "functions. (at "
                 << cprint.sourceRange(rd->getSourceRange()) << ")\n";
         }
         return compound + 1;
@@ -330,14 +344,15 @@ printSimpleContext(const DeclContext *dc, CoqPrinter &print,
         } else {
             if (ed->enumerators().empty()) {
                 // no idea what to do
-                print.output() << "~<empty-enum>";
+                print.output() << "2.#";
                 logging::unsupported()
                     << "empty anonymous namespaces are not supported."
                     << " (at " << cprint.sourceRange(ed->getSourceRange())
                     << ")\n";
             } else {
-                print.output() << "~";
-                ed->enumerators().begin()->printName(print.output().nobreak());
+                std::string name =
+                    "#" + ed->enumerators().begin()->getNameAsString();
+                print.output() << name.length() << name;
             }
         }
         return compound + 1;
