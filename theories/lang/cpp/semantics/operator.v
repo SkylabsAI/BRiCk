@@ -21,7 +21,7 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 
 (** Implement the following:
 https://eel.is/c++draft/expr.arith.conv#1.3
-
+This should only be applied to arithmetic types.
 
 (1.3.1) If both operands have the same type, no further conversion is needed.
 (1.3.2) Otherwise, if both operands have signed integer types or both have unsigned integer types, the operand with the type of lesser integer conversion rank is converted to the type of the operand with greater rank.
@@ -29,13 +29,14 @@ https://eel.is/c++draft/expr.arith.conv#1.3
 (1.3.4) Otherwise, if the type of the operand with signed integer type can represent all of the values of the type of the operand with unsigned integer type, the operand with unsigned integer type is converted to the type of the operand with signed integer type.
 (1.3.5) Otherwise, both operands are converted to the unsigned integer type corresponding to the type of the operand with signed integer type.
  *)
-Definition promote_integral (ty1 ty2 : IntegralType) : IntegralType :=
+Definition arith_join (ty1 ty2 : type) : option type :=
   match ty1 , ty2 with
-  | Bool , x => x
-  | x , Bool => x
-  | Num sz1 sgn1 , Num sz2 sgn2 =>
+  | Tbool , Tbool => Some Tbool
+  | Tnum _ _ , Tbool => Some ty1
+  | Tbool , Tnum _ _ => Some ty2
+  | Tnum sz1 sgn1 , Tnum sz2 sgn2 =>
       if bool_decide (sgn1 = sgn2) then
-        Num (bitsize_max sz1 sz2) sgn1
+        Some $ Tnum (bitsize_max sz1 sz2) sgn1
       else
         let (ssz, usz) := match sgn1 with
                           | Signed => (sz1, sz2)
@@ -43,19 +44,12 @@ Definition promote_integral (ty1 ty2 : IntegralType) : IntegralType :=
                           end
         in
         if bool_decide (bitsize_le ssz usz) then
-          Num usz Unsigned
+          Some $ Tnum usz Unsigned
         else if bool_decide (bitsN ssz > bitsN usz) then
-               Num ssz Signed
-             else Num ssz Unsigned
+          Some $ Tnum ssz Signed
+        else Some $ Tnum ssz Unsigned
+  | _ , _ => None
   end.
-
-(* if you have
-   op : T1 -> T2 -> T3
-   you do
-     let ptype := promote_integral T1 T2 in
-     fun l r => cast T3 $ op (cast ptype l) (cast ptype r)
- *)
-
 
 Module Type OPERATOR_INTF_FUNCTOR
   (Import P : PTRS_INTF)
@@ -115,6 +109,32 @@ Axiom eval_minus_int : forall (s : signed) a w,
               (Vint a) (Vint c).
 
 (** * Binary Operators *)
+
+(** ** Heterogeneous operators
+    These arise because of compound assignment operators such as `+=` when the
+    operands have different types. Per the standard [citation needed], when
+    the types are not homogeneous, we:
+
+    1. promote the operands using [promote_integral],
+    2. perform the operation on the promoted types,
+    3. cast the result to the result type.
+ *)
+Axiom eval_binop_pure_hetero : forall bo tl tr tresult vl vr vresult,
+    match as_integral tu tl , as_integral tu tr with
+    | Some til , Some tir =>
+        match arith_join til tir with
+        | Some tp =>
+            let cast_undef tu from to v :=
+              default Vundef $ conv_int tu from to v
+            in
+            exists vr,
+            eval_binop_pure bo tp tp tp (cast_undef tu tl tp vl) (cast_undef tu tr tp vr) vr /\
+            conv_int tu tp tresult vr = Some vresult
+        | _ => False
+        end
+    | _ , _ => False
+    end ->
+    eval_binop_pure bo tl tr tresult vl vr vresult.
 
 (** ** arithmetic operators *)
 Let eval_int_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=

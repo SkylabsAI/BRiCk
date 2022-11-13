@@ -460,60 +460,60 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               has_type_bswap128.
     Qed.
 
-    (** representation of integral types *)
-    Variant IntegralType : Set :=
-      | Bool
-      | Num (_ : bitsize) (_ : signed).
-
     (** [as_integral tu ty] is the integral representation of the type if one exists.
        In particular, this gets the underlying type of enumerations.
      *)
-    Definition as_integral (tu : translation_unit) (ty : type) : option IntegralType :=
+    Definition as_integral (tu : translation_unit) (ty : type) : option type :=
       match drop_qualifiers ty with
-      | Tnum sz sgn => Some $ Num sz sgn
+      | Tnum sz sgn => Some $ Tnum sz sgn
       | Tenum nm =>
           match tu !! nm with
           | Some (Genum ty _) =>
               match ty with
-              | Tnum sz sgn => Some $ Num sz sgn
-              | Tbool => Some Bool
+              | Tnum sz sgn => Some $ Tnum sz sgn
+              | Tbool => Some Tbool
               | _ => None
               end
           | _ => None
           end
-      | Tbool => Some Bool
+      | Tbool => Some Tbool
       | _ => None
       end.
 
     (** Integral conversions. For use in the semantics of C++ operators. *)
-    Definition conv_int (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
+    Definition conv_int (tu : translation_unit) (from to : type) (v : val) : option val :=
       match as_integral tu from , as_integral tu to with
       | Some from , Some to =>
           match from , to with
-          | Bool , Num _ _ =>
+          | Tbool , Tnum _ _ =>
               match is_true v with
-              | Some v => v' = Vbool v
-              | _ => False
+              | Some v => Some $ Vbool v
+              | _ => None
               end
-          | Num _ _ , Bool =>
+          | Tnum _ _ , Tbool =>
               match v with
               | Vint v =>
-                  v' = Vbool (bool_decide (v <> 0))
-              | _ => False
+                  Some $ Vbool (bool_decide (v <> 0))
+              | _ => None
               end
-          | Num _ _ , Num sz Unsigned =>
+          | Tnum _ _ , Tnum sz Unsigned =>
               match v with
               | Vint v =>
-                  v' = Vint (to_unsigned sz v)
-              | _ => False
+                  Some $ Vint (to_unsigned sz v)
+              | _ => None
               end
-          | Num _ _ , Num sz Signed =>
-              has_type v (Tnum sz Signed) /\ v' = v
-          | Bool , Bool => v = v'
+          | Tnum _ _ , Tnum sz Signed =>
+              match v with
+              | Vint z =>
+                  if bool_decide (bound sz Signed z) then Some v else None
+              | _ => None
+              end
+          | Tbool , Tbool => Some v
+          | _ , _ => None
           end
-      | _ , _ => False
+      | _ , _ => None
       end.
-    Arguments conv_int !_ !_ _ _ /.
+    #[global] Arguments conv_int _ !_ !_ _ /.
 
   End with_env.
 
