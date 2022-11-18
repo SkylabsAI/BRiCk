@@ -112,12 +112,6 @@ stages:
     - make -j ${NJOBS} coq
     - rm -f build/bedrock
     - cp -a theories build/bedrock
-  artifacts:
-    name: cpp2v-${LLVM_MAJ_VER}
-    paths:
-      - build/gitshas.txt
-      - build/cpp2v
-      - build/bedrock
   tags:
     - fm.shared
 
