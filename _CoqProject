@@ -67,6 +67,7 @@ theories/lang/prelude/addr.v
 theories/lang/algebra/telescopes.v
 theories/lang/algebra/coGset.v
 theories/lang/algebra/gset_bij.v
+theories/lang/algebra/cqp.v
 
 # BI-polymorphic modules
 theories/lang/bi/entailsN.v
