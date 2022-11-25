@@ -5,5 +5,3 @@
 
 virt_cpp.v
 virt_cpp_test.v
-const/cast.cpp
-const/const.cpp
