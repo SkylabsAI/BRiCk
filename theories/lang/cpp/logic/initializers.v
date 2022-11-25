@@ -171,12 +171,15 @@ Module Type Init.
 
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
-        wp_lval init (fun p free =>
-                        addr |-> primR rty (cqp.mk (q_const cv) (1/2)%Qp) (Vref p) -* k free)
+        wp_lval init (fun p free => 
+                        addr |-> primR rty 1%cQp (Vref p) -* k free)
+      (* ^ TODO: how do we model refs? *)
+                
       | Trv_ref ty =>
-        let rty := Tref $ erase_qualifiers ty in
+        let rty := Tref $ (*erase_qualifiers*) ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty (cqp.mk (q_const cv) (1/2)%Qp) (Vref p) -* k free)
+                        addr |-> primR rty (1%Qp) (Vref p) -* k free)
+      (* ^ TODO: how do we model refs? *)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
       | Tqualified _ ty => False (* unreachable *)
