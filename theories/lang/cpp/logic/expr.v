@@ -948,7 +948,7 @@ Module Type Expr.
     Axiom end_provides_storage : forall storage_ptr obj_ptr aty sz,
        size_of aty = Some sz ->
        provides_storage storage_ptr obj_ptr aty ** obj_ptr |-> anyR aty 1
-         ={⊤}=∗ (storage_ptr |-> blockR sz 1).
+         ={⊤}=∗ (storage_ptr |-> blockR sz 1%cQp).
 
     (** temporary expressions
        note(gmm): these axioms should be reviewed thoroughly
@@ -1354,10 +1354,10 @@ Module Type Expr.
                            to the program to make it read-only.
                          NOTE that no "correct" program will ever modify this variable
                            anyways. *)
-                      loop_index |-> primR Tu64 (1/2) idx -*
+                      loop_index |-> primR Tu64 (cqp.mk true 1%Qp) idx -*
                       wp_initialize tu ρ ty (targetp .[ ty ! idx ]) init
                               (fun free => interp free $
-                                 loop_index |-> primR Tu64 (1/2) idx **
+                                 loop_index |-> primR Tu64 (cqp.mk false 1%Qp) idx **
                                  rest (N.succ idx))) sz idx.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) vc src init ety ty Q,
@@ -1381,3 +1381,4 @@ End Expr.
 Declare Module E : Expr.
 
 Export E.
+Export cqp.

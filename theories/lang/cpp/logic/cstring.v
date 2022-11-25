@@ -19,6 +19,8 @@ From bedrock.lang.cpp Require Import
      logic.arr logic.heap_pred logic.mpred logic.zstring
      heap_notations.
 
+Require Import bedrock.lang.algebra.cqp.
+
 Import ChargeNotation.
 #[local] Open Scope Z_scope.
 
@@ -686,10 +688,10 @@ Module cstring.
     Context `{Σ : cpp_logic} `{σ : genv}.
 
     (* The toplevel definition of [cstring.bufR]: *)
-    Definition bufR (q : Qp) (sz : Z) (cstr : t) : Rep :=
+    Definition bufR (q : cQp) (sz : Z) (cstr : t) : Rep :=
     (* The toplevel definition of [cstring.bufR']: *)
       zstring.bufR q sz (to_zstring cstr).
-    Definition bufR' (q : Qp) (sz : Z) (cstr : t) : Rep :=
+    Definition bufR' (q : cQp) (sz : Z) (cstr : t) : Rep :=
       zstring.bufR' q sz (to_zstring cstr).
 
     #[global] Instance bufR_WF_observe :
@@ -702,15 +704,15 @@ Module cstring.
         Observe [| WF' zs |] (bufR' q sz zs).
     Proof. refine _. Qed.
 
-    Lemma bufRs_equiv (q : Qp) (sz : Z) (zs : t) :
+    Lemma bufRs_equiv (q : cQp) (sz : Z) (zs : t) :
       bufR q sz zs -|- bufR' q sz zs.
     Proof. intros *; rewrite /bufR/bufR'; by apply zstring.bufRs_equiv. Qed.
 
     (* The toplevel definition of [cstring.R]: *)
-    Definition R (q : Qp) (cstr : t) : Rep :=
+    Definition R (q : cQp) (cstr : t) : Rep :=
       zstring.R q (to_zstring cstr).
     (* The toplevel definition of [cstring.R']: *)
-    Definition R' (q : Qp) (cstr : t) : Rep :=
+    Definition R' (q : cQp) (cstr : t) : Rep :=
       zstring.R' q (to_zstring cstr).
 
     #[global] Instance R_WF_observe :
@@ -724,7 +726,7 @@ Module cstring.
     Proof. refine _. Qed.
 
     Lemma Rs_equiv :
-      forall (q : Qp) (zs : t),
+      forall (q : cQp) (zs : t),
         R q zs -|- R' q zs.
     Proof. intros *; rewrite /R/R'; by apply zstring.Rs_equiv. Qed.
 
@@ -737,7 +739,7 @@ Module cstring.
           intros **; rewrite !/bufR/=; eapply H; eauto.
 
         Lemma bufR_nil :
-          forall (q : Qp) (sz : Z),
+          forall (q : cQp) (sz : Z),
             (1 <= sz)%Z ->
                 arrayR Tuchar (fun _ => primR Tuchar q 0) (repeat () (Z.to_nat sz))
             |-- bufR q sz "".
@@ -762,12 +764,12 @@ Module cstring.
 
         (* TODO (AUTO): Investigate whether or not this hint actually fires. *)
         #[global] Instance bufR_sz_contra :
-          forall (q : Qp) (sz : Z) (cstr : t),
+          forall (q : cQp) (sz : Z) (cstr : t),
             Observe2 False [| sz < size cstr |] (bufR q sz cstr).
         Proof. by lift_zstring_bufR2bufR zstring.bufR_sz_contra. Qed.
 
         #[global] Instance bufR_singleton :
-          forall (q : Qp) (sz : Z) (b : Byte.byte),
+          forall (q : cQp) (sz : Z) (b : Byte.byte),
             1 <= sz ->
             Observe [| b <> "000" |]%byte (bufR q sz (BS.String b ""%bs)).
         Proof.
@@ -785,7 +787,7 @@ Module cstring.
         Qed.
 
         Lemma bufR_cons :
-          forall (q : Qp) (sz : Z) (b : Byte.byte) (cstr : t),
+          forall (q : cQp) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR q sz (BS.String b cstr)
             -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
@@ -797,7 +799,7 @@ Module cstring.
         Qed.
 
         #[global] Instance bufR_cons_cons_head_nonzero :
-          forall (q : Qp) (sz : Z) (b b' : Byte.byte) (cstr : t),
+          forall (q : cQp) (sz : Z) (b b' : Byte.byte) (cstr : t),
             Observe [| b <> "000" |]%byte (bufR q sz (BS.String b (BS.String b' cstr))).
         Proof.
           intros **; rewrite /bufR/Observe !to_zstring_unfold_String/=.
@@ -842,7 +844,7 @@ Module cstring.
           intros **; rewrite -!bufRs_equiv; by apply H.
 
         Lemma bufR'_nil :
-          forall (q : Qp) (sz : Z),
+          forall (q : cQp) (sz : Z),
             (1 <= sz)%Z ->
                 arrayR Tuchar (fun _ => primR Tuchar q 0) (repeat () (Z.to_nat sz))
             |-- bufR' q sz "".
@@ -850,18 +852,18 @@ Module cstring.
 
         (* TODO (AUTO): Investigate whether or not this hint actually fires. *)
         #[global] Instance bufR'_sz_contra :
-          forall (q : Qp) (sz : Z) (cstr : t),
+          forall (q : cQp) (sz : Z) (cstr : t),
             Observe2 False [| sz < size cstr |] (bufR' q sz cstr).
         Proof. by lift_WF2WF' bufR_sz_contra. Qed.
 
         #[global] Instance bufR'_singleton :
-          forall (q : Qp) (sz : Z) (b : Byte.byte),
+          forall (q : cQp) (sz : Z) (b : Byte.byte),
             1 <= sz ->
             Observe [| b <> "000" |]%byte (bufR' q sz (BS.String b ""%bs)).
         Proof. by lift_WF2WF' bufR_singleton. Qed.
 
         Lemma bufR'_cons :
-          forall (q : Qp) (sz : Z) (b : Byte.byte) (cstr : t),
+          forall (q : cQp) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR' q sz (BS.String b cstr)
             -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
@@ -869,7 +871,7 @@ Module cstring.
         Proof. by lift_WF2WF' bufR_cons. Qed.
 
         #[global] Instance bufR'_cons_cons_head_nonzero :
-          forall (q : Qp) (sz : Z) (b b' : Byte.byte) (cstr : t),
+          forall (q : cQp) (sz : Z) (b b' : Byte.byte) (cstr : t),
             Observe [| b <> "000" |]%byte (bufR' q sz (BS.String b (BS.String b' cstr))).
         Proof. by lift_WF2WF' bufR_cons_cons_head_nonzero. Qed.
 
@@ -892,7 +894,7 @@ Module cstring.
       End bufR'.
 
       Lemma bufR_unfold :
-        forall (q : Qp) (sz : Z) (cstr : t),
+        forall (q : cQp) (sz : Z) (cstr : t),
           bufR q sz cstr -|-
           [| size cstr <= sz |] ** R q cstr **
           .[ Tuchar ! size cstr] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
@@ -904,7 +906,7 @@ Module cstring.
       Qed.
 
       Lemma bufR'_unfold :
-        forall (q : Qp) (sz : Z) (cstr : t),
+        forall (q : cQp) (sz : Z) (cstr : t),
           bufR' q sz cstr -|-
           [| size cstr <= sz |] ** R' q cstr **
           .[ Tuchar ! size cstr] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
@@ -921,7 +923,7 @@ Module cstring.
           intros **; rewrite !R_bufR_equiv; eapply H; eauto.
 
         Remark R_nil :
-          forall (q : Qp),
+          forall (q : cQp),
                 arrayR Tuchar (fun c => primR Tuchar q (Vint c)) [0]
             |-- R q "".
         Proof.
@@ -932,7 +934,7 @@ Module cstring.
         Qed.
 
         #[global] Instance R_singleton :
-          forall (q : Qp) (b : Byte.byte),
+          forall (q : cQp) (b : Byte.byte),
             Observe [| b <> "000" |]%byte
                     (R q (BS.String b ""%bs)).
         Proof.
@@ -941,7 +943,7 @@ Module cstring.
         Qed.
 
         Lemma R_cons :
-          forall (q : Qp) (b : Byte.byte) (cstr : t),
+          forall (q : cQp) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R q (BS.String b cstr)
             -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
@@ -954,7 +956,7 @@ Module cstring.
         Qed.
 
         #[global] Instance R_cons_cons_head_nonzero :
-          forall (q : Qp) (b b' : Byte.byte) (cstr : t),
+          forall (q : cQp) (b b' : Byte.byte) (cstr : t),
             Observe [| b <> "000" |]%byte (R q (BS.String b (BS.String b' cstr))).
         Proof. try_lift_bufR bufR_cons_cons_head_nonzero. Qed.
 
@@ -1001,19 +1003,19 @@ Module cstring.
           intros **; rewrite !R_bufR_equiv; eapply H; eauto.
 
         Remark R'_nil :
-          forall (q : Qp),
+          forall (q : cQp),
                 arrayR Tuchar (fun c => primR Tuchar q (Vint c)) [0]
             |-- R' q "".
         Proof. lift_WF2WF' R_nil. Qed.
 
         #[global] Instance R'_singleton :
-          forall (q : Qp) (b : Byte.byte),
+          forall (q : cQp) (b : Byte.byte),
             Observe [| b <> "000" |]%byte
                     (R' q (BS.String b ""%bs)).
         Proof. lift_WF2WF' R_singleton. Qed.
 
         Lemma R'_cons :
-          forall (q : Qp) (b : Byte.byte) (cstr : t),
+          forall (q : cQp) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R' q (BS.String b cstr)
             -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
@@ -1021,7 +1023,7 @@ Module cstring.
         Proof. lift_WF2WF' R_cons. Qed.
 
         #[global] Instance R'_cons_cons_head_nonzero :
-          forall (q : Qp) (b b' : Byte.byte) (cstr : t),
+          forall (q : cQp) (b b' : Byte.byte) (cstr : t),
             Observe [| b <> "000" |]%byte (R' q (BS.String b (BS.String b' cstr))).
         Proof. lift_WF2WF' R_cons_cons_head_nonzero. Qed.
 
@@ -1049,22 +1051,22 @@ Module cstring.
       End R'.
 
       Lemma R_unfold :
-        forall (q : Qp) (cstr : t),
+        forall (q : cQp) (cstr : t),
               R q cstr
           -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) (to_zstring cstr) ** [| WF cstr |].
       Proof. intros **; split'; by rewrite /R. Qed.
 
       Lemma R'_unfold :
-        forall (q : Qp) (cstr : t),
+        forall (q : cQp) (cstr : t),
               R' q cstr
           -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) (to_zstring cstr) ** [| WF' cstr |].
       Proof. intros **; split'; by rewrite /R'. Qed.
 
       Section Extra.
-        Lemma R_to_zstringR (q : Qp) (cstr : t) : R q cstr |-- zstring.R q (to_zstring cstr).
+        Lemma R_to_zstringR (q : cQp) (cstr : t) : R q cstr |-- zstring.R q (to_zstring cstr).
         Proof. by []. Qed.
 
-        Lemma R_from_zstringR (q : Qp) (zs : zstring.t) :
+        Lemma R_from_zstringR (q : cQp) (zs : zstring.t) :
           zstring.R q zs |-- R q (from_zstring zs).
         Proof.
           iIntros "R";

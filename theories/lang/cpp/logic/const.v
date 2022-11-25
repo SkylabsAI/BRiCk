@@ -15,7 +15,7 @@ From bedrock.lang.cpp Require Import
   semantics ast logic.pred logic.path_pred logic.rep logic.rep_defs heap_notations
   heap_pred layout.
 
-
+(*
 Section defs.
   Context `{Σ : cpp_logic}  {σ : genv} {module : translation_unit}.
 
@@ -102,6 +102,6 @@ Section defs.
   Admitted.  
 
 End defs.
-
+*)
 
   

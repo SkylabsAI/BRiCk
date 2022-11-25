@@ -139,7 +139,7 @@ Module Type Expr__newdelete.
                           [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                         else
                           (* [blockR sz -|- tblockR aty] *)
-                          (storage_ptr |-> (blockR sz 1 ** alignedR al) **
+                          (storage_ptr |-> (blockR sz 1%cQp ** alignedR al) **
                            (* TODO: ^ This misses an condition that [storage_ptr]
                               is suitably aligned, accounting for
                               __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
@@ -212,7 +212,7 @@ Module Type Expr__newdelete.
                             [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                           else
                             (* [blockR sz -|- tblockR (Tarray aty array_size)] *)
-                            (storage_ptr |-> blockR (sz' + sz) 1 **
+                            (storage_ptr |-> blockR (sz' + sz) 1%cQp **
                              storage_ptr .[Tu8 ! sz'] |-> alignedR al) **
                              (* todo: ^ This misses an condition that [storage_ptr]
                               is suitably aligned, accounting for
@@ -376,7 +376,7 @@ Module Type Expr__newdelete.
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [delete_val]. *)
-                      (storage_ptr |-> blockR sz 1 -*
+                      (storage_ptr |-> blockR sz 1%cQp -*
                        (* v---- Calling deallocator with storage pointer
                                 Like above, because the operation is on the MDC,
                                 we must use [tu'] *)
@@ -416,7 +416,7 @@ Module Type Expr__newdelete.
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [delete_val]. *)
-                      (storage_ptr |-> blockR (sz' + sz) 1 -*
+                      (storage_ptr |-> blockR (sz' + sz) 1%cQp -*
                        (* v---- Calling deallocator with storage pointer.
                           Note: we rely on the AST to have correctly resolved this since the dispatch is statically known.
                         *)

@@ -8,7 +8,7 @@ Require Import ZArith.
 From bedrock.lang.cpp Require Import notations code_notations logic logic.builtins.
 
 Module WpTestDefns.
-  Context (ti : biIndex) (Σ : cpp_logic ti) (σ : genv) (tu : translation_unit) (ρ : region)
+  Context (ti : biIndex) (Σ : cpp_logic ti) (σ : genv) (tu : translation_unit) (q_c : bool) (ρ : region)
           (v : val) (p p' p'' p''' this : ptr) (vc : expr.ValCat)
           (free : FreeTemps) (E : epred) (K : Kpred).
   #[local] Notation ty := (types.Tptr types.Tvoid).
@@ -54,9 +54,9 @@ Module WpTestDefns.
 
   Section Cleanup.
     Definition NOTATION_destroy_val_nowrap :=
-      destroy_val tu ty p E.
+      destroy_val tu q_c ty p E.
     Definition NOTATION_destroy_val_wrap (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr) :=
-      destroy_val tu ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
+      destroy_val tu q_c ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
 
     Definition NOTATION_interp_nowrap :=
       interp tu free E.
