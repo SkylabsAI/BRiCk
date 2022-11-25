@@ -12,6 +12,8 @@ From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred wp call.
 Require Import bedrock.lang.cpp.heap_notations.
 
+Export cqp.
+
 #[local] Open Scope Z_scope.
 
 Section with_Σ.

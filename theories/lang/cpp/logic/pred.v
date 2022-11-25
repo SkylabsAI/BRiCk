@@ -16,6 +16,8 @@ Require Export bedrock.prelude.addr.
 From bedrock.lang.bi Require Export prelude observe.
 From bedrock.lang.cpp.logic Require Export mpred rep.
 
+From bedrock.lang.algebra Require Export cqp.
+
 From iris.base_logic.lib Require Export iprop.
 (* TODO: ^^ only needed to export uPredI, should be removed. *)
 Require Import iris.bi.monpred.
@@ -132,7 +134,7 @@ Module Type CPP_LOGIC
     We use this predicate both for pointers to actual memory and for pointers to
     C++ locations that are not stored in memory (as an optimization).
     *)
-    Parameter tptsto : forall {σ:genv} (t : type) (q : Qp) (a : ptr) (v : val), mpred.
+    Parameter tptsto : forall {σ:genv} (t : type) (q : cQp) (a : ptr) (v : val), mpred.
 
     Axiom tptsto_nonnull : forall {σ} ty q a,
       @tptsto σ ty q nullptr a |-- False.
@@ -146,11 +148,11 @@ Module Type CPP_LOGIC
     Axiom tptsto_timeless :
       forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
     Axiom tptsto_fractional :
-      forall {σ} ty a v, Fractional (λ q, @tptsto σ ty q a v).
+      forall {σ} ty a v q_c , Fractional (λ q, @tptsto σ ty (mk q_c q) a v).
     #[global] Existing Instances tptsto_timeless tptsto_fractional.
 
-    Axiom tptsto_frac_valid : forall {σ} t (q : Qp) p v,
-      Observe [| q ≤ 1 |]%Qp (@tptsto σ t q p v).
+    Axiom tptsto_frac_valid : forall {σ} t (q : cQp) p v,
+      Observe [| cqp.frac q ≤ 1 |]%Qp (@tptsto σ t q p v).
     #[global] Existing Instance tptsto_frac_valid.
 
     Axiom tptsto_agree : forall {σ} ty q1 q2 p v1 v2,
@@ -166,7 +168,7 @@ Module Type CPP_LOGIC
     Axiom tptsto_val_related_transport : forall {σ} ty q p v1 v2,
         [| val_related σ ty v1 v2 |] |-- @tptsto σ ty q p v1 -* @tptsto σ ty q p v2.
 
-    Axiom tptsto_nonvoid : forall {σ} ty (q : Qp) p v,
+    Axiom tptsto_nonvoid : forall {σ} ty (q : cQp) p v,
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v).
     #[global] Existing Instance tptsto_nonvoid.
 
@@ -191,7 +193,7 @@ Module Type CPP_LOGIC
     simplify stating rules for pointer comparison. *)
     Axiom nullptr_live : |-- live_ptr nullptr.
 
-    Axiom tptsto_live : forall {σ} ty (q : Qp) p v,
+    Axiom tptsto_live : forall {σ} ty (q : cQp) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
 
     (** [const_core σ t q p] represents the portion of the ownership (of type [t])
@@ -204,7 +206,7 @@ Module Type CPP_LOGIC
         ```
         the program will retain [1/4] of `x`, [1] of `y`, and [1/2] of `z`.
      *)
-    Parameter const_core : forall {σ : genv}, type -> Qp -> ptr -> mpred.
+    (*Parameter const_core : forall {σ : genv}, type -> Qp -> ptr -> mpred.*)
 
     (** [identity σ this mdc q p] state that [p] is a pointer to a (live)
         object of type [this] that is part of an object that can be reached
@@ -254,8 +256,8 @@ Module Type CPP_LOGIC
      *)
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : list globname),
-        Qp -> ptr -> mpred.
-    Axiom identity_fractional : forall σ this mdc p, Fractional (λ q, identity this mdc q p).
+        cQp -> ptr -> mpred.
+    Axiom identity_fractional : forall σ this mdc p q_c , Fractional (λ q, identity this mdc (mk q_c q) p).
     Axiom identity_timeless : forall σ this mdc q p, Timeless (identity this mdc q p).
     Axiom identity_strict_valid : forall σ this mdc q p, Observe (strict_valid_ptr p) (identity this mdc q p).
     #[global] Existing Instances identity_fractional identity_timeless identity_strict_valid.
@@ -1065,12 +1067,12 @@ Section with_cpp.
       (@tptsto _ Σ).
   Proof. repeat intro. exact: tptsto_mono. Qed.
 
-  #[global] Instance tptsto_as_fractional ty q a v :
-    AsFractional (tptsto ty q a v) (λ q, tptsto ty q a v) q.
+  #[global] Instance tptsto_as_fractional ty q_c q a v :
+    AsFractional (tptsto ty (mk q_c q) a v) (λ q, tptsto ty (mk q_c q) a v) q.
   Proof. exact: Build_AsFractional. Qed.
 
-  #[global] Instance identity_as_fractional this mdc p q :
-    AsFractional (identity this mdc q p) (λ q, identity this mdc q p) q.
+  #[global] Instance identity_as_fractional this mdc p q_c q :
+    AsFractional (identity this mdc (mk q_c q) p) (λ q, identity this mdc (mk q_c q) p) q.
   Proof. exact: Build_AsFractional. Qed.
 
   #[global] Instance tptsto_observe_nonnull t q p v :

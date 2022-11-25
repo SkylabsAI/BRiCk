@@ -144,7 +144,7 @@ Module Type Init.
      *)
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
-      let qf : Qp := (if q_const cv then 1/2 else 1)%Qp in
+      let qf : cQp := (if q_const cv then (cqp.mk true 1) else 1)%cQp in
       match ty with
       | Tvoid =>
         (* [wp_initialize] is used to `return` from a function.
@@ -166,17 +166,17 @@ Module Type Init.
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
-      | Tnamed _ as ty => wp_init qty addr init (fun _ frees => (if q_const cv then const_core ty 1 addr else emp) ** k frees)
+      | Tnamed _ as ty => wp_init qty addr init (fun _ frees => k frees)
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_lval init (fun p free =>
-                        addr |-> primR rty (1/2) (Vref p) -* k free)
+                        addr |-> primR rty (cqp.mk (q_const cv) (1/2)%Qp) (Vref p) -* k free)
       | Trv_ref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty (1/2) (Vref p) -* k free)
+                        addr |-> primR rty (cqp.mk (q_const cv) (1/2)%Qp) (Vref p) -* k free)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
       | Tqualified _ ty => False (* unreachable *)

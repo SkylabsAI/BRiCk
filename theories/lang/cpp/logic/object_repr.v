@@ -82,7 +82,7 @@ End Utilities.
 Section rawsR_transport.
   Context `{Σ : cpp_logic} {σ : genv}.
 
-  Lemma _at_rawsR_ptr_congP_transport (p1 p2 : ptr) (q : Qp) (rs : list raw_byte) :
+  Lemma _at_rawsR_ptr_congP_transport (p1 p2 : ptr) (q : cQp) (rs : list raw_byte) :
         ptr_congP σ p1 p2 ** ([∗list] i ∈ seqN 0 (lengthN rs), type_ptr Tu8 (p2 .[ Tu8 ! Z.of_N i ]))
     |-- p1 |-> rawsR q rs -* p2 |-> rawsR q rs.
   Proof.

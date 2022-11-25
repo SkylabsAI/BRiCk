@@ -46,11 +46,12 @@ Section destroy.
       have destructors according to the standard have no-op destructors. Thus,
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
+  Parameter TODO_FIX : mpred.
   Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
     match ty with
     | Tqualified q ty => destroy_val (q_c || q_const q) ty this Q
     | Tnamed cls      =>
-      (if q_c then const_core ty 1 this else emp) -*
+      (if q_c then (*const_core ty 1 this*) TODO_FIX  else emp) -*
       match tu !! cls with
       | Some (Gstruct s) =>
          (* NOTE the setup with explicit destructors (even when those destructors are trivial)
@@ -81,8 +82,7 @@ Section destroy.
       this |-> anyR (Tref $ erase_qualifiers r_ty) 1 ** Q
     | ty              =>
       (* if the field is a constant, then you only reclaim the portion given to the program *)
-      let qf : Qp := (if q_c then 1/2 else 1)%Qp in
-      this |-> anyR (erase_qualifiers ty) qf ** Q
+      this |-> anyR (erase_qualifiers ty) 1 ** Q
     end%I.
 
   Lemma destroy_val_frame : forall ty q_c this (Q Q' : epred),

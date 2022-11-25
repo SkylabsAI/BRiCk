@@ -9,9 +9,11 @@ Require Import bedrock.lang.bi.errors.
 Require Import bedrock.lang.cpp.logic.entailsN.
 Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
+
 From bedrock.lang.cpp.logic Require Import
   pred path_pred heap_pred wp builtins cptr
   layout initializers destroy.
+
 Require Import bedrock.lang.cpp.heap_notations.
 
 #[local] Set Printing Coercions.
