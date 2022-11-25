@@ -93,30 +93,20 @@ Section with_cpp.
   #[global] Instance primR_fractional resolve ty v q_c :
     Fractional (λ q, primR ty (cqp.mk q_c q) v).
   Proof. rewrite primR_eq. apply _. Qed.
-  #[global] Instance primR_as_fractional resolve ty q v :
-    AsFractional (primR ty q v) (λ q', primR ty (cqp.mk (is_const q) q') v) (frac q).
-  Proof. constructor. case: q=>>//=. apply _. Qed.
+  #[global] Instance primR_as_fractional resolve ty q q_c v fq :
+    q = cqp.mk q_c fq ->
+    AsFractional (primR ty q v)
+      (λ q', (fun q' => primR ty (cqp.mk q_c q') v) q') fq.
+  Proof. constructor. subst. done. apply _. Qed. 
 
-  Parameter primR' : type → Qp → val → Rep.
-  Instance primR_fractional' resolve ty v :
-    Fractional (λ q, primR' ty q v).
-  Proof. Admitted.
-  #[global] Instance primR_as_fractional' resolve ty q v :
-    AsFractional (primR' ty q v) (λ q', primR' ty q' v) q.
-  Proof. constructor. done. apply _. Qed.
-
-  Lemma test1 T q v (p : ptr) : primR' T q v p |-- emp.
-  Proof.
-    iIntros "H".
-
-    iDestruct (as_fractional with "H") as "?".
-    iDestructHyp "H" as "[??]".
-         
+  Hint Extern 100 (_  = cqp.mk _ _) => apply cQp.eta : typeclass_instances.
+  Hint Extern 100 (_  = cqp.mk _ _) => apply cQp.refl : typeclass_instances.
   
-  #[global] Instance primR_observe_frac_valid resolve ty (q : cQp) v :
-    Observe [| cqp.frac q ≤ 1 |]%Qp (primR ty q v).
-  Proof. rewrite primR_eq. apply _. Qed.
-
+  #[global] Instance primR_observe_frac_valid resolve ty (q : cQp) v q_f :
+    q_f = cqp.frac q ->
+    Observe [| (q_f ≤ 1)%Qp |] (primR ty q v).
+  Proof. rewrite primR_eq=>->. apply _. Qed.
+  
   #[global] Instance primR_observe_agree resolve ty q1 q2 v1 v2 :
     Observe2 [| v1 = v2 |]
       (primR ty q1 v1)

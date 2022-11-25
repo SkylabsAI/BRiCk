@@ -45,7 +45,7 @@ Section with_cpp.
      TODO replace this with a version that is built by well-founded recursion.
    *)
   #[local]
-  Fixpoint identitiesR' (f : nat) (include_base : bool) (cls : globname) (path : list globname) (q : Qp) : Rep :=
+  Fixpoint identitiesR' (f : nat) (include_base : bool) (cls : globname) (path : list globname) (q : cQp) : Rep :=
     match f with
     | 0 => False
     | S f =>
@@ -80,7 +80,7 @@ Section with_cpp.
       _base "::C" "::B" |-> identityR true "::B" ["::C"] q
       ]]
    *)
-  Definition identitiesR : bool -> globname -> list globname -> Qp -> Rep :=
+  Definition identitiesR : bool -> globname -> list globname -> cQp -> Rep :=
     let size := avl.IM.cardinal resolve.(genv_tu).(globals) in
     (* ^ the number of global entries is an upper bound on the height of the
        derivation tree.
