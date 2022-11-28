@@ -48,6 +48,7 @@ Section destroy.
       choice makes the semantics more uniform. *)
   Parameter TODO_FIX : mpred.
   Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
+    let qf : cQp := (if q_c then (cqp.mk true 1) else 1)%cQp in
     match ty with
     | Tqualified q ty => destroy_val (q_c || q_const q) ty this Q
     | Tnamed cls      =>
@@ -79,10 +80,10 @@ Section destroy.
     | Tref r_ty
     | Trv_ref r_ty    =>
       (* NOTE rvalue references [Trv_ref] are represented as references [Tref]. *)
-      this |-> anyR (Tref $ erase_qualifiers r_ty) 1 ** Q
+      this |-> anyR (Tref $ erase_qualifiers r_ty) qf ** Q
     | ty              =>
       (* if the field is a constant, then you only reclaim the portion given to the program *)
-      this |-> anyR (erase_qualifiers ty) 1 ** Q
+      this |-> anyR (erase_qualifiers ty) qf ** Q
     end%I.
 
   Lemma destroy_val_frame : forall ty q_c this (Q Q' : epred),
