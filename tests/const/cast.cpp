@@ -31,4 +31,19 @@ void foo (int * const x) {
   *k = *l;
 }
 
+void
+bar() {
 
+  int x{0};
+
+  foo(&x);
+
+}
+
+
+int foo1(int const * p) { return *p; }
+
+void bar1() {
+  int x{0};
+  foo1(&x);
+}

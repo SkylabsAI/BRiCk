@@ -154,7 +154,7 @@ Module Type Init.
            void g() { return f(); }
            ```
          *)
-        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid qf Vvoid -*  k frees))
+        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid 1 Vvoid -*  k frees))
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
       | Tbool as ty
@@ -162,7 +162,7 @@ Module Type Init.
       | Tenum _ as ty
       | Tnullptr as ty =>
         wp_operand init (fun v free =>
-                          addr |-> primR (erase_qualifiers ty) qf v -* k free)
+                          addr |-> primR ty qf v -* k free)
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
