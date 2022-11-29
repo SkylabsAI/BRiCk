@@ -142,6 +142,10 @@ Module Type Init.
         can be used to initialize all values (including references) whereas [wp_init]
         is only safe to initialize non-primitives (arrays and aggregates).
      *)
+    Definition  DOWNCAST_TO_CONST (addr : ptr) (Q : mpred) : mpred :=
+      Exists (R : cQp -> Rep),
+        (addr |-> R 1%cQp) ** (addr |-> R 1__const%cQp -* Q).
+
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
       let qf : cQp := (if q_const cv then (cqp.mk true 1) else 1)%cQp in
@@ -166,7 +170,11 @@ Module Type Init.
 
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
-      | Tnamed _ as ty => wp_init qty addr init (fun _ frees => k frees)
+      | Tnamed _ as ty => wp_init ty addr init (fun _ frees =>
+           if q_const cv then DOWNCAST_TO_CONST addr (k frees)
+                    (* ^ TODO? *)
+           else k frees       
+          )
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
       | Tref ty =>
