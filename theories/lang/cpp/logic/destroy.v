@@ -46,13 +46,15 @@ Section destroy.
       have destructors according to the standard have no-op destructors. Thus,
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
-  Parameter TODO_FIX : mpred.
+  Definition  UPCAST_FROM_CONST (addr : ptr) (Q : mpred) : mpred :=
+    Exists (R : cQp -> Rep),
+      (addr |-> R 1__const%cQp) ** (addr |-> R 1%cQp -* Q).
+
   Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
     let qf : cQp := (if q_c then (cqp.mk true 1) else 1)%cQp in
     match ty with
     | Tqualified q ty => destroy_val (q_c || q_const q) ty this Q
     | Tnamed cls      =>
-      (if q_c then (*const_core ty 1 this*) TODO_FIX  else emp) -*
       match tu !! cls with
       | Some (Gstruct s) =>
          (* NOTE the setup with explicit destructors (even when those destructors are trivial)
@@ -64,7 +66,9 @@ Section destroy.
              to make the framework a bit more uniform (all types have destructors) and allow
              for direct destructor calls, e.g. [c.~C()], which are encoded as
              [Emember_call ... "~C" ..] *)
-        |> wp_destructor ty (_global s.(s_dtor)) this Q
+        |> if q_c then
+            UPCAST_FROM_CONST this (wp_destructor ty (_global s.(s_dtor)) this Q)
+          else wp_destructor ty (_global s.(s_dtor)) this Q
       | Some (Gunion u)  =>
         (* Unions cannot have [virtual] destructors: we directly invoke the destructor. *)
         |> wp_destructor ty (_global u.(u_dtor)) this Q

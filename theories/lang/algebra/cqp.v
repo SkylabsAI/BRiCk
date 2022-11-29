@@ -36,6 +36,7 @@ Module cQp.
   Module Import notations.
 
     Notation "1" := (mk false (pos_to_Qp 1)) : cQp_scope.
+    Notation "1__const" := (mk true (pos_to_Qp 1)) : cQp_scope.
     Infix "+" := add : cQp_scope.
 
   End notations.

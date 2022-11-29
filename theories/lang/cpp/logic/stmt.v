@@ -70,9 +70,8 @@ Module Type Stmt.
                (k : region -> FreeTemp -> epred)
       : mpred :=
       Forall (addr : ptr),
-        let rty := erase_qualifiers ty in
         let destroy frees :=
-            interp frees (k (Rbind x addr ρ) (FreeTemps.delete rty addr))
+            interp frees (k (Rbind x addr ρ) (FreeTemps.delete ty addr))
         in
         match init with
         | Some init => wp_initialize ρ_init ty addr init $ fun frees => destroy frees
