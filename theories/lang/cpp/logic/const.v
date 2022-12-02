@@ -78,4 +78,23 @@ Section defs.
   Definition wp_downcast_to_const := cast_aux 5 false true.
   Definition wp_upcast_to_mutable := cast_aux 5 true false.
 
+  Lemma cast_aux_frame : forall tu n b b' p ty q (Q Q' : epred),
+    Q -* Q' |-- cast_aux (tu := tu) n b b' p ty q Q -* cast_aux (tu := tu) n b b' p ty q Q'.
+  Proof.
+    move=>? n; induction n; first by iIntros.
+
+    move=>b b' p.
+    case; try by [simpl; auto | intros; iIntros "W [[% [?K]]|[?K]]"; [iLeft; iExists _ | iRight];
+      iFrame; iIntros "?"; iApply "W"; iApply "K"].
+
+    - iIntros (cls q Q Q') "W //=".
+
+      case: (_ !! _)=>[a|]; last done.
+      case: a; try done.
+
+
+      admit.
+  Admitted.
+
+
 End defs.
