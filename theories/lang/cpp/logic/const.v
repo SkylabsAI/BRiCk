@@ -45,6 +45,9 @@ Section defs.
         | Tnum _ _
         | Tbool
         | Tnullptr
+        | Tenum _
+        | Tmember_pointer _ _
+        | Tfloat _
         | Tvoid =>
             (Exists v, addr |-> primR ty from v ** (addr |-> primR ty to v -* Q)) ∨
             (          addr |-> uninitR ty from ** (addr |-> uninitR ty to -* Q))
@@ -84,9 +87,6 @@ Section defs.
                 end
             end
         | Tqualified cv ty' => False (* unreachable *)
-        | Tenum _ => False (* TODO *)
-        | Tmember_pointer _ _
-        | Tfloat _
         | Tfunction _ _
         | Tarch _ _ => False
         end%I
