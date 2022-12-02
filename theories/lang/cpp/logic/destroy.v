@@ -88,15 +88,21 @@ Section destroy.
 
   Lemma destroy_val_frame : forall ty q_c this (Q Q' : epred),
       Q -* Q' |-- destroy_val q_c ty this Q -* destroy_val q_c ty this Q'.
-  Proof. (*
+  Proof.
+
     intro ty; induction ty; simpl; eauto;
       try solve [ intros; iIntros "Q [$ X]"; iRevert "X"; done ].
-    { induction (rev _); simpl; intros.
-      { iIntros "X"; iApply "X". }
-      { iIntros "Q [$ V]". iRevert "V"; iApply IHty; eauto. iApply IHl; eauto. } }
-    { intros. case_match; eauto.
-      case_match; eauto; iIntros "A B"; iModIntro; iRevert "B"; by iApply wp_destructor_frame. }
-  Qed. *) Admitted.
+    - induction (rev _); first done.
+      by iIntros (q_c ptr Q Q') "W"; iApply IHty; iApply IHl.
+
+    - intros. case_match; eauto.
+      case_match; eauto.
+      + iIntros "A B !>". iRevert "B"; by iApply wp_destructor_frame.
+      + case: q_c.
+        * iIntros "A B !>".
+          admit.
+        * iIntros "A B !>". iRevert "B"; by iApply wp_destructor_frame.
+  Admitted.
 
   (* BEGIN interp *)
   (** [interp free Q] "runs" [free] and then acts like [Q].
