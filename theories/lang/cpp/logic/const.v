@@ -17,8 +17,9 @@ From bedrock.lang.cpp Require Import
 
 
 Section defs.
-  Context `{Σ : cpp_logic}  {σ : genv} {module : translation_unit}.
+  Context `{Σ : cpp_logic}  {σ : genv} {tu : translation_unit}.
 
+  (* TODO: change to const core? *)
   Parameter downcast_to_const_base : mpred.
   Fixpoint cast_aux (fuel : nat) (q_c q_c' : bool)  (addr : ptr) (ty : type) (q : cQp) (Q : mpred) : mpred :=
     match fuel with
@@ -37,7 +38,7 @@ Section defs.
                 (addr |-> uninitR Tint cq **
                    (addr |-> uninitR Tint cq' -* Q))
             | Tarray _ _ => False (* TODO *)
-            | Tnamed cls => match (*glob_def σ cls *) module.(globals) !! cls with
+            | Tnamed cls => match (*glob_def σ cls *) tu.(globals) !! cls with
                            | None => False (* correct *)
                            | Some gd =>
                                match gd with
@@ -74,7 +75,7 @@ Section defs.
             end
     end.
 
-  Definition downcast_to_const := cast_aux 5 false true.
-  Definition upcast_to_mutable := cast_aux 5 true false.
+  Definition wp_downcast_to_const := cast_aux 5 false true.
+  Definition wp_upcast_to_mutable := cast_aux 5 true false.
 
 End defs.
