@@ -46,9 +46,6 @@ Section destroy.
       have destructors according to the standard have no-op destructors. Thus,
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
-  Definition  UPCAST_FROM_CONST (addr : ptr) (ty : type) (Q : mpred) : mpred :=
-    upcast_to_mutable (module := tu) addr ty 1%cQp Q.
-
   Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
     let qf : cQp := (if q_c then (cqp.mk true 1) else 1)%cQp in
     match ty with
@@ -66,7 +63,7 @@ Section destroy.
              for direct destructor calls, e.g. [c.~C()], which are encoded as
              [Emember_call ... "~C" ..] *)
         |> if q_c then
-            UPCAST_FROM_CONST this ty (wp_destructor ty (_global s.(s_dtor)) this Q)
+            wp_upcast_to_mutable (tu := tu) this ty 1%cQp (wp_destructor ty (_global s.(s_dtor)) this Q)
           else wp_destructor ty (_global s.(s_dtor)) this Q
       | Some (Gunion u)  =>
         (* Unions cannot have [virtual] destructors: we directly invoke the destructor. *)
