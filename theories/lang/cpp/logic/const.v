@@ -13,7 +13,7 @@ Require Import bedrock.prelude.base.
 
 From bedrock.lang.cpp Require Import
   semantics ast logic.pred logic.path_pred logic.rep logic.rep_defs heap_notations
-  heap_pred layout.
+  heap_pred layout logic.wp.
 
 
 Section defs.
@@ -78,10 +78,27 @@ Section defs.
   Definition wp_downcast_to_const := cast_aux 5 false true.
   Definition wp_upcast_to_mutable := cast_aux 5 true false.
 
-  Lemma cast_aux_frame : forall tu n b b' p ty q (Q Q' : epred),
-    Q -* Q' |-- cast_aux (tu := tu) n b b' p ty q Q -* cast_aux (tu := tu) n b b' p ty q Q'.
+
+
+  Lemma fold_frame : forall B (l : list B) (f : epred -> B -> epred)  (Q Q' : epred),
+    (Q -* Q') ** (Forall Q1 Q1' a, (Q1 -* Q1') -* (f Q1 a -* f Q1' a)) |-- fold_left f l Q -* fold_left f l Q'.
   Proof.
-    move=>? n; induction n; first by iIntros.
+
+    move=>B l.
+    induction l.
+    - simpl.
+      admit.
+
+    - move=>f Q Q'.
+      simpl.
+
+      Check IHl f (f Q a) (f Q' a).
+  Admitted.
+    
+  Lemma cast_aux_frame : forall n b b' p ty q (Q Q' : epred),
+    Q -* Q' |-- cast_aux n b b' p ty q Q -* cast_aux n b b' p ty q Q'.
+  Proof.
+    move=>n; induction n; first by iIntros.
 
     move=>b b' p.
     case; try by [simpl; auto | intros; iIntros "W [[% [?K]]|[?K]]"; [iLeft; iExists _ | iRight];
@@ -93,6 +110,37 @@ Section defs.
       case: a; try done.
 
 
+      move=>s.
+      
+      iApply fold_frame.
+      
+      iSplitL.
+      
+      iApply fold_frame.
+      iSplitL.
+      iIntros "[? K]".
+      iFrame.
+      iIntros.
+      iApply "W".
+      iApply "K".
+      done.
+
+      iIntros (???) "W".
+      case: (mem_mutable _).
+      iApply "W".
+
+      iDestruct (IHn with "W") as "?".
+      iFrame.
+
+      iIntros (???) "W".
+      case: a=>??.
+      iDestruct (IHn with "W") as "?".
+      iFrame.
+    -
+      
+      simpl.
+      
+      
       admit.
   Admitted.
 
