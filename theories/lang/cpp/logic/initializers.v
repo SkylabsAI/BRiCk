@@ -10,7 +10,7 @@ Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.bi.errors.
 From bedrock.lang.cpp.logic Require Import
-     pred path_pred heap_pred wp destroy.
+     pred path_pred heap_pred wp destroy const.
 Require Import bedrock.lang.cpp.heap_notations.
 
 (** The C++ language provides several types of initialization:
@@ -142,9 +142,9 @@ Module Type Init.
         can be used to initialize all values (including references) whereas [wp_init]
         is only safe to initialize non-primitives (arrays and aggregates).
      *)
-    Definition  DOWNCAST_TO_CONST (addr : ptr) (Q : mpred) : mpred :=
-      Exists (R : cQp -> Rep),
-        (addr |-> R 1%cQp) ** (addr |-> R 1__const%cQp -* Q).
+    (* TODO: rename? *)
+    Definition  DOWNCAST_TO_CONST (addr : ptr) (ty : type) (Q : mpred) : mpred :=
+      downcast_to_const (module := tu) addr ty 1%cQp Q.
 
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
@@ -171,18 +171,18 @@ Module Type Init.
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
       | Tnamed _ as ty => wp_init ty addr init (fun _ frees =>
-           if q_const cv then DOWNCAST_TO_CONST addr (k frees)
+           if q_const cv then DOWNCAST_TO_CONST addr ty (k frees)
                     (* ^ TODO? *)
-           else k frees       
+           else k frees
           )
         (* NOTE that just like this function [wp_init] will consume the object. *)
 
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
-        wp_lval init (fun p free => 
+        wp_lval init (fun p free =>
                         addr |-> primR rty 1%cQp (Vref p) -* k free)
       (* ^ TODO: how do we model refs? *)
-                
+
       | Trv_ref ty =>
         let rty := Tref $ (*erase_qualifiers*) ty in
         wp_xval init (fun p free =>
