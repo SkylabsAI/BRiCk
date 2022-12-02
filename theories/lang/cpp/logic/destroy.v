@@ -63,7 +63,7 @@ Section destroy.
              for direct destructor calls, e.g. [c.~C()], which are encoded as
              [Emember_call ... "~C" ..] *)
         |> if q_c then
-            wp_upcast_to_mutable (tu := tu) this ty 1%cQp (wp_destructor ty (_global s.(s_dtor)) this Q)
+            wp_upcast_to_mutable this ty (wp_destructor ty (_global s.(s_dtor)) this Q)
           else wp_destructor ty (_global s.(s_dtor)) this Q
       | Some (Gunion u)  =>
         (* Unions cannot have [virtual] destructors: we directly invoke the destructor. *)
@@ -94,16 +94,13 @@ Section destroy.
       try solve [ intros; iIntros "Q [$ X]"; iRevert "X"; done ].
     - induction (rev _); first done.
       by iIntros (q_c ptr Q Q') "W"; iApply IHty; iApply IHl.
-
     - intros. case_match; eauto.
-      case_match; eauto.
-      + iIntros "A B !>". iRevert "B"; by iApply wp_destructor_frame.
-      + case: q_c.
-        * iIntros "A B !>".
-          admit.
-        * iIntros "A B !>". iRevert "B"; by iApply wp_destructor_frame.
-  Admitted.
-
+      by case_match; eauto; (try case q_c);
+        iIntros "A B !>"; iRevert "B";
+        (try iApply cv_cast_frame);
+        iApply wp_destructor_frame.
+  Qed.
+  
   (* BEGIN interp *)
   (** [interp free Q] "runs" [free] and then acts like [Q].
 
