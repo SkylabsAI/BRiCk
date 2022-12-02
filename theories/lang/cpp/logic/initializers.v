@@ -167,7 +167,7 @@ Module Type Init.
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
       | Tnamed _ as ty => wp_init ty addr init (fun _ frees =>
-           if q_const cv then wp_downcast_to_const (tu := tu) addr ty 1%cQp (k frees)
+           if q_const cv then wp_downcast_to_const addr ty (k frees)
            else k frees
           )
         (* NOTE that just like this function [wp_init] will consume the object. *)
@@ -216,19 +216,19 @@ Module Type Init.
     Lemma wp_initialize_frame obj ty e Q Q' :
       (Forall free, Q free -* Q' free)
       |-- wp_initialize (σ:=σ2) tu ρ ty obj e Q -* wp_initialize (σ:=σ2) tu ρ ty obj e Q'.
-    Proof using. (*
+    Proof using.
       rewrite /wp_initialize.
-      case_eq (drop_qualifiers ty) =>/=; intros; eauto;
-        try solve [
-              iIntros "a"; first [ iApply wp_operand_frame
-                                 | iApply wp_lval_frame
-                                 | iApply wp_xval_frame ]; try reflexivity;
-              iIntros (v f) "X Y"; iApply "a"; iApply "X"; eauto ].
-      { iIntros "a". iApply wp_operand_frame => //; iIntros (??) => //.
-        iIntros "[$ X] Y"; iApply "a"; iApply "X" => //. }
-      { iIntros "a". iApply wp_init_frame => //; iIntros (?) => //. }
-      { iIntros "a". iApply wp_init_frame => //; iIntros (?) => //. }
-    Qed. *) Admitted.
+      iIntros "a".
+      case: (decompose_type _)=>a; case=>>; auto; try
+          by [ iApply wp_operand_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X"
+             | iIntros "H"; iExact "H"
+             | iApply wp_init_frame => //-;
+               case: (q_const _); iIntros (??); [ iApply cv_cast_frame | ]; iApply "a"
+             ].
+      { by iApply wp_lval_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X". }
+      { by iApply wp_xval_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X". }
+      { by iApply wp_operand_frame => //; iIntros (??) "[$ X] ?"; iApply "a"; iApply "X". }
+    Qed.
 
     Lemma wp_initialize_wand obj ty e Q Q' :
       wp_initialize (σ:=σ2) tu ρ ty obj e Q
@@ -238,7 +238,6 @@ Module Type Init.
     Theorem wpi_frame (cls : globname) (this : ptr) (e : Initializer) k1 k2 :
       k1 -* k2 |-- wpi (σ:=σ1) tu ρ cls this e k1 -* wpi (σ:=σ2) tu ρ cls this e k2.
     Proof. Abort. (* This is not provable *)
-
   End frames.
 
   Section mono_frames.
