@@ -16,7 +16,7 @@ Require Export bedrock.prelude.addr.
 From bedrock.lang.bi Require Export prelude observe.
 From bedrock.lang.cpp.logic Require Export mpred rep.
 
-From bedrock.lang.algebra Require Export cqp.
+From bedrock.lang.cpp.algebra Require Export cv.
 
 From iris.base_logic.lib Require Export iprop.
 (* TODO: ^^ only needed to export uPredI, should be removed. *)
