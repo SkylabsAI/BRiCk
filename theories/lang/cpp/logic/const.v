@@ -24,15 +24,15 @@ Section defs.
 
      This is used to implement [wp_downcast_to_const] and [wp_upcast_to_const].
    *)
-  Parameter cv_cast : forall (from to : cQp) (addr : ptr) (ty : type) (Q : mpred), mpred.
+  Parameter cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
   Axiom cv_cast_frame : forall f t a ty Q Q',
       Q -* Q' |-- cv_cast f t a ty Q -* cv_cast f t a ty Q'.
 
-  Definition wp_downcast_to_const := cv_cast 1 1__const%cQp.
-  Definition wp_upcast_to_mutable := cv_cast 1__const%cQp 1.
+  Definition wp_downcast_to_const := cv_cast (CV.m 1) (CV.c  1).
+  Definition wp_upcast_to_mutable := cv_cast (CV.c 1) (CV.m 1).
 
-  Definition cv_cast_body (cv_cast : forall (from to : cQp) (addr : ptr) (ty : type) (Q : mpred), mpred)
-    (from to : cQp)  (addr : ptr) (ty : type) (Q : mpred) : mpred :=
+  Definition cv_cast_body (cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred)
+    (from to : CV.t)  (addr : ptr) (ty : type) (Q : mpred) : mpred :=
     let UNSUPPORTED := cv_cast from to addr ty Q in
     let TODO := cv_cast from to addr ty Q in
     let '(cv, rty) := decompose_type ty in
@@ -96,7 +96,7 @@ Section defs.
   (* Should include a sanity check for the frame condition *)
 
   (*
-  Fixpoint cast_aux (fuel : nat) (from to : cQp)  (addr : ptr) (ty : type) (Q : mpred) {struct fuel} : mpred :=
+  Fixpoint cast_aux (fuel : nat) (from to : CV.t)  (addr : ptr) (ty : type) (Q : mpred) {struct fuel} : mpred :=
     match fuel with
     | 0 => cv_cast from to addr ty Q
     | S n =>

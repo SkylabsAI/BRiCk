@@ -47,7 +47,7 @@ Section destroy.
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
   Fixpoint destroy_val (q_c : bool) (ty : type) (this : ptr) (Q : epred) {struct ty} : mpred :=
-    let qf : cQp := (if q_c then (cqp.mk true 1) else 1)%cQp in
+    let qf : CV.t := if q_c then (CV.const 1) else CV.mut 1 in
     match ty with
     | Tqualified q ty => destroy_val (q_c || q_const q) ty this Q
     | Tnamed cls      =>
@@ -100,7 +100,7 @@ Section destroy.
         (try iApply cv_cast_frame);
         iApply wp_destructor_frame.
   Qed.
-  
+
   (* BEGIN interp *)
   (** [interp free Q] "runs" [free] and then acts like [Q].
 

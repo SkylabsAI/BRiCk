@@ -6,51 +6,49 @@
  *)
 
 Require Import stdpp.numbers.
-
-
-Declare Scope cvq_scope.
-Delimit Scope cvq_scope with cvq.
+Require Import bedrock.lang.cpp.syntax.types.
 
 Module CV.
-
-  Record t : Set := mk { is_const : bool ; is_volatile : bool ; frac : Qp }.
+  Record t : Set := mk { qual : type_qualifiers ; frac : Qp }.
   Add Printing Constructor t.
-  Bind Scope cvq_scope with t.
+  #[global] Bind Scope Qp_scope with t.
   Coercion frac : t >-> Qp.
 
   Definition add (a b : t) : t :=
-    mk (a.(is_const) || b.(is_const)) (a.(is_volatile) || b.(is_volatile))
-       (a.(frac) + b.(frac)).
+    mk (merge_tq a.(qual) b.(qual))(a.(frac) + b.(frac)).
 
-  Lemma eta q : q = mk (is_const q) (is_volatile q) (frac q).
+  Lemma eta q : q = mk (qual q) (frac q).
   Proof. by destruct q; intros. Qed.
 
-  Lemma refl v c q_f : mk v c q_f = mk v c q_f.
+  Lemma refl cv q_f : mk cv q_f = mk cv q_f.
   Proof. done. Qed.
 
   (* Notations -- probably actually make these notations? *)
-  Definition mut : Qp -> t := mk false false.
-  Definition const : Qp -> t := mk true false.
-  Definition volatile : Qp -> t := mk false true.
-  Definition const_volatile : Qp -> t := mk true true.
+  Definition mut : Qp -> t := mk QM.
+  Definition const : Qp -> t := mk QC.
+  Definition volatile : Qp -> t := mk QV.
+  Definition const_volatile : Qp -> t := mk QCV.
 
+  Notation m := mut.
   Notation c := const.
   Notation v := volatile.
   Notation cv := const_volatile.
+  #[deprecated(note="use [CV.cv]")]
   Notation vc := const_volatile (only parsing).
-  Notation m := mut.
-
 End CV.
+
+#[global] Bind Scope Qp_scope with CV.t.
+
 
 (* as with C++, we make mutable the default *)
 #[global] Coercion CV.mut : Qp >-> CV.t.
 
 Module Type TEST.
-  Variable TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
+  Parameter TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
 
   (* TODO: to make this work without the [%Qp], we need to register the
      notations for [Qp] as notations in [cvq_scope]. *)
-  Goal TEST 1%Qp (CV.c 1) (CV.v 1) (CV.cv 1).
+  Goal TEST 1 (CV.c 1) (CV.v 1) (CV.cv 1).
   Abort.
 
 End TEST.

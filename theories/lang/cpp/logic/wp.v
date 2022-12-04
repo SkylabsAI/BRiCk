@@ -148,7 +148,7 @@ Section Kpred.
   #[local] Notation Kpred := KpredI.
   Definition KP (P : ReturnType -> mpred) : KpredI := MonPred P _.
   #[global] Arguments KP _%I.
-
+About primR.
   Definition Kreturn {σ : genv} (P : ptr -> mpred) : KpredI :=
     KP (funI rt =>
           match rt with
@@ -1090,4 +1090,3 @@ End WPE.
 
 Export WPE.
 Export stdpp.coPset.
-Export cqp.

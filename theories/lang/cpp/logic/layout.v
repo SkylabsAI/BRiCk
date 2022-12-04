@@ -22,7 +22,7 @@ Section with_Σ.
   Context `{Σ : cpp_logic}.
 
   (** TODO move to pred.v *)
-  Axiom struct_paddingR : forall {σ:genv}, cQp -> globname -> Rep.
+  Axiom struct_paddingR : forall {σ:genv}, CV.t -> globname -> Rep.
 
   (* [union_paddingR q cls active_member] is [q] fractional ownership of
      the union padding for union [cls] for the active member
@@ -30,26 +30,26 @@ Section with_Σ.
      is [None], otherwise it is [Some idx] where [idx] is the numeric
      index of member field.
   *)
-  Axiom union_paddingR : forall {σ:genv}, cQp -> globname -> option nat -> Rep.
+  Axiom union_paddingR : forall {σ:genv}, CV.t -> globname -> option nat -> Rep.
 
   Context {σ : genv}.
 
-  Axiom struct_padding_fractional : forall cls c_q , Fractional (fun q => struct_paddingR (cqp.mk c_q q) cls).
+  Axiom struct_padding_fractional : forall cls c_q , Fractional (fun q => struct_paddingR (CV.mk c_q q) cls).
   Axiom struct_padding_timeless : forall q cls, Timeless  (struct_paddingR q cls).
-  Axiom struct_padding_frac_valid : forall (q : cQp) cls, Observe [| cqp.frac q ≤ 1 |]%Qp (struct_paddingR q cls).
-  Axiom union_padding_fractional : forall cls idx c_q , Fractional (fun q => union_paddingR (cqp.mk c_q q) cls idx).
+  Axiom struct_padding_frac_valid : forall (q : CV.t) cls, Observe [| CV.frac q ≤ 1 |]%Qp (struct_paddingR q cls).
+  Axiom union_padding_fractional : forall cls idx c_q , Fractional (fun q => union_paddingR (CV.mk c_q q) cls idx).
   Axiom union_padding_timeless : forall q cls idx, Timeless (union_paddingR q cls idx).
-  Axiom union_padding_frac_valid : forall (q : cQp) cls idx, Observe [| cqp.frac q ≤ 1 |]%Qp (union_paddingR q cls idx).
+  Axiom union_padding_frac_valid : forall (q : CV.t) cls idx, Observe [| CV.frac q ≤ 1 |]%Qp (union_paddingR q cls idx).
 
   #[global] Existing Instances
     struct_padding_fractional struct_padding_timeless struct_padding_frac_valid
     union_padding_fractional union_padding_timeless union_padding_frac_valid.
 
   #[global] Instance struct_padding_as_fractional q cls c_q :
-    AsFractional (struct_paddingR (cqp.mk c_q q) cls) (λ q, struct_paddingR (cqp.mk c_q q) cls) q.
+    AsFractional (struct_paddingR (CV.mk c_q q) cls) (λ q, struct_paddingR (CV.mk c_q q) cls) q.
   Proof. exact: Build_AsFractional. Qed.
   #[global] Instance union_padding_as_fractional c_q q cls idx :
-    AsFractional (union_paddingR (cqp.mk c_q q) cls idx) (λ q, union_paddingR (cqp.mk c_q q) cls idx) q.
+    AsFractional (union_paddingR (CV.mk c_q q) cls idx) (λ q, union_paddingR (CV.mk c_q q) cls idx) q.
   Proof. exact: Build_AsFractional. Qed.
 
   Axiom struct_paddingR_type_ptr_observe : forall q cls, Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).

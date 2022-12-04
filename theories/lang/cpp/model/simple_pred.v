@@ -900,17 +900,17 @@ Module SimpleCPP.
 
     Definition const_core {σ : genv} (T : type) (q : Qp) (p : ptr) : mpred.
     Proof. Admitted.
-        
+
     (* todo(gmm): this isn't accurate, but it is sufficient to show that the axioms are
     instantiatable. *)
     Definition identity {σ : genv} (this : globname) (most_derived : list globname)
-               (q : cQp) (p : ptr) : mpred := strict_valid_ptr p.
+               (q : CV.t) (p : ptr) : mpred := strict_valid_ptr p.
 
-    Instance identity_fractional σ this mdc p c_q : Fractional (λ q, identity this mdc (cqp.mk c_q q) p).
+    Instance identity_fractional {σ} this mdc p cv : Fractional (λ q, identity this mdc (CV.mk cv q) p).
     Proof. move =>q1 q2. rewrite /identity. iSplit; [ iIntros "#P" | iIntros "[#P ?]" ]; iFrame "#". Qed.
     (* No frac_valid. *)
-    Instance identity_timeless σ this mdc q p : Timeless (identity this mdc q p) := _.
-    Instance identity_strict_valid σ this mdc q p : Observe (strict_valid_ptr p) (identity this mdc q p).
+    Instance identity_timeless {σ} this mdc q p : Timeless (identity this mdc q p) := _.
+    Instance identity_strict_valid {σ} this mdc q p : Observe (strict_valid_ptr p) (identity this mdc q p).
     Proof. refine _. Qed.
 
     (** this allows you to forget an object identity, necessary for doing
@@ -920,12 +920,12 @@ Module SimpleCPP.
         @identity σ this mdc 1 p |-- |={↑pred_ns}=> @identity σ this nil 1 p.
     Proof. rewrite /identity. eauto. Qed.
 
-    Definition tptsto' {σ : genv} (t : type) (q : cQp) (p : ptr) (v : val) : mpred :=
+    Definition tptsto' {σ : genv} (t : type) (q : CV.t) (p : ptr) (v : val) : mpred :=
       [| p <> nullptr |] **
       Exists (oa : option addr),
         type_ptr t p ** (* use the appropriate ghost state instead *)
         mem_inj_own p oa **
-        oaddr_encodes σ t (cqp.frac q) oa p v.
+        oaddr_encodes σ t (CV.frac q) oa p v.
     (* TODO: [tptsto] should not include [type_ptr] wholesale, but its
     pieces in the new model, replacing [mem_inj_own], and [tptsto_type_ptr]
     should be proved properly. *)
@@ -934,7 +934,7 @@ Module SimpleCPP.
         Observe (type_ptr ty p) (tptsto' ty q p v) := _.
 
     (* TODO (JH): We shouldn't be axiomatizing this in our model in the long-run *)
-    Axiom tptsto'_live : forall {σ} ty (q : cQp) p v,
+    Axiom tptsto'_live : forall {σ} ty (q : CV.t) p v,
       @tptsto' σ ty q p v |-- live_ptr p ** True.
 
     #[local] Instance tptsto'_nonnull_obs {σ} ty q a :
@@ -965,16 +965,16 @@ Module SimpleCPP.
     Qed.
 
     #[local] Instance tptsto'_fractional {σ} ty p v q_c :
-      Fractional (λ q, @tptsto' σ ty (cqp.mk q_c q) p v) := _.
+      Fractional (λ q, @tptsto' σ ty (CV.mk q_c q) p v) := _.
 
     #[local] Instance tptsto'_timeless {σ} ty q p v :
       Timeless (@tptsto' σ ty q p v) := _.
 
-    #[local] Instance tptsto'_nonvoid {σ} ty (q : cQp) p v :
+    #[local] Instance tptsto'_nonvoid {σ} ty (q : CV.t) p v :
       Observe [| ty <> Tvoid |] (@tptsto' σ ty q p v) := _.
 
-    #[local] Instance tptsto'_frac_valid {σ} ty (q : cQp) p v :
-      Observe [| cqp.frac q ≤ 1 |]%Qp (@tptsto' σ ty q p v) := _.
+    #[local] Instance tptsto'_frac_valid {σ} ty (q : CV.t) p v :
+      Observe [| CV.frac q ≤ 1 |]%Qp (@tptsto' σ ty q p v) := _.
 
     #[local] Instance tptsto'_agree σ ty q1 q2 p v1 v2 :
       Observe2 [| v1 = v2 |] (@tptsto' σ ty q1 p v1) (@tptsto' σ ty q2 p v2).
@@ -988,13 +988,13 @@ Module SimpleCPP.
       by iPureIntro.
     Qed.
 
-    Definition tptsto {σ : genv} (ty : type) (q : cQp) (p : ptr) (v : val) : mpred :=
+    Definition tptsto {σ : genv} (ty : type) (q : CV.t) (p : ptr) (v : val) : mpred :=
       Exists v', [| val_related σ ty v v' |] ** @tptsto' σ ty q p v'.
 
     #[global] Instance tptsto_type_ptr : forall (σ : genv) ty q p v,
       Observe (type_ptr ty p) (tptsto ty q p v) := _.
 
-    Lemma tptsto_live : forall {σ} ty (q : cQp) p v,
+    Lemma tptsto_live : forall {σ} ty (q : CV.t) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
     Proof.
       intros *; rewrite /tptsto.
@@ -1027,16 +1027,16 @@ Module SimpleCPP.
     Qed.
 
     #[global] Instance tptsto_fractional {σ} ty p v c_q :
-      Fractional (λ q, @tptsto σ ty (cqp.mk c_q q) p v) := _.
+      Fractional (λ q, @tptsto σ ty (CV.mk c_q q) p v) := _.
 
     #[global] Instance tptsto_timeless {σ} ty q p v :
       Timeless (@tptsto σ ty q p v) := _.
 
-    #[global] Instance tptsto_nonvoid {σ} ty (q : cQp) p v :
+    #[global] Instance tptsto_nonvoid {σ} ty (q : CV.t) p v :
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v) := _.
 
-    #[global] Instance tptsto_frac_valid {σ} ty (q : cQp) p v :
-      Observe [| cqp.frac q ≤ 1 |]%Qp (@tptsto σ ty q p v) := _.
+    #[global] Instance tptsto_frac_valid {σ} ty (q : CV.t) p v :
+      Observe [| CV.frac q ≤ 1 |]%Qp (@tptsto σ ty q p v) := _.
 
     #[global] Instance tptsto_agree σ ty q1 q2 p v1 v2 :
       Observe2 [| val_related σ ty v1 v2 |] (@tptsto σ ty q1 p v1) (@tptsto σ ty q2 p v2).
