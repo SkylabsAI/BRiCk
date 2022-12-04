@@ -31,6 +31,9 @@ Section defs.
   Definition wp_downcast_to_const := cv_cast (CV.m 1) (CV.c 1).
   Definition wp_upcast_to_mutable := cv_cast (CV.c 1) (CV.m 1).
 
+  Definition type_is_const (ty : type) : bool :=
+    let '(cv, _) := decompose_type ty in q_const cv.
+
   (* TODO this needs to be extended because if it is casting [volatile],
      then it needs to descend under [const] *)
   Definition cv_cast_body (cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred)
@@ -67,7 +70,8 @@ Section defs.
                 | Some br => match u.(u_fields) !! br with
                             | None => False
                             | Some m =>
-                                if m.(mem_mutable) then Q
+                                if m.(mem_mutable) || type_is_const m.(mem_type)
+                                then Q
                                 else
                                   cv_cast from to (addr ,, _field {| f_type := cls ; f_name := m.(mem_name) |}) m.(mem_type) Q
                             end
@@ -76,11 +80,12 @@ Section defs.
                   fold_left (fun Q '(b, _) =>
                               cv_cast from to (addr ,, _base cls b) (Tnamed b) Q)
                     (s_bases st) $
-                    fold_left (fun Q f =>
-                                if f.(mem_mutable) then Q
+                    fold_left (fun Q m =>
+                                if m.(mem_mutable) || type_is_const m.(mem_type)
+                                then Q
                                 else cv_cast from to
-                                        (addr ,, _field {| f_type := cls; f_name := f.(mem_name) |})
-                                        f.(mem_type) Q)
+                                        (addr ,, _field {| f_type := cls; f_name := m.(mem_name) |})
+                                        m.(mem_type) Q)
                     (s_fields st)
                     (addr |-> struct_paddingR from cls ** (addr |-> struct_paddingR to cls -* Q))
               | Gtype
