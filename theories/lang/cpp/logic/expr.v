@@ -356,13 +356,22 @@ Module Type Expr.
             Q v' free)
         |-- wp_operand (Ebinop o e1 e2 ty) Q.
 
+    (* assignments to volatile storage is only permitted by volatile assignments
+       NOTE that volatile assignments are allowed to non-volatile storage.
+     *)
+    Definition assign_compat (storage : type_qualifiers) (ty : type) : Prop :=
+      let '(cv, _) := decompose_type ty in
+      negb (q_const storage) &&
+      if q_volatile storage then q_volatile cv else true.
+
     (* NOTE the right operand is sequenced before the left operand in C++20,
        check when this started. (cppreference.com doesn't seem to have this information)
      *)
     Axiom wp_lval_assign : forall ty l r Q,
         nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free =>
-            la |-> anyR (erase_qualifiers ty) 1 **
-           (la |-> primR (erase_qualifiers ty) 1 rv -* Q la free))
+            Exists cv, la |-> anyR (erase_qualifiers ty) (CV.mk cv 1) **
+            [| assign_compat cv (type_of l) |] **
+           (la |-> primR (erase_qualifiers ty) (CV.mk cv 1) rv -* Q la free))
         |-- wp_lval (Eassign l r ty) Q.
 
     (* Assignemnt operators are *almost* like regular assignments except that they
@@ -371,9 +380,10 @@ Module Type Expr.
      *)
     Axiom wp_lval_bop_assign : forall ty o l r Q,
         nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free =>
-             (Exists v v', la |-> primR (erase_qualifiers ty) 1 v **
+             (Exists cv v v', la |-> primR (erase_qualifiers ty) (CV.mk cv 1) v **
+                 [| assign_compat cv (type_of l) |] **
                  ((eval_binop tu o (erase_qualifiers (type_of l)) (erase_qualifiers (type_of r)) (erase_qualifiers (type_of l)) v rv v' ** True) //\\
-                 (la |-> primR (erase_qualifiers ty) 1 v' -* Q la free))))
+                 (la |-> primR (erase_qualifiers ty) (CV.mk cv 1) v' -* Q la free))))
         |-- wp_lval (Eassign_op o l r ty) Q.
 
     (** The comma operator can be both an lvalue and a prvalue
@@ -427,15 +437,23 @@ Module Type Expr.
         are represented as overloaded functions.
      *)
 
-    (** [Cl2r] represents reads of locations. *)
+    (** [Cl2r] represents reads of locations.
+
+        TODO: extend with support for `volatile`, i.e. only volatile reads are allowed
+        on volatile locations.
+     *)
+    Definition read_compat (storage : type_qualifiers) (ty : type) : Prop :=
+      let '(cv, _) := decompose_type ty in
+      if q_volatile storage then q_volatile cv else true.
+
     Axiom wp_operand_cast_l2r_l : forall ty e Q,
         wp_lval e (fun a free => Exists v,
-           (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\ Q v free)
+           (Exists cv q, a |-> primR (erase_qualifiers ty) (CV.mk cv q) v ** [| read_compat cv (type_of e) |] ** True) //\\ Q v free)
         |-- wp_operand (Ecast Cl2r Lvalue e ty) Q.
 
     Axiom wp_operand_cast_l2r_x : forall ty e Q,
         wp_xval e (fun a free => Exists v, (* was wp_lval *)
-          (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\ Q v free)
+          (Exists cv q, a |-> primR (erase_qualifiers ty) q v ** [| read_compat cv (type_of e) |] ** True) //\\ Q v free)
         |-- wp_operand (Ecast Cl2r Xvalue e ty) Q.
 
     (** [Cnoop] casts are no-op casts. *)
