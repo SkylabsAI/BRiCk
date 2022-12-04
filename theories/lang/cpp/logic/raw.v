@@ -19,21 +19,21 @@ Section with_Σ.
   Context `{Σ : cpp_logic} {σ : genv}.
 
   (** [rawR q rs]: the argument pointer points to [raw_byte] [r] within the C++ abstract machine. *)
-  Definition rawR_def (q : cQp) (r : raw_byte) : Rep :=
+  Definition rawR_def (q : CV.t) (r : raw_byte) : Rep :=
     as_Rep (fun p => tptsto Tuchar q p (Vraw r)).
   Definition rawR_aux : seal (@rawR_def). Proof. by eexists. Qed.
   Definition rawR := rawR_aux.(unseal).
   Definition rawR_eq : @rawR = _ := rawR_aux.(seal_eq).
   #[global] Arguments rawR q raw : rename.
 
-  Lemma _at_rawR_ptr_congP_transport (p1 p2 : ptr) (q : cQp) (r : raw_byte) :
+  Lemma _at_rawR_ptr_congP_transport (p1 p2 : ptr) (q : CV.t) (r : raw_byte) :
     ptr_congP σ p1 p2 |-- p1 |-> rawR q r -* p2 |-> rawR q r.
   Proof.
     rewrite rawR_eq/rawR_def !_at_as_Rep.
     iApply tptsto_ptr_congP_transport.
   Qed.
 
-  Lemma _at_rawR_offset_congP_transport (p : ptr) (o1 o2 : offset) (q : cQp) (r : raw_byte) :
+  Lemma _at_rawR_offset_congP_transport (p : ptr) (o1 o2 : offset) (q : CV.t) (r : raw_byte) :
         offset_congP σ o1 o2 ** type_ptr Tu8 (p ,, o2)
     |-- p ,, o1 |-> rawR q r -* p ,, o2 |-> rawR q r.
   Proof.
@@ -46,7 +46,7 @@ Section with_Σ.
     unfold ptr_cong; exists p, o1, o2; intuition.
   Qed.
 
-  Definition rawsR (q : cQp) (rs : list raw_byte) : Rep := arrayR Tuchar (rawR q) rs.
+  Definition rawsR (q : CV.t) (rs : list raw_byte) : Rep := arrayR Tuchar (rawR q) rs.
 
   Section Theory.
     Section primR_Axiom.
@@ -153,14 +153,14 @@ Section with_Σ.
       Proof. rewrite rawR_eq. apply _. Qed.
 
       #[global] Instance rawR_fractional raw c_q :
-        Fractional (λ q, rawR (cqp.mk c_q q) raw).
+        Fractional (λ q, rawR (CV.mk c_q q) raw).
       Proof. rewrite rawR_eq. apply _. Qed.
       #[global] Instance rawR_as_fractional c_q q raw :
-        AsFractional (rawR (cqp.mk c_q q) raw) (λ q, rawR (cqp.mk c_q q) raw) q.
+        AsFractional (rawR (CV.mk c_q q) raw) (λ q, rawR (CV.mk c_q q) raw) q.
       Proof. constructor. done. apply _. Qed.
 
-      #[global] Instance rawR_observe_frac_valid (q : cQp) raw :
-        Observe [| cqp.frac q ≤ 1 |]%Qp (rawR q raw).
+      #[global] Instance rawR_observe_frac_valid (q : CV.t) raw :
+        Observe [| CV.frac q ≤ 1 |]%Qp (rawR q raw).
       Proof. rewrite rawR_eq. apply _. Qed.
 
       #[global] Instance rawR_observe_agree q1 q2 raw1 raw2 :
@@ -187,15 +187,15 @@ Section with_Σ.
       Proof. apply _. Qed.
 
       #[global] Instance rawsR_fractional rs c_q :
-        Fractional (λ q, rawsR (cqp.mk c_q q) rs).
+        Fractional (λ q, rawsR (CV.mk c_q q) rs).
       Proof. apply _. Qed.
       #[global] Instance rawsR_as_fractional c_q q rs :
-        AsFractional (rawsR (cqp.mk c_q q) rs) (λ q, rawsR (cqp.mk c_q q) rs) q.
+        AsFractional (rawsR (CV.mk c_q q) rs) (λ q, rawsR (CV.mk c_q q) rs) q.
       Proof. constructor. done. apply _. Qed.
 
-      Lemma rawsR_observe_frac_valid (q : cQp) rs :
+      Lemma rawsR_observe_frac_valid (q : CV.t) rs :
         (0 < length rs) ->
-        Observe [| cqp.frac q ≤ 1 |]%Qp (rawsR q rs).
+        Observe [| CV.frac q ≤ 1 |]%Qp (rawsR q rs).
       Proof.
         intros Hlen; rewrite /rawsR; induction rs;
           by [ simpl in Hlen; lia

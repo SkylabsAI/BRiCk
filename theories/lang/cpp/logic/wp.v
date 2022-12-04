@@ -1090,4 +1090,3 @@ End WPE.
 
 Export WPE.
 Export stdpp.coPset.
-Export cqp.

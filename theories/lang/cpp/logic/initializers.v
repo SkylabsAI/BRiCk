@@ -144,7 +144,7 @@ Module Type Init.
      *)
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
-      let qf : cQp := (if q_const cv then (cqp.mk true 1) else 1)%cQp in
+      let qf := if q_const cv then CV.const 1 else CV.mut 1 in
       match ty with
       | Tvoid =>
         (* [wp_initialize] is used to `return` from a function.
@@ -175,14 +175,14 @@ Module Type Init.
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_lval init (fun p free =>
-                        addr |-> primR rty 1%cQp (Vref p) -* k free)
-      (* ^ TODO: how do we model refs? *)
+                        addr |-> primR rty (CV.c 1) (Vref p) -* k free)
+        (* ^ NOTE: [ref]s are never mutable *)
 
       | Trv_ref ty =>
         let rty := Tref $ (*erase_qualifiers*) ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty (1%Qp) (Vref p) -* k free)
-      (* ^ TODO: how do we model refs? *)
+                        addr |-> primR rty (CV.c 1) (Vref p) -* k free)
+        (* ^ NOTE: [ref]s are never mutable. *)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
       | Tqualified _ ty => False (* unreachable *)

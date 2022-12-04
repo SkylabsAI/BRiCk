@@ -18,7 +18,7 @@ From bedrock.lang.cpp Require Import
      logic.arr logic.heap_pred logic.mpred
      heap_notations.
 
-Require Import bedrock.lang.algebra.cqp.
+Require Import bedrock.lang.cpp.algebra.cv.
 
 Import ChargeNotation.
 #[local] Open Scope Z_scope.
@@ -451,13 +451,13 @@ Module zstring.
 
     (* The toplevel definition of [zstring.bufR]: *)
 
-    Definition bufR (q : cQp) (sz : Z) (zs : t) : Rep :=
+    Definition bufR (q : CV.t) (sz : Z) (zs : t) : Rep :=
       [| size zs <= sz |] **
       arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF zs |] **
       .[Tuchar ! size zs]
          |-> arrayR Tuchar (fun _ => primR Tuchar q 0) (repeat () (Z.to_nat (sz - size zs))).
     (* The toplevel definition of [zstring.bufR']: *)
-    Definition bufR' (q : cQp) (sz : Z) (zs : t) : Rep :=
+    Definition bufR' (q : CV.t) (sz : Z) (zs : t) : Rep :=
       [| size zs <= sz |] **
       arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF' zs |] **
       .[Tuchar ! size zs]
@@ -473,15 +473,15 @@ Module zstring.
         Observe [| WF' zs |] (bufR' q sz zs).
     Proof. refine _. Qed.
 
-    Lemma bufRs_equiv (q : cQp) (sz : Z) (zs : t) :
+    Lemma bufRs_equiv (q : CV.t) (sz : Z) (zs : t) :
       bufR q sz zs -|- bufR' q sz zs.
     Proof. intros *; by rewrite /bufR/bufR' WFs_equiv. Qed.
 
     (* The toplevel definition of [zstring.R]: *)
-    Definition R (q : cQp) (zs : t) : Rep :=
+    Definition R (q : CV.t) (zs : t) : Rep :=
       arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF zs |].
     (* The toplevel definition of [zstring.R']: *)
-    Definition R' (q : cQp) (zs : t) : Rep :=
+    Definition R' (q : CV.t) (zs : t) : Rep :=
       arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF' zs |].
 
     #[global] Instance R_WF_observe :
@@ -495,7 +495,7 @@ Module zstring.
     Proof. refine _. Qed.
 
     Lemma Rs_equiv :
-      forall (q : cQp) (zs : t),
+      forall (q : CV.t) (zs : t),
         R q zs -|- R' q zs.
     Proof. intros *; by rewrite /R/R' WFs_equiv. Qed.
 
@@ -503,7 +503,7 @@ Module zstring.
       #[local] Open Scope string_scope.
 
       Section bufR.
-        Remark bufR_nil : forall (q : cQp) (sz : Z), bufR q sz [] |-- False.
+        Remark bufR_nil : forall (q : CV.t) (sz : Z), bufR q sz [] |-- False.
         Proof.
           intros *.
           iIntros "rest"; rewrite /bufR.
@@ -513,12 +513,12 @@ Module zstring.
 
         (* TODO (AUTO): Investigate whether or not this hint actually fires. *)
         #[global] Instance bufR_sz_contra :
-          forall (q : cQp) (sz : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (zs : t),
             Observe2 False [| sz < size zs |] (bufR q sz zs).
         Proof. intros *; rewrite /Observe2/bufR; iIntros "%H [%CONTRA ?]"; by lia. Qed.
 
         #[global] Instance bufR_singleton :
-          forall (q : cQp) (sz : Z) (z : Z),
+          forall (q : CV.t) (sz : Z) (z : Z),
             Observe [| z = 0 |]%Z (bufR q sz [z]).
         Proof.
           intros *; rewrite /Observe/bufR; iIntros "(% & Hz & %HWF & rest)".
@@ -526,7 +526,7 @@ Module zstring.
         Qed.
 
         Lemma bufR_cons :
-          forall (q : cQp) (sz : Z) (z : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (z : Z) (zs : t),
             z <> 0 ->
             bufR q sz (z :: zs) -|-
             primR Tuchar q z ** .[Tu8 ! 1] |-> bufR q (sz - 1) zs.
@@ -552,7 +552,7 @@ Module zstring.
         Qed.
 
         #[global] Instance bufR_cons_cons_head_nonzero :
-          forall (q : cQp) (sz : Z) (z z' : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (z z' : Z) (zs : t),
             Observe [| z <> 0 |]%Z (bufR q sz (z :: z' :: zs)).
         Proof.
           intros *.
@@ -566,7 +566,7 @@ Module zstring.
         Qed.
 
         Lemma bufR_has_type :
-          forall (q : cQp) (sz : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (zs : t),
             strlen zs < sz ->
                 bufR q sz zs
             |-- bufR q sz zs ** [| List.Forall (fun c => has_type (Vint c) Tuchar) zs |].
@@ -685,35 +685,35 @@ Module zstring.
         #[local] Ltac lift_WF2WF' H :=
           intros **; rewrite -!bufRs_equiv; by apply H.
 
-        Remark bufR'_nil : forall (q : cQp) (sz : Z), bufR' q sz [] |-- False.
+        Remark bufR'_nil : forall (q : CV.t) (sz : Z), bufR' q sz [] |-- False.
         Proof. lift_WF2WF' bufR_nil. Qed.
 
         (* TODO (AUTO): Investigate whether or not this hint actually fires. *)
         #[global] Instance bufR'_sz_contra :
-          forall (q : cQp) (sz : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (zs : t),
             Observe2 False [| sz < size zs |] (bufR' q sz zs).
         Proof. lift_WF2WF' bufR_sz_contra. Qed.
 
         #[global] Instance bufR'_singleton :
-          forall (q : cQp) (sz : Z) (z : Z),
+          forall (q : CV.t) (sz : Z) (z : Z),
             0 <= sz ->
             Observe [| z = 0 |]%Z (bufR' q sz [z]).
         Proof. lift_WF2WF' bufR_singleton. Qed.
 
         Lemma bufR'_cons :
-          forall (q : cQp) (sz : Z) (z : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (z : Z) (zs : t),
             z <> 0 ->
             bufR' q sz (z :: zs) -|-
             primR Tuchar q z ** .[Tu8 ! 1] |-> bufR' q (sz - 1) zs.
         Proof. lift_WF2WF' bufR_cons. Qed.
 
         #[global] Instance bufR'_cons_cons_head_nonzero :
-          forall (q : cQp) (sz : Z) (z z' : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (z z' : Z) (zs : t),
             Observe [| z <> 0 |]%Z (bufR' q sz (z :: z' :: zs)).
         Proof.  lift_WF2WF' bufR_cons_cons_head_nonzero. Qed.
 
         Lemma bufR'_has_type :
-          forall (q : cQp) (sz : Z) (zs : t),
+          forall (q : CV.t) (sz : Z) (zs : t),
             strlen zs < sz ->
                 bufR' q sz zs
             |-- bufR' q sz zs ** [| List.Forall (fun c => has_type (Vint c) Tuchar) zs |].
@@ -737,7 +737,7 @@ Module zstring.
       End bufR'.
 
       Lemma bufR_unfold :
-        forall (q : cQp) (sz : Z) (zs : t),
+        forall (q : CV.t) (sz : Z) (zs : t),
           bufR q sz zs -|-
           [| size zs <= sz |] ** R q zs **
           .[ Tuchar ! size zs] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
@@ -749,7 +749,7 @@ Module zstring.
       Qed.
 
       Lemma bufR'_unfold :
-        forall (q : cQp) (sz : Z) (cstr : t),
+        forall (q : CV.t) (sz : Z) (cstr : t),
           bufR' q sz cstr -|-
           [| size cstr <= sz |] ** R' q cstr **
           .[ Tuchar ! size cstr] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
@@ -776,16 +776,16 @@ Module zstring.
         #[local] Ltac try_lift_bufR H :=
           intros **; rewrite !R_bufR_equiv; eapply H; eauto.
 
-        Remark R_nil : forall (q : cQp), R q [] |-- False.
+        Remark R_nil : forall (q : CV.t), R q [] |-- False.
         Proof. try_lift_bufR bufR_nil. Qed.
 
         #[global] Instance R_singleton :
-          forall (q : cQp) (z : Z),
+          forall (q : CV.t) (z : Z),
             Observe [| z = 0 |]%Z (R q [z]).
         Proof. try_lift_bufR bufR_singleton. Qed.
 
         Lemma R_cons :
-          forall (q : cQp) (z : Z) (zs : t),
+          forall (q : CV.t) (z : Z) (zs : t),
             z <> 0 ->
             R q (z :: zs) -|-
             primR Tuchar q z ** .[Tu8 ! 1] |-> R q zs.
@@ -797,12 +797,12 @@ Module zstring.
         Qed.
 
         #[global] Instance R_cons_cons_head_nonzero :
-          forall (q : cQp) (z z' : Z) (zs : t),
+          forall (q : CV.t) (z z' : Z) (zs : t),
             Observe [| z <> 0 |]%Z (R q (z :: z' :: zs)).
         Proof. try_lift_bufR bufR_cons_cons_head_nonzero. Qed.
 
         Lemma R_has_type :
-          forall (q : cQp) (zs : t),
+          forall (q : CV.t) (zs : t),
                 R q zs
             |-- R q zs ** [| List.Forall (fun c => has_type (Vint c) Tuchar) zs |].
         Proof.
@@ -856,28 +856,28 @@ Module zstring.
             R' q zs ≡ bufR' q (size zs) zs.
         Proof. intros **; rewrite -Rs_equiv -bufRs_equiv; by apply R_bufR_equiv. Qed.
 
-        Remark R'_nil : forall (q : cQp), R' q [] |-- False.
+        Remark R'_nil : forall (q : CV.t), R' q [] |-- False.
         Proof. lift_WF2WF' R_nil. Qed.
 
         #[global] Instance R'_singleton :
-          forall (q : cQp) (z : Z),
+          forall (q : CV.t) (z : Z),
             Observe [| z = 0 |]%Z (R' q [z]).
         Proof. lift_WF2WF' R_singleton. Qed.
 
         Lemma R'_cons :
-          forall (q : cQp) (z : Z) (zs : t),
+          forall (q : CV.t) (z : Z) (zs : t),
             z <> 0 ->
             R' q (z :: zs) -|-
             primR Tuchar q z ** .[Tu8 ! 1] |-> R' q zs.
         Proof. lift_WF2WF' R_cons. Qed.
 
         #[global] Instance R'_cons_cons_head_nonzero :
-          forall (q : cQp) (z z' : Z) (zs : t),
+          forall (q : CV.t) (z z' : Z) (zs : t),
             Observe [| z <> 0 |]%Z (R' q (z :: z' :: zs)).
         Proof. lift_WF2WF' R_cons_cons_head_nonzero. Qed.
 
         Lemma R'_has_type :
-          forall (q : cQp) (zs : t),
+          forall (q : CV.t) (zs : t),
                 R' q zs
             |-- R' q zs ** [| List.Forall (fun c => has_type (Vint c) Tuchar) zs |].
         Proof. lift_WF2WF' R_has_type. Qed.
@@ -905,13 +905,13 @@ Module zstring.
       End R'_Theory.
 
       Lemma R_unfold :
-        forall (q : cQp) (zs : t),
+        forall (q : CV.t) (zs : t),
               R q zs
           -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF zs |].
       Proof. intros **; split'; by rewrite /R. Qed.
 
       Lemma R'_unfold :
-        forall (q : cQp) (zs : t),
+        forall (q : CV.t) (zs : t),
               R' q zs
           -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) zs ** [| WF' zs |].
       Proof. intros **; split'; by rewrite /R'. Qed.

@@ -16,7 +16,7 @@ Require Export bedrock.prelude.addr.
 From bedrock.lang.bi Require Export prelude observe.
 From bedrock.lang.cpp.logic Require Export mpred rep.
 
-From bedrock.lang.algebra Require Export cqp.
+From bedrock.lang.cpp.algebra Require Export cv.
 
 From iris.base_logic.lib Require Export iprop.
 (* TODO: ^^ only needed to export uPredI, should be removed. *)
@@ -148,7 +148,7 @@ Module Type CPP_LOGIC
     Axiom tptsto_timeless :
       forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
     Axiom tptsto_fractional :
-      forall {σ} ty a v q_v q_c , Fractional (λ q, @tptsto σ ty (CV.mk q_v q_c q) a v).
+      forall {σ} ty a v q_cv , Fractional (λ q, @tptsto σ ty (CV.mk q_cv q) a v).
     #[global] Existing Instances tptsto_timeless tptsto_fractional.
 
     Axiom tptsto_frac_valid : forall {σ} t (q : CV.t) p v,
@@ -257,7 +257,7 @@ Module Type CPP_LOGIC
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : list globname),
         CV.t -> ptr -> mpred.
-    Axiom identity_fractional : forall σ this mdc p q_v q_c , Fractional (λ q, identity this mdc (CV.mk q_v q_c q) p).
+    Axiom identity_fractional : forall σ this mdc p q_cv , Fractional (λ q, identity this mdc (CV.mk q_cv q) p).
     Axiom identity_timeless : forall σ this mdc q p, Timeless (identity this mdc q p).
     Axiom identity_strict_valid : forall σ this mdc q p, Observe (strict_valid_ptr p) (identity this mdc q p).
     #[global] Existing Instances identity_fractional identity_timeless identity_strict_valid.
@@ -1067,12 +1067,12 @@ Section with_cpp.
       (@tptsto _ Σ).
   Proof. repeat intro. exact: tptsto_mono. Qed.
 
-  #[global] Instance tptsto_as_fractional ty q_v q_c q a v :
-    AsFractional (tptsto ty (CV.mk q_v q_c q) a v) (λ q, tptsto ty (CV.mk q_v q_c q) a v) q.
+  #[global] Instance tptsto_as_fractional ty q_cv q a v :
+    AsFractional (tptsto ty (CV.mk q_cv q) a v) (λ q, tptsto ty (CV.mk q_cv q) a v) q.
   Proof. exact: Build_AsFractional. Qed.
 
-  #[global] Instance identity_as_fractional this mdc p q_v q_c q :
-    AsFractional (identity this mdc (CV.mk q_v q_c q) p) (λ q, identity this mdc (CV.mk q_v q_c q) p) q.
+  #[global] Instance identity_as_fractional this mdc p q_cv q :
+    AsFractional (identity this mdc (CV.mk q_cv q) p) (λ q, identity this mdc (CV.mk q_cv q) p) q.
   Proof. exact: Build_AsFractional. Qed.
 
   #[global] Instance tptsto_observe_nonnull t q p v :
@@ -1083,8 +1083,8 @@ Section with_cpp.
     rewrite {1}tptsto_nonnull. exact: bi.False_elim.
   Qed.
 
-  Lemma tptsto_disjoint : forall ty q_v q_c p v1 v2,
-    tptsto ty (CV.mk q_v q_c 1) p v1 ** tptsto ty (CV.mk q_v q_c 1) p v2 |-- False.
+  Lemma tptsto_disjoint : forall ty q_cv p v1 v2,
+    tptsto ty (CV.mk q_cv 1) p v1 ** tptsto ty (CV.mk q_cv 1) p v2 |-- False.
   Proof.
     intros *; iIntros "[T1 T2]".
     iDestruct (observe_2_elim_pure with "T1 T2") as %Hvs.
