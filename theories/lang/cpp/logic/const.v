@@ -28,13 +28,12 @@ Section defs.
   Axiom cv_cast_frame : forall f t a ty Q Q',
       Q -* Q' |-- cv_cast f t a ty Q -* cv_cast f t a ty Q'.
 
-  Definition wp_downcast_to_const := cv_cast (CV.m 1) (CV.c  1).
+  Definition wp_downcast_to_const := cv_cast (CV.m 1) (CV.c 1).
   Definition wp_upcast_to_mutable := cv_cast (CV.c 1) (CV.m 1).
 
   Definition cv_cast_body (cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred)
     (from to : CV.t)  (addr : ptr) (ty : type) (Q : mpred) : mpred :=
     let UNSUPPORTED := cv_cast from to addr ty Q in
-    let TODO := cv_cast from to addr ty Q in
     let '(cv, rty) := decompose_type ty in
     if q_const cv then Q
     else
@@ -51,7 +50,10 @@ Section defs.
       | Tvoid =>
           (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q)) ∨
           (          addr |-> uninitR rty from ** (addr |-> uninitR rty to -* Q))
-      | Tarray _ _ => TODO
+      | Tarray ety sz =>
+          fold_left (fun Q i =>
+            cv_cast from to (addr .[ erase_qualifiers ety ! sz ]) ty Q)
+                    (seqN 0 sz) Q
       | Tnamed cls =>
           match tu.(globals) !! cls with
           | None => False (* correct *)
