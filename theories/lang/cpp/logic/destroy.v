@@ -89,7 +89,6 @@ Section destroy.
   Lemma destroy_val_frame : forall ty q_c this (Q Q' : epred),
       Q -* Q' |-- destroy_val q_c ty this Q -* destroy_val q_c ty this Q'.
   Proof.
-
     intro ty; induction ty; simpl; eauto;
       try solve [ intros; iIntros "Q [$ X]"; iRevert "X"; done ].
     - induction (rev _); first done.
