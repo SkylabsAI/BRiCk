@@ -492,7 +492,7 @@ Section with_cpp.
   (** ** Weakest precondition of a destructor *)
   Definition wpd_bases (cls : globname) (this : ptr) (bases : list globname) : epred -> mpred :=
     let del_base base := FreeTemps.delete (Tnamed base) (this ,, _base cls base) in
-    interp (FreeTemps.seqsR (List.map del_base bases)).
+    interp (FreeTemps.seqs_rev (List.map del_base bases)).
 
   Lemma wpd_bases_frame cls this : forall bases Q Q',
       Q -* Q' |-- wpd_bases cls this bases Q -* wpd_bases cls this bases Q'.
@@ -500,7 +500,7 @@ Section with_cpp.
 
   Definition wpd_members (cls : globname) (this : ptr) (members : list Member) : epred -> mpred :=
     let del_member m := FreeTemps.delete m.(mem_type) (this ,, _field {| f_name := m.(mem_name) ; f_type := cls |}) in
-    interp (FreeTemps.seqsR (List.map del_member members)).
+    interp (FreeTemps.seqs_rev (List.map del_member members)).
 
   Lemma wpd_members_frame cls this : forall members Q Q',
       Q -* Q' |-- wpd_members cls this members Q -* wpd_members cls this members Q'.
