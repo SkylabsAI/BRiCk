@@ -7,48 +7,45 @@
 
 Require Import stdpp.numbers.
 
+(* TODO: the name here probably does not make sense anymore *)
+Module CV.
 
-Declare Scope cQp_scope.
-Delimit Scope cQp_scope with cQp.
+  #[projections(primitive)]
+  Record t : Set := mk { is_const : bool ; frac : Qp }.
+  Coercion frac : t >-> Qp.
 
-Record cQp : Set := mk { is_const : bool ; frac : Qp }. 
-Add Printing Constructor cQp.
-Bind Scope cQp_scope with cQp.
-(* Coercion frac : cQp >-> Qp. *)
-  
-Module cQp.
-  
-  Definition of_Qp : Qp -> cQp := mk false.
-  (* Coercion to [Qp] *)
-  
-  Definition add (a b : cQp) : cQp :=
-    match a, b with
-    | mk false q_a, mk false q_b => mk false (q_a + q_b)
-    | mk _ q_a, mk _ q_b => mk true (q_a + q_b)
-    end.
+  Definition add (a b : t) : t :=
+    mk (a.(is_const) || b.(is_const)) (a.(frac) + b.(frac)).
 
   Lemma eta q : q = mk (is_const q) (frac q).
-  Proof. by destruct q; intros. Qed.
-
-  Lemma refl q_c q_f : mk q_c q_f = mk q_c q_f.
   Proof. done. Qed.
-  
-  Module Import notations.
 
-    Notation "1" := (mk false (pos_to_Qp 1)) : cQp_scope.
-    Notation "1__const" := (mk true (pos_to_Qp 1)) : cQp_scope.
-    Infix "+" := add : cQp_scope.
+  Lemma refl c q_f : mk c q_f = mk c q_f.
+  Proof. done. Qed.
 
-  End notations.
-  
-End cQp.
+  (* we need a definition in order to make a coercion *)
+  Definition _mut : Qp -> t := mk false.
 
-(* TODO: which Qp's to fix into cQp and which we leave? *)
-#[global] Coercion cQp.of_Qp : Qp >-> cQp.
-  
-Export cQp.notations.
+  (* Notations -- probably actually make these notations? *)
+  Notation mut := (mk false) (only parsing).
+  Notation const := (mk true) (only parsing).
+  Notation c := (mk true).
+  Notation m := (mk false).
 
-(* 
-#[global] Notation Qp_plain := stdpp.numbers.Qp.
-#[global] Notation Qp := cQp.
-*)
+End CV.
+
+Add Printing Constructor CV.t.
+#[global] Bind Scope Qp_scope with CV.t.
+
+(* as with C++, we make mutable the default *)
+#[global] Coercion CV._mut : Qp >-> CV.t.
+
+Section TEST.
+  Variable TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
+
+  (* TODO: to make this work without the [%Qp], we need to register the
+     notations for [Qp] as notations in [cvq_scope]. *)
+  Goal TEST 1 (CV.c 1) (1/2) (CV.c (1/4)).
+  Abort.
+
+End TEST.

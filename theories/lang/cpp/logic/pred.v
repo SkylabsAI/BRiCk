@@ -134,7 +134,7 @@ Module Type CPP_LOGIC
     We use this predicate both for pointers to actual memory and for pointers to
     C++ locations that are not stored in memory (as an optimization).
     *)
-    Parameter tptsto : forall {σ:genv} (t : type) (q : cQp) (a : ptr) (v : val), mpred.
+    Parameter tptsto : forall {σ:genv} (t : type) (q : CV.t) (a : ptr) (v : val), mpred.
 
     Axiom tptsto_nonnull : forall {σ} ty q a,
       @tptsto σ ty q nullptr a |-- False.
@@ -148,11 +148,11 @@ Module Type CPP_LOGIC
     Axiom tptsto_timeless :
       forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
     Axiom tptsto_fractional :
-      forall {σ} ty a v q_c , Fractional (λ q, @tptsto σ ty (mk q_c q) a v).
+      forall {σ} ty a v q_v q_c , Fractional (λ q, @tptsto σ ty (CV.mk q_v q_c q) a v).
     #[global] Existing Instances tptsto_timeless tptsto_fractional.
 
-    Axiom tptsto_frac_valid : forall {σ} t (q : cQp) p v,
-      Observe [| cqp.frac q ≤ 1 |]%Qp (@tptsto σ t q p v).
+    Axiom tptsto_frac_valid : forall {σ} t (q : CV.t) p v,
+      Observe [| CV.frac q ≤ 1 |]%Qp (@tptsto σ t q p v).
     #[global] Existing Instance tptsto_frac_valid.
 
     Axiom tptsto_agree : forall {σ} ty q1 q2 p v1 v2,
@@ -168,7 +168,7 @@ Module Type CPP_LOGIC
     Axiom tptsto_val_related_transport : forall {σ} ty q p v1 v2,
         [| val_related σ ty v1 v2 |] |-- @tptsto σ ty q p v1 -* @tptsto σ ty q p v2.
 
-    Axiom tptsto_nonvoid : forall {σ} ty (q : cQp) p v,
+    Axiom tptsto_nonvoid : forall {σ} ty (q : CV.t) p v,
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v).
     #[global] Existing Instance tptsto_nonvoid.
 
@@ -193,7 +193,7 @@ Module Type CPP_LOGIC
     simplify stating rules for pointer comparison. *)
     Axiom nullptr_live : |-- live_ptr nullptr.
 
-    Axiom tptsto_live : forall {σ} ty (q : cQp) p v,
+    Axiom tptsto_live : forall {σ} ty (q : CV.t) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
 
     (** [const_core σ t q p] represents the portion of the ownership (of type [t])
@@ -256,8 +256,8 @@ Module Type CPP_LOGIC
      *)
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : list globname),
-        cQp -> ptr -> mpred.
-    Axiom identity_fractional : forall σ this mdc p q_c , Fractional (λ q, identity this mdc (mk q_c q) p).
+        CV.t -> ptr -> mpred.
+    Axiom identity_fractional : forall σ this mdc p q_v q_c , Fractional (λ q, identity this mdc (CV.mk q_v q_c q) p).
     Axiom identity_timeless : forall σ this mdc q p, Timeless (identity this mdc q p).
     Axiom identity_strict_valid : forall σ this mdc q p, Observe (strict_valid_ptr p) (identity this mdc q p).
     #[global] Existing Instances identity_fractional identity_timeless identity_strict_valid.
@@ -268,7 +268,7 @@ Module Type CPP_LOGIC
         placement [new] over an existing object.
      *)
     Axiom identity_forget : forall σ mdc this p,
-        @identity σ this mdc 1 p |-- |={↑pred_ns}=> @identity σ this nil 1 p.
+        @identity σ this mdc (CV.m 1) p |-- |={↑pred_ns}=> @identity σ this nil (CV.m 1) p.
 
     (** the pointer points to the code
 
@@ -1067,12 +1067,12 @@ Section with_cpp.
       (@tptsto _ Σ).
   Proof. repeat intro. exact: tptsto_mono. Qed.
 
-  #[global] Instance tptsto_as_fractional ty q_c q a v :
-    AsFractional (tptsto ty (mk q_c q) a v) (λ q, tptsto ty (mk q_c q) a v) q.
+  #[global] Instance tptsto_as_fractional ty q_v q_c q a v :
+    AsFractional (tptsto ty (CV.mk q_v q_c q) a v) (λ q, tptsto ty (CV.mk q_v q_c q) a v) q.
   Proof. exact: Build_AsFractional. Qed.
 
-  #[global] Instance identity_as_fractional this mdc p q_c q :
-    AsFractional (identity this mdc (mk q_c q) p) (λ q, identity this mdc (mk q_c q) p) q.
+  #[global] Instance identity_as_fractional this mdc p q_v q_c q :
+    AsFractional (identity this mdc (CV.mk q_v q_c q) p) (λ q, identity this mdc (CV.mk q_v q_c q) p) q.
   Proof. exact: Build_AsFractional. Qed.
 
   #[global] Instance tptsto_observe_nonnull t q p v :
@@ -1083,8 +1083,8 @@ Section with_cpp.
     rewrite {1}tptsto_nonnull. exact: bi.False_elim.
   Qed.
 
-  Lemma tptsto_disjoint : forall ty p v1 v2,
-    tptsto ty 1 p v1 ** tptsto ty 1 p v2 |-- False.
+  Lemma tptsto_disjoint : forall ty q_v q_c p v1 v2,
+    tptsto ty (CV.mk q_v q_c 1) p v1 ** tptsto ty (CV.mk q_v q_c 1) p v2 |-- False.
   Proof.
     intros *; iIntros "[T1 T2]".
     iDestruct (observe_2_elim_pure with "T1 T2") as %Hvs.
