@@ -106,11 +106,11 @@ Section defs.
   Axiom cv_cast_intro : forall f t a ty Q, cv_cast_body cv_cast f t a ty Q |-- cv_cast f t a ty Q.
 
   (* Sanity check the [_frame] property *)
-  Lemma fold_frame : forall B (l : list B) (f : epred -> B -> epred)  (Q Q' : epred),
-    (Q -* Q') |-- □ (Forall Q1 Q1' a, (Q1 -* Q1') -* (f Q1 a -* f Q1' a)) -*  fold_left f l Q -* fold_left f l Q'.
+  Lemma fold_frame : forall B (l : list B) (f f' : epred -> B -> epred)  (Q Q' : epred),
+    (Q -* Q') |-- □ (Forall Q1 Q1' a, (Q1 -* Q1') -* (f Q1 a -* f' Q1' a)) -*  fold_left f l Q -* fold_left f' l Q'.
   Proof.
     move=>B l.
-    induction l; iIntros (???) "W #F"; first done.
+    induction l; iIntros (????) "W #F"; first done.
     iDestruct ("F" $! Q Q' a with "W") as "W".
     iApply (IHl with "W"). eauto.
   Qed.
