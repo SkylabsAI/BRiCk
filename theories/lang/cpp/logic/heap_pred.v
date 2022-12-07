@@ -93,32 +93,39 @@ Section with_cpp.
   #[global] Instance primR_fractional resolve ty v q_cv :
     Fractional (λ q, primR ty (CV.mk q_cv q) v).
   Proof. rewrite primR_eq. apply _. Qed.
-  #[global] Instance primR_as_fractional resolve ty q v :
-    AsFractional (primR ty q v)
-      (fun q' => primR ty (CV.mk q.(CV.is_const) q') v) q.(CV.frac).
-  Proof. constructor. subst. done. apply _. Qed.
-
-  (*
-  Hint Extern 100 (_  = CV.mk _ _ _) => apply CV.eta : typeclass_instances.
-  Hint Extern 100 (_  = CV.mk _ _ _) => apply CV.refl : typeclass_instances.
-   *)
+  #[global] Instance primR_as_fractional resolve ty c q v :
+    AsFractional (primR ty (CV.mk c q) v)
+      (fun q' => primR ty (CV.mk c q') v) q.
+  Proof. constructor. done. apply _. Qed.
 
   Section TEST.
     Context {σ : genv} (p : ptr).
+
+    Goal exists r q, AsFractional (primR Ti32 (CV.m (1 / 2)) 0) r (q / 2).
+    Proof.
+      do 2 eexists. refine _.
+    Abort.
+
+    Goal forall v ty, AsFractional (primR ty (CV.m 1) v) (fun q' => primR ty (CV.mk false q') v) 1.
+    Proof.
+      intros.
+      refine _.
+    Abort.
+
+
     Goal
         p |-> primR Tint (CV.m (1/2)) 0
         |-- p |-> primR Tint (CV.m (1/2)) 0 -* p |-> primR Tint (CV.m 1) 0.
     Proof.
       iIntros "H1 H2".
-      iCombine "H1 H2" as "H".
-      Fail by iFrame.
+      iCombine "H1 H2" as "$".
     Abort.
 
     Goal
         p |-> primR Tint (CV.c 1) 0 |-- p |-> primR Tint (CV.c (1/2)) 0 ** p |-> primR Tint (CV.c (1/2)) 0.
     Proof.
       iIntros "H".
-      Fail iDestruct "H" as "[H1 H2]".
+      iDestruct "H" as "[H1 H2]".
     Abort.
   End TEST.
 
