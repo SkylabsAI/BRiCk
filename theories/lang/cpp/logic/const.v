@@ -24,12 +24,9 @@ Section defs.
 
      This is used to implement [wp_downcast_to_const] and [wp_upcast_to_const].
    *)
-  Parameter cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
+  Parameter cv_cast : forall (tu : translation_unit) (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
   Axiom cv_cast_frame : forall f t a ty Q Q',
-      Q -* Q' |-- cv_cast f t a ty Q -* cv_cast f t a ty Q'.
-
-  Definition wp_downcast_to_const := cv_cast (CV.m 1) (CV.c 1).
-  Definition wp_upcast_to_mutable := cv_cast (CV.c 1) (CV.m 1).
+      Q -* Q' |-- cv_cast tu f t a ty Q -* cv_cast tu f t a ty Q'.
 
   Definition type_is_const (ty : type) : bool :=
     let '(cv, _) := decompose_type ty in q_const cv.
@@ -103,7 +100,7 @@ Section defs.
   (* NOTE: we prefer an entailment ([|--]) to a bi-entailment ([-|-]) or an equality
      to be conservative.
    *)
-  Axiom cv_cast_intro : forall f t a ty Q, cv_cast_body cv_cast f t a ty Q |-- cv_cast f t a ty Q.
+  Axiom cv_cast_intro : forall f t a ty Q, cv_cast_body (cv_cast tu) f t a ty Q |-- cv_cast tu f t a ty Q.
 
   (* Sanity check the [_frame] property *)
   Lemma fold_frame : forall B (l : list B) (f f' : epred -> B -> epred)  (Q Q' : epred),
@@ -165,3 +162,6 @@ Section defs.
   Qed.
 
 End defs.
+
+Notation wp_make_const tu := (cv_cast tu (CV.m 1) (CV.c 1)).
+Notation wp_make_mutable tu := (cv_cast tu (CV.c 1) (CV.m 1)).

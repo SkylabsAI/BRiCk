@@ -167,7 +167,7 @@ Module Type Init.
         (* non-primitives are handled via prvalue-initialization semantics *)
       | Tarray _ _ as ty
       | Tnamed _ as ty => wp_init ty addr init (fun _ frees =>
-           if q_const cv then wp_downcast_to_const addr ty (k frees)
+           if q_const cv then wp_make_const tu addr ty (k frees)
            else k frees
           )
         (* NOTE that just like this function [wp_init] will consume the object. *)
