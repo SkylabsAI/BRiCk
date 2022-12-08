@@ -53,10 +53,13 @@ Section defs.
         (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q)) ∨
         (          addr |-> uninitR rty from ** (addr |-> uninitR rty to -* Q))
 
-      | Tref _
-      | Trv_ref _ =>
+      | Tref _ =>
         let rty := erase_qualifiers rty in
         (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q))
+        (* ^ References must be initialized *)
+      | Trv_ref rty =>
+        let rty := erase_qualifiers rty in
+        (Exists v, addr |-> primR (Tref rty) from v ** (addr |-> primR (Tref rty) to v -* Q))
         (* ^ References must be initialized *)
 
       | Tarray ety sz =>
