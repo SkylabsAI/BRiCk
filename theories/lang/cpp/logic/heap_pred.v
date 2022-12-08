@@ -118,18 +118,6 @@ Section with_cpp.
   Section TEST.
     Context {σ : genv} (p : ptr).
 
-    Goal exists r q, AsFractional (primR Ti32 (CV.m (1 / 2)) 0) r (q / 2).
-    Proof.
-      do 2 eexists. refine _.
-    Abort.
-
-    Goal forall v ty, AsFractional (primR ty (CV.m 1) v) (fun q' => primR ty (CV.mk false q') v) 1.
-    Proof.
-      intros.
-      refine _.
-    Abort.
-
-
     Goal
         p |-> primR Tint (CV.m (1/2)) 0
         |-- p |-> primR Tint (CV.m (1/2)) 0 -* p |-> primR Tint (CV.m 1) 0.
