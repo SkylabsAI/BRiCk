@@ -11,7 +11,7 @@ Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.
 
 From bedrock.lang.cpp.logic Require Import
-  pred path_pred heap_pred wp builtins cptr
+  pred path_pred heap_pred wp builtins cptr const
   layout initializers destroy.
 
 Require Import bedrock.lang.cpp.heap_notations.
@@ -132,35 +132,65 @@ Section with_cpp.
 
   (** * Binding parameters *)
 
+  Fixpoint wp_make_mutables (ls : list (ptr * type)) (Q : epred) : mpred :=
+    match ls with
+    | nil => Q
+    | (p,t) :: ls => wp_make_mutables ls $ wp_make_mutable tu p t Q
+    end.
+
+  Lemma wp_make_mutables_frame ls : forall Q Q',
+      Q -* Q' |-- wp_make_mutables ls Q -* wp_make_mutables ls Q'.
+  Proof.
+    induction ls =>/=; eauto.
+    iIntros (??) "X"; case_match; iApply (IHls with "[X]").
+    iApply cv_cast_frame; first reflexivity; eauto.
+  Qed.
+
+  Definition Kcleanup (ls : list (ptr * type)) : Kpred -> Kpred :=
+    Kat_exit (wp_make_mutables ls).
+
+  Lemma Kcleanup_frame ls (Q Q' : Kpred) rt :
+    Q rt -* Q' rt |-- Kcleanup ls Q rt -* Kcleanup ls Q' rt.
+  Proof.
+    iIntros "K". iApply Kat_exit_frame; eauto.
+    iIntros (??) "X"; iApply wp_make_mutables_frame; eauto.
+  Qed.
+
   (** [bind_vars args vals r Q] preforms initialization of the parameters
       given the values being passed.
 
-      TODO: if the type is [const], we need to consume [const_core] of the definition now
-            and give it back at the end of the function
+      NOTE. We make arguments [const] here if necessary and then make them
+            mutable again in the second argument to [Q].
    *)
   Fixpoint bind_vars (args : list (ident * type)) (ar : function_arity) (ptrs : list ptr)
-    (ρ : option ptr -> region) (Q : region -> FreeTemps -> mpred) : mpred :=
+    (ρ : option ptr -> region) (Q : region -> list (ptr * type) -> mpred) : mpred :=
     match args with
     | nil =>
         match ar with
         | Ar_Definite =>
             match ptrs with
-            | nil => Q (ρ None) FreeTemps.id
+            | nil => Q (ρ None) []
             | _ :: _ => ERROR "bind_vars: extra arguments"
             end
         | Ar_Variadic =>
             match ptrs with
-            | vap :: nil => Q (ρ $ Some vap) FreeTemps.id
+            | vap :: nil => Q (ρ $ Some vap) []
             | _ => ERROR "bind_vars: variadic function missing varargs"
             end
         end
-    | (x,_) :: xs =>
+    | (x,ty) :: xs =>
         match ptrs with
         | p :: ps  =>
-            bind_vars xs ar ps (fun vap => Rbind x p $ ρ vap) Q
+            let '(cv, ty) := decompose_type ty in
+            if q_const cv then
+              wp_make_const tu p ty $ bind_vars xs ar ps (fun vap => Rbind x p $ ρ vap)
+                (fun ρ consts => Q ρ $ (p,ty) :: consts)
+            else
+              bind_vars xs ar ps (fun vap => Rbind x p $ ρ vap) Q
         | nil => ERROR "bind_vars: insufficient arguments"
         end
     end.
+
 
   Lemma bind_vars_frame : forall ts ar args ρ Q Q',
         Forall ρ free, Q ρ free -* Q' ρ free
@@ -169,10 +199,13 @@ Section with_cpp.
     induction ts; destruct args => /= *; eauto.
     { case_match; eauto.
       iIntros "A B"; iApply "A"; eauto. }
-    { case_match; eauto.  case_match; eauto.
+    { case_match; eauto. case_match; eauto.
       iIntros "A"; iApply "A". }
-    { iIntros "A B". destruct a.
-      iRevert "B"; by iApply IHts. }
+    { iIntros "A".
+      repeat case_match; subst.
+      { iApply cv_cast_frame; first reflexivity.
+        iApply IHts. iIntros (??). iApply "A". }
+      { iApply IHts; iApply "A". } }
   Qed.
 
   (** * Weakest preconditions of the flavors of C++ "functions"  *)
@@ -185,8 +218,8 @@ Section with_cpp.
       match body with
       | Impl body =>
         let ρ va := Remp None va f.(f_return) in
-        bind_vars f.(f_params) f.(f_arity) args ρ (fun ρ frees =>
-        |> wp ρ body (Kfree frees $ Kreturn (funI x => |={⊤}=> |> Q x)))
+        bind_vars f.(f_params) f.(f_arity) args ρ (fun ρ cleanup =>
+        |> wp ρ body (Kcleanup cleanup $ Kreturn (funI x => |={⊤}=> |> Q x)))
       | Builtin builtin =>
         wp_builtin_func builtin (Tfunction (cc:=f.(f_cc)) f.(f_return) (List.map snd f.(f_params))) args Q
       end
@@ -212,8 +245,8 @@ Section with_cpp.
       match args with
       | thisp :: rest_vals =>
         let ρ va := Remp (Some thisp) va m.(m_return) in
-        bind_vars m.(m_params) m.(m_arity) rest_vals ρ (fun ρ frees =>
-        |> wp ρ body (Kfree frees (Kreturn (funI x => |={⊤}=> |>Q x))))
+        bind_vars m.(m_params) m.(m_arity) rest_vals ρ (fun ρ cleanup =>
+        |> wp ρ body (Kcleanup cleanup (Kreturn (funI x => |={⊤}=> |>Q x))))
       | _ => False
       end
     | Some _ => UNSUPPORTED "defaulted methods"%bs
@@ -460,9 +493,9 @@ Section with_cpp.
              will use.
            *)
           |> let ρ va := Remp (Some thisp) va Tvoid in
-             bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ frees =>
+             bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ cleanup =>
                (wp_struct_initializer_list cls ρ ctor.(c_class) thisp inits
-                  (wp ρ body (Kfree frees (Kreturn_void (|={⊤}=> |> Forall p : ptr, p |-> primR Tvoid 1 Vvoid -* Q p))))))
+                  (wp ρ body (Kcleanup cleanup (Kreturn_void (|={⊤}=> |> Forall p : ptr, p |-> primR Tvoid 1 Vvoid -* Q p))))))
         | Some (Gunion union) =>
         (* this is a union *)
           thisp |-> tblockR ty 1 **
@@ -470,9 +503,9 @@ Section with_cpp.
              will use.
            *)
           |> let ρ va := Remp (Some thisp) va Tvoid in
-             bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ frees =>
+             bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ cleanup =>
                (wp_union_initializer_list union ρ ctor.(c_class) thisp inits
-                  (fun which => wp ρ body (Kfree frees (Kreturn_void (thisp |-> union_paddingR 1 ctor.(c_class) which -*
+                  (fun which => wp ρ body (Kcleanup cleanup (Kreturn_void (thisp |-> union_paddingR 1 ctor.(c_class) which -*
                                                                        |={⊤}=> |> Forall p, p |-> primR Tvoid 1 Vvoid -* Q p))))))
         | Some _ =>
           ERROR $ "constructor for non-aggregate (" ++ ctor.(c_class) ++ ")"

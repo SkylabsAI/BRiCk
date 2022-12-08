@@ -34,11 +34,26 @@ Section with_resolve.
      NOTE this definition is *not* sound in the presence of exceptions.
   *)
   Fixpoint zipTypes (ts : list type) (ar : function_arity) (es : list Expr) : option (list (wp.WPE.M ptr) * option (nat * list type)) :=
-    let wp_arg_init ty init K := Forall p, wp_initialize tu ρ ty p init (fun frees => K p (FreeTemps.delete ty p >*> frees)%free) in
+    let wp_arg_init ty init K :=
+      (* top-level qualifiers on arguments are ignored, they are taken from the definition,
+         not the declaration. Dropping qualifiers here makes it possible to support code
+         like the following:
+         ```
+         // f.hpp
+         void f(int);
+         void g() { f(1); } // calls using [void f(int)] rather than [void f(const int)]
+         // f.cpp
+         void f(const int) {}
+         ```
+       *)
+      let ty := drop_qualifiers ty in
+      Forall p, wp_initialize tu ρ ty p init (fun frees => K p (FreeTemps.delete ty p >*> frees)%free)
+    in
     match ts with
     | [] =>
         if ar is Ar_Variadic then
-          let rest := map (fun e => (type_of e, wp_arg_init (type_of e) e)) es in
+          let rest := map (fun e => let ty := drop_qualifiers (type_of e) in
+                                 (ty, wp_arg_init ty e)) es in
           Some (map snd rest, Some (0, map fst rest))
         else None
     | t :: ts =>
