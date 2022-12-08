@@ -39,6 +39,7 @@ Add Printing Constructor CV.t.
 
 (* as with C++, we make mutable the default *)
 #[global] Coercion CV._mut : Qp >-> CV.t.
+#[global] Coercion CV.frac : CV.t >-> Qp.
 
 Section TEST.
   Variable TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
