@@ -63,8 +63,8 @@ Section destroy.
              for direct destructor calls, e.g. [c.~C()], which are encoded as
              [Emember_call ... "~C" ..] *)
         |> if q_c then
-            wp_make_mutable tu this ty (wp_destructor ty (_global s.(s_dtor)) this Q)
-          else wp_destructor ty (_global s.(s_dtor)) this Q
+             wp_make_mutable tu this ty (wp_destructor ty (_global s.(s_dtor)) this Q)
+           else wp_destructor ty (_global s.(s_dtor)) this Q
       | Some (Gunion u)  =>
         (* Unions cannot have [virtual] destructors: we directly invoke the destructor. *)
         |> wp_destructor ty (_global u.(u_dtor)) this Q

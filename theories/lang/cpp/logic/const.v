@@ -17,7 +17,7 @@ From bedrock.lang.cpp Require Import
 
 
 Section defs.
-  Context `{Σ : cpp_logic}  {σ : genv} {tu : translation_unit}.
+  Context `{Σ : cpp_logic}  {σ : genv}.
 
   (* [cv_cast from to addr ty Q] replaces the [from] ownership of [ty] at [addr] with
      [to] ownership and then proceeds as [Q].
@@ -34,15 +34,13 @@ Section defs.
   (* TODO this needs to be extended because if it is casting [volatile],
      then it needs to descend under [const] *)
   Definition cv_cast_body (cv_cast : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred)
-    (from to : CV.t)  (addr : ptr) (ty : type) (Q : mpred) : mpred :=
-    let UNSUPPORTED := cv_cast from to addr ty Q in
+    (tu : translation_unit) (from to : CV.t)  (addr : ptr) (ty : type) (Q : mpred) : mpred :=
     let '(cv, rty) := decompose_type ty in
     if q_const cv then Q
     else
+      let UNSUPPORTED := cv_cast from to addr ty Q in
       match rty with
       | Tptr _
-      | Tref _
-      | Trv_ref _
       | Tnum _ _
       | Tbool
       | Tnullptr
@@ -50,12 +48,22 @@ Section defs.
       | Tmember_pointer _ _
       | Tfloat _
       | Tvoid =>
-          (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q)) ∨
-          (          addr |-> uninitR rty from ** (addr |-> uninitR rty to -* Q))
+        let rty := erase_qualifiers rty in
+        (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q)) ∨
+        (          addr |-> uninitR rty from ** (addr |-> uninitR rty to -* Q))
+
+      | Tref _
+      | Trv_ref _ =>
+        let rty := erase_qualifiers rty in
+        (Exists v, addr |-> primR rty from v ** (addr |-> primR rty to v -* Q))
+        (* ^ References must be initialized *)
+
       | Tarray ety sz =>
-          fold_left (fun Q i =>
+        (* NOTE the order here is irrelevant because the operation is "atomic" *)
+        fold_left (fun Q i =>
             cv_cast from to (addr .[ erase_qualifiers ety ! sz ]) ty Q)
                     (seqN 0 sz) Q
+
       | Tnamed cls =>
           match tu.(globals) !! cls with
           | Some gd =>
@@ -100,10 +108,10 @@ Section defs.
   (* NOTE: we prefer an entailment ([|--]) to a bi-entailment ([-|-]) or an equality
      to be conservative.
    *)
-  Axiom cv_cast_intro : forall f t a ty Q, cv_cast_body (cv_cast tu) f t a ty Q |-- cv_cast tu f t a ty Q.
+  Axiom cv_cast_intro : forall tu f t a ty Q, cv_cast_body (cv_cast tu) tu f t a ty Q |-- cv_cast tu f t a ty Q.
 
   (* Sanity check the [_frame] property *)
-  Lemma fold_frame : forall B (l : list B) (f f' : epred -> B -> epred)  (Q Q' : epred),
+  Lemma fold_left_frame : forall B (l : list B) (f f' : epred -> B -> epred)  (Q Q' : epred),
     (Q -* Q') |-- □ (Forall Q1 Q1' a, (Q1 -* Q1') -* (f Q1 a -* f' Q1' a)) -*  fold_left f l Q -* fold_left f' l Q'.
   Proof.
     move=>B l.
@@ -113,10 +121,10 @@ Section defs.
   Qed.
 
   (* Sanity check *)
-  Lemma cv_cast_body_frame : forall CAST q q' p ty (Q Q' : epred),
+  Lemma cv_cast_body_frame_uniform : forall CAST tu q q' p ty (Q Q' : epred),
     Q -* Q'
     |-- □ (Forall a b p ty Q Q', (Q -* Q') -* CAST a b p ty Q -* CAST a b p ty Q') -*
-        cv_cast_body CAST q q' p ty Q -* cv_cast_body CAST q q' p ty Q'.
+        cv_cast_body CAST tu q q' p ty Q -* cv_cast_body CAST tu q q' p ty Q'.
   Proof.
     rewrite /cv_cast_body/=; intros.
     destruct (decompose_type ty) as [cv t].
@@ -132,33 +140,40 @@ Section defs.
         [ iLeft; iDestruct "X" as (v) "[? X]"; iExists v; iFrame; iIntros "?"; iApply "F"; iApply "X"; eauto
         | iRight; iDestruct "X" as "[$ X]"; iIntros "Y"; iApply "F"; iApply "X"; eauto ] ].
 
+    (* references *)
+    all: try solve [ iIntros "F #C X";
+                     iDestruct "X" as (v) "[? X]"; iExists v; iFrame; iIntros "?"; iApply "F"; iApply "X"; eauto ].
+
     { (* arrays *)
-      iIntros "F #C"; iApply (fold_frame with "F"); iModIntro. iIntros (???) "F"; iApply "C"; eauto.
+      iIntros "F #C"; iApply (fold_left_frame with "F"); iModIntro. iIntros (???) "F"; iApply "C"; eauto.
     }
 
     { (* aggregates *)
-
-    case_match; last by iIntros "X C"; iApply "C"; eauto.
-    case_match; try by iIntros "X C"; iApply "C"; eauto.
-    { (* unions *)
-      iIntros "F #C X"; iDestruct "X" as (?) "X".
-      iExists _; iDestruct "X" as "[$ X]".
-      iIntros "Y"; iSpecialize ("X" with "Y").
-      case_match; last by iApply "F".
-      case_match; eauto.
-      case_match; first by iApply "F".
-      iRevert "X"; iApply "C"; eauto. }
-    { (* struct *)
-      iIntros "F #C".
-      iApply (fold_frame with "[F]").
-      { iApply (fold_frame with "[F]").
-        { iIntros "[$ X] Y"; iApply "F"; iApply "X"; eauto. }
+      case_match; last by iIntros "X C"; iApply "C"; eauto.
+      case_match; try by iIntros "X C"; iApply "C"; eauto.
+      { (* unions *)
+        iIntros "F #C X"; iDestruct "X" as (?) "X".
+        iExists _; iDestruct "X" as "[$ X]".
+        iIntros "Y"; iSpecialize ("X" with "Y").
+        case_match; last by iApply "F".
+        case_match; eauto.
+        case_match; first by iApply "F".
+        iRevert "X"; iApply "C"; eauto. }
+      { (* struct *)
+        iIntros "F #C".
+        iApply (fold_left_frame with "[F]").
+        { iApply (fold_left_frame with "[F]").
+          { iIntros "[$ X] Y"; iApply "F"; iApply "X"; eauto. }
+          { iModIntro.
+            iIntros (???) "F". case_match; eauto.
+            iApply "C"; eauto. } }
         { iModIntro.
           iIntros (???) "F". case_match; eauto.
-          iApply "C"; eauto. } }
-      { iModIntro.
-        iIntros (???) "F". case_match; eauto.
-        iApply "C"; eauto. } } }
+          iApply "C"; eauto. } } }
+  Qed.
+
+        { iModIntro.
+          iIntros (???) "F". case_match; eauto.
   Qed.
 
 End defs.

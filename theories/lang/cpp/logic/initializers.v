@@ -168,21 +168,21 @@ Module Type Init.
       | Tarray _ _ as ty
       | Tnamed _ as ty => wp_init ty addr init (fun _ frees =>
            if q_const cv then wp_make_const tu addr ty (k frees)
-           else k frees
-          )
-        (* NOTE that just like this function [wp_init] will consume the object. *)
+           else k frees)
 
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_lval init (fun p free =>
-                        addr |-> primR rty (CV.c 1) (Vref p) -* k free)
-        (* ^ NOTE: [ref]s are never mutable *)
+                        addr |-> primR rty (CV.m 1) (Vref p) -* k free)
+        (* ^ TODO: [ref]s are never mutable, but we use [CV.m] here
+           for compatibility with [implicit_destruct_struct] *)
 
       | Trv_ref ty =>
-        let rty := Tref $ (*erase_qualifiers*) ty in
+        let rty := Tref $ erase_qualifiers ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty (CV.c 1) (Vref p) -* k free)
-        (* ^ NOTE: [ref]s are never mutable. *)
+                        addr |-> primR rty (CV.m 1) (Vref p) -* k free)
+        (* ^ TODO: [ref]s are never mutable, but we use [CV.m] here
+           for compatibility with [implicit_destruct_struct] *)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
       | Tqualified _ ty => False (* unreachable *)
