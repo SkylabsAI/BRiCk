@@ -223,7 +223,7 @@ Module Type Init.
           by [ iApply wp_operand_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X"
              | iIntros "H"; iExact "H"
              | iApply wp_init_frame => //-;
-               case: (q_const _); iIntros (??); [ iApply cv_cast_frame | ]; iApply "a"
+               case: (q_const _); iIntros (??); [ iApply cv_cast_frame; try reflexivity | ]; iApply "a"
              ].
       { by iApply wp_lval_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X". }
       { by iApply wp_xval_frame => //; iIntros (??) "X ?"; iApply "a"; iApply "X". }

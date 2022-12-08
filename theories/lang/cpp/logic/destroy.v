@@ -96,7 +96,7 @@ Section destroy.
     - intros. case_match; eauto.
       by case_match; eauto; (try case q_c);
         iIntros "A B !>"; iRevert "B";
-        (try iApply cv_cast_frame);
+        (try iApply cv_cast_frame; try reflexivity);
         iApply wp_destructor_frame.
   Qed.
 

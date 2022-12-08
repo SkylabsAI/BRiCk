@@ -25,8 +25,9 @@ Section defs.
      This is used to implement [wp_downcast_to_const] and [wp_upcast_to_const].
    *)
   Parameter cv_cast : forall (tu : translation_unit) (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
-  Axiom cv_cast_frame : forall f t a ty Q Q',
-      Q -* Q' |-- cv_cast tu f t a ty Q -* cv_cast tu f t a ty Q'.
+  Axiom cv_cast_frame : forall tu tu' f t a ty Q Q',
+      sub_module tu tu' ->
+      Q -* Q' |-- cv_cast tu f t a ty Q -* cv_cast tu' f t a ty Q'.
 
   Definition type_is_const (ty : type) : bool :=
     let '(cv, _) := decompose_type ty in q_const cv.
@@ -172,9 +173,63 @@ Section defs.
           iApply "C"; eauto. } } }
   Qed.
 
+  (*
+  Lemma cv_cast_body_frame : forall CAST CAST' tu tu' q q' p ty (Q Q' : epred),
+    sub_module tu tu' ->
+        Q -* Q'
+    |-- □ (Forall a b p ty Q Q', (Q -* Q') -* CAST a b p ty Q -* CAST' a b p ty Q') -*
+        cv_cast_body CAST tu q q' p ty Q -* cv_cast_body CAST' tu' q q' p ty Q'.
+  Proof.
+    rewrite /cv_cast_body/=; intros.
+    destruct (decompose_type ty) as [cv t].
+    case_match.
+    { iIntros "$ _"; eauto. }
+    destruct t; eauto.
+
+    (* unsupported *)
+    all: try by iIntros "X C"; iApply "C"; eauto.
+
+    (* primitives *)
+    all: try solve [ iIntros "F #C X"; iDestruct "X" as "[X | X]";
+        [ iLeft; iDestruct "X" as (v) "[? X]"; iExists v; iFrame; iIntros "?"; iApply "F"; iApply "X"; eauto
+        | iRight; iDestruct "X" as "[$ X]"; iIntros "Y"; iApply "F"; iApply "X"; eauto ] ].
+
+    (* references *)
+    all: try solve [ iIntros "F #C X";
+                     iDestruct "X" as (v) "[? X]"; iExists v; iFrame; iIntros "?"; iApply "F"; iApply "X"; eauto ].
+
+    { (* arrays *)
+      iIntros "F #C"; iApply (fold_left_frame with "F"); iModIntro. iIntros (???) "F"; iApply "C"; eauto.
+    }
+
+    { (* aggregates *)
+      case_match; last first.
+      { (* this case does not work out because i would need to go back to CAST' *)
+
+      }
+      case_match; last by iIntros "X C"; iApply "C"; eauto.
+      case_match; try by iIntros "X C"; iApply "C"; eauto.
+      { (* unions *)
+        iIntros "F #C X"; iDestruct "X" as (?) "X".
+        iExists _; iDestruct "X" as "[$ X]".
+        iIntros "Y"; iSpecialize ("X" with "Y").
+        case_match; last by iApply "F".
+        case_match; eauto.
+        case_match; first by iApply "F".
+        iRevert "X"; iApply "C"; eauto. }
+      { (* struct *)
+        iIntros "F #C".
+        iApply (fold_left_frame with "[F]").
+        { iApply (fold_left_frame with "[F]").
+          { iIntros "[$ X] Y"; iApply "F"; iApply "X"; eauto. }
+          { iModIntro.
+            iIntros (???) "F". case_match; eauto.
+            iApply "C"; eauto. } }
         { iModIntro.
           iIntros (???) "F". case_match; eauto.
+          iApply "C"; eauto. } } }
   Qed.
+  *)
 
 End defs.
 
