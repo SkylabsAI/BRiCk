@@ -98,6 +98,23 @@ Section with_cpp.
       (fun q' => primR ty (CV.mk c q') v) q.
   Proof. constructor. done. apply _. Qed.
 
+  Section TODO_valid_intances.
+    (* TODO: consider valid instances for CV: *)
+    #[global] Instance cv_valid_instance : Valid CV.t := λ x, (CV.frac x ≤ 1)%Qp.
+
+    #[global] Instance primR_observe_frac_valid2 ty resolve (q : CV.t) v :
+      (* q_f =[Eq]= CV.frac q -> *)
+      Observe [| ✓ q |] (primR ty q v).
+    Proof.
+      rewrite /valid/cv_valid_instance; case: q=>? q //=.
+      rewrite primR_eq/primR_def.
+      rewrite as_Rep_sep; apply: observe_sep_l.
+      apply: as_Rep_only_provable_observe=>?.
+      apply: tptsto_frac_valid.
+    Qed.
+
+  End TODO_valid_intances.
+
   Section TEST.
     Context {σ : genv} (p : ptr).
 
