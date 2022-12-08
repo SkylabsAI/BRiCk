@@ -8,13 +8,12 @@ From bedrock.lang.bi Require Export monpred.
 From iris.proofmode Require Import proofmode monpred.
 Require Import iris.bi.lib.fractional.
 
-
 Require Import bedrock.prelude.base.
 
-From bedrock.lang.cpp Require Import
-  semantics ast logic.pred logic.path_pred logic.rep logic.rep_defs heap_notations
-  heap_pred layout logic.wp.
-
+From bedrock.lang.cpp Require Import semantics ast heap_notations.
+From bedrock.lang.cpp.logic Require Import
+  pred path_pred rep rep_defs
+  heap_pred layout wp.
 
 Section defs.
   Context `{Σ : cpp_logic}  {σ : genv}.
