@@ -36,17 +36,17 @@ Section with_Σ.
 
   Axiom struct_padding_fractional : forall cls c_q , Fractional (fun q => struct_paddingR (CV.mk c_q q) cls).
   Axiom struct_padding_timeless : forall q cls, Timeless  (struct_paddingR q cls).
-  Axiom struct_padding_frac_valid : forall (q : CV.t) cls, Observe [| CV.frac q ≤ 1 |]%Qp (struct_paddingR q cls).
+  Axiom struct_padding_frac_valid : forall (q : Qp) cv cls, Observe [| CV.frac q ≤ 1 |]%Qp (struct_paddingR (CV.mk cv q) cls).
   Axiom union_padding_fractional : forall cls idx c_q , Fractional (fun q => union_paddingR (CV.mk c_q q) cls idx).
   Axiom union_padding_timeless : forall q cls idx, Timeless (union_paddingR q cls idx).
-  Axiom union_padding_frac_valid : forall (q : CV.t) cls idx, Observe [| CV.frac q ≤ 1 |]%Qp (union_paddingR q cls idx).
+  Axiom union_padding_frac_valid : forall (q : Qp) cv cls idx, Observe [| CV.frac q ≤ 1 |]%Qp (union_paddingR (CV.mk cv q) cls idx).
 
   #[global] Existing Instances
     struct_padding_fractional struct_padding_timeless struct_padding_frac_valid
     union_padding_fractional union_padding_timeless union_padding_frac_valid.
 
   #[global] Instance struct_padding_as_fractional q cls c_q :
-    AsFractional (struct_paddingR (CV.mk c_q q) cls) (λ q, struct_paddingR (CV.mk c_q q) cls) q.
+    AsFractional (struct_paddingR (CV.mk c_q q) cls) (λ q : Qp, struct_paddingR (CV.mk c_q q) cls) q.
   Proof. exact: Build_AsFractional. Qed.
   #[global] Instance union_padding_as_fractional c_q q cls idx :
     AsFractional (union_paddingR (CV.mk c_q q) cls idx) (λ q, union_paddingR (CV.mk c_q q) cls idx) q.
