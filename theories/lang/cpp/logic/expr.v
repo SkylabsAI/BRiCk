@@ -430,12 +430,12 @@ Module Type Expr.
     (** [Cl2r] represents reads of locations. *)
     Axiom wp_operand_cast_l2r_l : forall ty e Q,
         wp_lval e (fun a free => Exists v,
-           (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\ Q v free)
+           (Exists q, a |-> primR ty q v ** True) //\\ Q v free)
         |-- wp_operand (Ecast Cl2r Lvalue e ty) Q.
 
     Axiom wp_operand_cast_l2r_x : forall ty e Q,
         wp_xval e (fun a free => Exists v, (* was wp_lval *)
-          (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\ Q v free)
+          (Exists q, a |-> primR ty q v ** True) //\\ Q v free)
         |-- wp_operand (Ecast Cl2r Xvalue e ty) Q.
 
     (** [Cnoop] casts are no-op casts. *)

@@ -22,7 +22,7 @@ Section with_cpp.
     match erase_qualifiers t with
     | Tnamed cls => inl cls
     | Trv_ref ty => inr (Tref ty)
-    | ty => inr ty
+    | ty => inr t
     end.
 
   (** [elaborate ret ts wpp args] builds a function specification around [wpp]
