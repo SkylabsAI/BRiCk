@@ -35,22 +35,22 @@ Section with_cpp.
         | Ofunction f =>
           match f.(f_body) with
           | None => svalidR
-          | Some body => as_Rep (code_at resolve tu f)
+          | Some body => as_Rep (code_at tu f)
           end
         | Omethod m =>
           match m.(m_body) with
           | None => svalidR
-          | Some body => as_Rep (method_at resolve tu m)
+          | Some body => as_Rep (method_at tu m)
           end
         | Oconstructor c =>
           match c.(c_body) with
           | None => svalidR
-          | Some body => as_Rep (ctor_at resolve tu c)
+          | Some body => as_Rep (ctor_at tu c)
           end
         | Odestructor d =>
           match d.(d_body) with
           | None => svalidR
-          | Some body => as_Rep (dtor_at resolve tu d)
+          | Some body => as_Rep (dtor_at tu d)
           end
         end.
 
@@ -95,6 +95,19 @@ Section with_cpp.
     all: intros; rewrite denoteSymbol_strict_valid //; apply strict_valid_valid.
   Qed.
 
+  Lemma denoteSymbol_frame : forall tu tu' nm v,
+      sub_module tu tu' ->
+      denoteSymbol tu nm v |-- denoteSymbol tu' nm v.
+  Proof.
+    destruct v; rewrite /denoteSymbol; intros; eauto; case_match; eauto.
+    all: do 2 f_equiv; intro.
+    by eapply code_at_frame.
+    by eapply method_at_frame.
+    by eapply ctor_at_frame.
+    by eapply dtor_at_frame.
+  Qed.
+
+  (** TODO incomplete *)
   Definition initSymbol (n : obj_name) (o : ObjValue) : mpred :=
     _at (_global n)
         match o with
@@ -179,6 +192,28 @@ Section with_cpp.
     destruct (module_le_spec tu (genv_tu resolve)); eauto.
     destruct H.
   Qed.
+
+  Lemma denoteModule_weaken tu tu' :
+    sub_module tu' tu ->
+    denoteModule tu |-- denoteModule tu'.
+  Proof.
+    rewrite denoteModule_eq/denoteModule_def; intros.
+    iIntros "[#A %]".
+    iSplit; last first.
+    { iPureIntro.
+      destruct (module_le_spec tu (genv_tu resolve)); destruct (module_le_spec tu' (genv_tu resolve)); eauto.
+      apply n. etrans. eassumption. eauto. }
+    { (*       Lemma to_big_sep : forall {PROP : bi} {A} (ls : list A) (P : A -> PROP),
+          [∗] List.map P ls -|- [∗ list] x ∈ ls, P x.
+      Proof. induction ls; simpl; intros; eauto. rewrite IHls. eauto. Qed.
+      iApply to_big_sep.
+      rewrite -to_big_sep.
+      iApply big_sepL_id_mono'. 2: iApply "A".
+      iApply big_sepL_submseteq. 2: iApply "A".
+      iApply big_sepL_id_mono'. }
+    rewrite <- (big_opM_map_to_list (o:=bi_sep)).
+     *) admit. }
+  Admitted.
 
 End with_cpp.
 

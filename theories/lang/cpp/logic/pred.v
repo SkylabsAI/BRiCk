@@ -261,17 +261,17 @@ Module Type CPP_LOGIC
       note that in the presence of code-loading, function calls will
       require an extra side-condition that the code is loaded.
      *)
-    Parameter code_at : genv -> translation_unit -> Func -> ptr -> mpred.
-    Parameter method_at : genv -> translation_unit -> Method -> ptr -> mpred.
-    Parameter ctor_at : genv -> translation_unit -> Ctor -> ptr -> mpred.
-    Parameter dtor_at : genv -> translation_unit -> Dtor -> ptr -> mpred.
+    Parameter code_at : forall {σ : genv}, translation_unit -> Func -> ptr -> mpred.
+    Parameter method_at : forall {σ : genv}, translation_unit -> Method -> ptr -> mpred.
+    Parameter ctor_at : forall {σ : genv}, translation_unit -> Ctor -> ptr -> mpred.
+    Parameter dtor_at : forall {σ : genv}, translation_unit -> Dtor -> ptr -> mpred.
 
     Section with_genv.
       Context {σ : genv} (tu : translation_unit).
-      #[local] Notation code_at := (code_at σ tu) (only parsing).
-      #[local] Notation method_at := (method_at σ tu) (only parsing).
-      #[local] Notation ctor_at := (ctor_at σ tu) (only parsing).
-      #[local] Notation dtor_at := (dtor_at σ tu) (only parsing).
+      #[local] Notation code_at := (@code_at σ tu) (only parsing).
+      #[local] Notation method_at := (@method_at σ tu) (only parsing).
+      #[local] Notation ctor_at := (@ctor_at σ tu) (only parsing).
+      #[local] Notation dtor_at := (@dtor_at σ tu) (only parsing).
 
       Axiom code_at_persistent : forall f p, Persistent (code_at f p).
       Axiom code_at_affine : forall f p, Affine (code_at f p).
@@ -306,6 +306,20 @@ Module Type CPP_LOGIC
       Axiom dtor_at_strict_valid   : forall f p,   dtor_at f p |-- strict_valid_ptr p.
 
     End with_genv.
+
+    (** respecting [sub_module] weakening *)
+    Axiom code_at_frame : forall {σ : genv} tu tu' f p,
+        sub_module tu tu' ->
+        code_at tu f p |-- code_at tu' f p.
+    Axiom method_at_frame : forall {σ : genv} tu tu' f p,
+        sub_module tu tu' ->
+        method_at tu f p |-- method_at tu' f p.
+    Axiom ctor_at_frame : forall {σ : genv} tu tu' f p,
+        sub_module tu tu' ->
+        ctor_at tu f p |-- ctor_at tu' f p.
+    Axiom dtor_at_frame : forall {σ : genv} tu tu' f p,
+        sub_module tu tu' ->
+        dtor_at tu f p |-- dtor_at tu' f p.
 
     Axiom offset_pinned_ptr_pure : forall σ o z va p,
       eval_offset σ o = Some z ->
@@ -710,13 +724,13 @@ Declare Module Export VALID_PTR : VALID_PTR_AXIOMS PTRS_INTF_AXIOM VALUES_INTF_A
 Section valid_ptr_code.
   Context `{Σ : cpp_logic} {σ : genv} (tu : translation_unit).
 
-  Lemma code_at_valid   : forall f p,   code_at _ tu f p |-- valid_ptr p.
+  Lemma code_at_valid   : forall f p,   code_at tu f p |-- valid_ptr p.
   Proof. intros. rewrite code_at_strict_valid; apply strict_valid_valid. Qed.
-  Lemma method_at_valid : forall f p, method_at _ tu f p |-- valid_ptr p.
+  Lemma method_at_valid : forall f p, method_at tu f p |-- valid_ptr p.
   Proof. intros. rewrite method_at_strict_valid; apply strict_valid_valid. Qed.
-  Lemma ctor_at_valid   : forall f p,   ctor_at _ tu f p |-- valid_ptr p.
+  Lemma ctor_at_valid   : forall f p,   ctor_at tu f p |-- valid_ptr p.
   Proof. intros. rewrite ctor_at_strict_valid; apply strict_valid_valid. Qed.
-  Lemma dtor_at_valid   : forall f p,   dtor_at _ tu f p |-- valid_ptr p.
+  Lemma dtor_at_valid   : forall f p,   dtor_at tu f p |-- valid_ptr p.
   Proof. intros. rewrite dtor_at_strict_valid; apply strict_valid_valid. Qed.
 End valid_ptr_code.
 
