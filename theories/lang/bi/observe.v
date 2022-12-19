@@ -407,6 +407,25 @@ Proof.
   f_equiv=>oa. apply: fractional.
 Qed.
 
+#[global] Instance as_fractional_exist {PROP : bi} {A} (P Pf : A → Qp → PROP) q
+    (Hfrac : ∀ oa, AsFractional (P oa q) (Pf oa) q)
+    (Hobs : ∀ a1 a2 q1 q2, Observe2 [| a1 = a2 |] (Pf a1 q1) (Pf a2 q2)) :
+  AsFractional (∃ (a : A), P a q) (fun q => ∃ a : A, Pf a q)%I q.
+Proof.
+  constructor; first by f_equiv => a; apply Hfrac.
+  move => q1 q2; iSplit.
+  { iIntros "H"; iDestruct "H" as (x) "H".
+    rewrite as_fractional_fractional.
+    iDestruct "H" as "(H1 & H2)". iSplitL "H1"; first by iExists x.
+    by iExists x. }
+  iIntros "[H1 H2]".
+  iDestruct "H1" as (x1) "H1".
+  iDestruct "H2" as (x2) "H2".
+  iExists x1.
+  iDestruct (observe_2 [| x1 = x2 |] with "H1 H2") as "%E". subst x1.
+  rewrite as_fractional_fractional. iFrame.
+Qed.
+
 (** Helpful lemmas. *)
 Section theory.
   Context {PROP : bi}.
