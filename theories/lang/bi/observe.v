@@ -397,8 +397,9 @@ Section embed.
   Qed.
 End embed.
 
+(** Existentials are fractional if we can observe the witnesses coincide when merging ownership. *)
 Global Instance fractional_exist {PROP : bi} {A} (P : A → Qp → PROP)
-  (Hfrac : ∀ oa, Fractional (P oa))
+  (Hfrac : ∀ a, Fractional (P a))
   (Hobs : ∀ a1 a2 q1 q2, Observe2 [| a1 = a2 |] (P a1 q1) (P a2 q2)) :
   Fractional (λ q, ∃ a : A, P a q)%I.
 Proof.
@@ -407,8 +408,10 @@ Proof.
   f_equiv=>oa. apply: fractional.
 Qed.
 
+(** Partially overlaps with [fractional_exist], but necessary sometimes for
+predicates taking [CV.t] with "nontrivial" [AsFractional] instances. *)
 #[global] Instance as_fractional_exist {PROP : bi} {A} (P Pf : A → Qp → PROP) q
-    (Hfrac : ∀ oa, AsFractional (P oa q) (Pf oa) q)
+    (Hfrac : ∀ a, AsFractional (P a q) (Pf a) q)
     (Hobs : ∀ a1 a2 q1 q2, Observe2 [| a1 = a2 |] (Pf a1 q1) (Pf a2 q2)) :
   AsFractional (∃ (a : A), P a q) (fun q => ∃ a : A, Pf a q)%I q.
 Proof.
