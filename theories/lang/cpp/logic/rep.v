@@ -9,7 +9,7 @@ For an introduction see
 [fmdeps/cpp2v-core/theories/noimport/doc/cpp/howto_sequential.v]. *)
 
 From iris.proofmode Require Import proofmode.
-Require Import iris.bi.lib.fractional.
+From bedrock.lang.bi Require Import fractional.
 
 From bedrock.lang.bi Require Import prelude only_provable observe laterable.
 From bedrock.lang.bi Require Export monpred.

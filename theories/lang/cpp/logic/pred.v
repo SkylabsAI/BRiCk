@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020 BedRock Systems, Inc.
+ * Copyright (c) 2020-2022 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -20,7 +20,7 @@ Export order can affect CS inference. *)
 
 From iris.base_logic.lib Require Export iprop.
 (* TODO: ^^ only needed to export uPredI, should be removed. *)
-From iris.bi.lib Require Import fractional.
+From bedrock.lang.bi.spec Require Import knowledge frac_splittable.
 From iris.proofmode Require Import proofmode.
 
 Require Import bedrock.lang.bi.na_invariants.
@@ -95,10 +95,8 @@ Module Type CPP_LOGIC
     (* validity (past-the-end allowed) *)
     Notation valid_ptr := (_valid_ptr Relaxed).
 
-    Axiom _valid_ptr_persistent : forall b p, Persistent (_valid_ptr b p).
-    Axiom _valid_ptr_affine : forall b p, Affine (_valid_ptr b p).
-    Axiom _valid_ptr_timeless : forall b p, Timeless (_valid_ptr b p).
-    #[global] Existing Instances _valid_ptr_persistent _valid_ptr_affine _valid_ptr_timeless.
+    #[global] Declare Instance _valid_ptr_knowledge : Knowledge2 _valid_ptr.
+    #[global] Declare Instance _valid_ptr_timeless : Timeless2 _valid_ptr.
 
     Axiom valid_ptr_nullptr : |-- valid_ptr nullptr.
     Axiom not_strictly_valid_ptr_nullptr : strict_valid_ptr nullptr |-- False.
@@ -110,16 +108,10 @@ Module Type CPP_LOGIC
     Parameter provides_storage :
       forall (storage : ptr) (object : ptr) (object_type : type), mpred.
 
-    Axiom provides_storage_persistent :
-      forall storage_ptr obj_ptr ty,
-      Persistent (provides_storage storage_ptr obj_ptr ty).
-    Axiom provides_storage_affine :
-      forall storage_ptr obj_ptr ty,
-      Affine (provides_storage storage_ptr obj_ptr ty).
-    Axiom provides_storage_timeless :
-      forall storage_ptr obj_ptr ty,
-      Timeless (provides_storage storage_ptr obj_ptr ty).
-    #[global] Existing Instances provides_storage_persistent provides_storage_affine provides_storage_timeless.
+    #[global] Declare Instance provides_storage_knowledge :
+      Knowledge3 provides_storage.
+    #[global] Declare Instance provides_storage_timeless :
+      Timeless3 provides_storage.
 
     (**
     Typed points-to predicate. Fact [tptsto t q p v] asserts the following things:
@@ -138,27 +130,16 @@ Module Type CPP_LOGIC
     Axiom tptsto_nonnull : forall {σ} ty q a,
       @tptsto σ ty q nullptr a |-- False.
 
-    Axiom tptsto_proper :
+    #[global] Declare Instance tptsto_proper :
       Proper (genv_eq ==> eq ==> eq ==> eq ==> eq ==> (≡)) (@tptsto).
-    Axiom tptsto_mono :
+    #[global] Declare Instance tptsto_mono :
       Proper (genv_leq ==> eq ==> eq ==> eq ==> eq ==> (⊢)) (@tptsto).
-    #[global] Existing Instances tptsto_proper tptsto_mono.
 
-    Axiom tptsto_timeless :
-      forall {σ} ty q a v, Timeless (@tptsto σ ty q a v).
-    Axiom tptsto_fractional :
-      forall {σ} ty a v, Fractional (λ q, @tptsto σ ty q a v).
-    #[global] Existing Instances tptsto_timeless tptsto_fractional.
-
-    Axiom tptsto_frac_valid : forall {σ} t (q : Qp) p v,
-      Observe [| q ≤ 1 |]%Qp (@tptsto σ t q p v).
-    #[global] Existing Instance tptsto_frac_valid.
-
-    Axiom tptsto_agree : forall {σ} ty q1 q2 p v1 v2,
+    #[global] Declare Instance tptsto_frac {σ} ty : FracSplittable_2 (@tptsto σ ty).
+    #[global] Declare Instance  tptsto_agree {σ} ty q1 q2 p v1 v2 :
       Observe2 [| val_related σ ty v1 v2 |]
-               (@tptsto σ ty q1 p v1)
-               (@tptsto σ ty q2 p v2).
-    #[global] Existing Instances tptsto_agree.
+        (@tptsto σ ty q1 p v1)
+        (@tptsto σ ty q2 p v2).
 
     (* TODO (JH/PG): Add in a proper instance using this which allows us to rewrite
          `val_related` values within `tptsto`s.
@@ -167,17 +148,15 @@ Module Type CPP_LOGIC
     Axiom tptsto_val_related_transport : forall {σ} ty q p v1 v2,
         [| val_related σ ty v1 v2 |] |-- @tptsto σ ty q p v1 -* @tptsto σ ty q p v2.
 
-    Axiom tptsto_nonvoid : forall {σ} ty (q : Qp) p v,
+    #[global] Declare Instance tptsto_nonvoid {σ} ty (q : Qp) p v :
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v).
-    #[global] Existing Instance tptsto_nonvoid.
 
     (** The allocation is alive. Neither persistent nor fractional.
       See https://eel.is/c++draft/basic.stc.general#4 and
       https://eel.is/c++draft/basic.compound#3.1.
     *)
     Parameter live_alloc_id : alloc_id -> mpred.
-    Axiom live_alloc_id_timeless : forall aid, Timeless (live_alloc_id aid).
-    #[global] Existing Instance live_alloc_id_timeless.
+    #[global] Declare Instance live_alloc_id_timeless : Timeless1 live_alloc_id.
 
     Axiom valid_ptr_alloc_id : forall p,
       valid_ptr p |-- [| is_Some (ptr_alloc_id p) |].
@@ -244,10 +223,11 @@ Module Type CPP_LOGIC
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : list globname),
         Qp -> ptr -> mpred.
-    Axiom identity_fractional : forall σ this mdc p, Fractional (λ q, identity this mdc q p).
-    Axiom identity_timeless : forall σ this mdc q p, Timeless (identity this mdc q p).
-    Axiom identity_strict_valid : forall σ this mdc q p, Observe (strict_valid_ptr p) (identity this mdc q p).
-    #[global] Existing Instances identity_fractional identity_timeless identity_strict_valid.
+    (** No frac_valid. *)
+    #[global] Declare Instance identity_fractional σ this mdc : Fractional1 (identity this mdc).
+    #[global] Declare Instance identity_timeless σ : Timeless4 identity.
+
+    #[global] Declare Instance identity_strict_valid σ this mdc q p : Observe (strict_valid_ptr p) (identity this mdc q p).
 
     (** cpp2v-core#194: The fraction is valid? Agreement? *)
 
@@ -274,27 +254,17 @@ Module Type CPP_LOGIC
       #[local] Notation ctor_at := (ctor_at σ tu) (only parsing).
       #[local] Notation dtor_at := (dtor_at σ tu) (only parsing).
 
-      Axiom code_at_persistent : forall f p, Persistent (code_at f p).
-      Axiom code_at_affine : forall f p, Affine (code_at f p).
-      Axiom code_at_timeless : forall f p, Timeless (code_at f p).
+      #[global] Declare Instance code_at_knowledge : Knowledge2 code_at.
+      #[global] Declare Instance code_at_timeless : Timeless2 code_at.
 
-      Axiom method_at_persistent : forall f p, Persistent (method_at f p).
-      Axiom method_at_affine : forall f p, Affine (method_at f p).
-      Axiom method_at_timeless : forall f p, Timeless (method_at f p).
+      #[global] Declare Instance method_at_knowledge : Knowledge2 method_at.
+      #[global] Declare Instance method_at_timeless : Timeless2 method_at.
 
-      Axiom ctor_at_persistent : forall f p, Persistent (ctor_at f p).
-      Axiom ctor_at_affine : forall f p, Affine (ctor_at f p).
-      Axiom ctor_at_timeless : forall f p, Timeless (ctor_at f p).
+      #[global] Declare Instance ctor_at_knowledge : Knowledge2 ctor_at.
+      #[global] Declare Instance ctor_at_timeless : Timeless2 ctor_at.
 
-      Axiom dtor_at_persistent : forall f p, Persistent (dtor_at f p).
-      Axiom dtor_at_affine : forall f p, Affine (dtor_at f p).
-      Axiom dtor_at_timeless : forall f p, Timeless (dtor_at f p).
-
-      #[global] Existing Instances
-        code_at_persistent code_at_affine code_at_timeless
-        method_at_persistent method_at_affine method_at_timeless
-        ctor_at_persistent ctor_at_affine ctor_at_timeless
-        dtor_at_persistent dtor_at_affine dtor_at_timeless.
+      #[global] Declare Instance dtor_at_knowledge : Knowledge2 dtor_at.
+      #[global] Declare Instance dtor_at_timeless : Timeless2 dtor_at.
 
       Axiom code_at_live   : forall f p,   code_at f p |-- live_ptr p.
       Axiom method_at_live : forall f p, method_at f p |-- live_ptr p.
@@ -321,16 +291,13 @@ Module Type CPP_LOGIC
       [| 0 <= Z.of_N va - z |]%Z **
       [| ptr_vaddr p = Some (Z.to_N (Z.of_N va - z)) |].
 
-    Axiom provides_storage_same_address : forall storage_ptr obj_ptr ty,
+    #[global] Declare Instance provides_storage_same_address storage_ptr obj_ptr ty :
       Observe [| same_address storage_ptr obj_ptr |] (provides_storage storage_ptr obj_ptr ty).
 
-    Axiom provides_storage_valid_storage_ptr : forall storage_ptr obj_ptr aty,
+    #[global] Declare Instance provides_storage_valid_storage_ptr storage_ptr obj_ptr aty :
       Observe (valid_ptr storage_ptr) (provides_storage storage_ptr obj_ptr aty).
-    Axiom provides_storage_valid_obj_ptr : forall storage_ptr obj_ptr aty,
+    #[global] Declare Instance provides_storage_valid_obj_ptr storage_ptr obj_ptr aty :
       Observe (valid_ptr obj_ptr) (provides_storage storage_ptr obj_ptr aty).
-
-    #[global] Existing Instances provides_storage_same_address
-      provides_storage_valid_storage_ptr provides_storage_valid_obj_ptr.
 
     (**
     [exposed_aid aid] states that the storage instance identified by [aid] is
@@ -342,14 +309,10 @@ Module Type CPP_LOGIC
     See https://dl.acm.org/doi/10.1145/3290380 for an introduction.
     *)
     Parameter exposed_aid : alloc_id -> mpred.
-    Axiom exposed_aid_persistent : forall aid, Persistent (exposed_aid aid).
-    Axiom exposed_aid_affine : forall aid, Affine (exposed_aid aid).
-    Axiom exposed_aid_timeless : forall aid, Timeless (exposed_aid aid).
+    #[global] Declare Instance exposed_aid_knowledge : Knowledge1 exposed_aid.
+    #[global] Declare Instance exposed_aid_timeless : Timeless1 exposed_aid.
 
     Axiom exposed_aid_null_alloc_id : |-- exposed_aid null_alloc_id.
-
-    #[global] Existing Instances
-      exposed_aid_persistent exposed_aid_affine exposed_aid_timeless.
 
     (**
       [type_ptr {resolve := resolve} ty p] asserts that [p] points to
@@ -373,13 +336,8 @@ Module Type CPP_LOGIC
       http://eel.is/c++draft/basic.memobj#basic.life-4.
      *)
     Parameter type_ptr : forall {resolve : genv} (c: type), ptr -> mpred.
-    Axiom type_ptr_persistent : forall σ p ty,
-      Persistent (type_ptr ty p).
-    Axiom type_ptr_affine : forall σ p ty,
-      Affine (type_ptr ty p).
-    Axiom type_ptr_timeless : forall σ p ty,
-      Timeless (type_ptr ty p).
-    #[global] Existing Instances type_ptr_persistent type_ptr_affine type_ptr_timeless.
+    #[global] Declare Instance type_ptr_knowledge : Knowledge3 (@type_ptr).
+    #[global] Declare Instance type_ptr_timeless : Timeless3 (@type_ptr).
 
     Axiom type_ptr_aligned_pure : forall σ ty p,
       type_ptr ty p |-- [| aligned_ptr_ty ty p |].
@@ -387,9 +345,8 @@ Module Type CPP_LOGIC
     Axiom type_ptr_off_nonnull : forall {σ ty p o},
       type_ptr ty (p ,, o) |-- [| p <> nullptr |].
 
-    Axiom tptsto_type_ptr : forall (σ : genv) ty q p v,
+    #[global] Declare Instance tptsto_type_ptr (σ : genv) ty q p v :
       Observe (type_ptr ty p) (tptsto ty q p v).
-    #[global] Existing Instance tptsto_type_ptr.
 
     (* All objects in the C++ abstract machine have a size
 
@@ -732,11 +689,9 @@ Section pinned_ptr_def.
 
   #[global] Hint Opaque exposed_ptr : typeclass_instances.
 
-  #[global] Instance exposed_ptr_persistent p : Persistent (exposed_ptr p).
-  Proof. rewrite exposed_ptr_eq. apply _. Qed.
-  #[global] Instance exposed_ptr_affine p : Affine (exposed_ptr p).
-  Proof. rewrite exposed_ptr_eq. apply _. Qed.
-  #[global] Instance exposed_ptr_timeless p : Timeless (exposed_ptr p).
+  #[global] Instance exposed_ptr_knowledge : Knowledge1 exposed_ptr.
+  Proof. rewrite exposed_ptr_eq. solve_knowledge. Qed.
+  #[global] Instance exposed_ptr_timeless : Timeless1 exposed_ptr.
   Proof. rewrite exposed_ptr_eq. apply _. Qed.
   #[global] Instance exposed_ptr_valid p :
     Observe (valid_ptr p) (exposed_ptr p).
@@ -784,11 +739,9 @@ Section pinned_ptr_def.
 
   #[global] Hint Opaque pinned_ptr : typeclass_instances.
 
-  #[global] Instance pinned_ptr_persistent va p : Persistent (pinned_ptr va p).
-  Proof. rewrite pinned_ptr_eq. apply _. Qed.
-  #[global] Instance pinned_ptr_affine va p : Affine (pinned_ptr va p).
-  Proof. rewrite pinned_ptr_eq. apply _. Qed.
-  #[global] Instance pinned_ptr_timeless va p : Timeless (pinned_ptr va p).
+  #[global] Instance pinned_ptr_knowledge : Knowledge2 pinned_ptr.
+  Proof. rewrite pinned_ptr_eq. solve_knowledge. Qed.
+  #[global] Instance pinned_ptr_timeless : Timeless2 pinned_ptr.
   Proof. rewrite pinned_ptr_eq. apply _. Qed.
 
   Lemma pinned_ptr_intro p va :
@@ -1054,10 +1007,6 @@ Section with_cpp.
       (@tptsto _ Σ).
   Proof. repeat intro. exact: tptsto_mono. Qed.
 
-  #[global] Instance tptsto_as_fractional ty q a v :
-    AsFractional (tptsto ty q a v) (λ q, tptsto ty q a v) q.
-  Proof. exact: Build_AsFractional. Qed.
-
   #[global] Instance identity_as_fractional this mdc p q :
     AsFractional (identity this mdc q p) (λ q, identity this mdc q p) q.
   Proof. exact: Build_AsFractional. Qed.
@@ -1073,11 +1022,11 @@ Section with_cpp.
   Lemma tptsto_disjoint : forall ty p v1 v2,
     tptsto ty 1 p v1 ** tptsto ty 1 p v2 |-- False.
   Proof.
-    intros *; iIntros "[T1 T2]".
-    iDestruct (observe_2_elim_pure with "T1 T2") as %Hvs.
+    intros. iIntros "[T1 T2]".
+    iDestruct (observe_2 [| val_related _ _ _ _ |] with "T1 T2") as %Hvs.
     iDestruct (tptsto_val_related_transport $! Hvs with "T1") as "T2'".
     iCombine "T2 T2'" as "T".
-    iDestruct (tptsto_frac_valid with "T") as %L => //.
+    by iDestruct (observe [| _ ≤ _ |]%Qp with "T") as %?.
   Qed.
 
   (** *** Just wrappers. *)

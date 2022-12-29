@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From iris.proofmode Require Import proofmode.
+From bedrock.lang.bi.spec Require Import knowledge.
 
 From bedrock.lang.cpp Require Import
      semantics logic.pred logic.wp.
@@ -258,10 +259,8 @@ End defs.
 Section with_cpp.
   Context `{Σ : cpp_logic} {resolve : genv}.
 
-  #[global] Instance cptrR_persistent {s} : Persistent (cptrR s).
-  Proof. rewrite cptrR_eq. apply _. Qed.
-  #[global] Instance cptrR_affine {s} : Affine (cptrR s).
-  Proof. rewrite cptrR_eq. apply _. Qed.
+  #[global] Instance cptrR_knowledge : Knowledge1 cptrR.
+  Proof. rewrite cptrR_eq. solve_knowledge. Qed.
 
   Lemma cptrR_strict_valid_observe (p : ptr) f : Observe (strict_valid_ptr p) (_at p (cptrR f)).
   Proof.
@@ -332,6 +331,9 @@ Section with_cpp.
   Proof. repeat intro. by rewrite -cptrR_mono_fupd. Qed.
 End with_cpp.
 
+(**
+TODO (Discuss): What purpose do these redundant instances serve?
+*)
 #[global] Instance Persistent_spec `{Σ:cpp_logic ti} {resolve:genv} p s :
   Persistent (_at p (cptrR s)) := _.
 #[global] Instance Affine_spec `{Σ:cpp_logic ti} {resolve:genv} p s :

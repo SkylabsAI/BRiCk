@@ -4,7 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From iris.proofmode Require Import proofmode.
-Require Import iris.bi.lib.fractional.
+From bedrock.lang.bi.spec Require Import knowledge frac_splittable.
 
 From bedrock.lang.cpp Require Import
   semantics ast logic.pred logic.path_pred.
@@ -78,34 +78,20 @@ Section with_cpp.
     rewrite primR_eq/primR_def. by setoid_rewrite Hσ.
   Qed.
 
-  #[global] Instance primR_timeless resolve ty q v
-    : Timeless (primR ty q v).
-  Proof. rewrite primR_eq. apply _. Qed.
+  #[global] Instance primR_frac resolve ty : FracSplittable_1 (primR ty).
+  Proof. rewrite primR_eq. solve_frac. Qed.
 
-  #[global] Instance primR_fractional resolve ty v :
-    Fractional (λ q, primR ty q v).
-  Proof. rewrite primR_eq. apply _. Qed.
-  #[global] Instance primR_as_fractional resolve ty q v :
-    AsFractional (primR ty q v) (λ q, primR ty q v) q.
-  Proof. constructor. done. apply _. Qed.
-
-  #[global] Instance primR_observe_frac_valid resolve ty (q : Qp) v :
-    Observe [| q ≤ 1 |]%Qp (primR ty q v).
-  Proof. rewrite primR_eq. apply _. Qed.
-
-  #[global] Instance primR_observe_agree resolve ty q1 q2 v1 v2 :
-    Observe2 [| v1 = v2 |]
-      (primR ty q1 v1)
-      (primR ty q2 v2).
+  #[global] Instance primR_agree resolve ty : AgreeF1 (primR ty).
   Proof.
-    rewrite primR_eq/primR_def; apply: as_Rep_only_provable_observe_2=> p.
+    intros. rewrite primR_eq /primR_def.
+    apply: as_Rep_only_provable_observe_2=> p.
     iIntros "(Htptsto1 & %Hnotraw1 & %Hhas_type1)
-             (Htptsto2 & %Hnotraw2 & %Hhas_type2)".
+      (Htptsto2 & %Hnotraw2 & %Hhas_type2)".
     iApply (observe_2 with "Htptsto1 Htptsto2").
     iApply observe_2_derive_only_provable => Hvs.
     induction Hvs; subst; auto; exfalso;
-        [apply Hnotraw1 | apply Hnotraw2];
-        eauto.
+      [apply Hnotraw1 | apply Hnotraw2];
+      eauto.
   Qed.
 
   (* Typical [f] are [Vint], [Vn] etc; this gives agreement for [u64R] etc. *)
@@ -153,20 +139,8 @@ Section with_cpp.
     rewrite uninitR_eq/uninitR_def. by setoid_rewrite Hσ.
   Qed.
 
-  #[global] Instance uninitR_timeless resolve ty q
-    : Timeless (uninitR ty q).
-  Proof. rewrite uninitR_eq. apply _. Qed.
-
-  #[global] Instance uninitR_fractional resolve ty :
-    Fractional (uninitR ty).
-  Proof. rewrite uninitR_eq. apply _. Qed.
-  #[global] Instance unintR_as_fractional resolve ty q :
-    AsFractional (uninitR ty q) (uninitR ty) q.
-  Proof. constructor. done. apply _. Qed.
-
-  #[global] Instance uninitR_observe_frac_valid resolve ty (q : Qp) :
-    Observe [| q ≤ 1 |]%Qp (uninitR ty q).
-  Proof. rewrite uninitR_eq. apply _. Qed.
+  #[global] Instance uninitR_frac resolve ty : FracSplittable_0 (uninitR ty).
+  Proof. rewrite uninitR_eq. solve_frac. Qed.
 
   Lemma test:
     forall σ ty v v',
@@ -198,18 +172,11 @@ Section with_cpp.
   Parameter anyR : ∀ {resolve} (ty : type) (q : Qp), Rep.
   #[global] Arguments anyR {resolve} ty q : rename.
   Axiom anyR_timeless : ∀ resolve ty q, Timeless (anyR ty q).
-  Axiom anyR_fractional : ∀ resolve ty, Fractional (anyR ty).
-  Axiom anyR_observe_frac_valid : ∀ resolve ty (q : Qp),
-    Observe [| q ≤ 1 |]%Qp (anyR ty q).
+  #[global] Declare Instance anyR_frac resolve ty : FracSplittable_0 (anyR ty).
   Axiom primR_anyR : ∀ resolve t q v, primR t q v |-- anyR t q.
   Axiom uninitR_anyR : ∀ resolve t q, uninitR t q |-- anyR t q.
   Axiom tptsto_raw_anyR : forall resolve p q r, tptsto Tu8 q p (Vraw r) |-- p |-> anyR Tu8 q.
-  Axiom anyR_type_ptr_observe : ∀ σ ty q, Observe (type_ptrR ty) (anyR ty q).
-
-  #[global] Existing Instances anyR_timeless anyR_fractional anyR_observe_frac_valid anyR_type_ptr_observe.
-  #[global] Instance anyR_as_fractional resolve ty q :
-    AsFractional (anyR ty q) (anyR ty) q.
-  Proof. exact: Build_AsFractional. Qed.
+  #[global] Declare Instance anyR_type_ptr_observe σ ty q : Observe (type_ptrR ty) (anyR ty q).
 
   Axiom _at_anyR_ptr_congP_transport : forall {σ} p p' ty q,
     ptr_congP σ p p' ** type_ptr ty p' |-- p |-> anyR ty q -* p' |-> anyR ty q.
@@ -222,11 +189,9 @@ Section with_cpp.
   Context `{Σ : cpp_logic} {σ : genv}.
 
   (********************* DERIVED CONCEPTS ****************************)
-  #[global] Instance validR_persistent : Persistent validR.
-  Proof. rewrite validR_eq; refine _. Qed.
+  #[global] Instance validR_knowledge : Knowledge validR.
+  Proof. rewrite validR_eq. solve_knowledge. Qed.
   #[global] Instance validR_timeless : Timeless validR.
-  Proof. rewrite validR_eq; refine _. Qed.
-  #[global] Instance validR_affine : Affine validR.
   Proof. rewrite validR_eq; refine _. Qed.
 
   Import heap_notations.INTERNAL.
@@ -236,11 +201,9 @@ Section with_cpp.
   Lemma _at_validR (p : ptr) : _at p validR -|- valid_ptr p.
   Proof. by rewrite validR_eq _at_eq /_at_def. Qed.
 
-  #[global] Instance svalidR_persistent : Persistent svalidR.
-  Proof. rewrite svalidR_eq; refine _. Qed.
+  #[global] Instance svalidR_knowledge : Knowledge svalidR.
+  Proof. rewrite svalidR_eq. solve_knowledge. Qed.
   #[global] Instance svalidR_timeless : Timeless svalidR.
-  Proof. rewrite svalidR_eq; refine _. Qed.
-  #[global] Instance svalidR_affine : Affine svalidR.
   Proof. rewrite svalidR_eq; refine _. Qed.
 
   Lemma monPred_at_svalidR p : svalidR p -|- strict_valid_ptr p.
@@ -248,11 +211,9 @@ Section with_cpp.
   Lemma _at_svalidR (p : ptr) : _at p svalidR -|- strict_valid_ptr p.
   Proof. by rewrite svalidR_eq _at_eq. Qed.
 
-  #[global] Instance type_ptrR_persistent t : Persistent (type_ptrR t).
-  Proof. rewrite type_ptrR_eq; refine _. Qed.
-  #[global] Instance type_ptrR_timeless t : Timeless (type_ptrR t).
-  Proof. rewrite type_ptrR_eq; refine _. Qed.
-  #[global] Instance type_ptrR_affine t : Affine (type_ptrR t).
+  #[global] Instance type_ptrR_knowledge : Knowledge1 type_ptrR.
+  Proof. rewrite type_ptrR_eq. solve_knowledge. Qed.
+  #[global] Instance type_ptrR_timeless : Timeless1 type_ptrR.
   Proof. rewrite type_ptrR_eq; refine _. Qed.
 
   Lemma monPred_at_type_ptrR ty p : type_ptrR ty p -|- type_ptr ty p.
@@ -288,16 +249,19 @@ Section with_cpp.
 
   #[global] Hint Opaque nullR : typeclass_instances.
 
-  #[global] Instance nullR_persistent : Persistent nullR.
-  Proof. rewrite nullR_eq. apply _. Qed.
-  #[global] Instance nullR_affine : Affine nullR.
-  Proof. rewrite nullR_eq. apply _. Qed.
+  #[global] Instance nullR_knowledge : Knowledge nullR.
+  Proof. rewrite nullR_eq. solve_knowledge. Qed.
   #[global] Instance nullR_timeless : Timeless nullR.
   Proof. rewrite nullR_eq. apply _. Qed.
-  #[global] Instance nullR_fractional : Fractional (λ _, nullR).
-  Proof. apply _. Qed.
+  (**
+  TODO (Discuss): Does some proof need [nullR_as_fractional]? It seems
+  odd. Is there pressure to lift [persistent_fractional] to a
+  [persistent_as_fractional]?
+  *)
+  Let nullR_fractional : Fractional (λ _, nullR).
+  Proof. apply _. Abort.
   #[global] Instance nullR_as_fractional q : AsFractional nullR (λ _, nullR) q.
-  Proof. exact: Build_AsFractional. Qed.
+  Proof. solve_as_frac. Qed.
 
   Definition nonnullR_def : Rep :=
     as_Rep (fun addr => [| addr <> nullptr |]).
@@ -307,10 +271,8 @@ Section with_cpp.
 
   #[global] Hint Opaque nonnullR : typeclass_instances.
 
-  #[global] Instance nonnullR_persistent : Persistent nonnullR.
-  Proof. rewrite nonnullR_eq. apply _. Qed.
-  #[global] Instance nonnullR_affine : Affine nonnullR.
-  Proof. rewrite nonnullR_eq. apply _. Qed.
+  #[global] Instance nonnullR_knowledge : Knowledge nonnullR.
+  Proof. rewrite nonnullR_eq. solve_knowledge. Qed.
   #[global] Instance nonnullR_timeless : Timeless nonnullR.
   Proof. rewrite nonnullR_eq. apply _. Qed.
 
@@ -318,11 +280,10 @@ Section with_cpp.
   Definition alignedR_aux : seal (@alignedR_def). Proof. by eexists. Qed.
   Definition alignedR := alignedR_aux.(unseal).
   Definition alignedR_eq : @alignedR = _ := alignedR_aux.(seal_eq).
-  #[global] Instance alignedR_persistent {al} : Persistent (alignedR al).
-  Proof. rewrite alignedR_eq. apply _. Qed.
-  #[global] Instance alignedR_affine {al} : Affine (alignedR al).
-  Proof. rewrite alignedR_eq. apply _. Qed.
-  #[global] Instance alignedR_timeless {al} : Timeless (alignedR al).
+
+  #[global] Instance alignedR_knowledge : Knowledge1 alignedR.
+  Proof. rewrite alignedR_eq. solve_knowledge. Qed.
+  #[global] Instance alignedR_timeless : Timeless1 alignedR.
   Proof. rewrite alignedR_eq. apply _. Qed.
 
   #[global] Instance alignedR_divide_mono :
@@ -419,7 +380,7 @@ Section with_cpp.
     rewrite/tblockR=>-> ?. case_match; by apply _.
   Qed.
 
-  #[global] Instance identityR_timeless cls mdc q : Timeless (identityR cls mdc q) := _.
+  #[global] Instance identityR_timeless : Timeless3 identityR := _.
   #[global] Instance identityR_frac cls mdc : Fractional (identityR cls mdc) := _.
   #[global] Instance identityR_as_frac cls mdc q : AsFractional (identityR cls mdc q) (identityR cls mdc) q := _.
   #[global] Instance identityR_strict_valid cls mdc q : Observe svalidR (identityR cls mdc q).
@@ -504,8 +465,7 @@ Section with_cpp.
   Proof.
     rewrite nonnullR_eq uninitR_eq. apply monPred_observe=>p /=. apply _.
   Qed.
-  Axiom anyR_nonnull_observe : ∀ {ty q}, Observe nonnullR (anyR ty q).
-  #[global] Existing Instance anyR_nonnull_observe.
+  #[global] Declare Instance anyR_nonnull_observe {ty q} : Observe nonnullR (anyR ty q).
 
   #[global] Instance blockR_nonnull n q :
     TCLt (0 ?= n)%N -> Observe nonnullR (blockR n q).

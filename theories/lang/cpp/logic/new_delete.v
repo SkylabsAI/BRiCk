@@ -7,7 +7,7 @@
  * Semantics of [new] and [delete] expressions
  * (expressed in weakest pre-condition style)
  *)
-Require Import iris.bi.lib.fractional.
+From bedrock.lang.bi.spec Require Import frac_splittable.
 Require Import iris.proofmode.proofmode.
 From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import
@@ -46,12 +46,15 @@ Module Type Expr__newdelete.
       [new_tokenR q allocation_type] tracks this Dynamic Type information.
    *)
   Parameter new_tokenR : forall `{Σ : cpp_logic ti} (q : Qp) (ty : type), Rep.
+  (**
+  TODO (Discuss): If [FracValid1] is fine, use [FracSplittable_1].
+  *)
   #[global] Declare Instance new_tokenR_timeless `{Σ : cpp_logic ti} q ty :
     Timeless (new_tokenR q ty).
   #[global] Declare Instance new_tokenR_fractional `{Σ : cpp_logic ti} ty :
     Fractional (fun q => new_tokenR q ty).
-  #[global] Declare Instance new_tokenR_agree `{Σ : cpp_logic ti} q ty1 ty2 :
-    Observe2 [| ty1 = ty2 |] (new_tokenR q ty1) (new_tokenR q ty2).
+  #[global] Declare Instance new_tokenR_agree `{Σ : cpp_logic ti} :
+    AgreeF1 new_tokenR.
   #[global] Instance new_tokenR_as_fractional `{Σ : cpp_logic ti} q ty :
     AsFractional (new_tokenR q ty) (fun q => new_tokenR q ty) q.
   Proof. exact: Build_AsFractional. Qed.

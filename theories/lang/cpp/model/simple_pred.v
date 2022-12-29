@@ -9,7 +9,8 @@ From iris.bi Require Import monpred.
 From iris.bi.lib Require Import fractional.
 From iris.proofmode Require Import proofmode.
 
-From bedrock.lang.bi Require Import fractional cancelable_invariants.
+From bedrock.lang.bi.spec Require Import knowledge frac_splittable.
+From bedrock.lang.bi Require Import cancelable_invariants.
 Require Import bedrock.lang.cpp.logic.own_instances.
 
 From bedrock.prelude Require Import base option.
@@ -244,9 +245,9 @@ Module SimpleCPP.
     (* relaxed validity (past-the-end allowed) *)
     Notation valid_ptr := (_valid_ptr Relaxed).
 
-    Instance _valid_ptr_persistent : forall b p, Persistent (_valid_ptr b p) := _.
-    Instance _valid_ptr_affine : forall b p, Affine (_valid_ptr b p) := _.
-    Instance _valid_ptr_timeless : forall b p, Timeless (_valid_ptr b p) := _.
+    Instance _valid_ptr_knowledge : Knowledge2 _valid_ptr.
+    Proof. solve_knowledge. Qed.
+    Instance _valid_ptr_timeless : Timeless2 _valid_ptr := _.
 
     (* Needs validity to exclude non-null pointers with 0 addresses but
     non-null provenance (which can be created by pointer arithmetic!) as
@@ -285,12 +286,10 @@ Module SimpleCPP.
     A more useful definition should probably not be persistent. *)
     Definition provides_storage (storage_ptr obj_ptr : ptr) (_ : type) : mpred :=
       [| same_address storage_ptr obj_ptr |] ** valid_ptr storage_ptr ** valid_ptr obj_ptr.
-    Global Instance provides_storage_persistent storage_ptr obj_ptr ty :
-      Persistent (provides_storage storage_ptr obj_ptr ty) := _.
-    Global Instance provides_storage_affine storage_ptr obj_ptr ty :
-      Affine (provides_storage storage_ptr obj_ptr ty) := _.
-    Global Instance provides_storage_timeless storage_ptr obj_ptr ty :
-      Timeless (provides_storage storage_ptr obj_ptr ty) := _.
+    #[global] Instance provides_storage_knowledge : Knowledge3 provides_storage.
+    Proof. solve_knowledge. Qed.
+    #[global] Instance provides_storage_timeless : Timeless3 provides_storage := _.
+
     Global Instance provides_storage_same_address storage_ptr obj_ptr ty :
       Observe [| same_address storage_ptr obj_ptr |] (provides_storage storage_ptr obj_ptr ty) := _.
 
@@ -749,21 +748,21 @@ Module SimpleCPP.
     Definition dtor_at (_ : genv) (_ : translation_unit) (d : Dtor) (p : ptr) : mpred :=
       code_own p (inr d).
 
-    Instance code_at_persistent : forall s tu f p, Persistent (@code_at s tu f p) := _.
-    Instance code_at_affine : forall s tu f p, Affine (@code_at s tu f p) := _.
-    Instance code_at_timeless : forall s tu f p, Timeless (@code_at s tu f p) := _.
+    Instance code_at_knowledge : Knowledge4 (@code_at).
+    Proof. solve_knowledge. Qed.
+    Instance code_at_timeless : Timeless4 (@code_at) := _.
 
-    Instance method_at_persistent : forall s tu f p, Persistent (@method_at s tu f p) := _.
-    Instance method_at_affine : forall s tu f p, Affine (@method_at s tu f p) := _.
-    Instance method_at_timeless : forall s tu f p, Timeless (@method_at s tu f p) := _.
+    Instance method_at_knowledge : Knowledge4 (@method_at).
+    Proof. solve_knowledge. Qed.
+    Instance method_at_timeless : Timeless4 (@method_at) := _.
 
-    Instance ctor_at_persistent : forall s tu f p, Persistent (@ctor_at s tu f p) := _.
-    Instance ctor_at_affine : forall s tu f p, Affine (@ctor_at s tu f p) := _.
-    Instance ctor_at_timeless : forall s tu f p, Timeless (@ctor_at s tu f p) := _.
+    Instance ctor_at_knowledge : Knowledge4 (@ctor_at).
+    Proof. solve_knowledge. Qed.
+    Instance ctor_at_timeless : Timeless4 (@ctor_at) := _.
 
-    Instance dtor_at_persistent : forall s tu f p, Persistent (@dtor_at s tu f p) := _.
-    Instance dtor_at_affine : forall s tu f p, Affine (@dtor_at s tu f p) := _.
-    Instance dtor_at_timeless : forall s tu f p, Timeless (@dtor_at s tu f p) := _.
+    Instance dtor_at_knowledge : Knowledge4 (@dtor_at).
+    Proof. solve_knowledge. Qed.
+    Instance dtor_at_timeless : Timeless4 (@dtor_at) := _.
 
     Axiom code_at_live   : forall s tu f p,   @code_at s tu f p |-- live_ptr p.
     Axiom method_at_live : forall s tu f p, @method_at s tu f p |-- live_ptr p.
@@ -819,9 +818,9 @@ Module SimpleCPP.
       (* [alloc_own (alloc_id p) (l, h) **
       [| l <= ptr_addr p <= ptr_addr (p ,, o_sub resolve ty 1) <= h |]] *)
 
-    Instance type_ptr_persistent σ p ty : Persistent (type_ptr (resolve:=σ) ty p) := _.
-    Instance type_ptr_affine σ p ty : Affine (type_ptr (resolve:=σ) ty p) := _.
-    Instance type_ptr_timeless σ p ty : Timeless (type_ptr (resolve:=σ) ty p) := _.
+    Instance type_ptr_knowledge : Knowledge3 (@type_ptr).
+    Proof. solve_knowledge. Qed.
+    Instance type_ptr_timeless : Timeless3 (@type_ptr) := _.
 
     Lemma type_ptr_off_nonnull {σ ty p o} :
       type_ptr ty (p ,, o) |-- [| p <> nullptr |].
@@ -1023,17 +1022,11 @@ Module SimpleCPP.
       by split'; apply tptsto_mono.
     Qed.
 
-    #[global] Instance tptsto_fractional {σ} ty p v :
-      Fractional (λ q, @tptsto σ ty q p v) := _.
-
-    #[global] Instance tptsto_timeless {σ} ty q p v :
-      Timeless (@tptsto σ ty q p v) := _.
+    #[global] Instance tptsto_frac {σ} ty : FracSplittable_2 (@tptsto σ ty).
+    Proof. solve_frac. Qed.
 
     #[global] Instance tptsto_nonvoid {σ} ty (q : Qp) p v :
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v) := _.
-
-    #[global] Instance tptsto_frac_valid {σ} ty (q : Qp) p v :
-      Observe [| q ≤ 1 |]%Qp (@tptsto σ ty q p v) := _.
 
     #[global] Instance tptsto_agree σ ty q1 q2 p v1 v2 :
       Observe2 [| val_related σ ty v1 v2 |] (@tptsto σ ty q1 p v1) (@tptsto σ ty q2 p v2).
@@ -1102,9 +1095,8 @@ Module SimpleCPP.
       [| pinned_ptr_pure (Z.to_N (Z.of_N va - z)) p |].
 
     Parameter exposed_aid : alloc_id -> mpred.
-    Axiom exposed_aid_persistent : forall aid, Persistent (exposed_aid aid).
-    Axiom exposed_aid_affine : forall aid, Affine (exposed_aid aid).
-    Axiom exposed_aid_timeless : forall aid, Timeless (exposed_aid aid).
+    Axiom exposed_aid_knowledge : Knowledge1 exposed_aid.
+    Axiom exposed_aid_timeless : Timeless1 exposed_aid.
 
     Axiom exposed_aid_null_alloc_id : |-- exposed_aid null_alloc_id.
 

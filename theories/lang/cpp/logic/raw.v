@@ -5,7 +5,7 @@
  *)
 Require Import bedrock.prelude.base.
 Require Import iris.proofmode.proofmode.
-From iris.bi.lib Require Import fractional.
+From bedrock.lang.bi.spec Require Import frac_splittable.
 
 Require Import bedrock.lang.cpp.arith.z_to_bytes.
 Require Import bedrock.lang.cpp.ast.
@@ -146,25 +146,12 @@ Section with_Σ.
         Proper ((=) ==> (=) ==> (⊢)) (@rawR).
       Proof. by intros ??-> ??->. Qed.
 
-      #[global] Instance rawR_timeless q raw :
-        Timeless (rawR q raw).
-      Proof. rewrite rawR_eq. apply _. Qed.
+      #[global] Instance rawR_frac : FracSplittable_1 rawR.
+      Proof. rewrite rawR_eq. solve_frac. Qed.
 
-      #[global] Instance rawR_fractional raw :
-        Fractional (λ q, rawR q raw).
-      Proof. rewrite rawR_eq. apply _. Qed.
-      #[global] Instance rawR_as_fractional q raw :
-        AsFractional (rawR q raw) (λ q, rawR q raw) q.
-      Proof. constructor. done. apply _. Qed.
-
-      #[global] Instance rawR_observe_frac_valid (q : Qp) raw :
-        Observe [| q ≤ 1 |]%Qp (rawR q raw).
-      Proof. rewrite rawR_eq. apply _. Qed.
-
-      #[global] Instance rawR_observe_agree q1 q2 raw1 raw2 :
-        Observe2 [| raw1 = raw2 |] (rawR q1 raw1) (rawR q2 raw2).
+      #[global] Instance rawR_observe_agree : AgreeF1 rawR.
       Proof.
-        rewrite rawR_eq/rawR_def.
+        intros. rewrite rawR_eq/rawR_def.
         apply: as_Rep_only_provable_observe_2=> p.
         iIntros "Hptsto1 Hptsto2".
         iPoseProof (tptsto_agree with "Hptsto1 Hptsto2") as "%Hraws"; eauto.
@@ -192,6 +179,10 @@ Section with_Σ.
       Proof. constructor. done. apply _. Qed.
 
       Lemma rawsR_observe_frac_valid (q : Qp) rs :
+        (**
+        TODO (Discuss): Consider using [TCLt] and enabling this
+        instance.
+        *)
         (0 < length rs) ->
         Observe [| q ≤ 1 |]%Qp (rawsR q rs).
       Proof.
@@ -201,6 +192,10 @@ Section with_Σ.
       Qed.
 
       Lemma rawsR_observe_agree q1 q2 rs1 rs2 :
+        (**
+        TODO (Discuss): Consider using [TCEq] and enabling this
+        instance.
+        *)
         length rs1 = length rs2 ->
         Observe2 [| rs1 = rs2 |] (rawsR q1 rs1) (rawsR q2 rs2).
       Proof.

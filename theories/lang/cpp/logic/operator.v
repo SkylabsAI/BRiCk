@@ -5,6 +5,7 @@
  *)
 Require Import iris.proofmode.proofmode.
 From bedrock.prelude Require Import base option.
+From bedrock.lang.bi.spec Require Import knowledge.
 From bedrock.lang.cpp Require Import ast semantics.values semantics.operator.
 From bedrock.lang.cpp Require Import logic.pred.
 
@@ -19,9 +20,9 @@ Definition non_beginning_ptr `{has_cpp : cpp_logic} p' : mpred :=
 Section non_beginning_ptr.
   Context `{has_cpp : cpp_logic}.
 
-  #[global] Instance non_beginning_ptr_persistent p : Persistent (non_beginning_ptr p) := _.
-  #[global] Instance non_beginning_ptr_affine p : Affine (non_beginning_ptr p) := _.
-  #[global] Instance non_beginning_ptr_timeless p : Timeless (non_beginning_ptr p) := _.
+  #[global] Instance non_beginning_ptr_knowledge : Knowledge1 non_beginning_ptr.
+  Proof. solve_knowledge. Qed.
+  #[global] Instance non_beginning_ptr_timeless : Timeless1 non_beginning_ptr := _.
 End non_beginning_ptr.
 
 #[global] Typeclasses Opaque non_beginning_ptr.

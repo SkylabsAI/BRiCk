@@ -5,7 +5,7 @@
  *)
 From bedrock.prelude Require Import base numbers list.
 Require Import iris.proofmode.proofmode.
-From iris.bi.lib Require Import fractional.
+From bedrock.lang.bi.spec Require Import frac_splittable.
 
 Require Import bedrock.lang.cpp.arith.z_to_bytes.
 Require Import bedrock.lang.cpp.ast.
@@ -33,33 +33,17 @@ Section with_Σ.
 
   Context {σ : genv}.
 
-  Axiom struct_padding_fractional : forall cls, Fractional (fun q => struct_paddingR q cls).
-  Axiom struct_padding_timeless : forall q cls, Timeless  (struct_paddingR q cls).
-  Axiom struct_padding_frac_valid : forall (q : Qp) cls, Observe [| q ≤ 1 |]%Qp (struct_paddingR q cls).
-  Axiom union_padding_fractional : forall cls idx, Fractional (fun q => union_paddingR q cls idx).
-  Axiom union_padding_timeless : forall q cls idx, Timeless (union_paddingR q cls idx).
-  Axiom union_padding_frac_valid : forall (q : Qp) cls idx, Observe [| q ≤ 1 |]%Qp (union_paddingR q cls idx).
+  #[global] Declare Instance struct_padding_frac : FracSplittable_1 struct_paddingR.
 
-  #[global] Existing Instances
-    struct_padding_fractional struct_padding_timeless struct_padding_frac_valid
-    union_padding_fractional union_padding_timeless union_padding_frac_valid.
+  #[global] Declare Instance union_padding_frac : FracSplittable_2 union_paddingR.
 
-  #[global] Instance struct_padding_as_fractional q cls :
-    AsFractional (struct_paddingR q cls) (λ q, struct_paddingR q cls) q.
-  Proof. exact: Build_AsFractional. Qed.
-  #[global] Instance union_padding_as_fractional q cls idx :
-    AsFractional (union_paddingR q cls idx) (λ q, union_paddingR q cls idx) q.
-  Proof. exact: Build_AsFractional. Qed.
-
-  Axiom struct_paddingR_type_ptr_observe : forall q cls, Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).
-  #[global] Existing Instance struct_paddingR_type_ptr_observe.
+  #[global] Declare Instance struct_paddingR_type_ptr_observe q cls : Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).
   #[global] Instance struct_paddingR_strict_valid_observe q cls : Observe svalidR (struct_paddingR q cls).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
   #[global] Instance struct_paddingR_valid_observe q cls : Observe validR (struct_paddingR q cls).
   Proof. rewrite -svalidR_validR; apply _. Qed.
 
-  Axiom union_paddingR_type_ptr_observe : forall q cls i, Observe (type_ptrR (Tnamed cls)) (union_paddingR q cls i).
-  #[global] Existing Instance union_paddingR_type_ptr_observe.
+  #[global] Declare Instance union_paddingR_type_ptr_observe q cls i : Observe (type_ptrR (Tnamed cls)) (union_paddingR q cls i).
   #[global] Instance union_paddingR_strict_valid_observe q cls i : Observe svalidR (union_paddingR q cls i).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
   #[global] Instance union_paddingR_valid_observe q cls i : Observe validR (union_paddingR q cls i).

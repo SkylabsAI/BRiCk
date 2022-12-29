@@ -9,6 +9,7 @@
  *)
 Require Import bedrock.prelude.base.
 Require Import bedrock.lang.cpp.ast.
+From bedrock.lang.bi.spec Require Import knowledge.
 From bedrock.lang.cpp Require Import
      semantics logic.pred logic.path_pred logic.heap_pred.
 Require Import iris.proofmode.proofmode.
@@ -54,10 +55,11 @@ Section with_cpp.
           end
         end.
 
-  #[global] Instance denoteSymbol_persistent {tu n o} : Persistent (denoteSymbol tu n o).
-  Proof. rewrite /denoteSymbol; repeat case_match; apply _. Qed.
-
-  #[global] Instance denoteSymbol_affine {tu n o} : Affine (denoteSymbol tu n o) := _.
+  #[global] Instance denoteSymbol_knowledge : Knowledge3 denoteSymbol.
+  Proof.
+    split; [|apply _].
+    rewrite /denoteSymbol; repeat case_match; apply _.
+  Qed.
 
   (** [is_strict_valid o] states that if the declaration [o] occurs in a
       translation unit, the pointer to it is guaranteed to be strictly valid.
@@ -119,15 +121,11 @@ Section with_cpp.
 
   #[global] Hint Opaque denoteModule : typeclass_instances.
 
-  #[global] Instance denoteModule_persistent {module} : Persistent (denoteModule module).
+  #[global] Instance denoteModule_knowledge : Knowledge1 denoteModule.
   Proof.
-    red. rewrite denoteModule_eq /denoteModule_def; intros.
-    destruct module; simpl.
-    iIntros "[#M #H]"; iFrame "#".
+    intros module. split; [|apply _].
+    rewrite denoteModule_eq. destruct module; apply _.
   Qed.
-
-  #[global] Instance denoteModule_affine {module} : Affine (denoteModule module).
-  Proof using . refine _. Qed.
 
   Lemma denoteModule_denoteSymbol n m o :
     m.(symbols) !! n = Some o ->

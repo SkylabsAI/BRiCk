@@ -13,7 +13,7 @@
 Require Import iris.proofmode.proofmode.
 Require Import bedrock.prelude.base.
 
-Require Import bedrock.lang.bi.big_op.
+From bedrock.lang.bi Require Import big_op spec.knowledge.
 Require Import bedrock.lang.cpp.semantics.
 From bedrock.lang.cpp.logic Require Import arr pred heap_pred layout raw.
 
@@ -160,32 +160,15 @@ Section raw_type_ptrs.
   Qed.
 
   Section Instances.
-    #[global]
-    Instance raw_type_ptrs_persistent : forall p ty,
-      Persistent (raw_type_ptrs ty p).
-    Proof. rewrite raw_type_ptrs_eq/raw_type_ptrs_def; apply: _. Qed.
-    #[global]
-    Instance raw_type_ptrsR_persistent : forall ty,
-      Persistent (raw_type_ptrsR ty).
-    Proof. rewrite raw_type_ptrsR_eq/raw_type_ptrsR_def; apply: _. Qed.
+    #[global] Instance raw_type_ptrs_knowledge : Knowledge2 raw_type_ptrs.
+    Proof. rewrite raw_type_ptrs_eq. solve_knowledge. Qed.
+    #[global] Instance raw_type_ptrs_timeless : Timeless2 raw_type_ptrs.
+    Proof. rewrite raw_type_ptrs_eq. apply _. Qed.
 
-    #[global]
-    Instance raw_type_ptrs_affine : forall p ty,
-      Affine (raw_type_ptrs ty p).
-    Proof. rewrite raw_type_ptrs_eq/raw_type_ptrs_def; apply: _. Qed.
-    #[global]
-    Instance raw_type_ptrsR_affine : forall ty,
-      Affine (raw_type_ptrsR ty).
-    Proof. rewrite raw_type_ptrsR_eq/raw_type_ptrsR_def; apply: _. Qed.
-
-    #[global]
-    Instance raw_type_ptrs_timeless : forall p ty,
-      Timeless (raw_type_ptrs ty p).
-    Proof. rewrite raw_type_ptrs_eq/raw_type_ptrs_def; apply: _. Qed.
-    #[global]
-    Instance raw_type_ptrsR_timeless : forall ty,
-      Timeless (raw_type_ptrsR ty).
-    Proof. rewrite raw_type_ptrsR_eq/raw_type_ptrsR_def; apply: _. Qed.
+    #[global] Instance raw_type_ptrsR_knowledge : Knowledge1 raw_type_ptrsR.
+    Proof. rewrite raw_type_ptrsR_eq. solve_knowledge. Qed.
+    #[global] Instance raw_type_ptrsR_timeless : Timeless1 raw_type_ptrsR.
+    Proof. rewrite raw_type_ptrsR_eq. apply _. Qed.
 
     Section observations.
       #[global]
