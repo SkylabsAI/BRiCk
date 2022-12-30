@@ -17,7 +17,7 @@ Require Import iris.proofmode.proofmode.
 (**
 Overview:
 
-- [FracVadidN], [Frac2ValidN], [FracSplittable_N R]
+- [FracValidN], [Frac2ValidN], [FracSplittable_N R]
 
 - Tactic [solve_frac] for solving [FracSplittable_N]
 
