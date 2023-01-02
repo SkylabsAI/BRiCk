@@ -85,9 +85,9 @@ Arguments frac_eq {_ _} _ : assert.
 Lemma frac_eq_iff q1 q2 : FracEq q1 q2 <-> q1 = q2.
 Proof. split. by inversion_clear 1. by intros ->. Qed.
 
-#[global] Instance frac_eq_beta_reduce (q_f q : Qp) is_const :
-  FracEq q_f q ->
-  FracEq (CV.frac (CV.mk is_const q_f)) q | 20.
+#[global] Instance frac_eq_beta_reduce q qout c :
+  FracEq q qout ->
+  FracEq (CV.frac (CV.mk c q)) qout | 20.
 Proof. by intros ->%frac_eq. Qed.
 
 (* Higher cost, to favor [frac_eq_beta_reduce]. *)
@@ -218,28 +218,28 @@ Section cfractional.
   Proof. intros HP ???????. rewrite CV.t_op /=. apply HP. Qed.
 
   (** *** Lifting [CFractional] things when using [CV.mk]. *)
-  #[global] Instance cfractional_cfractional_mk_0 (P : CV.t -> PROP) is_const :
-    CFractional P -> CFractional (fun q => P (CV.mk is_const (CV.frac q))).
+  #[global] Instance cfractional_cfractional_mk_0 (P : CV.t -> PROP) c :
+    CFractional P -> CFractional (fun q => P (CV.mk c (CV.frac q))).
   Proof. intros HP ??. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_1 {A} (P : CV.t -> A -> PROP) is_const :
-    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a).
+  #[global] Instance cfractional_cfractional_mk_1 {A} (P : CV.t -> A -> PROP) c :
+    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.mk c (CV.frac q)) a).
   Proof. intros HP ???. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_2 {A B} (P : CV.t -> A -> B -> PROP) is_const :
-    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b).
+  #[global] Instance cfractional_cfractional_mk_2 {A B} (P : CV.t -> A -> B -> PROP) cm :
+    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b).
   Proof. intros HP ????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) is_const :
-    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c).
+  #[global] Instance cfractional_cfractional_mk_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) cm :
+    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c).
   Proof. intros HP ?????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) is_const :
-    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c d).
+  #[global] Instance cfractional_cfractional_mk_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) cm :
+    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c d).
   Proof. intros HP ??????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) is_const :
-    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c d e).
+  #[global] Instance cfractional_cfractional_mk_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) cm :
+    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c d e).
   Proof. intros HP ???????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
   (** *** Lifting [CFractional] things into [Fractional] when using [CV._mut] *)
