@@ -75,6 +75,12 @@ Notation AgreeCF1 P := (∀ (q1 q2 : CV.t) a1 a2, Observe2 [| a1 = a2 |] (P q1 a
 [FracEq q1 q2] normalizes [q1] to [q2].
 This helps TC search reduce TC-opaque [CV.frac] in a controlled way.
 Used to state [CFracValidN].
+
+TODO: Reformulate as [CVToFrac (cv : CV.t) (q : Qp)] to disentangle
+reduction from the initial projection [CV.frac cv], and drop those
+projections from the following [CFracValidN] notations. We'll want a
+second reduction rule covering [CV.scale] once that becomes a
+constant.
 *)
 #[projections(primitive=yes)]
 Class FracEq (q1 q2 : Qp) := MkFracEq { frac_eq : q1 = q2 }.
