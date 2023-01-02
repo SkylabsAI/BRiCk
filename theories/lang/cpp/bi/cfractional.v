@@ -217,57 +217,30 @@ Section cfractional.
     Fractional5 P -> CFractional5 (fun q a b c d e => P (CV.frac q) a b c d e).
   Proof. intros HP ???????. rewrite CV.t_op /=. apply HP. Qed.
 
-  (** *** Lifting [CFractional] things when using [CV.const] *)
+  (** *** Lifting [CFractional] things when using [CV.mk]. *)
+  #[global] Instance cfractional_cfractional_mk_0 (P : CV.t -> PROP) is_const :
+    CFractional P -> CFractional (fun q => P (CV.mk is_const (CV.frac q))).
+  Proof. intros HP ??. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_const_0 (P : CV.t -> PROP) :
-    CFractional P -> CFractional (fun q => P (CV.const (CV.frac q))).
-  Proof. intros HP ??. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_1 {A} (P : CV.t -> A -> PROP) is_const :
+    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a).
+  Proof. intros HP ???. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_const_1 {A} (P : CV.t -> A -> PROP) :
-    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.const (CV.frac q)) a).
-  Proof. intros HP ???. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_2 {A B} (P : CV.t -> A -> B -> PROP) is_const :
+    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b).
+  Proof. intros HP ????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_const_2 {A B} (P : CV.t -> A -> B -> PROP) :
-    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.const (CV.frac q)) a b).
-  Proof. intros HP ????. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) is_const :
+    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c).
+  Proof. intros HP ?????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_const_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) :
-    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.const (CV.frac q)) a b c).
-  Proof. intros HP ?????. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) is_const :
+    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c d).
+  Proof. intros HP ??????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_const_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) :
-    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.const (CV.frac q)) a b c d).
-  Proof. intros HP ??????. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_const_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) :
-    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.const (CV.frac q)) a b c d e).
-  Proof. intros HP ???????. rewrite CV.t_op /= CV.const_add. apply HP. Qed.
-
-  (** *** Lifting [CFractional] things when using [CV.mut] *)
-
-  #[global] Instance cfractional_cfractional_mut_0 (P : CV.t -> PROP) :
-    CFractional P -> CFractional (fun q => P (CV.mut (CV.frac q))).
-  Proof. intros HP ??. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_mut_1 {A} (P : CV.t -> A -> PROP) :
-    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.mut (CV.frac q)) a).
-  Proof. intros HP ???. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_mut_2 {A B} (P : CV.t -> A -> B -> PROP) :
-    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.mut (CV.frac q)) a b).
-  Proof. intros HP ????. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_mut_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) :
-    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.mut (CV.frac q)) a b c).
-  Proof. intros HP ?????. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_mut_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) :
-    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.mut (CV.frac q)) a b c d).
-  Proof. intros HP ??????. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
-
-  #[global] Instance cfractional_cfractional_mut_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) :
-    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.mut (CV.frac q)) a b c d e).
-  Proof. intros HP ???????. rewrite CV.t_op /= CV.mut_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) is_const :
+    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.mk is_const (CV.frac q)) a b c d e).
+  Proof. intros HP ???????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
 
   (** *** Lifting [CFractional] things into [Fractional] when using [CV._mut] *)
   (**
@@ -276,27 +249,27 @@ Section cfractional.
   *)
   #[global] Instance cfractional_fractional_mut_0 (P : CV.t -> PROP) :
     CFractional P -> Fractional P.
-  Proof. intros HP ??. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ??. rewrite /= CV.mk_add. apply HP. Qed.
 
   #[global] Instance cfractional_fractional_mut_1 {A} (P : CV.t -> A -> PROP) :
     CFractional1 P -> Fractional1 P.
-  Proof. intros HP ???. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ???. rewrite /= CV.mk_add. apply HP. Qed.
 
   #[global] Instance cfractional_fractional_mut_2 {A B} (P : CV.t -> A -> B -> PROP) :
     CFractional2 P -> Fractional2 P.
-  Proof. intros HP ????. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ????. rewrite /= CV.mk_add. apply HP. Qed.
 
   #[global] Instance cfractional_fractional_mut_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) :
     CFractional3 P -> Fractional3 P.
-  Proof. intros HP ?????. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ?????. rewrite /= CV.mk_add. apply HP. Qed.
 
   #[global] Instance cfractional_fractional_mut_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) :
     CFractional4 P -> Fractional4 P.
-  Proof. intros HP ??????. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ??????. rewrite /= CV.mk_add. apply HP. Qed.
 
   #[global] Instance cfractional_fractional_mut_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) :
     CFractional5 P -> Fractional5 P.
-  Proof. intros HP ???????. rewrite /= CV.mut_add. apply HP. Qed.
+  Proof. intros HP ???????. rewrite /= CV.mk_add. apply HP. Qed.
 End cfractional.
 
 (** ** IPM instances *)

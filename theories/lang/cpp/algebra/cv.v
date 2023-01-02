@@ -137,17 +137,11 @@ Module CV.
   Definition _mut : Qp -> t := mut.
   #[global] Arguments CV._mut /.
 
-  Lemma const_add' q1 q2 : const (q1 + q2) = const q1 ⋅ const q2.
-  Proof. done. Qed.
+  Lemma mk_add' is_const q1 q2 : mk is_const (q1 + q2) = mk is_const q1 ⋅ mk is_const q2.
+  Proof. by rewrite t_op /= andb_diag. Qed.
 
-  Lemma const_add `{!SplitFrac q q1 q2} : const q = const q1 ⋅ const q2.
-  Proof. by rewrite (split_frac q). Qed.
-
-  Lemma mut_add' q1 q2 : mut (q1 + q2) = mut q1 ⋅ mut q2.
-  Proof. done. Qed.
-
-  Lemma mut_add `{!SplitFrac q q1 q2} : mut q = mut q1 ⋅ mut q2.
-  Proof. by rewrite (split_frac q). Qed.
+  Lemma mk_add `{!SplitFrac q q1 q2} is_const : mk is_const q = mk is_const q1 ⋅ mk is_const q2.
+  Proof. by rewrite (split_frac q) mk_add'. Qed.
 
   Lemma mut_const' q1 q2 : mut (q1 + q2) = mut q1 ⋅ const q2.
   Proof. done. Qed.
