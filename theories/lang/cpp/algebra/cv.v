@@ -133,10 +133,6 @@ Module CV.
   Notation const := (mk true).
   Notation c := (mk true) (only parsing).
 
-  (* we need a definition in order to make a coercion *)
-  Definition _mut : Qp -> t := mut.
-  #[global] Arguments CV._mut /.
-
   Lemma mk_add' c q1 q2 : mk c (q1 + q2) = mk c q1 ⋅ mk c q2.
   Proof. by rewrite t_op /= andb_diag. Qed.
 
@@ -166,11 +162,28 @@ Canonical Structure CV.tR.
 
 (* as with C++, we make mutable the default *)
 #[global] Coercion CV.frac : CV.t >-> Qp.
-#[global] Coercion CV._mut : Qp >-> CV.t.
 #[global] Bind Scope Qp_scope with CV.t.	(** Complements the [_mut] coercion *)
+
+(** ** Backwards compatibility *)
+(**
+Old code can benefit from a coercion.
+*)
+Module CV_compat.
+
+  Module CV.
+    Export cv.CV.
+
+    Definition _mut : Qp -> t := mut.
+    #[global] Arguments CV._mut /.
+  End CV.
+
+  Coercion CV._mut : Qp >-> CV.t.
+
+End CV_compat.
 
 Section TEST.
   Variable TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
+  Import CV_compat.
 
   (* TODO: to make this work without the [%Qp], we need to register the
      notations for [Qp] as notations in [cvq_scope]. *)
