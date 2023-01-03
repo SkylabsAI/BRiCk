@@ -128,6 +128,9 @@ Module CV.
     Qed.
   End cmra.
 
+  (* scaling *)
+  Notation scale q cq := (mk cq.(is_const) (q * cq.(frac))).
+
   Notation mut := (mk false).
   Notation m := (mk false) (only parsing).
   Notation const := (mk true).
