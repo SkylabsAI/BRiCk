@@ -588,8 +588,8 @@ Section with_cpp.
     CFractional P -> CFractional (fun q => pureR (P q)).
   Proof. apply _. Qed.
   #[global] Instance pureR_as_cfractional (P : mpred) (F : CV.t -> mpred) q :
-    AsFractional P F q →
-    AsFractional (pureR P) (fun q => pureR (F q)) q.
+    AsCFractional P F q →
+    AsCFractional (pureR P) (fun q => pureR (F q)) q.
   Proof. intros [??]. constructor. done. apply _. Qed.
 
   #[global] Instance pureR_objective P : Objective (pureR P).
