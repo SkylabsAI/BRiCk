@@ -292,6 +292,9 @@ Module CV_compat.
 
 End CV_compat.
 
+(* TEMPORARY: Re-export [CV_compat] for now. *)
+Export CV_compat.
+
 (** ** IPM instances *)
 Section proofmode.
   Context {PROP : bi}.
