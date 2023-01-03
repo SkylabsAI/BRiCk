@@ -277,7 +277,7 @@ Section with_cpp.
         (* there is no initializer for this member, so we "default initialize" it
            (see https://eel.is/c++draft/dcl.init#general-7 )
          *)
-        default_initialize tu false m.(mem_type)
+        default_initialize tu m.(mem_type)
           (this ,, _field {| f_type := cls ; f_name := m.(mem_name) |})
           (fun frees => interp frees (wpi_members ρ cls this members inits Q))
       | i :: is' =>

@@ -147,7 +147,7 @@ Module Type Expr__newdelete.
                                   provides_storage storage_ptr obj_ptr aty -*
                                   match oinit with
                                   | None => (* default_initialize the memory *)
-                                    default_initialize false aty obj_ptr
+                                    default_initialize aty obj_ptr
                                       (fun free' =>
                                          (* Track the type we are allocating
                                             so it can be checked at [delete].
@@ -220,12 +220,10 @@ Module Type Expr__newdelete.
                                 (Forall obj_ptr : ptr,
                                    (* This also ensures these pointers share their
                                    address (see [provides_storage_same_address]) *)
-                                   provides_storage
-                                     (storage_ptr .[Tu8 ! sz'])
-                                     obj_ptr array_ty -*
+                                   provides_storage (storage_ptr .[Tu8 ! sz']) obj_ptr array_ty -*
                                    match oinit with
                                    | None => (* default_initialize the memory *)
-                                     default_initialize false array_ty obj_ptr
+                                     default_initialize array_ty obj_ptr
                                                         (fun free'' =>
                                                            (* Track the type we are allocating
                                                               so it can be checked at [delete]

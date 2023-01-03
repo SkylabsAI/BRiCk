@@ -45,6 +45,14 @@ Module Type Init.
     #[local] Notation fspec := (@fspec _ Σ tu.(globals)).
     #[local] Notation mspec := (@mspec _ Σ tu.(globals)).
 
+    (** [default_initialize_array default_init ty len p Q] initializes an array of type [ty[len]]
+        at pointer [p].
+
+        NOTE that default initialization of an array of constants is a compile-time error, so
+             we don't need to worry about that case. Also, note that arrays of length 0 are
+             not legal so we are guaranteed to have to initialize a value which will result in
+             an [ERROR].
+     *)
     Definition default_initialize_array (default_initialize : type -> ptr -> (FreeTemps -> epred) -> mpred)
                (ty : type) (len : N) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
       fold_right (fun i PP => default_initialize ty (p ,, o_sub _ ty (Z.of_N i)) (fun free' => interp free' PP))
@@ -80,25 +88,19 @@ Module Type Init.
         | (7.2) If T is an array type, each element is default-initialized.
         | (7.3) Otherwise, no initialization is performed.
         and [default_initialize] corresponds to [default-initialization] as described above.
-
-        NOTE: the added [q_c] argument here is pretty annoying and should probably be hidden.
      *)
-    Fixpoint default_initialize
-               (q_c : bool) (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
+    Fixpoint default_initialize (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
       match ty with
-      | Tnum _ _ as rty
-      | Tptr _ as rty
-      | Tbool as rty
-      | Tfloat _ as rty
-      | Tnullptr as rty
-      | Tenum _ as rty =>
-        if q_c then
-          ERROR "default initialize const"
-        else
-          let rty := erase_qualifiers rty in
+      | Tnum _ _
+      | Tptr _
+      | Tbool
+      | Tfloat _
+      | Tnullptr
+      | Tenum _ =>
+          let rty := erase_qualifiers ty in
           p |-> uninitR rty (CV.m 1) -* Q FreeTemps.id
       | Tarray ety sz =>
-        default_initialize_array (default_initialize q_c) ety sz p (fun _ => Q FreeTemps.id)
+          default_initialize_array default_initialize ety sz p (fun _ => Q FreeTemps.id)
 
       | Tref _
       | Trv_ref _ => ERROR "default initialization of reference"
@@ -110,16 +112,16 @@ Module Type Init.
       | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
       | Tqualified q ty =>
           if q_const q then ERROR "default initialize const"
-          else default_initialize q_c ty p Q
+          else default_initialize ty p Q
       end%bs%I.
-    #[global] Arguments default_initialize _ !_ _ _ / : assert.
+    #[global] Arguments default_initialize !_ _ _ / : assert.
 
     (** TODO this should be generalized to different [σ] but, in that case it relies
         on the fact that [ty] is defined in both environments.
      *)
-    Lemma default_initialize_frame ty : forall this q_c Q Q',
+    Lemma default_initialize_frame ty : forall this Q Q',
         (Forall f, Q f -* Q' f)
-        |-- default_initialize q_c ty this Q -* default_initialize q_c ty this Q'.
+        |-- default_initialize ty this Q -* default_initialize ty this Q'.
     Proof.
       induction ty; simpl; intros; try case_match;
         try solve [ intros; iIntros "a b c"; iApply "a"; iApply "b"; eauto | eauto ].
@@ -176,15 +178,15 @@ Module Type Init.
       | Tref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_lval init (fun p free =>
-                        addr |-> primR rty (CV.m 1) (Vref p) -* k free)
-        (* ^ TODO: [ref]s are never mutable, but we use [CV.m] here
+                        addr |-> primR rty qf (Vref p) -* k free)
+        (* ^ TODO: [ref]s are never mutable, but we use [qf] here
            for compatibility with [implicit_destruct_struct] *)
 
       | Trv_ref ty =>
         let rty := Tref $ erase_qualifiers ty in
         wp_xval init (fun p free =>
-                        addr |-> primR rty (CV.m 1) (Vref p) -* k free)
-        (* ^ TODO: [ref]s are never mutable, but we use [CV.m] here
+                        addr |-> primR rty qf (Vref p) -* k free)
+        (* ^ TODO: [ref]s are never mutable, but we use [qf] here
            for compatibility with [implicit_destruct_struct] *)
       | Tfunction _ _ => UNSUPPORTED (initializing_type ty init)
 
