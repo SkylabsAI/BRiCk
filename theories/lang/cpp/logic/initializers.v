@@ -96,7 +96,7 @@ Module Type Init.
           ERROR "default initialize const"
         else
           let rty := erase_qualifiers rty in
-          p |-> uninitR rty 1 -* Q FreeTemps.id
+          p |-> uninitR rty (CV.m 1) -* Q FreeTemps.id
       | Tarray ety sz =>
         default_initialize_array (default_initialize q_c) ety sz p (fun _ => Q FreeTemps.id)
 
@@ -143,6 +143,10 @@ Module Type Init.
      *)
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
+      (**
+      TODO (Gregory): In a few cases below, we're using [CV.m 1]
+      rather than [qf]. Please add a comment explaining.
+      *)
       let qf := if q_const cv then CV.const 1 else CV.mut 1 in
       match ty with
       | Tvoid =>
@@ -153,7 +157,7 @@ Module Type Init.
            void g() { return f(); }
            ```
          *)
-        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid 1 Vvoid -* k frees))
+        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid (CV.m 1) Vvoid -* k frees))
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
       | Tbool as ty

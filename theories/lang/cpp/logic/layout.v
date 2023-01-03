@@ -77,7 +77,7 @@ Section with_Σ.
       Exists rs, rawsR q rs ** [| raw_bytes_of_struct σ cls rss rs |].
 
   #[local] Definition implicit_destruct_ty (ty : type) :=
-    anyR ty 1 |-- |={↑pred_ns}=> tblockR ty 1.
+    anyR ty (CV.mut 1) |-- |={↑pred_ns}=> tblockR ty (CV.mut 1).
 
   (** implicit destruction of a primitive *)
   Axiom implicit_destruct_int : forall sz sgn, Reduce (implicit_destruct_ty (Tnum sz sgn)).
@@ -95,10 +95,10 @@ Section with_Σ.
                 (R (erase_qualifiers fld.(mem_type)))) **
     (if has_vtable st (* this is almost certainly [false] if the
                          object is trivially destructible. *)
-     then identityR cls nil 1 (** NOTE this doesn't really work out because i generally
+     then identityR cls nil (CV.mut 1) (** NOTE this doesn't really work out because i generally
                                    require a fancy update to forget the MDC. *)
      else emp)%I **
-    struct_paddingR 1 cls.
+    struct_paddingR (CV.mut 1) cls.
 
 
   (** implicit destruction of an aggregate *)
@@ -107,23 +107,23 @@ Section with_Σ.
       glob_def σ cls = Some (Gstruct st) ->
       st.(s_trivially_destructible) ->
           type_ptrR (Tnamed cls)
-      |-- (Reduce (struct_def (fun ty => tblockR ty 1) cls st)) -*
-          |={↑pred_ns}=> tblockR (Tnamed cls) 1.
+      |-- (Reduce (struct_def (fun ty => tblockR ty (CV.mut 1)) cls st)) -*
+          |={↑pred_ns}=> tblockR (Tnamed cls) (CV.mut 1).
 
   (** decompose a struct into its constituent fields and base classes.
    *)
   Axiom anyR_struct
   : forall cls st,
     glob_def σ cls = Some (Gstruct st) ->
-        anyR (Tnamed cls) 1
-    -|- Reduce (struct_def (fun ty => anyR ty 1) cls st).
+        anyR (Tnamed cls) (CV.mut 1)
+    -|- Reduce (struct_def (fun ty => anyR ty (CV.mut 1)) cls st).
 
   Definition union_def (R : type -> Rep) (cls : globname) (st : translation_unit.Union) : Rep :=
-    union_paddingR 1 cls None \\//
+    union_paddingR (CV.mut 1) cls None \\//
     [∨list] idx↦it ∈ st.(u_fields),
        let f := _field {| f_name := it.(mem_name) ; f_type := cls |} in
        f |-> R (erase_qualifiers it.(mem_type)) **
-       union_paddingR 1 cls (Some idx).
+       union_paddingR (CV.mut 1) cls (Some idx).
 
   (** implicit destruction of a union. *)
   Axiom implicit_destruct_union
@@ -131,7 +131,7 @@ Section with_Σ.
       glob_def σ cls = Some (Gunion un) ->
       un.(u_trivially_destructible) ->
           type_ptrR (Tnamed cls)
-      |-- (Reduce (union_def (fun ty => tblockR ty 1) cls un)) -* |={↑pred_ns}=> tblockR (Tnamed cls) 1.
+      |-- (Reduce (union_def (fun ty => tblockR ty (CV.mut 1)) cls un)) -* |={↑pred_ns}=> tblockR (Tnamed cls) (CV.mut 1).
 
 (*
   (* the following rule would allow you to change the active entity in a union
@@ -152,11 +152,11 @@ Section with_Σ.
       glob_def resolve cls = Some (Gunion un) ->
 (*      un.(u_trivially_destructible) -> *)
       type_ptrR (Tnamed cls)
-      |-- (union_def (fun ty => tblockR ty 1) cls un)
+      |-- (union_def (fun ty => tblockR ty (CV.mut 1)) cls un)
       -* [∧ list] idx ↦ it ∈ un.(u_fields),
           let f := _field {| f_name := it.(mem_name) ; f_type := cls |} in
-          |={↑pred_ns}=> f |-> tblockR (erase_qualifiers it.(mem_type)) 1 **
-               union_paddingR resolve 1 cls (Some idx).
+          |={↑pred_ns}=> f |-> tblockR (erase_qualifiers it.(mem_type)) (CV.mut 1) **
+               union_paddingR resolve (CV.mut 1) cls (Some idx).
 *)
 
   (** decompose a union into the classical disjunction of the alternatives
@@ -164,8 +164,8 @@ Section with_Σ.
   Axiom anyR_union
   : forall (cls : globname) un,
     glob_def σ cls = Some (Gunion un) ->
-        anyR (Tnamed cls) 1
-    -|- Reduce (union_def (fun ty => anyR ty 1) cls un).
+        anyR (Tnamed cls) (CV.mut 1)
+    -|- Reduce (union_def (fun ty => anyR ty (CV.mut 1)) cls un).
 
  (** Proof requires the generalization of [anyR] to support aggregates (and arrays) *)
   Lemma anyR_array_0 t q :

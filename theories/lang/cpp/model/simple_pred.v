@@ -592,7 +592,7 @@ Module SimpleCPP.
     Qed.
 
     Lemma byte_update (a : addr) (rv rv' : runtime_val) :
-      byte_ a rv 1 |-- |==> byte_ a rv' 1.
+      byte_ a rv (CV.mut 1)|-- |==> byte_ a rv' (CV.mut 1).
     Proof. by apply own_update, singleton_update, cmra_update_exclusive. Qed.
 
     Definition bytes (a : addr) (vs : list runtime_val) q : mpred :=
@@ -636,7 +636,7 @@ Module SimpleCPP.
 
     Lemma bytes_update {a : addr} {vs} vs' :
       length vs = length vs' →
-      bytes a vs 1 |-- |==> bytes a vs' 1.
+      bytes a vs (CV.mut 1) |-- |==> bytes a vs' (CV.mut 1).
     Proof.
       rewrite /bytes -big_sepL_bupd.
       revert a vs'.
@@ -919,7 +919,7 @@ Module SimpleCPP.
         placement [new] over an existing object.
      *)
     Theorem identity_forget : forall σ mdc this p,
-        @identity σ this mdc 1 p |-- |={↑pred_ns}=> @identity σ this nil 1 p.
+        @identity σ this mdc (CV.mut 1) p |-- |={↑pred_ns}=> @identity σ this nil (CV.mut 1) p.
     Proof. rewrite /identity. eauto. Qed.
 
     Definition tptsto' {σ : genv} (t : type) (q : CV.t) (p : ptr) (v : val) : mpred :=
@@ -1062,10 +1062,10 @@ Module SimpleCPP.
 
     (* This is now internal to the C++ abstract machine. *)
     Local Lemma pinned_ptr_borrow {σ} ty p v va :
-      @tptsto σ ty 1 p v ** pinned_ptr va p |--
-        |={↑pred_ns}=> Exists v' vs, @encodes σ ty v' vs ** vbytes va vs 1 **
-                (Forall v'' vs', @encodes σ ty v'' vs' -* vbytes va vs' 1 -*
-                                |={↑pred_ns}=> @tptsto σ ty 1 p v'').
+      @tptsto σ ty (CV.mut 1) p v ** pinned_ptr va p |--
+        |={↑pred_ns}=> Exists v' vs, @encodes σ ty v' vs ** vbytes va vs (CV.mut 1) **
+                (Forall v'' vs', @encodes σ ty v'' vs' -* vbytes va vs' (CV.mut 1) -*
+                                |={↑pred_ns}=> @tptsto σ ty (CV.mut 1) p v'').
     Proof.
       iIntros "(TP & PI)".
       iDestruct "PI" as "[_ [[-> %]|[[%%] MJ]]]"; first by rewrite tptsto_nonnull.

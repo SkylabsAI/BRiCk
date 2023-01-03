@@ -18,6 +18,7 @@ In the html, identifiers are hyperlinked to their definition.
 Your Coq editor may also provide a facility to jump to definition (M-. in emacs (company-coq mode))
 *)
 Require Import bedrock.lang.cpp.
+Import CV_compat.
 
 Section with_Sigma.
 Context `{Sigma: cpp_logic} {CU:genv}.

@@ -76,7 +76,7 @@ Module Type Expr__newdelete.
       #[local] Notation Tbyte := Tuchar (only parsing).
 
       Definition alloc_size_t (sz : N) (Q : ptr -> (mpred -> mpred) -> mpred) : mpred :=
-        Forall p : ptr, p |-> primR Tsize_t 1 (Vn sz) -* Q p (fun Q => p |-> anyR Tsize_t 1 ** Q).
+        Forall p : ptr, p |-> primR Tsize_t (CV.mut 1) (Vn sz) -* Q p (fun Q => p |-> anyR Tsize_t (CV.mut 1) ** Q).
 
       Section new.
         (** [new (...) C(...)] <https://eel.is/c++draft/expr.new>
@@ -132,7 +132,7 @@ Module Type Expr__newdelete.
                 Exists sz al, [| size_of aty = Some sz |] ** [| has_type sz Tsize_t |] ** [| align_of aty = Some al |] **
                 Reduce (alloc_size_t sz (fun p FR =>
                 |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
-                      Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
+                      Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) (CV.mut 1) (Vptr storage_ptr) **
                         if bool_decide (storage_ptr = nullptr) then
                           [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                         else
@@ -154,7 +154,7 @@ Module Type Expr__newdelete.
                                             It is important that this preseves
                                             `const`ness of the type.
                                           *)
-                                         obj_ptr |-> new_tokenR 1 aty -*
+                                         obj_ptr |-> new_tokenR (CV.mut 1) aty -*
                                          Q (Vptr obj_ptr) (free' >*> free))
                                   | Some init => (* Use [init] to initialize the memory *)
                                     wp_initialize aty obj_ptr init
@@ -162,7 +162,7 @@ Module Type Expr__newdelete.
                                          (* Track the type we are allocating
                                             so it can be checked at [delete]
                                           *)
-                                         obj_ptr |-> new_tokenR 1 aty -*
+                                         obj_ptr |-> new_tokenR (CV.mut 1) aty -*
                                          Q (Vptr obj_ptr) (free' >*> free))
                                   end))))))
         |-- wp_operand (Enew new_fn new_args aty None oinit) Q.
@@ -207,7 +207,7 @@ Module Type Expr__newdelete.
                     Forall sz',
                       Reduce (alloc_size_t (sz' + sz) (fun psz FR =>
                       |> fspec tu.(globals) nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
-                        Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) 1 (Vptr storage_ptr) **
+                        Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) (CV.mut 1) (Vptr storage_ptr) **
                           if bool_decide (storage_ptr = nullptr) then
                             [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                           else
@@ -230,7 +230,7 @@ Module Type Expr__newdelete.
                                                            (* Track the type we are allocating
                                                               so it can be checked at [delete]
                                                             *)
-                                                           obj_ptr |-> new_tokenR 1 array_ty -*
+                                                           obj_ptr |-> new_tokenR (CV.mut 1) array_ty -*
                                                            Q (Vptr obj_ptr)
                                                              (free'' >*> free' >*> free))
                                    | Some init => (* Use [init] to initialize the memory *)
@@ -239,7 +239,7 @@ Module Type Expr__newdelete.
                                                       (* Track the type we are allocating
                                                          so it can be checked at [delete]
                                                        *)
-                                                      obj_ptr |-> new_tokenR 1 array_ty -*
+                                                      obj_ptr |-> new_tokenR (CV.mut 1) array_ty -*
                                                       Q (Vptr obj_ptr)
                                                         (free'' >*> free' >*> free))
                                    end))))))
@@ -248,7 +248,7 @@ Module Type Expr__newdelete.
 
       Section delete.
         Definition alloc_pointer (pv : ptr) (Q : ptr -> FreeTemp -> mpred) : mpred :=
-          Forall p : ptr, p |-> primR (Tptr Tvoid) 1 (Vptr pv) -* Q p (FreeTemps.delete (Tptr Tvoid) p).
+          Forall p : ptr, p |-> primR (Tptr Tvoid) (CV.mut 1) (Vptr pv) -* Q p (FreeTemps.delete (Tptr Tvoid) p).
 
         Lemma alloc_pointer_frame : forall p Q Q',
             Forall p fr, Q p fr -* Q' p fr |-- alloc_pointer p Q -* alloc_pointer p Q'.
@@ -368,7 +368,7 @@ Module Type Expr__newdelete.
              else
                (* v---- Calling destructor with object pointer *)
                resolve_dtor destroyed_type obj_ptr (fun this' mdc_ty =>
-                    Exists cv_mdc, this' |-> new_tokenR 1 cv_mdc **
+                    Exists cv_mdc, this' |-> new_tokenR (CV.mut 1) cv_mdc **
                                    [| cv_compat cv_mdc mdc_ty |] **
                     (* v---- because dispatch could be virtual, the translation unit
                              used to destroy the object may need to be different *)
@@ -406,7 +406,7 @@ Module Type Expr__newdelete.
                let array_ty := Tarray destroyed_type array_size in
                (* /---- Token for distinguishing between array and
                   v     non-array allocations *)
-               obj_ptr |-> new_tokenR 1 array_ty **
+               obj_ptr |-> new_tokenR (CV.mut 1) array_ty **
                (* /---- Calling destructor with object pointer
                   v     Note: virtual dispatch is not allowed for [delete[]] *)
                destroy_val tu array_ty obj_ptr (
