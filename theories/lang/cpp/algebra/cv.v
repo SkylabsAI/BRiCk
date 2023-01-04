@@ -131,6 +131,14 @@ Module CV.
   (* scaling *)
   Notation scale q cq := (mk cq.(is_const) (q * cq.(frac))).
 
+  Lemma scale_combine s1 s2 q :
+    scale s1 q ⋅ scale s2 q = scale (s1 + s2) q.
+  Proof.
+    by rewrite /op/CV.tR/cmra_op/CV.t_op_instance/=;
+       rewrite -Qp.mul_add_distr_r Bool.andb_diag. Qed.
+  Lemma scale_1 q : scale 1 q = q.
+  Proof. by rewrite Qp.mul_1_l. Qed.
+
   Notation mut := (mk false).
   Notation m := (mk false) (only parsing).
   Notation const := (mk true).
