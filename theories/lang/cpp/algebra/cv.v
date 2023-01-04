@@ -116,13 +116,13 @@ Module cQp.
     #[global] Instance t_id_free x : IdFree x.
     Proof.
       apply: discrete_id_free=>y. rewrite t_valid=>/= Hv.
-      rewrite (eta y) t_op=>/= /mk_inj_equiv [] _ Heq.
+      rewrite t_op=>/mk_inj_equiv [] _ Heq.
       exact: (id_free_r x.(frac)).
     Qed.
     #[global] Instance t_cancelable q : Cancelable (mk true q).
     Proof.
       apply: discrete_cancelable=>y z.
-      rewrite (eta y) (eta z) !t_op /=.
+      rewrite (eta y) !t_op /=.
       rewrite t_valid=>/= Hv. move=>/mk_inj_equiv [] -> Heq. f_equiv.
       exact: (cancelable q).
     Qed.
