@@ -156,9 +156,7 @@ Module cQp.
   Lemma mut_const `{!SplitFrac q q1 q2} : mut q = mut q1 ⋅ const q2.
   Proof. by rewrite (split_frac q). Qed.
 
-  #[deprecated(since="20221223", note="use [cmra.op] or [⋅]")]
   Notation add := (op (A:=t)) (only parsing).
-  #[deprecated(since="20221223", note="use [cQp.t_op]")]
   Notation add_eq := t_op (only parsing).
 
   #[local] Definition _refl (c : bool) (q : Qp) : mk c q = mk c q := eq_refl _.
