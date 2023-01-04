@@ -12,7 +12,7 @@ From bedrock.lang.bi Require Import split_frac.
 #[local] Set Printing Coercions.
 
 (* TODO: the name here probably does not make sense anymore *)
-Module CV.
+Module cQp.
 
   #[projections(primitive)]
   Record t : Set := mk { is_const : bool ; frac : Qp }.
@@ -134,7 +134,7 @@ Module CV.
   Lemma scale_combine s1 s2 q :
     scale s1 q ⋅ scale s2 q = scale (s1 + s2) q.
   Proof.
-    by rewrite /op/CV.tR/cmra_op/CV.t_op_instance/=;
+    by rewrite /op/cQp.tR/cmra_op/cQp.t_op_instance/=;
        rewrite -Qp.mul_add_distr_r Bool.andb_diag. Qed.
   Lemma scale_1 q : scale 1 q = q.
   Proof. by rewrite Qp.mul_1_l. Qed.
@@ -158,47 +158,47 @@ Module CV.
 
   #[deprecated(since="20221223", note="use [cmra.op] or [⋅]")]
   Notation add := (op (A:=t)) (only parsing).
-  #[deprecated(since="20221223", note="use [CV.t_op]")]
+  #[deprecated(since="20221223", note="use [cQp.t_op]")]
   Notation add_eq := t_op (only parsing).
 
   #[local] Definition _refl (c : bool) (q : Qp) : mk c q = mk c q := eq_refl _.
   #[deprecated(since="20221223")]
   Notation refl := _refl (only parsing).
 
-End CV.
+End cQp.
 
-Add Printing Constructor CV.t.
-Canonical Structure CV.tO.
-Canonical Structure CV.tR.
+Add Printing Constructor cQp.t.
+Canonical Structure cQp.tO.
+Canonical Structure cQp.tR.
 
 (* as with C++, we make mutable the default *)
-#[global] Coercion CV.frac : CV.t >-> Qp.
-#[global] Bind Scope Qp_scope with CV.t.	(** Complements the [_mut] coercion *)
+#[global] Coercion cQp.frac : cQp.t >-> Qp.
+#[global] Bind Scope Qp_scope with cQp.t.	(** Complements the [_mut] coercion *)
 
 (** ** Backwards compatibility *)
 (**
 Old code can benefit from a coercion.
 *)
-Module CV_compat.
+Module cQp_compat.
 
-  Module CV.
-    Export cv.CV.
+  Module cQp.
+    Export cv.cQp.
 
     Definition _mut : Qp -> t := mut.
-    #[global] Arguments CV._mut /.
-  End CV.
+    #[global] Arguments cQp._mut /.
+  End cQp.
 
-  Coercion CV._mut : Qp >-> CV.t.
+  Coercion cQp._mut : Qp >-> cQp.t.
 
-End CV_compat.
+End cQp_compat.
 
 Section TEST.
-  Variable TEST : CV.t -> CV.t -> CV.t -> CV.t -> Prop.
-  Import CV_compat.
+  Variable TEST : cQp.t -> cQp.t -> cQp.t -> cQp.t -> Prop.
+  Import cQp_compat.
 
   (* TODO: to make this work without the [%Qp], we need to register the
      notations for [Qp] as notations in [cvq_scope]. *)
-  Goal TEST 1 (CV.c 1) (1/2) (CV.c (1/4)).
+  Goal TEST 1 (cQp.c 1) (1/2) (cQp.c (1/4)).
   Abort.
 
 End TEST.

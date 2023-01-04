@@ -112,7 +112,7 @@ Module Type Stmt.
         if ts then
           UNSUPPORTED (thread_safe_initializer d)
         else
-          _global nm |-> tblockR ty (CV.mut 1) ** do_init
+          _global nm |-> tblockR ty (cQp.mut 1) ** do_init
       end.
 
     Lemma wp_decl_frame : forall ds ρ ρ_init m m',

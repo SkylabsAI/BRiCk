@@ -167,7 +167,7 @@ Section with_resolve.
      function calls.
    *)
   Definition xval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-    Exists p, res |-> primR (Tref ty) (CV.mut 1) (Vref p) ** Q p.
+    Exists p, res |-> primR (Tref ty) (cQp.mut 1) (Vref p) ** Q p.
 
   Lemma xval_receive_frame ty res Q Q' :
       Forall v, Q v -* Q' v |-- xval_receive ty res Q -* xval_receive ty res Q'.
@@ -176,7 +176,7 @@ Section with_resolve.
   Qed.
 
   Definition lval_receive (ty : type) (res : ptr) (Q : ptr -> mpred) : mpred :=
-    Exists p, res |-> primR (Tref ty) (CV.mut 1) (Vref p) ** Q p.
+    Exists p, res |-> primR (Tref ty) (cQp.mut 1) (Vref p) ** Q p.
 
   Lemma lval_receive_frame ty res Q Q' :
       Forall v, Q v -* Q' v |-- lval_receive ty res Q -* lval_receive ty res Q'.
@@ -185,7 +185,7 @@ Section with_resolve.
   Qed.
 
   Definition operand_receive (ty : type) (res : ptr) (Q : val -> mpred) : mpred :=
-    Exists v, res |-> primR ty (CV.mut 1) v ** Q v.
+    Exists v, res |-> primR ty (cQp.mut 1) v ** Q v.
 
   Lemma operand_receive_frame ty res Q Q' :
       Forall v, Q v -* Q' v |-- operand_receive ty res Q -* operand_receive ty res Q'.

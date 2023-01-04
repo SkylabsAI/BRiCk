@@ -23,7 +23,7 @@ Section destroy.
        to have C calling convention. *)
     mspec tu.(globals) ty (Tfunction Tvoid nil)
           dtor (this :: nil) (* NOTE this is the correct calling convention for member functions *)
-          (fun p => Exists v, p |-> primR Tvoid (CV.mut 1) v ** this |-> tblockR ty (CV.mut 1) ** Q).
+          (fun p => Exists v, p |-> primR Tvoid (cQp.mut 1) v ** this |-> tblockR ty (cQp.mut 1) ** Q).
               (* ^ this is inlining [operand_receive] which is not accessible due to cirularity *)
 
   Lemma wp_destructor_frame ty dtor this Q Q' :
@@ -56,8 +56,8 @@ Section destroy.
     let '(cv, rty) := decompose_type ty in
     let (q, handle_const) :=
       if q_const cv then
-        (CV.c 1, wp_make_mutable tu this rty)
-      else (CV.m 1, id)
+        (cQp.c 1, wp_make_mutable tu this rty)
+      else (cQp.m 1, id)
     in
     match rty with
     | Tnamed cls      =>

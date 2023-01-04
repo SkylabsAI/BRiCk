@@ -21,15 +21,15 @@ Section defs.
 
      This is used to implement [wp_downcast_to_const] and [wp_upcast_to_const].
    *)
-  Parameter wp_const : forall (tu : translation_unit) {σ : genv} (from to : CV.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
+  Parameter wp_const : forall (tu : translation_unit) {σ : genv} (from to : cQp.t) (addr : ptr) (ty : type) (Q : mpred), mpred.
   Axiom wp_const_frame : forall tu tu' f t a ty Q Q',
       type_table_le tu.(globals) tu'.(globals) ->
       Q -* Q' |-- wp_const tu f t a ty Q -* wp_const tu' f t a ty Q'.
 
   (* TODO this needs to be extended because if it is casting [volatile],
      then it needs to descend under [const] *)
-  Definition wp_const_body (wp_const : forall (from to : CV.t) (addr : ptr) (ty : type) (Q : epred), mpred)
-    (tu : translation_unit) (from to : CV.t)  (addr : ptr) (ty : type) (Q : epred) : mpred :=
+  Definition wp_const_body (wp_const : forall (from to : cQp.t) (addr : ptr) (ty : type) (Q : epred), mpred)
+    (tu : translation_unit) (from to : cQp.t)  (addr : ptr) (ty : type) (Q : epred) : mpred :=
     let '(cv, rty) := decompose_type ty in
     if q_const cv then Q
     else
@@ -236,5 +236,5 @@ Section defs.
 
 End defs.
 
-Notation wp_make_const tu := (wp_const tu (CV.m 1) (CV.c 1)).
-Notation wp_make_mutable tu := (wp_const tu (CV.c 1) (CV.m 1)).
+Notation wp_make_const tu := (wp_const tu (cQp.m 1) (cQp.c 1)).
+Notation wp_make_mutable tu := (wp_const tu (cQp.c 1) (cQp.m 1)).

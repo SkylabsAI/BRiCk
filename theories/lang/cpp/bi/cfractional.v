@@ -13,12 +13,12 @@ Import ChargeNotation.
 
 #[local] Set Printing Coercions.
 
-(** * Fractional predicates at type [CV.t] *)
+(** * Fractional predicates at type [cQp.t] *)
 (**
 Overview:
 
 - [CFractional], [AsCFractional] enable one to declare predicates that
-are fractional at type [CV.t]
+are fractional at type [cQp.t]
 
 - Tactic [solve_as_cfrac] for solving [AsCFractional]
 
@@ -30,7 +30,7 @@ are fractional at type [CV.t]
 *)
 
 (** Proof obligation for const/mutable fractional things. *)
-Class CFractional {PROP : bi} (P : CV.t -> PROP) : Prop :=
+Class CFractional {PROP : bi} (P : cQp.t -> PROP) : Prop :=
   cfractional q1 q2 : P (q1 ⋅ q2) -|- P q1 ** P q2.
 #[global] Hint Mode CFractional + ! : typeclass_instances.
 #[global] Arguments CFractional {_} _%I : simpl never, assert.
@@ -47,7 +47,7 @@ Notation CFractional5 P := (∀ a b c d e, CFractional (fun q => P q a b c d e))
 
 (** [CFractional] wrapper suited to avoiding HO unification. *)
 #[projections(primitive)]
-Class AsCFractional {PROP : bi} (P : PROP) (Q : CV.t -> PROP) (cv : CV.t) : Prop := {
+Class AsCFractional {PROP : bi} (P : PROP) (Q : cQp.t -> PROP) (cv : cQp.t) : Prop := {
   as_cfractional : P -|- Q cv;
   as_cfractional_cfractional :> CFractional Q;
 }.
@@ -69,17 +69,17 @@ Notation AsCFractional5 P := (∀ q a b c d e, AsCFractional (P q a b c d e) (fu
 [AgreeCF1 P] states that [P q a] only holds for one possible [a],
 regardless of const/mutable fraction [q].
 *)
-Notation AgreeCF1 P := (∀ (q1 q2 : CV.t) a1 a2, Observe2 [| a1 = a2 |] (P q1 a1) (P q2 a2)) (only parsing).
+Notation AgreeCF1 P := (∀ (q1 q2 : cQp.t) a1 a2, Observe2 [| a1 = a2 |] (P q1 a1) (P q2 a2)) (only parsing).
 
 (**
 [FracEq q1 q2] normalizes [q1] to [q2].
-This helps TC search reduce TC-opaque [CV.frac] in a controlled way.
+This helps TC search reduce TC-opaque [cQp.frac] in a controlled way.
 Used to state [CFracValidN].
 
-TODO: Reformulate as [CVToFrac (cv : CV.t) (q : Qp)] to disentangle
-reduction from the initial projection [CV.frac cv], and drop those
+TODO: Reformulate as [cQpToFrac (cv : cQp.t) (q : Qp)] to disentangle
+reduction from the initial projection [cQp.frac cv], and drop those
 projections from the following [CFracValidN] notations. We'll want a
-second reduction rule covering [CV.scale] once that becomes a
+second reduction rule covering [cQp.scale] once that becomes a
 constant.
 *)
 #[projections(primitive=yes)]
@@ -93,7 +93,7 @@ Proof. split. by inversion_clear 1. by intros ->. Qed.
 
 #[global] Instance frac_eq_beta_reduce q qout c :
   FracEq q qout ->
-  FracEq (CV.frac (CV.mk c q)) qout | 20.
+  FracEq (cQp.frac (cQp.mk c q)) qout | 20.
 Proof. by intros ->%frac_eq. Qed.
 
 (* Higher cost, to favor [frac_eq_beta_reduce]. *)
@@ -101,28 +101,28 @@ Proof. by intros ->%frac_eq. Qed.
 Proof. done. Qed.
 
 (**
-[CFracValidN P] observes [CV.frac q ≤ 1] from [P] applied to
+[CFracValidN P] observes [cQp.frac q ≤ 1] from [P] applied to
 const/mutable fraction [q] and then [N] arguments.
 *)
-Notation CFracValid0 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid0 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   Observe [| p ≤ 1 |]%Qp (P q)) (only parsing).
-Notation CFracValid1 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid1 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   ∀ a, Observe [| p ≤ 1 |]%Qp (P q a)) (only parsing).
-Notation CFracValid2 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid2 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   ∀ a b, Observe [| p ≤ 1 |]%Qp (P q a b)) (only parsing).
-Notation CFracValid3 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid3 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   ∀ a b c, Observe [| p ≤ 1 |]%Qp (P q a b c)) (only parsing).
-Notation CFracValid4 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid4 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   ∀ a b c d, Observe [| p ≤ 1 |]%Qp (P q a b c d)) (only parsing).
-Notation CFracValid5 P := (∀ (q : CV.t) (p : Qp), FracEq (CV.frac q) p ->
+Notation CFracValid5 P := (∀ (q : cQp.t) (p : Qp), FracEq (cQp.frac q) p ->
   ∀ a b c d e, Observe [| p ≤ 1 |]%Qp (P q a b c d e)) (only parsing).
 
 (**
 [CFrac2ValidN P] is a useful corollary of [CFracValidN], observing
-[CV.frac q1 + CV.frac q2 ≤ 1] given [P q1 a1 .. aN ** P q2 b1 .. bN].
+[cQp.frac q1 + cQp.frac q2 ≤ 1] given [P q1 a1 .. aN ** P q2 b1 .. bN].
 *)
-Notation CFrac2Valid0 P := (∀ q1 q2, Observe2 [| CV.frac q1 + CV.frac q2 ≤ 1 |]%Qp (P q1) (P q2)) (only parsing).
-Notation CFrac2Valid1 P := (∀ q1 q2 a1 a2, Observe2 [| CV.frac q1 + CV.frac q2 ≤ 1 |]%Qp (P q1 a1) (P q2 a2)) (only parsing).
+Notation CFrac2Valid0 P := (∀ q1 q2, Observe2 [| cQp.frac q1 + cQp.frac q2 ≤ 1 |]%Qp (P q1) (P q2)) (only parsing).
+Notation CFrac2Valid1 P := (∀ q1 q2 a1 a2, Observe2 [| cQp.frac q1 + cQp.frac q2 ≤ 1 |]%Qp (P q1 a1) (P q2 a2)) (only parsing).
 
 Section cfractional.
   Context {PROP : bi}.
@@ -147,7 +147,7 @@ Section cfractional.
     by rewrite {1}(bi.persistent_sep_dup P).
   Qed.
 
-  #[global] Instance cfractional_sep (F G : CV.t -> PROP) :
+  #[global] Instance cfractional_sep (F G : cQp.t -> PROP) :
     CFractional F -> CFractional G ->
     CFractional (fun cv => F cv ** G cv).
   Proof.
@@ -155,7 +155,7 @@ Section cfractional.
     split'; iIntros "([$ $] & $ & $)".
   Qed.
 
-  #[global] Instance cfractional_exist {A} (P : A -> CV.t -> PROP) :
+  #[global] Instance cfractional_exist {A} (P : A -> cQp.t -> PROP) :
     (∀ oa, CFractional (P oa)) ->
     (∀ a1 a2 q1 q2, Observe2 [| a1 = a2 |] (P a1 q1) (P a2 q2)) ->
     CFractional (fun q => Exists a : A, P a q).
@@ -202,106 +202,106 @@ Section cfractional.
     CFractional (PROP:=PROP) (funI q => [** mset] x ∈ X, F x q).
   Proof. intros ? q q'. rewrite -big_sepMS_sep. by setoid_rewrite cfractional. Qed.
 
-  (** *** Lifting [Fractional] things via [CV.frac]. *)
+  (** *** Lifting [Fractional] things via [cQp.frac]. *)
 
   #[global] Instance fractional_cfractional_0 (P : Qp -> PROP) :
-    Fractional P -> CFractional (fun q => P (CV.frac q)).
-  Proof. intros HP ??. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional P -> CFractional (fun q => P (cQp.frac q)).
+  Proof. intros HP ??. rewrite cQp.t_op /=. apply HP. Qed.
   #[global] Instance fractional_cfractional_1 {A} (P : Qp -> A -> PROP) :
-    Fractional1 P -> CFractional1 (fun q a => P (CV.frac q) a).
-  Proof. intros HP ???. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional1 P -> CFractional1 (fun q a => P (cQp.frac q) a).
+  Proof. intros HP ???. rewrite cQp.t_op /=. apply HP. Qed.
   #[global] Instance fractional_cfractional_2 {A B} (P : Qp -> A -> B -> PROP) :
-    Fractional2 P -> CFractional2 (fun q a b => P (CV.frac q) a b).
-  Proof. intros HP ????. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional2 P -> CFractional2 (fun q a b => P (cQp.frac q) a b).
+  Proof. intros HP ????. rewrite cQp.t_op /=. apply HP. Qed.
   #[global] Instance fractional_cfractional_3 {A B C} (P : Qp -> A -> B -> C -> PROP) :
-    Fractional3 P -> CFractional3 (fun q a b c => P (CV.frac q) a b c).
-  Proof. intros HP ?????. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional3 P -> CFractional3 (fun q a b c => P (cQp.frac q) a b c).
+  Proof. intros HP ?????. rewrite cQp.t_op /=. apply HP. Qed.
   #[global] Instance fractional_cfractional_4 {A B C D} (P : Qp -> A -> B -> C -> D -> PROP) :
-    Fractional4 P -> CFractional4 (fun q a b c d => P (CV.frac q) a b c d).
-  Proof. intros HP ??????. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional4 P -> CFractional4 (fun q a b c d => P (cQp.frac q) a b c d).
+  Proof. intros HP ??????. rewrite cQp.t_op /=. apply HP. Qed.
   #[global] Instance fractional_cfractional_5 {A B C D E} (P : Qp -> A -> B -> C -> D -> E ->PROP) :
-    Fractional5 P -> CFractional5 (fun q a b c d e => P (CV.frac q) a b c d e).
-  Proof. intros HP ???????. rewrite CV.t_op /=. apply HP. Qed.
+    Fractional5 P -> CFractional5 (fun q a b c d e => P (cQp.frac q) a b c d e).
+  Proof. intros HP ???????. rewrite cQp.t_op /=. apply HP. Qed.
 
-  (** *** Lifting [CFractional] things when using [CV.mk]. *)
-  #[global] Instance cfractional_cfractional_mk_0 (P : CV.t -> PROP) c :
-    CFractional P -> CFractional (fun q => P (CV.mk c (CV.frac q))).
-  Proof. intros HP ??. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  (** *** Lifting [CFractional] things when using [cQp.mk]. *)
+  #[global] Instance cfractional_cfractional_mk_0 (P : cQp.t -> PROP) c :
+    CFractional P -> CFractional (fun q => P (cQp.mk c (cQp.frac q))).
+  Proof. intros HP ??. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_1 {A} (P : CV.t -> A -> PROP) c :
-    CFractional1 P -> ∀ a, CFractional (fun q => P (CV.mk c (CV.frac q)) a).
-  Proof. intros HP ???. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_1 {A} (P : cQp.t -> A -> PROP) c :
+    CFractional1 P -> ∀ a, CFractional (fun q => P (cQp.mk c (cQp.frac q)) a).
+  Proof. intros HP ???. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_2 {A B} (P : CV.t -> A -> B -> PROP) cm :
-    CFractional2 P -> ∀ a b, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b).
-  Proof. intros HP ????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_2 {A B} (P : cQp.t -> A -> B -> PROP) cm :
+    CFractional2 P -> ∀ a b, CFractional (fun q => P (cQp.mk cm (cQp.frac q)) a b).
+  Proof. intros HP ????. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) cm :
-    CFractional3 P -> ∀ a b c, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c).
-  Proof. intros HP ?????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_3 {A B C} (P : cQp.t -> A -> B -> C -> PROP) cm :
+    CFractional3 P -> ∀ a b c, CFractional (fun q => P (cQp.mk cm (cQp.frac q)) a b c).
+  Proof. intros HP ?????. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) cm :
-    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c d).
-  Proof. intros HP ??????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_4 {A B C D} (P : cQp.t -> A -> B -> C -> D -> PROP) cm :
+    CFractional4 P -> ∀ a b c d, CFractional (fun q => P (cQp.mk cm (cQp.frac q)) a b c d).
+  Proof. intros HP ??????. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 
-  #[global] Instance cfractional_cfractional_mk_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) cm :
-    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (CV.mk cm (CV.frac q)) a b c d e).
-  Proof. intros HP ???????. rewrite CV.t_op /= CV.mk_add. apply HP. Qed.
+  #[global] Instance cfractional_cfractional_mk_5 {A B C D E} (P : cQp.t -> A -> B -> C -> D -> E -> PROP) cm :
+    CFractional5 P -> ∀ a b c d e, CFractional (fun q => P (cQp.mk cm (cQp.frac q)) a b c d e).
+  Proof. intros HP ???????. rewrite cQp.t_op /= cQp.mk_add. apply HP. Qed.
 End cfractional.
 
 (** ** Backwards compatibility *)
 (**
 The following instances are only needed for backward compatibility,
 when using [CFractional] [Rep]s in [Fractional] ones, so we only
-support [CV._mut] not [CV.const] (or [CV.mut]).
+support [cQp._mut] not [cQp.const] (or [cQp.mut]).
 *)
-Module CV_compat.
-  Export cv.CV_compat.
+Module cQp_compat.
+  Export cv.cQp_compat.
 
   Section cfractional.
     Context {PROP : bi}.
     Implicit Types (P Q : PROP).
 
-    (** *** Lifting [CFractional] things into [Fractional] when using [CV._mut] *)
+    (** *** Lifting [CFractional] things into [Fractional] when using [cQp._mut] *)
 
-    #[export] Instance cfractional_fractional_mut_0 (P : CV.t -> PROP) :
+    #[export] Instance cfractional_fractional_mut_0 (P : cQp.t -> PROP) :
       CFractional P -> Fractional P.
-    Proof. intros HP ??. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ??. rewrite /= cQp.mk_add. apply HP. Qed.
 
-    #[export] Instance cfractional_fractional_mut_1 {A} (P : CV.t -> A -> PROP) :
+    #[export] Instance cfractional_fractional_mut_1 {A} (P : cQp.t -> A -> PROP) :
       CFractional1 P -> Fractional1 P.
-    Proof. intros HP ???. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ???. rewrite /= cQp.mk_add. apply HP. Qed.
 
-    #[export] Instance cfractional_fractional_mut_2 {A B} (P : CV.t -> A -> B -> PROP) :
+    #[export] Instance cfractional_fractional_mut_2 {A B} (P : cQp.t -> A -> B -> PROP) :
       CFractional2 P -> Fractional2 P.
-    Proof. intros HP ????. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ????. rewrite /= cQp.mk_add. apply HP. Qed.
 
-    #[export] Instance cfractional_fractional_mut_3 {A B C} (P : CV.t -> A -> B -> C -> PROP) :
+    #[export] Instance cfractional_fractional_mut_3 {A B C} (P : cQp.t -> A -> B -> C -> PROP) :
       CFractional3 P -> Fractional3 P.
-    Proof. intros HP ?????. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ?????. rewrite /= cQp.mk_add. apply HP. Qed.
 
-    #[export] Instance cfractional_fractional_mut_4 {A B C D} (P : CV.t -> A -> B -> C -> D -> PROP) :
+    #[export] Instance cfractional_fractional_mut_4 {A B C D} (P : cQp.t -> A -> B -> C -> D -> PROP) :
       CFractional4 P -> Fractional4 P.
-    Proof. intros HP ??????. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ??????. rewrite /= cQp.mk_add. apply HP. Qed.
 
-    #[export] Instance cfractional_fractional_mut_5 {A B C D E} (P : CV.t -> A -> B -> C -> D -> E -> PROP) :
+    #[export] Instance cfractional_fractional_mut_5 {A B C D E} (P : cQp.t -> A -> B -> C -> D -> E -> PROP) :
       CFractional5 P -> Fractional5 P.
-    Proof. intros HP ???????. rewrite /= CV.mk_add. apply HP. Qed.
+    Proof. intros HP ???????. rewrite /= cQp.mk_add. apply HP. Qed.
 
   End cfractional.
 
-End CV_compat.
+End cQp_compat.
 
-(* TEMPORARY: Re-export [CV_compat] for now. *)
-Export CV_compat.
+(* TEMPORARY: Re-export [cQp_compat] for now. *)
+Export cQp_compat.
 
 (** ** IPM instances *)
 Section proofmode.
   Context {PROP : bi}.
-  Implicit Types (P Q : PROP) (F G : CV.t -> PROP).
+  Implicit Types (P Q : PROP) (F G : cQp.t -> PROP).
 
   #[local] Lemma as_cfractional_split P P1 P2 F cv cv1 cv2 :
-    AsCFractional P F cv -> SplitCV cv cv1 cv2 ->
+    AsCFractional P F cv -> SplitcQp cv cv1 cv2 ->
     AsCFractional P1 F cv1 -> AsCFractional P2 F cv2 ->
     P -|- P1 ** P2.
   Proof.
@@ -310,7 +310,7 @@ Section proofmode.
 
   #[local] Lemma as_cfractional_combine P1 P2 P F cv1 cv2 cv :
     AsCFractional P1 F cv1 -> AsCFractional P2 F cv2 ->
-    CombineCV cv1 cv2 cv -> AsCFractional P F cv ->
+    CombinecQp cv1 cv2 cv -> AsCFractional P F cv ->
     P -|- P1 ** P2.
   Proof.
     intros [->?] [->_] ? [->_]. by rewrite -cfractional combine_cv.
@@ -322,7 +322,7 @@ Section proofmode.
   *)
 
   #[global] Instance into_sep_cfractional P P1 P2 F cv cv1 cv2 :
-    AsCFractional P F cv -> SplitCV cv cv1 cv2 ->
+    AsCFractional P F cv -> SplitcQp cv cv1 cv2 ->
     AsCFractional P1 F cv1 -> AsCFractional P2 F cv2 ->
     IntoSep P P1 P2.
   Proof.
@@ -334,7 +334,7 @@ Section proofmode.
   [P2] outputs.
   *)
   #[global] Instance from_sep_cfractional_split P P1 P2 F cv cv1 cv2 :
-    AsCFractional P F cv -> SplitCV cv cv1 cv2 ->
+    AsCFractional P F cv -> SplitcQp cv cv1 cv2 ->
     AsCFractional P1 F cv1 -> AsCFractional P2 F cv2 ->
     FromSep P P1 P2.
   Proof.
@@ -351,7 +351,7 @@ Section proofmode.
   *)
   #[global] Instance from_sep_cfractional_combine P1 P2 P F cv1 cv2 cv :
     AsCFractional P1 F cv1 -> AsCFractional P2 F cv2 ->
-    CombineCV cv1 cv2 cv -> AsCFractional P F cv ->
+    CombinecQp cv1 cv2 cv -> AsCFractional P F cv ->
     FromSep P P1 P2 | 100.
   Proof.
     intros. rewrite/FromSep. by rewrite -as_cfractional_combine.

@@ -98,7 +98,7 @@ Module Type Init.
       | Tnullptr
       | Tenum _ =>
           let rty := erase_qualifiers ty in
-          p |-> uninitR rty (CV.m 1) -* Q FreeTemps.id
+          p |-> uninitR rty (cQp.m 1) -* Q FreeTemps.id
       | Tarray ety sz =>
           default_initialize_array default_initialize ety sz p (fun _ => Q FreeTemps.id)
 
@@ -146,10 +146,10 @@ Module Type Init.
     Definition wp_initialize (qty : type) (addr : ptr) (init : Expr) (k : FreeTemps -> mpred) : mpred :=
       let '(cv, ty) := decompose_type qty in
       (**
-      TODO (Gregory): In a few cases below, we're using [CV.m 1]
+      TODO (Gregory): In a few cases below, we're using [cQp.m 1]
       rather than [qf]. Please add a comment explaining.
       *)
-      let qf := if q_const cv then CV.const 1 else CV.mut 1 in
+      let qf := if q_const cv then cQp.const 1 else cQp.mut 1 in
       match ty with
       | Tvoid =>
         (* [wp_initialize] is used to `return` from a function.
@@ -159,7 +159,7 @@ Module Type Init.
            void g() { return f(); }
            ```
          *)
-        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid (CV.m 1) Vvoid -* k frees))
+        wp_operand init (fun v frees => [| v = Vvoid |] ** (addr |-> primR Tvoid (cQp.m 1) Vvoid -* k frees))
       | Tpointer _ as ty
       | Tmember_pointer _ _ as ty
       | Tbool as ty

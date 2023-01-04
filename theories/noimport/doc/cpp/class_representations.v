@@ -4,7 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.lang.cpp.
-Import CV_compat.
+Import cQp_compat.
 
 Section with_Sigma.
 

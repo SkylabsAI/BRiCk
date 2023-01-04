@@ -138,7 +138,7 @@ Module Type CPP_LOGIC
     We use this predicate both for pointers to actual memory and for pointers to
     C++ locations that are not stored in memory (as an optimization).
     *)
-    Parameter tptsto : forall {σ:genv} (t : type) (q : CV.t) (a : ptr) (v : val), mpred.
+    Parameter tptsto : forall {σ:genv} (t : type) (q : cQp.t) (a : ptr) (v : val), mpred.
 
     Axiom tptsto_nonnull : forall {σ} ty q a,
       @tptsto σ ty q nullptr a |-- False.
@@ -188,7 +188,7 @@ Module Type CPP_LOGIC
     simplify stating rules for pointer comparison. *)
     Axiom nullptr_live : |-- live_ptr nullptr.
 
-    Axiom tptsto_live : forall {σ} ty (q : CV.t) p v,
+    Axiom tptsto_live : forall {σ} ty (q : cQp.t) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
 
     (** [identity σ this mdc q p] state that [p] is a pointer to a (live)
@@ -239,7 +239,7 @@ Module Type CPP_LOGIC
      *)
     Parameter identity : forall {σ : genv}
         (this : globname) (most_derived : list globname),
-        CV.t -> ptr -> mpred.
+        cQp.t -> ptr -> mpred.
     #[global] Declare Instance identity_cfractional σ this mdc : CFractional1 (identity this mdc).
     #[global] Declare Instance identity_cfrac_valid {σ} cls path : CFracValid1 (identity cls path).
     #[global] Declare Instance identity_timeless : Timeless5 (@identity).
@@ -251,7 +251,7 @@ Module Type CPP_LOGIC
         placement [new] over an existing object.
      *)
     Axiom identity_forget : forall σ mdc this p,
-        @identity σ this mdc (CV.m 1) p |-- |={↑pred_ns}=> @identity σ this nil (CV.m 1) p.
+        @identity σ this mdc (cQp.m 1) p |-- |={↑pred_ns}=> @identity σ this nil (cQp.m 1) p.
 
     (** the pointer points to the code
 
@@ -1083,7 +1083,7 @@ Section with_cpp.
   Qed.
 
   Lemma tptsto_disjoint : forall ty q_cv p v1 v2,
-    tptsto ty (CV.mk q_cv 1) p v1 ** tptsto ty (CV.mk q_cv 1) p v2 |-- False.
+    tptsto ty (cQp.mk q_cv 1) p v1 ** tptsto ty (cQp.mk q_cv 1) p v2 |-- False.
   Proof.
     intros *; iIntros "[T1 T2]".
     iDestruct (observe_2_elim_pure with "T1 T2") as %Hvs.

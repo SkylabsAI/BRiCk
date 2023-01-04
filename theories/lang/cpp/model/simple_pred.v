@@ -26,11 +26,11 @@ From bedrock.lang.cpp.logic Require Import mpred pred.
 
 #[local] Set Printing Coercions.
 
-Implicit Types (vt : validity_type) (σ resolve : genv) (q : CV.t).
+Implicit Types (vt : validity_type) (σ resolve : genv) (q : cQp.t).
 
 (* todo: does this not exist as a library somewhere? *)
 Definition cfractionalR (V : Type) : cmra :=
-  prodR CV.tR (agreeR (leibnizO V)).
+  prodR cQp.tR (agreeR (leibnizO V)).
 Definition cfrac {V : Type} q (v : V) : cfractionalR V :=
   (q, to_agree v).
 
@@ -592,7 +592,7 @@ Module SimpleCPP.
     Qed.
 
     Lemma byte_update (a : addr) (rv rv' : runtime_val) :
-      byte_ a rv (CV.mut 1)|-- |==> byte_ a rv' (CV.mut 1).
+      byte_ a rv (cQp.mut 1)|-- |==> byte_ a rv' (cQp.mut 1).
     Proof. by apply own_update, singleton_update, cmra_update_exclusive. Qed.
 
     Definition bytes (a : addr) (vs : list runtime_val) q : mpred :=
@@ -636,7 +636,7 @@ Module SimpleCPP.
 
     Lemma bytes_update {a : addr} {vs} vs' :
       length vs = length vs' →
-      bytes a vs (CV.mut 1) |-- |==> bytes a vs' (CV.mut 1).
+      bytes a vs (cQp.mut 1) |-- |==> bytes a vs' (cQp.mut 1).
     Proof.
       rewrite /bytes -big_sepL_bupd.
       revert a vs'.
@@ -905,7 +905,7 @@ Module SimpleCPP.
     (* todo(gmm): this isn't accurate, but it is sufficient to show that the axioms are
     instantiatable. *)
     Definition identity {σ : genv} (this : globname) (most_derived : list globname)
-               (q : CV.t) (p : ptr) : mpred := strict_valid_ptr p.
+               (q : cQp.t) (p : ptr) : mpred := strict_valid_ptr p.
 
     Instance identity_cfractional {σ} this mdc : CFractional1 (identity this mdc).
     Proof. move =>p q1 q2. rewrite /identity. iSplit; [ iIntros "#P" | iIntros "[#P ?]" ]; iFrame "#". Qed.
@@ -919,10 +919,10 @@ Module SimpleCPP.
         placement [new] over an existing object.
      *)
     Theorem identity_forget : forall σ mdc this p,
-        @identity σ this mdc (CV.mut 1) p |-- |={↑pred_ns}=> @identity σ this nil (CV.mut 1) p.
+        @identity σ this mdc (cQp.mut 1) p |-- |={↑pred_ns}=> @identity σ this nil (cQp.mut 1) p.
     Proof. rewrite /identity. eauto. Qed.
 
-    Definition tptsto' {σ : genv} (t : type) (q : CV.t) (p : ptr) (v : val) : mpred :=
+    Definition tptsto' {σ : genv} (t : type) (q : cQp.t) (p : ptr) (v : val) : mpred :=
       [| p <> nullptr |] **
       Exists (oa : option addr),
         type_ptr t p ** (* use the appropriate ghost state instead *)
@@ -936,7 +936,7 @@ Module SimpleCPP.
         Observe (type_ptr ty p) (tptsto' ty q p v) := _.
 
     (* TODO (JH): We shouldn't be axiomatizing this in our model in the long-run *)
-    Axiom tptsto'_live : forall {σ} ty (q : CV.t) p v,
+    Axiom tptsto'_live : forall {σ} ty (q : cQp.t) p v,
       @tptsto' σ ty q p v |-- live_ptr p ** True.
 
     #[local] Instance tptsto'_nonnull_obs {σ} ty q a :
@@ -972,7 +972,7 @@ Module SimpleCPP.
     #[local] Instance tptsto'_timeless {σ} ty q p v :
       Timeless (@tptsto' σ ty q p v) := _.
 
-    #[local] Instance tptsto'_nonvoid {σ} ty (q : CV.t) p v :
+    #[local] Instance tptsto'_nonvoid {σ} ty (q : cQp.t) p v :
       Observe [| ty <> Tvoid |] (@tptsto' σ ty q p v) := _.
 
     #[local] Instance tptsto'_cfrac_valid {σ} ty :
@@ -990,13 +990,13 @@ Module SimpleCPP.
       by iPureIntro.
     Qed.
 
-    Definition tptsto {σ : genv} (ty : type) (q : CV.t) (p : ptr) (v : val) : mpred :=
+    Definition tptsto {σ : genv} (ty : type) (q : cQp.t) (p : ptr) (v : val) : mpred :=
       Exists v', [| val_related σ ty v v' |] ** @tptsto' σ ty q p v'.
 
     #[global] Instance tptsto_type_ptr : forall (σ : genv) ty q p v,
       Observe (type_ptr ty p) (tptsto ty q p v) := _.
 
-    Lemma tptsto_live : forall {σ} ty (q : CV.t) p v,
+    Lemma tptsto_live : forall {σ} ty (q : cQp.t) p v,
       @tptsto σ ty q p v |-- live_ptr p ** True.
     Proof.
       intros *; rewrite /tptsto.
@@ -1034,7 +1034,7 @@ Module SimpleCPP.
     #[global] Instance tptsto_timeless {σ} ty q p v :
       Timeless (@tptsto σ ty q p v) := _.
 
-    #[global] Instance tptsto_nonvoid {σ} ty (q : CV.t) p v :
+    #[global] Instance tptsto_nonvoid {σ} ty (q : cQp.t) p v :
       Observe [| ty <> Tvoid |] (@tptsto σ ty q p v) := _.
 
     #[global] Instance tptsto_cfrac_valid {σ} ty :
@@ -1062,10 +1062,10 @@ Module SimpleCPP.
 
     (* This is now internal to the C++ abstract machine. *)
     Local Lemma pinned_ptr_borrow {σ} ty p v va :
-      @tptsto σ ty (CV.mut 1) p v ** pinned_ptr va p |--
-        |={↑pred_ns}=> Exists v' vs, @encodes σ ty v' vs ** vbytes va vs (CV.mut 1) **
-                (Forall v'' vs', @encodes σ ty v'' vs' -* vbytes va vs' (CV.mut 1) -*
-                                |={↑pred_ns}=> @tptsto σ ty (CV.mut 1) p v'').
+      @tptsto σ ty (cQp.mut 1) p v ** pinned_ptr va p |--
+        |={↑pred_ns}=> Exists v' vs, @encodes σ ty v' vs ** vbytes va vs (cQp.mut 1) **
+                (Forall v'' vs', @encodes σ ty v'' vs' -* vbytes va vs' (cQp.mut 1) -*
+                                |={↑pred_ns}=> @tptsto σ ty (cQp.mut 1) p v'').
     Proof.
       iIntros "(TP & PI)".
       iDestruct "PI" as "[_ [[-> %]|[[%%] MJ]]]"; first by rewrite tptsto_nonnull.
@@ -1084,7 +1084,7 @@ Module SimpleCPP.
       iExists vs'; iFrame "#∗".
       (* TODO AUTO:
       [iFrame] does not frame assumption [vbytes va vs' 1] against goal
-      [vbytes va vs' (CV.frac (CV.mut 1))]. *)
+      [vbytes va vs' (cQp.frac (cQp.mut 1))]. *)
       solve [simpl; iFrame].
     Qed.
 

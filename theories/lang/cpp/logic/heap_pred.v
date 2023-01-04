@@ -24,7 +24,7 @@ Section defs.
 
   (** object identity *)
   Definition identityR {σ : genv} (cls : globname) (mdc : list globname)
-             (q : CV.t) : Rep :=
+             (q : cQp.t) : Rep :=
     as_Rep (identity cls mdc q).
 
   Definition validR_def : Rep := as_Rep valid_ptr.
@@ -58,7 +58,7 @@ Section with_cpp.
    *
    * NOTE [ty] *must* be a primitive type.
    *)
-  Definition primR_def {resolve:genv} (ty : type) (q : CV.t) (v : val) : Rep :=
+  Definition primR_def {resolve:genv} (ty : type) (q : cQp.t) (v : val) : Rep :=
     as_Rep (fun p : ptr => tptsto ty q p v **
              [| not(exists raw, v = Vraw raw) |] **
              [| has_type v (drop_qualifiers ty) |]).
@@ -100,21 +100,21 @@ Section with_cpp.
     Context {σ : genv} (p : ptr).
 
     Goal
-        p |-> primR Tint (CV.m (1/2)) 0
-        |-- p |-> primR Tint (CV.m (1/2)) 0 -* p |-> primR Tint (CV.m 1) 0.
+        p |-> primR Tint (cQp.m (1/2)) 0
+        |-- p |-> primR Tint (cQp.m (1/2)) 0 -* p |-> primR Tint (cQp.m 1) 0.
     Proof.
       iIntros "H1 H2".
       iCombine "H1 H2" as "$".
     Abort.
 
     Goal
-        p |-> primR Tint (CV.c 1) 0 |-- p |-> primR Tint (CV.c (1/2)) 0 ** p |-> primR Tint (CV.c (1/2)) 0.
+        p |-> primR Tint (cQp.c 1) 0 |-- p |-> primR Tint (cQp.c (1/2)) 0 ** p |-> primR Tint (cQp.c (1/2)) 0.
     Proof.
       iIntros "H".
       iDestruct "H" as "[H1 H2]".
     Abort.
 
-    Goal p |-> primR Tint (CV.c 1) 1 |-- True.
+    Goal p |-> primR Tint (cQp.c 1) 1 |-- True.
     Proof.
       iIntros "H".
       iDestruct (observe [| 1 ≤ 1 |]%Qp with "H") as %? (* ; [] << FAILS *).
@@ -161,7 +161,7 @@ Section with_cpp.
      TODO is it possible to generalize this to support aggregate types? structures seem easy enough
           but unions seem more difficult, possibly we can achieve that through the use of disjunction?
    *)
-  Definition uninitR_def {resolve:genv} (ty : type) (q : CV.t) : Rep :=
+  Definition uninitR_def {resolve:genv} (ty : type) (q : cQp.t) : Rep :=
     as_Rep (fun addr => @tptsto _ _ resolve ty q addr Vundef).
   Definition uninitR_aux : seal (@uninitR_def). Proof. by eexists. Qed.
   Definition uninitR := uninitR_aux.(unseal).
@@ -224,7 +224,7 @@ Section with_cpp.
 
   (** [anyR] The argument pointers points to a value of C++ type [ty] that might be
       uninitialized. *)
-  Parameter anyR : ∀ {resolve} (ty : type) (q : CV.t), Rep.
+  Parameter anyR : ∀ {resolve} (ty : type) (q : cQp.t), Rep.
   #[global] Arguments anyR {resolve} ty q : rename.
   #[global] Declare Instance anyR_timeless : ∀ resolve ty q, Timeless (anyR ty q).
   #[global] Declare Instance anyR_cfractional : ∀ resolve ty, CFractional (anyR ty).
@@ -389,7 +389,7 @@ Section with_cpp.
 
   (** [blockR sz q] represents [q] ownership of a contiguous chunk of
       [sz] bytes without any C++ structure on top of it. *)
-  Definition blockR_def {σ} sz (q : CV.t) : Rep :=
+  Definition blockR_def {σ} sz (q : cQp.t) : Rep :=
     _offsetR (o_sub σ Tu8 (Z.of_N sz)) validR **
     (* ^ Encodes valid_ptr (this .[ Tu8 ! sz]). This is
     necessary to get [l |-> blockR n -|- l |-> blockR n ** l .[ Tu8 ! m] |-> blockR 0]. *)
@@ -423,7 +423,7 @@ Section with_cpp.
    * it is a convenient short-hand since it happens frequently, but there is nothing
    * special about it.
    *)
-  Definition tblockR {σ} (ty : type) (q : CV.t) : Rep :=
+  Definition tblockR {σ} (ty : type) (q : cQp.t) : Rep :=
     match size_of σ ty , align_of ty with
     | Some sz , Some al => blockR (σ:=σ) sz q ** alignedR al
     | _ , _  => False

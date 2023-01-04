@@ -18,21 +18,21 @@ Section with_Σ.
   Context `{Σ : cpp_logic} {σ : genv}.
 
   (** [rawR q rs]: the argument pointer points to [raw_byte] [r] within the C++ abstract machine. *)
-  Definition rawR_def (q : CV.t) (r : raw_byte) : Rep :=
+  Definition rawR_def (q : cQp.t) (r : raw_byte) : Rep :=
     as_Rep (fun p => tptsto Tuchar q p (Vraw r)).
   Definition rawR_aux : seal (@rawR_def). Proof. by eexists. Qed.
   Definition rawR := rawR_aux.(unseal).
   Definition rawR_eq : @rawR = _ := rawR_aux.(seal_eq).
   #[global] Arguments rawR q raw : rename.
 
-  Lemma _at_rawR_ptr_congP_transport (p1 p2 : ptr) (q : CV.t) (r : raw_byte) :
+  Lemma _at_rawR_ptr_congP_transport (p1 p2 : ptr) (q : cQp.t) (r : raw_byte) :
     ptr_congP σ p1 p2 |-- p1 |-> rawR q r -* p2 |-> rawR q r.
   Proof.
     rewrite rawR_eq/rawR_def !_at_as_Rep.
     iApply tptsto_ptr_congP_transport.
   Qed.
 
-  Lemma _at_rawR_offset_congP_transport (p : ptr) (o1 o2 : offset) (q : CV.t) (r : raw_byte) :
+  Lemma _at_rawR_offset_congP_transport (p : ptr) (o1 o2 : offset) (q : cQp.t) (r : raw_byte) :
         offset_congP σ o1 o2 ** type_ptr Tu8 (p ,, o2)
     |-- p ,, o1 |-> rawR q r -* p ,, o2 |-> rawR q r.
   Proof.
@@ -45,7 +45,7 @@ Section with_Σ.
     unfold ptr_cong; exists p, o1, o2; intuition.
   Qed.
 
-  Definition rawsR (q : CV.t) (rs : list raw_byte) : Rep := arrayR Tuchar (rawR q) rs.
+  Definition rawsR (q : cQp.t) (rs : list raw_byte) : Rep := arrayR Tuchar (rawR q) rs.
 
   Section Theory.
     Section primR_Axiom.
@@ -186,9 +186,9 @@ Section with_Σ.
       #[global] Instance rawsR_as_fractional : AsCFractional1 rawsR.
       Proof. solve_as_cfrac. Qed.
 
-      Lemma rawsR_observe_frac_valid (q : CV.t) (q_f : Qp) rs :
+      Lemma rawsR_observe_frac_valid (q : cQp.t) (q_f : Qp) rs :
         (0 < length rs) ->
-        FracEq (CV.frac q) q_f ->
+        FracEq (cQp.frac q) q_f ->
         Observe [| q_f ≤ 1 |]%Qp (rawsR q rs).
       Proof.
         intros Hlen; rewrite /rawsR; induction rs;

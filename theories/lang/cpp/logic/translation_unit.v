@@ -107,7 +107,7 @@ Section with_cpp.
 *)
       (* ^^ todo(gmm): static initialization is not yet supported *)
         | Ovar t None =>
-          uninitR (resolve:=resolve) t (CV.m 1)
+          uninitR (resolve:=resolve) t (cQp.m 1)
         | _ => emp
         end.
 

@@ -80,7 +80,7 @@ End Utilities.
 Section rawsR_transport.
   Context `{Σ : cpp_logic} {σ : genv}.
 
-  Lemma _at_rawsR_ptr_congP_transport (p1 p2 : ptr) (q : CV.t) (rs : list raw_byte) :
+  Lemma _at_rawsR_ptr_congP_transport (p1 p2 : ptr) (q : cQp.t) (rs : list raw_byte) :
         ptr_congP σ p1 p2 ** ([∗list] i ∈ seqN 0 (lengthN rs), type_ptr Tu8 (p2 .[ Tu8 ! Z.of_N i ]))
     |-- p1 |-> rawsR q rs -* p2 |-> rawsR q rs.
   Proof.
@@ -481,7 +481,7 @@ End primR_transport.
 (* [Rep]s which can be encoded as [raw] bytes enjoy certain transport and cancellation properties *)
 Section with_rawable.
   Context `{Σ : cpp_logic} {σ : genv}.
-  Context {X : Type} (R : CV.t -> X -> Rep).
+  Context {X : Type} (R : cQp.t -> X -> Rep).
   Context (decode : list raw_byte -> X -> Prop) (encode : X -> list raw_byte -> Prop).
   Context (enc_dec_uniq : forall (x x' : X) (raws : list raw_byte),
               encode x raws -> decode raws x' -> x = x').

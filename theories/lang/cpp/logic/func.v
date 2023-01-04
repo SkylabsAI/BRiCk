@@ -43,7 +43,7 @@ Section with_cpp.
      TODO replace this with a version that is built by well-founded recursion.
    *)
   #[local]
-  Fixpoint identitiesR' (f : nat) (include_base : bool) (cls : globname) (path : list globname) (q : CV.t) : Rep :=
+  Fixpoint identitiesR' (f : nat) (include_base : bool) (cls : globname) (path : list globname) (q : cQp.t) : Rep :=
     match f with
     | 0 => False
     | S f =>
@@ -78,7 +78,7 @@ Section with_cpp.
       _base "::C" "::B" |-> identityR true "::B" ["::C"] q
       ]]
    *)
-  Definition identitiesR : bool -> globname -> list globname -> CV.t -> Rep :=
+  Definition identitiesR : bool -> globname -> list globname -> cQp.t -> Rep :=
     let size := avl.IM.cardinal resolve.(genv_tu).(globals) in
     (* ^ the number of global entries is an upper bound on the height of the
        derivation tree.
@@ -90,8 +90,8 @@ Section with_cpp.
       for "this".
    *)
   Definition wp_init_identity (cls : globname) (Q : mpred) : Rep :=
-    identitiesR false cls [] (CV.mut 1) **
-    (identitiesR true cls [cls] (CV.mut 1) -* pureR Q).
+    identitiesR false cls [] (cQp.mut 1) **
+    (identitiesR true cls [cls] (cQp.mut 1) -* pureR Q).
 
   Theorem wp_init_identity_frame cls Q Q' :
     pureR (Q' -* Q) |-- wp_init_identity cls Q' -* wp_init_identity cls Q.
@@ -106,8 +106,8 @@ Section with_cpp.
       classes to remove [cls] as the most derived class.
    *)
   Definition wp_revert_identity (cls : globname) (Q : mpred) : Rep :=
-    identitiesR true cls [cls] (CV.mut 1) **
-    (identitiesR false cls [] (CV.mut 1) -* pureR Q).
+    identitiesR true cls [cls] (cQp.mut 1) **
+    (identitiesR false cls [] (cQp.mut 1) -* pureR Q).
 
   Theorem wp_revert_identity_frame cls Q Q' :
     pureR (Q' -* Q) |-- wp_revert_identity cls Q' -* wp_revert_identity cls Q.
@@ -119,7 +119,7 @@ Section with_cpp.
 
   (** sanity chect that initialization and revert are inverses *)
   Corollary wp_init_revert cls Q p :
-    let REQ := identitiesR false cls [] (CV.mut 1) in
+    let REQ := identitiesR false cls [] (cQp.mut 1) in
         p |-> REQ ** Q
     |-- p |-> wp_init_identity cls (p |-> wp_revert_identity cls (p |-> REQ ** Q)).
   Proof.
@@ -372,9 +372,9 @@ Section with_cpp.
       let members := wpi_members ρ cls this s.(s_fields) inits in
       let ident Q := this |-> wp_init_identity cls Q in
       (** initialize the bases, then the identity, then the members *)
-      bases (ident (members (this |-> struct_paddingR (CV.mut 1) cls -*  Q)))
+      bases (ident (members (this |-> struct_paddingR (cQp.mut 1) cls -*  Q)))
       (* NOTE we get the [struct_paddingR] at the end since
-         [struct_paddingR (CV.mut 1) cls |-- type_ptrR (Tnamed cls)].
+         [struct_paddingR (cQp.mut 1) cls |-- type_ptrR (Tnamed cls)].
        *)
     end.
 
@@ -486,25 +486,25 @@ Section with_cpp.
         match tu !! ctor.(c_class) with
         | Some (Gstruct cls) =>
           (* this is a structure *)
-          thisp |-> tblockR ty (CV.mut 1) **
+          thisp |-> tblockR ty (cQp.mut 1) **
           (* ^ this requires that you give up the *entire* block of memory that the object
              will use.
            *)
           |> let ρ va := Remp (Some thisp) va Tvoid in
              bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ cleanup =>
                (wp_struct_initializer_list cls ρ ctor.(c_class) thisp inits
-                  (wp ρ body (Kcleanup cleanup (Kreturn_void (|={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (CV.mut 1) Vvoid -* Q p))))))
+                  (wp ρ body (Kcleanup cleanup (Kreturn_void (|={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p))))))
         | Some (Gunion union) =>
         (* this is a union *)
-          thisp |-> tblockR ty (CV.mut 1) **
+          thisp |-> tblockR ty (cQp.mut 1) **
           (* ^ this requires that you give up the *entire* block of memory that the object
              will use.
            *)
           |> let ρ va := Remp (Some thisp) va Tvoid in
              bind_vars ctor.(c_params) ctor.(c_arity) rest_vals ρ (fun ρ cleanup =>
                (wp_union_initializer_list union ρ ctor.(c_class) thisp inits
-                  (fun which => wp ρ body (Kcleanup cleanup (Kreturn_void (thisp |-> union_paddingR (CV.mut 1) ctor.(c_class) which -*
-                                                                       |={⊤}=> |> Forall p, p |-> primR Tvoid (CV.mut 1) Vvoid -* Q p))))))
+                  (fun which => wp ρ body (Kcleanup cleanup (Kreturn_void (thisp |-> union_paddingR (cQp.mut 1) ctor.(c_class) which -*
+                                                                       |={⊤}=> |> Forall p, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p))))))
         | Some _ =>
           ERROR $ "constructor for non-aggregate (" ++ ctor.(c_class) ++ ")"
         | None => False
@@ -557,14 +557,14 @@ Section with_cpp.
       let epilog :=
           match tu !! dtor.(d_class) with
           | Some (Gstruct s) => Some $ fun (thisp : ptr) =>
-            thisp |-> struct_paddingR (CV.mut 1) dtor.(d_class) **
+            thisp |-> struct_paddingR (cQp.mut 1) dtor.(d_class) **
             wpd_members dtor.(d_class) thisp s.(s_fields)
                (* ^ fields are destroyed *)
                (thisp |-> wp_revert_identity dtor.(d_class)
                (* ^ the identity of the object is destroyed *)
                   (wpd_bases dtor.(d_class) thisp (List.map fst s.(s_bases))
                   (* ^ the base classes are destroyed (reverse order) *)
-                     (thisp |-> tblockR (Tnamed dtor.(d_class)) (CV.mut 1) -* |={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (CV.mut 1) Vvoid -* Q p)))
+                     (thisp |-> tblockR (Tnamed dtor.(d_class)) (cQp.mut 1) -* |={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p)))
                      (* ^ the operations above destroy each object returning its memory to
                         the abstract machine. Then the abstract machine gives this memory
                         back to the program.
@@ -579,8 +579,8 @@ Section with_cpp.
                automatically where they can prove the active entry has a trivial destructor
                or is already destroyed.
              *)
-            |={⊤}=> thisp |-> tblockR (Tnamed dtor.(d_class)) (CV.mut 1) **
-                   (thisp |-> tblockR (Tnamed dtor.(d_class)) (CV.mut 1) -* |={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (CV.mut 1) Vvoid -* Q p)
+            |={⊤}=> thisp |-> tblockR (Tnamed dtor.(d_class)) (cQp.mut 1) **
+                   (thisp |-> tblockR (Tnamed dtor.(d_class)) (cQp.mut 1) -* |={⊤}=> |> Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p)
           | _ => None
           end%I
       in

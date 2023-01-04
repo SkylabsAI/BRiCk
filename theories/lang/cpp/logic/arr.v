@@ -512,7 +512,7 @@ End with_array_frac.
 
 Section with_array_cfrac.
   Context `{Σ : cpp_logic, resolve : genv} {X : Type} (ty : type).
-  Context (R : CV.t -> X -> Rep).
+  Context (R : cQp.t -> X -> Rep).
 
   #[global] Instance arrayR_cfractional l `{HF : CFractional1 R} :
     CFractional (λ q, arrayR ty (R q) l).
