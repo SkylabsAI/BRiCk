@@ -292,9 +292,6 @@ Module cQp_compat.
 
 End cQp_compat.
 
-(* TEMPORARY: Re-export [cQp_compat] for now. *)
-Export cQp_compat.
-
 (** ** IPM instances *)
 Section proofmode.
   Context {PROP : bi}.
