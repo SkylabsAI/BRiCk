@@ -86,53 +86,52 @@ Section with_Σ.
   Axiom implicit_destruct_ptr : forall ty, Reduce (implicit_destruct_ty (Tptr ty)).
   Axiom implicit_destruct_member_pointer : forall cls ty, Reduce (implicit_destruct_ty (Tmember_pointer cls ty)).
 
-  Definition struct_def (R : type -> cQp.t -> Rep) (cls : globname) (st : Struct) : Rep :=
+  (** [mut_type m q] is the ownership [cQp.t] and the type used for a [Member] *)
+  Definition mut_type (m : Member) (q : cQp.t) : cQp.t * type :=
+      let '(cv, ty) := decompose_type m.(mem_type) in
+      let q := if q_const cv && negb m.(mem_mutable) then cQp.c q else q in
+      (q, erase_qualifiers ty).
+
+  (** [struct_def R cls st q] is the ownership of the class where [R ty q] is
+      owned for each field and base class *)
+  Definition struct_def (R : type -> cQp.t -> Rep) (cls : globname) (st : Struct) (q : cQp.t) : Rep :=
     ([** list] base ∈ st.(s_bases),
        let '(gn,_) := base in
-       _offsetR (_base cls gn) (R (Tnamed gn) (cQp.mut 1))) **
+       _offsetR (_base cls gn) (R (Tnamed gn) q)) **
     ([** list] fld ∈ st.(s_fields),
       let f := {| f_name := fld.(mem_name) ; f_type := cls |} in
-      let ty := erase_qualifiers fld.(mem_type) in
-      let q := cQp.mk (if fld.(mem_mutable) then false else true) 1 in
+      let (q, ty) := mut_type fld q in
       _offsetR (_field f) (R ty q)) **
-    (if has_vtable st then
-      (**
-      NOTE this doesn't really work out because we generally
-      need a fancy update to forget the MDC.
-      *)
-      identityR cls nil (cQp.mut 1)
-    else emp) **
-    struct_paddingR (cQp.mut 1) cls.
+    (if has_vtable st then identityR cls nil q else emp) **
+    struct_paddingR q cls.
 
   (** implicit destruction of an aggregate *)
   Axiom implicit_destruct_struct
   : forall cls st q,
       glob_def σ cls = Some (Gstruct st) ->
       st.(s_trivially_destructible) ->
-      cQp.frac q = 1%Qp ->
+      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
           type_ptrR (Tnamed cls)
-      |-- (Reduce (struct_def tblockR cls st)) -*
+      |-- (Reduce (struct_def tblockR cls st q)) -*
           |={↑pred_ns}=> tblockR (Tnamed cls) q.
 
   (** decompose a struct into its constituent fields and base classes. *)
   Axiom anyR_struct
   : forall cls st q,
     glob_def σ cls = Some (Gstruct st) ->
-      cQp.frac q = 1%Qp ->
+      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
         anyR (Tnamed cls) q
-    -|- Reduce (struct_def anyR cls st).
+    -|- Reduce (struct_def anyR cls st q).
 
-  (**
-  TODO: As in [struct_def]
-  *)
-  Definition union_def (R : type -> cQp.t -> Rep) (cls : globname) (st : translation_unit.Union) : Rep :=
+  (** [union_def R cls st q] is the ownership of the union where [R ty q] is
+      owned for each field and base class *)
+  Definition union_def (R : type -> cQp.t -> Rep) (cls : globname) (st : translation_unit.Union) (q : cQp.t) : Rep :=
     union_paddingR (cQp.mut 1) cls None \\//
-    [\/ list] idx |-> it ∈ st.(u_fields),
-      let f := _field {| f_name := it.(mem_name) ; f_type := cls |} in
-      let ty := erase_qualifiers it.(mem_type) in
-      let q := cQp.mk (if it.(mem_mutable) then false else true) 1 in
+    ([\/ list] idx |-> m ∈ st.(u_fields),
+      let f := _field {| f_name := m.(mem_name) ; f_type := cls |} in
+      let '(q, ty) := mut_type m q in
       f |-> R ty q **
-      union_paddingR (cQp.mut 1) cls (Some idx).
+      union_paddingR q cls (Some idx)).
 
   (** implicit destruction of a union. *)
   Axiom implicit_destruct_union
@@ -141,7 +140,7 @@ Section with_Σ.
       un.(u_trivially_destructible) ->
       cQp.frac q = 1%Qp ->
           type_ptrR (Tnamed cls)
-      |-- (Reduce (union_def tblockR cls un)) -* |={↑pred_ns}=> tblockR (Tnamed cls) q.
+      |-- (Reduce (union_def tblockR cls un q)) -* |={↑pred_ns}=> tblockR (Tnamed cls) q.
 
 (*
   (* the following rule would allow you to change the active entity in a union
@@ -174,9 +173,9 @@ Section with_Σ.
   Axiom anyR_union
   : forall (cls : globname) un q,
     glob_def σ cls = Some (Gunion un) ->
-      cQp.frac q = 1%Qp ->
+      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
         anyR (Tnamed cls) q
-    -|- Reduce (union_def anyR cls un).
+    -|- Reduce (union_def anyR cls un q).
 
  (** Proof requires the generalization of [anyR] to support aggregates (and arrays) *)
   Lemma anyR_array_0 t q :
