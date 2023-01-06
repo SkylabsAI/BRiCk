@@ -88,9 +88,9 @@ Section with_Σ.
 
   (** [mut_type m q] is the ownership [cQp.t] and the type used for a [Member] *)
   Definition mut_type (m : Member) (q : cQp.t) : cQp.t * type :=
-      let '(cv, ty) := decompose_type m.(mem_type) in
-      let q := if q_const cv && negb m.(mem_mutable) then cQp.c q else q in
-      (q, erase_qualifiers ty).
+    let '(cv, ty) := decompose_type m.(mem_type) in
+    let q := if q_const cv && negb m.(mem_mutable) then cQp.c q else q in
+    (q, erase_qualifiers ty).
 
   (** [struct_def R cls st q] is the ownership of the class where [R ty q] is
       owned for each field and base class *)
@@ -100,8 +100,8 @@ Section with_Σ.
        _offsetR (_base cls gn) (R (Tnamed gn) q)) **
     ([** list] fld ∈ st.(s_fields),
       let f := {| f_name := fld.(mem_name) ; f_type := cls |} in
-      let (q, ty) := mut_type fld q in
-      _offsetR (_field f) (R ty q)) **
+      let qt := mut_type fld q in
+      _offsetR (_field f) (R qt.2 qt.1)) **
     (if has_vtable st then identityR cls nil q else emp) **
     struct_paddingR q cls.
 
@@ -129,8 +129,8 @@ Section with_Σ.
     union_paddingR (cQp.mut 1) cls None \\//
     ([\/ list] idx |-> m ∈ st.(u_fields),
       let f := _field {| f_name := m.(mem_name) ; f_type := cls |} in
-      let '(q, ty) := mut_type m q in
-      f |-> R ty q **
+      let qt := mut_type m q in
+      f |-> R qt.2 qt.1 **
       union_paddingR q cls (Some idx)).
 
   (** implicit destruction of a union. *)
