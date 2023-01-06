@@ -131,7 +131,7 @@ Section with_Σ.
       let f := _field {| f_name := m.(mem_name) ; f_type := cls |} in
       let qt := mut_type m q in
       f |-> R qt.2 qt.1 **
-      union_paddingR qt.1 cls (Some idx)).
+      union_paddingR q cls (Some idx)).
 
   (** implicit destruction of a union. *)
   Axiom implicit_destruct_union
