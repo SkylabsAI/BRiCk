@@ -97,11 +97,11 @@ Section with_Σ.
   Definition struct_def (R : type -> cQp.t -> Rep) (cls : globname) (st : Struct) (q : cQp.t) : Rep :=
     ([** list] base ∈ st.(s_bases),
        let '(gn,_) := base in
-       _offsetR (_base cls gn) (R (Tnamed gn) q)) **
+       _base cls gn |-> R (Tnamed gn) q) **
     ([** list] fld ∈ st.(s_fields),
       let f := {| f_name := fld.(mem_name) ; f_type := cls |} in
       let qt := mut_type fld q in
-      _offsetR (_field f) (R qt.2 qt.1)) **
+      _field f |-> R qt.2 qt.1) **
     (if has_vtable st then identityR cls nil q else emp) **
     struct_paddingR q cls.
 
@@ -110,16 +110,14 @@ Section with_Σ.
   : forall cls st q,
       glob_def σ cls = Some (Gstruct st) ->
       st.(s_trivially_destructible) ->
-      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
+      cQp.frac q = 1%Qp ->
           type_ptrR (Tnamed cls)
       |-- (Reduce (struct_def tblockR cls st q)) -*
           |={↑pred_ns}=> tblockR (Tnamed cls) q.
 
   (** decompose a struct into its constituent fields and base classes. *)
-  Axiom anyR_struct
-  : forall cls st q,
+  Axiom anyR_struct : forall cls st q,
     glob_def σ cls = Some (Gstruct st) ->
-      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
         anyR (Tnamed cls) q
     -|- Reduce (struct_def anyR cls st q).
 
@@ -134,8 +132,7 @@ Section with_Σ.
       union_paddingR q cls (Some idx)).
 
   (** implicit destruction of a union. *)
-  Axiom implicit_destruct_union
-  : forall (cls : globname) un q,
+  Axiom implicit_destruct_union : forall (cls : globname) un q,
       glob_def σ cls = Some (Gunion un) ->
       un.(u_trivially_destructible) ->
       cQp.frac q = 1%Qp ->
@@ -170,22 +167,20 @@ Section with_Σ.
 
   (** decompose a union into the classical disjunction of the alternatives
    *)
-  Axiom anyR_union
-  : forall (cls : globname) un q,
+  Axiom anyR_union : forall (cls : globname) un q,
     glob_def σ cls = Some (Gunion un) ->
-      cQp.frac q = 1%Qp -> (* probably not strictly necessary *)
         anyR (Tnamed cls) q
     -|- Reduce (union_def anyR cls un q).
 
- (** Proof requires the generalization of [anyR] to support aggregates (and arrays) *)
+  (** Proof requires the generalization of [anyR] to support aggregates (and arrays) *)
   Lemma anyR_array_0 t q :
     anyR (Tarray t 0) q -|- validR ** [| is_Some (size_of σ t) |].
-  Admitted.
+  Proof. Admitted.
 
   Lemma anyR_array_succ t n q :
     anyR (Tarray t (N.succ n)) q -|-
     type_ptrR t ** anyR t q ** .[ t ! 1 ] |-> anyR (Tarray t n) q.
-  Admitted.
+  Proof. Admitted.
 
   (** decompose an array into individual components
       note that one past the end of an array is a valid location, but
@@ -245,9 +240,9 @@ Section with_Σ.
   (* TODO: migrate client to the statement above, and drop this. *)
   Lemma tblockR_array : forall t n q,
         tblockR (Tarray t n) q
-    -|- _offsetR (_sub t (Z.of_N n)) validR **
+    -|- _sub t (Z.of_N n) |-> validR **
         [∗list] i ↦ _ ∈ repeat () (BinNatDef.N.to_nat n),
-           _offsetR (_sub t (Z.of_nat i)) (tblockR t q).
-  Admitted.
+           _sub t (Z.of_nat i) |-> tblockR t q.
+  Proof. Admitted.
 
 End with_Σ.
