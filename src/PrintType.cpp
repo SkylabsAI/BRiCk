@@ -31,6 +31,8 @@ bitsize(unsigned n) {
         return "W32";
     case 64:
         return "W64";
+    case 80:
+        return "W80";
     case 128:
         return "W128";
     default:
@@ -190,15 +192,25 @@ public:
     void VisitBuiltinType(const BuiltinType* type, CoqPrinter& print,
                           ClangPrinter& cprint) {
         switch (type->getKind()) {
-        case BuiltinType::Kind::Bool:
-            print.output() << "Tbool";
-            break;
-        case BuiltinType::Kind::Void:
-            print.output() << "Tvoid";
-            break;
-        case BuiltinType::Kind::NullPtr:
-            print.output() << "Tnullptr";
-            break;
+#define CASE(X, Y)                                                             \
+    case BuiltinType::Kind::X:                                                 \
+        print.output() << #Y;                                                  \
+        break;
+            CASE(SChar, Tschar)
+            CASE(UChar, Tuchar)
+            CASE(Short, Tshort)
+            CASE(UShort, Tushort)
+            CASE(Int, Tint)
+            CASE(UInt, Tuint)
+            CASE(Long, Tlong)
+            CASE(ULong, Tulong)
+            CASE(LongLong, Tlonglong)
+            CASE(ULongLong, Tulonglong)
+            CASE(Int128, Ti128)
+            CASE(UInt128, Tu128)
+            CASE(Bool, Tbool)
+            CASE(Void, Tvoid)
+            CASE(NullPtr, Tnullptr)
         case BuiltinType::Kind::Dependent:
             print.output() << "Tunsupported \"type-dependent type\"";
             using namespace logging;
@@ -228,17 +240,15 @@ public:
             break;
 #endif
         default:
-            if (type->isAnyCharacterType()) {
+            if (type->isCharType()) {
+                print.output() << "Tchar_";
+            } else if (type->isAnyCharacterType()) {
                 print.output()
                     << "(Tchar " << bitsize(cprint.getTypeSize(type)) << " "
                     << (type->isSignedInteger() ? "Signed" : "Unsigned") << ")";
             } else if (type->isFloatingPoint()) {
                 print.output()
                     << "(Tfloat " << bitsize(cprint.getTypeSize(type)) << ")";
-            } else if (type->isIntegerType()) {
-                print.output()
-                    << "(Tnum " << bitsize(cprint.getTypeSize(type)) << " "
-                    << (type->isSignedInteger() ? "Signed" : "Unsigned") << ")";
 #if CLANG_VERSION_MAJOR >= 11
             } else if (type->isSizelessBuiltinType()) {
                 print.output() << fmt::lparen << "Tarch None \""
