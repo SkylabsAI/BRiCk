@@ -5,6 +5,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
+From iris.algebra Require Import proofmode_classes frac.
 From bedrock.lang.cpp.algebra Require Import cv.
 From bedrock.lang.bi Require Import prelude split_andb split_frac.
 Require Import iris.proofmode.proofmode.
@@ -23,7 +24,21 @@ up from booleans, fractions, and [op]
 (**
 Our rules are syntactic: All operations appearing in input positions
 should be opaque for typeclass resolution.
+
+But first, we specialize [IsOp]* about [op] instances to [Qp], to preserve behavior.
 *)
+#[global] Hint Opaque op : typeclass_instances.
+
+Section lift_op_qp.
+  Implicit Types (q : Qp).
+
+  #[global] Instance is_op_op_frac q1 q2 : IsOp (q1 + q2)%Qp q1 q2 | 100.
+  Proof. exact: is_op_op. Qed.
+
+  #[global] Instance is_op_lr_op_frac (q1 q2 : Qp) : IsOp'LR (q1 + q2)%Qp q1 q2 | 0.
+  Proof. exact: is_op_lr_op. Qed.
+End lift_op_qp.
+
 #[global] Hint Opaque op : typeclass_instances.
 
 #[local] Notation Cut := TCNoBackTrack.
