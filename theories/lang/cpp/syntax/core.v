@@ -449,7 +449,7 @@ with type' {lang : lang.t} : Set :=
 | Tptr (t : type')
 | Tref (t : type')
 | Trv_ref (t : type')
-| Tnum (sz : bitsize) (sgn : signed)
+| Tnum (sz : int_type.t) (sgn : signed)
 | Tchar_ (_ : char_type.t)
 | Tvoid
 | Tarray (t : type') (n : N)
@@ -853,16 +853,6 @@ Notation Tchar8 := (Tchar_ char_type.C8).
 Notation Tchar16 := (Tchar_ char_type.C16).
 Notation Tchar32 := (Tchar_ char_type.C32).
 
-Notation Ti8 := (Tnum W8 Signed).
-Notation Tu8 := (Tnum W8 Unsigned).
-Notation Ti16 := (Tnum W16 Signed).
-Notation Tu16 := (Tnum W16 Unsigned).
-Notation Ti32 := (Tnum W32 Signed).
-Notation Tu32 := (Tnum W32 Unsigned).
-Notation Ti64 := (Tnum W64 Signed).
-Notation Tu64 := (Tnum W64 Unsigned).
-Notation Ti128 := (Tnum W128 Signed).
-Notation Tu128 := (Tnum W128 Unsigned).
 
 Notation Tschar := (Tnum int_type.Ichar Signed) (only parsing).
 Notation Tuchar := (Tnum int_type.Ichar Unsigned) (only parsing).
@@ -884,6 +874,20 @@ Notation Tfloat := (Tfloat_ float_type.Ffloat).
 Notation Tdouble := (Tfloat_ float_type.Fdouble).
 Notation Tlongdouble := (Tfloat_ float_type.Flongdouble).
 Notation Tfloat128 := (Tfloat_ float_type.Ffloat128).
+
+(* Temporarily disable.
+Notation Ti8 := (Tnum W8 Signed).
+Notation Tu8 := (Tnum W8 Unsigned).
+Notation Ti16 := (Tnum W16 Signed).
+Notation Tu16 := (Tnum W16 Unsigned).
+Notation Ti32 := (Tnum W32 Signed).
+Notation Tu32 := (Tnum W32 Unsigned).
+Notation Ti64 := (Tnum W64 Signed).
+Notation Tu64 := (Tnum W64 Unsigned).
+Notation Ti128 := (Tnum W128 Signed).
+Notation Tu128 := (Tnum W128 Unsigned).
+ *)
+
 
 (* TODO: This is determined by the compiler. *)
 Notation Tsize_t := Tulong.

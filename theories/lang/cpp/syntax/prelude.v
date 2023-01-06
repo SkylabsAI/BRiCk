@@ -8,3 +8,4 @@ Require Export bedrock.prelude.base.
 Require Export bedrock.prelude.option.
 Require Export bedrock.prelude.sum.
 Require Export bedrock.prelude.bytestring.
+Require Export bedrock.lang.prelude.platform.

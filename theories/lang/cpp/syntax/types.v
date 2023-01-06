@@ -883,7 +883,39 @@ Lemma normalize_type_qual_norm t :
 Proof. rewrite qual_norm_unfold. by destruct t. Qed.
 *)
 
-(** ** Qualifier-aware type operations *)
+(** ** Types with explicit size information.
+    TODO remove this.
+ *)
+
+Notation Ti8    := (Tnum int_type.Schar Signed).
+Notation Tu8    := (Tnum int_type.Schar Unsigned).
+Notation Ti16   := (Tnum int_type.Sshort Signed).
+Notation Tu16   := (Tnum int_type.Sshort Unsigned).
+Notation Ti32   := (Tnum int_type.Sint Signed).
+Notation Tu32   := (Tnum int_type.Sint Unsigned).
+Notation Ti64   := (Tnum int_type.Slonglong Signed).
+Notation Tu64   := (Tnum int_type.Slonglong Unsigned).
+Notation Ti128  := (Tnum int_type.S128 Signed).
+Notation Tu128  := (Tnum int_type.S128 Unsigned).
+
+(* note(gmm): types without explicit size information need to
+ * be parameters of the underlying code, otherwise we can't
+ * describe the semantics correctly.
+ * - cpp2v should probably insert these types.
+ *)
+(**
+https://en.cppreference.com/w/cpp/language/types
+The 4 definitions below use the LP64 data model.
+LLP64 and LP64 agree except for the [long] type: see
+the warning below.
+In future, we may want to parametrize by a data model, or
+the machine word size.
+*)
+Notation char_bits      := int_type.Schar  (only parsing).
+Notation short_bits     := int_type.Sshort (only parsing).
+Notation int_bits       := int_type.Sint (only parsing).
+Notation long_bits      := int_type.Slong (only parsing).
+Notation long_long_bits := int_type.Slonglong (only parsing).
 
 (**
 [unptr t] returns the type of the object that a value of type [t]

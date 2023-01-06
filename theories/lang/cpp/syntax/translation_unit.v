@@ -6,6 +6,7 @@
 Require Import stdpp.fin_maps.
 Require Import bedrock.prelude.base.
 Require Import bedrock.prelude.avl.
+Require Import bedrock.lang.prelude.platform.
 Require Import bedrock.lang.cpp.syntax.core.
 Require Import bedrock.lang.cpp.syntax.types.
 Require Import bedrock.lang.cpp.syntax.decl.

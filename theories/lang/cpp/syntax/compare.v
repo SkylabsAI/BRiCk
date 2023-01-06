@@ -414,6 +414,15 @@ Module bitsize.
 End bitsize.
 #[global] Instance bitsize_compare : Compare bitsize := bitsize.compare.
 
+Module int_type.
+  #[prefix="", only(tag)] derive int_type.t.
+
+  Definition compare (x y : int_type.t) : comparison :=
+    Pos.compare (tag x) (tag y).
+End int_type.
+#[global] Instance int_type_compare : Compare int_type := int_type.compare.
+
+
 Module signed.
   #[prefix="", only(tag)] derive signed.
 
@@ -1150,11 +1159,11 @@ Module type.
       bs_cmp b1.(box_Tresult_member_1) b2.(box_Tresult_member_1).
 
     Record box_Tnum : Set := Box_Tnum {
-      box_Tnum_0 : bitsize;
+      box_Tnum_0 : int_type.t;
       box_Tnum_1 : signed;
     }.
     Definition box_Tnum_compare (b1 b2 : box_Tnum) : comparison :=
-      compare_lex (bitsize.compare b1.(box_Tnum_0) b2.(box_Tnum_0)) $ fun _ =>
+      compare_lex (int_type.compare b1.(box_Tnum_0) b2.(box_Tnum_0)) $ fun _ =>
       signed.compare b1.(box_Tnum_1) b2.(box_Tnum_1).
 
     Record box_Tarray : Set := Box_Tarray {

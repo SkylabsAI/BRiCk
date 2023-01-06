@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.prelude.base.
+Require Import bedrock.prelude.bits.
 Require Import bedrock.lang.cpp.arith.types.
 Require Import bedrock.lang.cpp.arith.operator.
 
@@ -15,7 +16,7 @@ Require Import bedrock.lang.cpp.arith.operator.
 (* Returns one plus the index of the least significant 1-bit of x,
    or if x is zero, returns zero. *)
 Definition first_set (sz : bitsize) (n : Z) : Z :=
-  let n := trim (bitsN sz) n in
+  let n := trim (bitsize.bitsN sz) n in
   if Z.eqb n 0 then 0
   else
     (fix get ls : Z :=
@@ -25,7 +26,7 @@ Definition first_set (sz : bitsize) (n : Z) : Z :=
          if Z.testbit n l
          then 1 + l
          else get ls
-       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsize.bitsN sz)))).
 #[global] Arguments first_set : simpl never.
 
 (* Returns the number of trailing 0-bits in x, starting at the least
@@ -38,13 +39,13 @@ Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
        if Z.testbit n l
        then l
        else get ls
-     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsize.bitsN sz)))).
 #[global] Arguments trailing_zeros : simpl never.
 
 (* Returns the number of leading 0-bits in x, starting at the most significant
    bit position. If x is 0, the result is undefined. *)
 Definition leading_zeros (sz : bitsize) (l : Z) : Z :=
-  bitsZ sz - Z.log2 (l mod (2^64)).
+  bitsize.bitsZ sz - Z.log2 (l mod (2^64)).
 #[global] Arguments leading_zeros : simpl never.
 
 
@@ -103,10 +104,11 @@ Section BitsTheory.
 End BitsTheory.
 
 Section Byte.
+  Import churn_bits.
   Section split.
     Lemma split8:
       forall z,
-        0 <= z < 2^bitsZ W8 ->
+        0 <= z < 2^bitsize.bitsZ bitsize.W8 ->
         z = _set_byte (_get_byte z 0) 0.
     Proof.
       intros * Hbounds; rewrite _set_get_0.
@@ -117,7 +119,7 @@ Section Byte.
 
     Lemma split16:
       forall z,
-        0 <= z < 2^bitsZ W16 ->
+        0 <= z < 2^bitsize.bitsZ bitsize.W16 ->
         z = Z.lor (_set_byte (_get_byte z 0) 0)
                   (_set_byte (_get_byte z 1) 1).
     Proof.
@@ -141,7 +143,7 @@ Section Byte.
 
     Lemma split32:
       forall z,
-        0 <= z < 2^bitsZ W32 ->
+        0 <= z < 2^bitsize.bitsZ bitsize.W32 ->
         z = Z.lor (_set_byte (_get_byte z 0) 0)
             (Z.lor (_set_byte (_get_byte z 1) 1)
              (Z.lor (_set_byte (_get_byte z 2) 2)
@@ -183,7 +185,7 @@ Section Byte.
 
     Lemma split64:
       forall z,
-        0 <= z < 2^bitsZ W64 ->
+        0 <= z < 2^bitsize.bitsZ bitsize.W64 ->
         z = Z.lor (_set_byte (_get_byte z 0) 0)
             (Z.lor (_set_byte (_get_byte z 1) 1)
              (Z.lor (_set_byte (_get_byte z 2) 2)
@@ -281,7 +283,7 @@ Section Byte.
 
     Lemma split128:
       forall z,
-        0 <= z < 2^bitsZ W128 ->
+        0 <= z < 2^bitsize.bitsZ bitsize.W128 ->
         z = Z.lor (_set_byte (_get_byte z 0) 0)
             (Z.lor (_set_byte (_get_byte z 1) 1)
              (Z.lor (_set_byte (_get_byte z 2) 2)
@@ -600,29 +602,30 @@ Section Bswap.
               (bswap_idxs bytes)
               0.
 
-  Definition bswap (sz : bitsize) : Z -> Z := bswap_ (bytesNat sz).
+  Definition bswap (sz : bitsize) : Z -> Z := bswap_ (N.to_nat $ bitsize.bytesN sz).
 
   Section test.
     Local Definition bytes (ls : list Z) :=
       fold_left (fun a b => a * 256 + b)%Z ls 0%Z.
     Arguments bytes _%_Z.
 
-    Local Definition _bswap16_test : bswap W16 (bytes (1::2::nil)%Z) = bytes (2::1::nil)%Z := eq_refl.
+    Local Definition _bswap16_test : bswap bitsize.W16 (bytes (1::2::nil)%Z) = bytes (2::1::nil)%Z := eq_refl.
     Local Definition _bswap32_test :
-      bswap W32 (bytes (1::2::3::4::nil)%Z) = bytes (4::3::2::1::nil)%Z := eq_refl.
+      bswap bitsize.W32 (bytes (1::2::3::4::nil)%Z) = bytes (4::3::2::1::nil)%Z := eq_refl.
     Local Definition _bswap64_test :
-      bswap W64 (bytes (1::2::3::4::5::6::7::8::nil)%Z) = bytes (8::7::6::5::4::3::2::1::nil)%Z := eq_refl.
+      bswap bitsize.W64 (bytes (1::2::3::4::5::6::7::8::nil)%Z) = bytes (8::7::6::5::4::3::2::1::nil)%Z := eq_refl.
   End test.
 End Bswap.
 
-Notation bswap8 := (bswap W8) (only parsing).
-Notation bswap16 := (bswap W16) (only parsing).
-Notation bswap32 := (bswap W32) (only parsing).
-Notation bswap64 := (bswap W64) (only parsing).
-Notation bswap128 := (bswap W128) (only parsing).
+Notation bswap8 := (bswap bitsize.W8) (only parsing).
+Notation bswap16 := (bswap bitsize.W16) (only parsing).
+Notation bswap32 := (bswap bitsize.W32) (only parsing).
+Notation bswap64 := (bswap bitsize.W64) (only parsing).
+Notation bswap128 := (bswap bitsize.W128) (only parsing).
 
 #[global] Opaque bswap.
 
+(*
 Section Bswap.
   Section Theory.
     Section bounded.
@@ -675,6 +678,22 @@ Section Bswap.
         repeat (try apply ZlorRange with (w:=64%N)); lia.
       Qed.
 
+      Lemma bswap64_bounded:
+        forall v,
+          0 ≤ bswap80 v < ltac:(let x := eval cbv in (2^80) in exact x).
+      Proof.
+        intros *; rewrite /bswap/bswap_/= Z.lor_0_l.
+        pose proof (_set_byte_bound (_get_byte v 0) 7).
+        pose proof (_set_byte_bound (_get_byte v 1) 6).
+        pose proof (_set_byte_bound (_get_byte v 2) 5).
+        pose proof (_set_byte_bound (_get_byte v 3) 4).
+        pose proof (_set_byte_bound (_get_byte v 4) 3).
+        pose proof (_set_byte_bound (_get_byte v 5) 2).
+        pose proof (_set_byte_bound (_get_byte v 6) 1).
+        pose proof (_set_byte_bound (_get_byte v 7) 0).
+        repeat (try apply ZlorRange with (w:=64%N)); lia.
+      Qed.
+
       Lemma bswap128_bounded:
         forall v,
           0 ≤ bswap128 v < ltac:(let x := eval cbv in (2^128) in exact x).
@@ -702,7 +721,7 @@ Section Bswap.
 
     Lemma bswap_bounded:
       forall sz v,
-        0 <= bswap sz v < 2^(bitsZ sz).
+        0 <= bswap sz v < 2^(bitsize.bitsZ sz).
     Proof.
       intros *; destruct sz;
         eauto using
@@ -971,7 +990,7 @@ Section Bswap.
 
     Lemma bswap_larger sz z:
       0 <= z ->
-      bswap sz z = bswap sz (Z.land z (Z.ones (bitsZ sz))).
+      bswap sz z = bswap sz (Z.land z (Z.ones (bitsize.bitsZ sz))).
     Proof.
       intros; destruct sz;
         eauto using
@@ -985,7 +1004,7 @@ Section Bswap.
     Section involutive.
       Lemma bswap8_involutive:
         forall z,
-          0 <= z < 2^bitsZ W8 ->
+          0 <= z < 2^bitsize.bitsZ bitsize.W8 ->
           bswap8 (bswap8 z) = z.
       Proof.
         intros * Hbounds.
@@ -995,8 +1014,8 @@ Section Bswap.
 
       Lemma bswap8_involutive_land:
         forall z,
-          0 <= z < 2^bitsZ W8 ->
-          bswap8 (bswap8 z) = Z.land z (Z.ones (bitsZ W8)).
+          0 <= z < 2^bitsize.bitsZ bitsize.W8 ->
+          bswap8 (bswap8 z) = Z.land z (Z.ones (bitsize.bitsZ bitsize.W8)).
       Proof.
         intros * Hbounds; simpl in *.
         rewrite bswap8_involutive; auto.
@@ -1006,7 +1025,7 @@ Section Bswap.
 
       Lemma bswap16_involutive:
         forall z,
-          0 <= z < 2^bitsZ W16 ->
+          0 <= z < 2^bitsize.bitsZ bitsize.W16 ->
           bswap16 (bswap16 z) = z.
       Proof.
         intros * Hbounds.
@@ -1016,8 +1035,8 @@ Section Bswap.
 
       Lemma bswap16_involutive_land:
         forall z,
-          0 <= z < 2^bitsZ W16 ->
-          bswap16 (bswap16 z) = Z.land z (Z.ones (bitsZ W16)).
+          0 <= z < 2^bitsize.bitsZ bitsize.W16 ->
+          bswap16 (bswap16 z) = Z.land z (Z.ones (bitsize.bitsZ bitsize.W16)).
       Proof.
         intros * Hbounds; simpl in *.
         rewrite bswap16_involutive; auto.
@@ -1027,7 +1046,7 @@ Section Bswap.
 
       Lemma bswap32_involutive:
         forall z,
-          0 <= z < 2^bitsZ W32 ->
+          0 <= z < 2^bitsize.bitsZ bitsize.W32 ->
           bswap32 (bswap32 z) = z.
       Proof.
         intros * Hbounds.
@@ -1037,8 +1056,8 @@ Section Bswap.
 
       Lemma bswap32_involutive_land:
         forall z,
-          0 <= z < 2^bitsZ W32 ->
-          bswap32 (bswap32 z) = Z.land z (Z.ones (bitsZ W32)).
+          0 <= z < 2^bitsize.bitsZ bitsize.W32 ->
+          bswap32 (bswap32 z) = Z.land z (Z.ones (bitsize.bitsZ bitsize.W32)).
       Proof.
         intros * Hbounds; simpl in *.
         rewrite bswap32_involutive; auto.
@@ -1048,7 +1067,7 @@ Section Bswap.
 
       Lemma bswap64_involutive:
         forall z,
-          0 <= z < 2^bitsZ W64 ->
+          0 <= z < 2^bitsize.bitsZ bitsize.W64 ->
           bswap64 (bswap64 z) = z.
       Proof.
         intros * Hbounds.
@@ -1058,8 +1077,8 @@ Section Bswap.
 
       Lemma bswap64_involutive_land:
         forall z,
-          0 <= z < 2^bitsZ W64 ->
-          bswap64 (bswap64 z) = Z.land z (Z.ones (bitsZ W64)).
+          0 <= z < 2^bitsize.bitsZ bitsize.W64 ->
+          bswap64 (bswap64 z) = Z.land z (Z.ones (bitsize.bitsZ bitsize.W64)).
       Proof.
         intros * Hbounds; simpl in *.
         rewrite bswap64_involutive; auto.
@@ -1069,7 +1088,7 @@ Section Bswap.
 
       Lemma bswap128_involutive:
         forall z,
-          0 <= z < 2^bitsZ W128 ->
+          0 <= z < 2^bitsize.bitsZ bitsize.W128 ->
           bswap128 (bswap128 z) = z.
       Proof.
         intros * Hbounds.
@@ -1079,8 +1098,8 @@ Section Bswap.
 
       Lemma bswap128_involutive_land:
         forall z,
-          0 <= z < 2^bitsZ W128 ->
-          bswap128 (bswap128 z) = Z.land z (Z.ones (bitsZ W128)).
+          0 <= z < 2^bitsize.bitsZ bitsize.W128 ->
+          bswap128 (bswap128 z) = Z.land z (Z.ones (bitsize.bitsZ bitsize.W128)).
       Proof.
         intros * Hbounds; simpl in *.
         rewrite bswap128_involutive; auto.
@@ -1091,7 +1110,7 @@ Section Bswap.
 
     Lemma bswap_involutive:
       forall sz z,
-        0 <= z < 2^bitsZ sz ->
+        0 <= z < 2^bitsize.bitsZ sz ->
         bswap sz (bswap sz z) = z.
     Proof.
       intros * Hbounds; destruct sz;
@@ -1105,8 +1124,8 @@ Section Bswap.
 
     Lemma bswap_involutive_land:
       forall sz z,
-        0 <= z < 2^bitsZ sz ->
-        bswap sz (bswap sz z) = Z.land z (Z.ones (bitsZ sz)).
+        0 <= z < 2^bitsize.bitsZ sz ->
+        bswap sz (bswap sz z) = Z.land z (Z.ones (bitsize.bitsZ sz)).
     Proof.
       intros * Hbounds; destruct sz;
         eauto using
@@ -1118,3 +1137,4 @@ Section Bswap.
     Qed.
   End Theory.
 End Bswap.
+*)

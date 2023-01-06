@@ -229,39 +229,7 @@ Module char_type.
 End char_type.
 Notation char_type := char_type.t.
 
-(** ** Integer types
-    See <https://en.cppreference.com/w/cpp/language/types>
- *)
-Module int_type.
-  (* the rank <https://eel.is/c++draft/conv.rank> *)
-  Notation t := bitsize (only parsing).
-  Notation rank := t (only parsing).
-
-  Notation Ichar := W8 (only parsing).
-  Notation Ishort := W16 (only parsing).
-  Notation Iint := W32 (only parsing).
-  Notation Ilong := W64 (only parsing).
-  (** warning: LLP64 model uses [long_bits := W32] *)
-  Notation Ilonglong := W64 (only parsing).
-
-  Definition bytesN (t : t) : N :=
-    arith.types.bytesN t. (* from [arith.types] *)
-
-  Definition bitsN (t : t) : N :=
-    8 * bytesN t.
-
-  Definition t_le (a b : t) : Prop :=
-    (bytesN a <= bytesN b)%N.
-
-  #[global] Instance t_le_dec : RelDecision t_le :=
-    fun a b => N.le_dec (bytesN a) (bytesN b).
-
-  (* [max] on the rank. *)
-  Definition t_max (a b : bitsize) : bitsize :=
-    if bool_decide (t_le a b) then b else a.
-
-End int_type.
-Notation int_type := int_type.t.
+Print int_type.
 
 (** ** Floating point types
     See <https://en.cppreference.com/w/cpp/language/types>

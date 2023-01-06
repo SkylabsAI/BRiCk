@@ -11,52 +11,61 @@ Variant endian : Set := Little | Big.
 #[global] Instance endian_eq_dec : EqDecision endian.
 Proof. solve_decision. Defined.
 
-(** ** bitsizes *)
-Variant bitsize : Set :=
-  | W8 | W16 | W32 | W64 | W128.
+(** ** bitsizes -- TODO represent simply as positive? *)
+Module bitsize.
+  Variant t : Set :=
+    | W8 | W16 | W32 | W64 | W80 | W128.
 
-Definition bytesN (b : bitsize) : N :=
-  match b with
-  | W8 => 1
-  | W16 => 2
-  | W32 => 4
-  | W64 => 8
-  | W128 => 16
-  end.
+  Definition bitsN (b : t) : N :=
+    match b with
+    | W8 => 8
+    | W16 => 16
+    | W32 => 32
+    | W64 => 64
+    | W80 => 80
+    | W128 => 128
+    end.
 
-Definition bitsN (b : bitsize) : N :=
-  match b with
-  | W8 => 8
-  | W16 => 16
-  | W32 => 32
-  | W64 => 64
-  | W128 => 128
-  end.
+  Notation bitsZ b := (Z.of_N (bitsN b)).
 
-Lemma bytes_bits b : (8 * bytesN b = bitsN b)%N.
-Proof. by destruct b. Qed.
+  #[global] Instance t_eq_dec: EqDecision t.
+  Proof. solve_decision. Defined.
+  #[global] Instance t_countable : Countable t.
+  Proof.
+    apply (inj_countable'
+             (λ s,
+               match s with
+               | W8 => 1
+               | W16 => 2
+               | W32 => 3
+               | W64 => 4
+               | W80 => 5
+               | W128 => 6
+               end)
+             (λ b,
+               match b with
+               | 1 => W8
+               | 2 => W16
+               | 3 => W32
+               | 4 => W64
+               | 5 => W80
+               | 6 => W128
+               | _ => W8
+               end)).
+    abstract (by intros []).
+  Defined.
 
-#[global] Instance bitsize_eq_dec: EqDecision bitsize.
-Proof. solve_decision. Defined.
-#[global] Instance bitsize_countable : Countable bitsize.
-Proof.
-  apply (inj_countable'
-            (λ s,
-              match s with
-              | W8 => 1
-              | W16 => 2
-              | W32 => 3
-              | W64 => 4
-              | W128 => 5
-              end)
-            (λ b,
-              match b with
-              | 1 => W8
-              | 2 => W16
-              | 3 => W32
-              | 4 => W64
-              | 5 => W128
-              | _ => W8
-              end)).
-  abstract (by intros []).
-Defined.
+  Definition bytesN (b : t) : N :=
+    match b with
+    | W8 => 1
+    | W16 => 2
+    | W32 => 4
+    | W64 => 8
+    | W80 => 10
+    | W128 => 16
+    end.
+
+  Lemma bytes_bits b : (8 * bytesN b = bitsN b)%N.
+  Proof. by destruct b. Qed.
+End bitsize.
+Notation bitsize := bitsize.t.

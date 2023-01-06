@@ -41,7 +41,7 @@ Record genv : Type :=
 { genv_tu : translation_unit
   (* ^ Implementation detail: the result of merging all the [translation_unit]s
   in the program. Might be replaced when fixing FM-2738. *)
-; pointer_size_bitsize : bitsize
+; pointer_size_bitsize : bitsize.t
   (* ^ the size of a pointer *)
 ; char_signed : signed
   (* ^ whether or not `char` is signed or unsigned *)

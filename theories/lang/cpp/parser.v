@@ -54,7 +54,7 @@ Module Import translation_unit.
     | d :: ds => fun s t a k => d s t a (fun s t a => decls' ds s t a k)
     end.
 
-  Definition decls (ds : list t) (e : endian) : translation_unit :=
+  Definition decls (ds : list t) (e : platform.endian) : translation_unit :=
     decls' ds ∅ ∅ ∅ $ fun s t a => {|
       symbols := NM.from_raw s;
       types := NM.from_raw t;

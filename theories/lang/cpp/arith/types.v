@@ -4,83 +4,11 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Import bedrock.prelude.base.
+Require Import bedrock.prelude.base bedrock.prelude.numbers.
 
 #[local] Open Scope Z_scope.
 
-(* Bit-widths *)
-Variant bitsize : Set :=
-| W8
-| W16
-| W32
-| W64
-| W128.
-#[global] Instance bitsize_eq: EqDecision bitsize.
-Proof. solve_decision. Defined.
-#[global] Instance bitsize_countable : Countable bitsize.
-Proof.
-  apply (inj_countable'
-    (λ b,
-      match b with
-      | W8 => 0 | W16 => 1 | W32 => 2 | W64 => 3 | W128 => 4
-      end)
-    (λ n,
-      match n with
-      | 0 => W8 | 1 => W16 | 2 => W32 | 3 => W64 | 4 => W128
-      | _ => W8	(* dummy *)
-      end)).
-  abstract (by intros []).
-Defined.
-
-Definition bitsN (s : bitsize) : N :=
-  match s with
-  | W8   => 8
-  | W16  => 16
-  | W32  => 32
-  | W64  => 64
-  | W128 => 128
-  end.
-
-#[global] Instance bitsN_inj : Inj (=) (=) bitsN.
-Proof. red; intros x y H; by (destruct x; destruct y). Qed.
-
-Definition bitsZ (s : bitsize) : Z :=
-  Z.of_N (bitsN s).
-
-Definition bytesNat (s : bitsize) : nat :=
-  match s with
-  | W8 => 1
-  | W16 => 2
-  | W32 => 4
-  | W64 => 8
-  | W128 => 16
-  end.
-
-Definition bytesN (s : bitsize) : N :=
-  N.of_nat (bytesNat s).
-
-Definition bytesZ (s : bitsize) : Z :=
-  Z.of_N (bytesN s).
-
-#[global] Arguments N.of_nat !_ /.
-#[global] Arguments bytesN !_ /.
-#[global] Arguments bytesZ !_ /.
-
-Bind Scope N_scope with bitsize.
-
-Lemma of_size_gt_O w :
-  (0 < 2 ^ bitsZ w)%Z.
-Proof. destruct w; reflexivity. Qed.
-(* Hint Resolve of_size_gt_O. *)
-
-Lemma bytesZ_positive s :
-  (0 < bytesZ s)%Z.
-Proof. destruct s; reflexivity. Qed.
-
-Lemma bytesZ_range s : (0 < bytesZ s < 17)%Z.
-Proof. destruct s; cbn; lia. Qed.
-
-(* Signed and Unsigned *)
+(** ** Signed and Unsigned *)
 Variant signed : Set := Signed | Unsigned.
 #[global] Instance signed_eq_dec: EqDecision signed.
 Proof. solve_decision. Defined.
@@ -92,36 +20,109 @@ Proof.
   abstract (by intros []).
 Defined.
 
-Variant endian : Set := Little | Big.
-#[global] Instance endian_dec : EqDecision endian.
-Proof. solve_decision. Defined.
+(** ** Integer types
+    See <https://en.cppreference.com/w/cpp/language/types>
+ *)
+Module int_type.
+  (* the rank <https://eel.is/c++draft/conv.rank> *)
+  Variant t : Set :=
+    | Schar
+    | Sshort
+    | Sint
+    | Slong
+    | Slonglong
+    | S128.
+  Notation rank := t (only parsing).
 
-Definition max_val (bits : bitsize) (sgn : signed) : Z :=
-  match bits , sgn with
-  | W8   , Signed   => 2^7 - 1
-  | W8   , Unsigned => 2^8 - 1
-  | W16  , Signed   => 2^15 - 1
-  | W16  , Unsigned => 2^16 - 1
-  | W32  , Signed   => 2^31 - 1
-  | W32  , Unsigned => 2^32 - 1
-  | W64  , Signed   => 2^63 - 1
-  | W64  , Unsigned => 2^64 - 1
-  | W128 , Signed   => 2^127 - 1
-  | W128 , Unsigned => 2^128 - 1
-  end.
+  Notation Ichar := Schar (only parsing).
+  Notation Ishort := Sshort (only parsing).
+  Notation Iint := Sint (only parsing).
+  Notation Ilong := Slong (only parsing).
+  (** warning: LLP64 model uses [long_bits := W32] *)
+  Notation Ilonglong := Slonglong (only parsing).
 
-Definition min_val (bits : bitsize) (sgn : signed) : Z :=
+  (* NOTE: These are hardcoded to LP64 model *)
+  Definition bytesN (t : t) : N :=
+    match t with
+    | Schar     => 1
+    | Sshort    => 2
+    | Sint      => 4
+    | Slong     => 8
+    | Slonglong => 8
+    | S128      => 16
+    end.
+
+  Definition bitsN (t : t) : N :=
+    8 * bytesN t.
+
+  Definition t_le (a b : t) : Prop :=
+    (bytesN a <= bytesN b)%N.
+
+  #[global] Instance t_le_dec : RelDecision t_le :=
+    fun a b => N.le_dec (bytesN a) (bytesN b).
+
+  (* [max] on the rank. *)
+  Definition t_max (a b : t) : t :=
+    if bool_decide (t_le a b) then b else a.
+
+  (* TODO: deprecate
+  Lemma of_size_gt_O w :
+    (0 < 2 ^ bitsN w)%Z.
+  Proof. destruct w; reflexivity. Qed.
+  Hint Resolve of_size_gt_O. *)
+
+End int_type.
+Notation int_type := int_type.t.
+
+
+Definition max_val (bits : int_type) (sgn : signed) : Z :=
+  match sgn with
+  | Signed => pow2N (int_type.bitsN bits - 1) - 1
+  | Unsigned => pow2N (int_type.bitsN bits) - 1
+  end%N.
+
+Definition min_val (bits : int_type) (sgn : signed) : Z :=
   match sgn with
   | Unsigned => 0
-  | Signed =>
-    match bits with
-    | W8   => -2^7
-    | W16  => -2^15
-    | W32  => -2^31
-    | W64  => -2^63
-    | W128 => -2^127
-    end
+  | Signed => - pow2N (int_type.bitsN bits - 1)
   end.
 
-Definition bound (bits : bitsize) (sgn : signed) (v : Z) : Prop :=
+Definition bound (bits : int_type) (sgn : signed) (v : Z) : Prop :=
   min_val bits sgn <= v <= max_val bits sgn.
+
+
+(*
+(** This record is what would be needed to support different compiler settings,
+    e.g. the precision of [long] being 32 vs 64.
+ *)
+Section with_arith.
+  Class ArithSettings : Set :=
+    { char_bits : N
+    ; short_bits : N
+    ; int_bits : N
+    ; long_bits : N
+    ; longlong_bits : N
+    ; char_bound : (8 <= char_bits)%N
+    ; short_bound : (16 <= short_bits)%N
+    ; int_bound : (32 <= int_bits)%N
+    ; long_bound : (32 <= long_bits)%N
+    ; longlong_bound : (64 <= longlong_bits)%N
+    ; char_short : (char_bits <= short_bits)%N
+    ; short_int : (short_bits <= int_bits)%N
+    ; int_long : (int_bits <= long_bits)%N
+    ; long_longlong : (long_bits <= longlong_bits)%N
+    }.
+
+
+  Context {AS : ArithSettings}.
+  Definition bitsN (sz : int_type) : N :=
+    match sz with
+    | Schar => char_bits
+    | Sshort => short_bits
+    | Sint => int_bits
+    | Slong => long_bits
+    | Slonglong => longlong_bits
+    end.
+
+End with_arith.
+*)

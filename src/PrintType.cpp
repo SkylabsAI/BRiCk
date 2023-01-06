@@ -178,6 +178,7 @@ public:
 		print.end_ctor();
 	}
 
+
 	void VisitRecordType(const RecordType* type, CoqPrinter& print,
 						 ClangPrinter& cprint) {
 		print.ctor("Tnamed", false);
