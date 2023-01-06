@@ -5,14 +5,15 @@
  *)
 From elpi Require Import locker.
 
+From iris.bi Require Import bi.
 From bedrock.lang.cpp.semantics Require Import values.
 From bedrock.lang.cpp.logic Require Import mpred rep_defs.
 
 (* points-to *)
 Structure AT : Type :=
   { #[canonical=yes] AT_LHS : Type
-  ; #[canonical=no] AT_RHS : Type
-  ; #[canonical=yes] AT_Result : Type
+  ; #[canonical=no] AT_RHS : bi
+  ; #[canonical=yes] AT_Result : bi
   ; #[canonical=no] AT_at : AT_LHS -> AT_RHS -> AT_Result }.
 Canonical Structure AT_ptr `{Σ : cpp_logic} : AT :=
   {| AT_LHS := ptr; AT_RHS := Rep; AT_Result := mpred; AT_at := _at |}.
