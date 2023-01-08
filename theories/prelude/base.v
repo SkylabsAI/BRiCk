@@ -21,6 +21,8 @@ It's more expressive, but it mangles definitions and can cause a quadratic size
 explosion. *)
 #[global] Unset Program Cases.
 #[global] Set Ltac Backtrace.
+(** Chosen by coq-elpi's derive. *)
+#[global] Set Uniform Inductive Parameters.
 
 (** * Small extensions to [stdpp.base] *)
 
