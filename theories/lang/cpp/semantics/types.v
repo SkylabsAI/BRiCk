@@ -33,8 +33,8 @@ Definition GlobDecl_align_of (g : GlobDecl) : option N :=
   | _ => None
   end.
 Variant Roption_leq {T} (R : T -> T -> Prop) : option T -> option T -> Prop :=
-| Rleq_None {x} : Roption_leq R None x
-| Rleq_Some {x y} (_ : R x y) : Roption_leq R (Some x) (Some y).
+| Rleq_None {x} : Roption_leq None x
+| Rleq_Some {x y} (_ : R x y) : Roption_leq (Some x) (Some y).
 
 
 #[global] Instance proper_GlobDecl_size_of: Proper (GlobDecl_ler ==> Roption_leq eq) GlobDecl_size_of.

@@ -161,7 +161,7 @@ Following our recipe, we first define a Coq model of (unsorted) trees: *)
 
 Inductive tree (A : Type) : Type :=
 | leaf
-| node (data : A) (left : tree A) (right : tree A).
+| node (data : A) (left : tree) (right : tree).
 Arguments leaf {_}.
 Arguments node {_} _ _ _.
 

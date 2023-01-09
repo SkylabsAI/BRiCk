@@ -33,12 +33,12 @@ Section extends.
       - [class_derives "::B" ["::A"]], [class_derives "::C" ["::B"]]
       - [class_derives "::C" ["::B","::A"]]
    *)
-  Inductive class_derives (derived : globname) : list globname -> Prop :=
-  | Derives_here {st}
+  Inductive class_derives : ∀ (derived : globname), list globname -> Prop :=
+  | Derives_here {derived st}
       {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
     : class_derives derived []
 
-  | Derives_base base st li rest
+  | Derives_base {derived} base st li rest
       {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
       {_ : (base, li) ∈ st.(s_bases)}
       (_ : class_derives base rest)

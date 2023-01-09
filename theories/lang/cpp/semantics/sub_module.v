@@ -554,4 +554,4 @@ Inductive class_compatible (a b : translation_unit) (cls : globname) : Prop :=
                (_ : a !! cls = Some (Gstruct st))
                (_ : b !! cls = Some (Gstruct st))
                (_ : forall base, In base (map fst st.(s_bases)) ->
-                            class_compatible a b base).
+                            class_compatible).

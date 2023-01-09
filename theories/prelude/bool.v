@@ -16,8 +16,8 @@ Typical users will still pick [P] and [Q] such that [Q ↔ ¬P], even if that's 
 strictly enforced.
 *)
 Variant reflectPQ (P Q : Prop) : bool -> Prop :=
-| rPQ_true  (_ : P) : reflectPQ P Q true
-| rPQ_false (_ : Q) : reflectPQ P Q false.
+| rPQ_true  (_ : P) : reflectPQ true
+| rPQ_false (_ : Q) : reflectPQ false.
 
 Lemma Is_true_is_true b : Is_true b ↔ is_true b.
 Proof. by destruct b. Qed.
