@@ -4,7 +4,7 @@ double d;
 long double ld;
 
 
-void dfun(float, double, long double)
+void dfun(float, double, long double);
 
 // integral
 char c;
@@ -31,12 +31,16 @@ void ifun(char,signed char, unsigned char, short, unsigned short, int, unsigned 
 wchar_t wc;
 #if 202002L <= __cplusplus
 char8_t c8;
-#endif
-#if 201102L <= __cplusplus
 char16_t c16;
 char32_t c32;
+void cfun(wchar_t, char8_t, char16_t, char32_t);
+#elif 201102L <= __cplusplus
+char16_t c16;
+char32_t c32;
+void cfun(wchar_t, char16_t, char32_t);
+#else
+void cfun(wchar_t);
 #endif
-
 
 // boolean
 bool b;
