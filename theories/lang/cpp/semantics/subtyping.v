@@ -16,7 +16,7 @@ Require Import bedrock.lang.cpp.ast.
 Require Import bedrock.lang.cpp.semantics.genv.
 
 Section extends.
-  Context (σ : genv).
+  Context {σ : genv}.
 
   (** [class_derives σ derived path]
       - [derived] is the derived class name
@@ -38,7 +38,7 @@ Section extends.
       {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
     : class_derives derived []
 
-  | Derives_base {base st li rest}
+  | Derives_base base st li rest
       {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
       {_ : (base, li) ∈ st.(s_bases)}
       (_ : class_derives base rest)
@@ -59,10 +59,6 @@ Section extends.
   Qed.
 
 End extends.
-
-Arguments Derives_here {_ _} _ _.
-Arguments Derives_base {_ _} _.
-Arguments class_derives {σ} derived path : rename.
 
 (** The following instance enables TC resolution to prove
 [class_derives σ derived base] when the translation unit [tu] and
