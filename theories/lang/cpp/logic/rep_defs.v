@@ -28,7 +28,7 @@ Lemma ptr_rel_elim (p1 p2 : ptr) : p1 ⊑ p2 → p1 = p2.
 Proof. done. Qed.
 
 Canonical Structure RepI `{Σ : cpp_logic} := monPredI ptr_bi_index mpredI.
-Definition Rep `{Σ : cpp_logic} : Type := RepI.
+Notation Rep := (bi_car RepI).
 Definition RepO `{Σ : cpp_logic} : ofe := RepI.
 
 #[global] Bind Scope bi_scope with Rep.
