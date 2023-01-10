@@ -296,11 +296,11 @@ Module Type RAW_BYTES_MIXIN
 
   Lemma raw_bytes_of_val_uint_length : forall σ v rs sz sgn,
       raw_bytes_of_val σ (Tnum sz sgn) v rs ->
-      length rs = bytesNat sz.
+      length rs = N.to_nat (bytesN sz).
   Proof.
     intros * Hraw_bytes_of_val%raw_bytes_of_val_sizeof.
     inversion Hraw_bytes_of_val as [Hsz]. clear Hraw_bytes_of_val.
-    by apply N_of_nat_inj in Hsz.
+    by rewrite Hsz Nat2N.id.
   Qed.
 End RAW_BYTES_MIXIN.
 
@@ -449,7 +449,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
 
     Lemma has_type_bswap:
       forall sz v,
-        has_type (Vint (bswap sz v)) (Tnum sz Unsigned).
+        has_type (Vint (bswap (N.to_nat $ bytesN sz) v)) (Tnum sz Unsigned).
     Proof.
       intros *; destruct sz;
         eauto using

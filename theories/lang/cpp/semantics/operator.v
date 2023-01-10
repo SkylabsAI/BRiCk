@@ -48,7 +48,7 @@ Axiom eval_not_bool : forall a,
 Axiom eval_unop_not : forall (w : bitsize) (sgn : signed) (a : Z),
     let b := match sgn with
              | Signed => -1 - a
-             | Unsigned => bitFlipZU w a
+             | Unsigned => bitFlipZU (bitsN w) a
              end in
     has_type (Vint b) (Tnum w sgn) ->
     eval_unop Ubnot (Tnum w sgn) (Tnum w sgn)
@@ -152,7 +152,7 @@ L operator>>(L, R)
 
 Axiom eval_shl :
   forall (w : bitsize) w2 (s s2 : signed) (a b : Z),
-    (0 <= b < bitsZ w)%Z ->
+    (0 <= b < bitsN w)%Z ->
     (0 <= a)%Z ->
     has_type (Vint a) (Tnum w s) ->
     has_type (Vint b) (Tnum w2 s2) ->
@@ -170,7 +170,7 @@ Axiom eval_shl :
    negative value, the resulting value is implementation-defined. *)
 Axiom eval_shr :
   forall (w : bitsize) w2 (s s2: signed) (a b : Z),
-    (0 <= b < bitsZ w)%Z ->
+    (0 <= b < bitsN w)%Z ->
     (0 <= a)%Z ->
     has_type (Vint a) (Tnum w s) ->
     has_type (Vint b) (Tnum w2 s2) ->

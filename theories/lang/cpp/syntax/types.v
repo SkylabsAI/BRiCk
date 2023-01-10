@@ -195,7 +195,7 @@ Section type_ind'.
     P ty -> P (Tref ty).
   Hypothesis Trv_ref_ind' : forall (ty : type),
     P ty -> P (Trv_ref ty).
-  Hypothesis Tnum_ind' : forall (size : bitsize) (sign : signed),
+  Hypothesis Tnum_ind' : forall (size : _) (sign : signed),
     P (Tnum size sign).
   Hypothesis Tvoid_ind' : P Tvoid.
   Hypothesis Tarray_ind' : forall (ty : type) (sz : N),
@@ -209,12 +209,12 @@ Section type_ind'.
   Hypothesis Tbool_ind' : P Tbool.
   Hypothesis Tmember_pointer_ind' : forall (name : globname) (ty : type),
     P ty -> P (Tmember_pointer name ty).
-  Hypothesis Tfloat_ind' : forall (size : bitsize),
+  Hypothesis Tfloat_ind' : forall (size : _),
     P (Tfloat size).
   Hypothesis Tqualified_ind' : forall (q : type_qualifiers) (ty : type),
     P ty -> P (Tqualified q ty).
   Hypothesis Tnullptr_ind' : P Tnullptr.
-  Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : bs),
+  Hypothesis Tarch_ind' : forall (osize : option _) (name : bs),
     P (Tarch osize name).
 
   Fixpoint type_ind' (ty : type) : P ty :=
@@ -258,13 +258,14 @@ Proof.
 Defined.
 #[global] Instance type_eq: EqDecision type := type_eq_dec.
 Section type_countable.
-  #[local] Notation BS x      := (GenLeaf (inr x)).
-  #[local] Notation QUAL x    := (GenLeaf (inl (inr x))).
-  #[local] Notation BITSIZE x := (GenLeaf (inl (inl (inr x)))).
-  #[local] Notation SIGNED x  := (GenLeaf (inl (inl (inl (inr x))))).
-  #[local] Notation CC x      := (GenLeaf (inl (inl (inl (inl (inr x)))))).
-  #[local] Notation AR x      := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
-  #[local] Notation N x       := (GenLeaf (inl (inl (inl (inl (inl (inl x))))))).
+  #[local] Notation BS x         := (GenLeaf (inr x)).
+  #[local] Notation QUAL x       := (GenLeaf (inl (inr x))).
+  #[local] Notation BITSIZE x    := (GenLeaf (inl (inl (inr x)))).
+  #[local] Notation SIGNED x     := (GenLeaf (inl (inl (inl (inr x))))).
+  #[local] Notation CC x         := (GenLeaf (inl (inl (inl (inl (inr x)))))).
+  #[local] Notation AR x         := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
+  #[local] Notation N x          := (GenLeaf (inl (inl (inl (inl (inl (inl x))))))).
+
   #[global] Instance type_countable : Countable type.
   Proof.
     set enc := fix go (t : type) :=
@@ -368,13 +369,13 @@ Fixpoint normalize_type (t : type) : type :=
     Tfunction (cc:=cc) (ar:=ar) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
   | Tqualified q t => qual_norm q t
-  | Tnum _ _ => t
-  | Tbool => t
-  | Tvoid => t
-  | Tnamed _ => t
-  | Tenum _ => t
-  | Tnullptr => t
-  | Tfloat _ => t
+  | Tnum _ _
+  | Tbool
+  | Tvoid
+  | Tnamed _
+  | Tenum _
+  | Tnullptr
+  | Tfloat _
   | Tarch _ _ => t
   end.
 

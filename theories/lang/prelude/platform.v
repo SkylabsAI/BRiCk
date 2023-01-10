@@ -6,7 +6,7 @@
 
 Require Import bedrock.prelude.numbers.
 
-(** ** Endianness -- TODO move *)
+(** ** Endianness *)
 Variant endian : Set := Little | Big.
 #[global] Instance endian_eq_dec : EqDecision endian.
 Proof. solve_decision. Defined.
@@ -32,6 +32,9 @@ Definition bitsN (b : bitsize) : N :=
   | W64 => 64
   | W128 => 128
   end.
+
+(* for compatibility? *)
+Notation bytesNat b := (N.to_nat (bytesN b)).
 
 Lemma bytes_bits b : (8 * bytesN b = bitsN b)%N.
 Proof. by destruct b. Qed.

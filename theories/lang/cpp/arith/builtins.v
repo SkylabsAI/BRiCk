@@ -3,18 +3,21 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import bedrock.prelude.base.
-From bedrock.lang.cpp.arith Require Import types operator.
+From bedrock.prelude Require Import base bits.
+Require Import bedrock.lang.prelude.platform.
+Require Import bedrock.lang.cpp.arith.operator.
 
 #[local] Open Scope Z_scope.
+#[local] Notation bytesNat x := (N.to_nat (bytesN x)) (only parsing).
+
 (* see
  * https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
  *)
 
 (* Returns one plus the index of the least significant 1-bit of x,
    or if x is zero, returns zero. *)
-Definition first_set (sz : bitsize) (n : Z) : Z :=
-  let n := trim (bitsN sz) n in
+Definition first_set (sz : N) (n : Z) : Z :=
+  let n := trim sz n in
   if Z.eqb n 0 then 0
   else
     (fix get ls : Z :=
@@ -24,12 +27,12 @@ Definition first_set (sz : bitsize) (n : Z) : Z :=
          if Z.testbit n l
          then 1 + l
          else get ls
-       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat sz))).
 #[global] Arguments first_set : simpl never.
 
 (* Returns the number of trailing 0-bits in x, starting at the least
    significant bit position. If x is 0, the result is undefined. *)
-Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
+Definition trailing_zeros (sz : N) (n : Z) : Z :=
   (fix get ls : Z :=
      match ls with
      | nil => 64
@@ -37,15 +40,15 @@ Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
        if Z.testbit n l
        then l
        else get ls
-     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat sz))).
 #[global] Arguments trailing_zeros : simpl never.
 
+#[local] Notation bitsZ x := (Z.of_N (bitsN x)) (only parsing).
 (* Returns the number of leading 0-bits in x, starting at the most significant
    bit position. If x is 0, the result is undefined. *)
-Definition leading_zeros (sz : bitsize) (l : Z) : Z :=
-  bitsZ sz - Z.log2 (l mod (2^64)).
+Definition leading_zeros (sz : N) (l : Z) : Z :=
+  Z.of_N sz - Z.log2 (l mod (2^64)).
 #[global] Arguments leading_zeros : simpl never.
-
 
 Section BitsTheory.
   Lemma log2_lt_pow2ge:
@@ -101,11 +104,14 @@ Section BitsTheory.
   Qed.
 End BitsTheory.
 
+Require Import bedrock.prelude.bits.
+Import churn_bits.
+
 Section Byte.
   Section split.
     Lemma split8:
       forall z,
-        0 <= z < 2^bitsZ W8 ->
+        0 <= z < 2^8 ->
         z = _set_byte (_get_byte z 0) 0.
     Proof.
       intros * Hbounds; rewrite _set_get_0.
@@ -116,7 +122,7 @@ Section Byte.
 
     Lemma split16:
       forall z,
-        0 <= z < 2^bitsZ W16 ->
+        0 <= z < 2^16 ->
         z = Z.lor (_set_byte (_get_byte z 0) 0)
                   (_set_byte (_get_byte z 1) 1).
     Proof.
@@ -599,26 +605,26 @@ Section Bswap.
               (bswap_idxs bytes)
               0.
 
-  Definition bswap (sz : bitsize) : Z -> Z := bswap_ (bytesNat sz).
+  Definition bswap (bytes : nat) : Z -> Z := bswap_ bytes.
 
   Section test.
-    Local Definition bytes (ls : list Z) :=
+    Let bytes (ls : list Z) :=
       fold_left (fun a b => a * 256 + b)%Z ls 0%Z.
     Arguments bytes _%Z.
 
-    Local Definition _bswap16_test : bswap W16 (bytes (1::2::nil)%Z) = bytes (2::1::nil)%Z := eq_refl.
-    Local Definition _bswap32_test :
-      bswap W32 (bytes (1::2::3::4::nil)%Z) = bytes (4::3::2::1::nil)%Z := eq_refl.
-    Local Definition _bswap64_test :
-      bswap W64 (bytes (1::2::3::4::5::6::7::8::nil)%Z) = bytes (8::7::6::5::4::3::2::1::nil)%Z := eq_refl.
+    Succeed Example _bswap16_test : bswap 2 (bytes (1::2::nil)%Z) = bytes (2::1::nil)%Z := eq_refl.
+    Succeed Example _bswap32_test :
+      bswap 4 (bytes (1::2::3::4::nil)%Z) = bytes (4::3::2::1::nil)%Z := eq_refl.
+    Succeed Example _bswap64_test :
+      bswap 8 (bytes (1::2::3::4::5::6::7::8::nil)%Z) = bytes (8::7::6::5::4::3::2::1::nil)%Z := eq_refl.
   End test.
 End Bswap.
 
-Notation bswap8 := (bswap W8) (only parsing).
-Notation bswap16 := (bswap W16) (only parsing).
-Notation bswap32 := (bswap W32) (only parsing).
-Notation bswap64 := (bswap W64) (only parsing).
-Notation bswap128 := (bswap W128) (only parsing).
+Notation bswap8 := (bswap 1) (only parsing).
+Notation bswap16 := (bswap 2) (only parsing).
+Notation bswap32 := (bswap 4) (only parsing).
+Notation bswap64 := (bswap 8) (only parsing).
+Notation bswap128 := (bswap 16) (only parsing).
 
 #[global] Opaque bswap.
 
@@ -700,8 +706,7 @@ Section Bswap.
     End bounded.
 
     Lemma bswap_bounded:
-      forall sz v,
-        0 <= bswap sz v < 2^(bitsZ sz).
+      forall sz v, 0 <= bswap (N.to_nat $ bytesN sz) v < 2^(bitsZ sz).
     Proof.
       intros *; destruct sz;
         eauto using
@@ -779,6 +784,7 @@ Section Bswap.
       Qed.
     End useless_lor.
 
+    (* NOT NEEDED
     Lemma bswap_useless_lor:
       forall sz v v' idx,
         (idx >= bytesNat sz)%nat ->
@@ -793,6 +799,7 @@ Section Bswap.
               bswap64_useless_lor,
               bswap128_useless_lor.
     Qed.
+    *)
 
     Section _set_byte_reverse.
       #[local] Transparent _get_byte _set_byte bswap.
@@ -968,9 +975,10 @@ Section Bswap.
       Qed.
     End larger.
 
+    (*
     Lemma bswap_larger sz z:
       0 <= z ->
-      bswap sz z = bswap sz (Z.land z (Z.ones (bitsZ sz))).
+      bswap sz z = bswap sz (Z.land z (Z.ones (Z.of_nat sz))).
     Proof.
       intros; destruct sz;
         eauto using
@@ -980,6 +988,7 @@ Section Bswap.
               bswap64_larger,
               bswap128_larger.
     Qed.
+    *)
 
     Section involutive.
       Lemma bswap8_involutive:
@@ -1089,9 +1098,9 @@ Section Bswap.
     End involutive.
 
     Lemma bswap_involutive:
-      forall sz z,
+      forall (sz : bitsize) z,
         0 <= z < 2^bitsZ sz ->
-        bswap sz (bswap sz z) = z.
+        bswap (bytesNat sz) (bswap (bytesNat sz) z) = z.
     Proof.
       intros * Hbounds; destruct sz;
         eauto using
@@ -1105,7 +1114,7 @@ Section Bswap.
     Lemma bswap_involutive_land:
       forall sz z,
         0 <= z < 2^bitsZ sz ->
-        bswap sz (bswap sz z) = Z.land z (Z.ones (bitsZ sz)).
+        bswap (bytesNat sz) (bswap (bytesNat sz) z) = Z.land z (Z.ones (bitsZ sz)).
     Proof.
       intros * Hbounds; destruct sz;
         eauto using
