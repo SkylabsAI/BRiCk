@@ -8,6 +8,7 @@ From iris.proofmode Require Import proofmode.
 From iris.bi.lib Require Import fractional.
 
 From bedrock.lang.cpp Require Import logic.pred.
+Require Import bedrock.lang.prelude.platform.
 From bedrock.lang.cpp.semantics Require Import types genv values.
 Require Import bedrock.prelude.addr.
 
@@ -36,10 +37,10 @@ Module Type PHANTDATA.
     points-to.*)
   Parameter phantdata_at :
     forall `{Σ:cpp_logic} {σ:genv} (ty : type) (q : Qp) (p : ptr), mpred.
-  #[global] Notation phantbyte_at := (phantdata_at W8).
-  #[global] Notation phantshort_at := (phantdata_at W16).
-  #[global] Notation phantword_at := (phantdata_at W32).
-  #[global] Notation phantdword_at := (phantdata_at W64).
+  #[global] Notation phantbyte_at := (phantdata_at Tuchar).
+  #[global] Notation phantshort_at := (phantdata_at Tushort).
+  #[global] Notation phantword_at := (phantdata_at Tuint).
+  #[global] Notation phantdword_at := (phantdata_at Tulonglong).
 
   Axiom phantdata_at_fractional :
     forall `{Σ:cpp_logic} {σ:genv} ty p, Fractional (λ q, phantdata_at ty q p).
