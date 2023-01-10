@@ -156,6 +156,7 @@ Inductive type : Set :=
 | Tbool
 | Tmember_pointer (_ : globname) (_ : type)
 | Tfloat (sizes : bitsize.t)
+  (* ^^ TODO incomplete. pointers to methods do not carry "this" qualifiers *)
 | Tqualified (_ : type_qualifiers) (_ : type)
 | Tnullptr
 (* architecture-specific types; currently unused.
