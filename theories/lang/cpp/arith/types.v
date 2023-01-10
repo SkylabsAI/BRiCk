@@ -8,55 +8,6 @@ Require Import bedrock.prelude.base bedrock.prelude.numbers.
 
 #[local] Open Scope Z_scope.
 
-(** ** Endianness -- TODO move *)
-Variant endian : Set := Little | Big.
-#[global] Instance endian_dec : EqDecision endian.
-Proof. solve_decision. Defined.
-
-(** ** bitsizes -- TODO represent simply as positive? *)
-Module bitsize.
-  Variant t : Set :=
-  | W8 | W16 | W32 | W64 | W80 | W128.
-
-  Definition bitsN (b : t) : N :=
-    match b with
-    | W8 => 8
-    | W16 => 16
-    | W32 => 32
-    | W64 => 64
-    | W80 => 80
-    | W128 => 128
-    end.
-
-  #[global] Instance t_eq_dec: EqDecision t.
-  Proof. solve_decision. Defined.
-  #[global] Instance t_countable : Countable t.
-  Proof.
-    apply (inj_countable'
-             (λ s,
-               match s with
-               | W8 => 1
-               | W16 => 2
-               | W32 => 3
-               | W64 => 4
-               | W80 => 5
-               | W128 => 6
-               end)
-             (λ b,
-               match b with
-               | 1 => W8
-               | 2 => W16
-               | 3 => W32
-               | 4 => W64
-               | 5 => W80
-               | 6 => W128
-               | _ => W8
-               end)).
-    abstract (by intros []).
-  Defined.
-
-End bitsize.
-
 (** ** Signed and Unsigned *)
 Variant signed : Set := Signed | Unsigned.
 #[global] Instance signed_eq_dec: EqDecision signed.
@@ -73,12 +24,12 @@ Defined.
 
 (** [int_type] provides the standard C++ primitive integral types *)
 Variant int_type : Set :=
-| Schar
-| Sshort
-| Sint
-| Slong
-| Slonglong
-| S128.
+| Ichar
+| Ishort
+| Iint
+| Ilong
+| Ilong_long
+| I128.
 #[global] Instance bitsize_eq: EqDecision int_type.
 Proof. solve_decision. Defined.
 #[global] Instance bitsize_countable : Countable int_type.
@@ -86,24 +37,24 @@ Proof.
   apply (inj_countable'
     (λ b,
       match b with
-      | Schar => 0 | Sshort => 1 | Sint => 2 | Slong => 3 | Slonglong => 4 | S128 => 5
+      | Ichar => 0 | Ishort => 1 | Iint => 2 | Ilong => 3 | Ilong_long => 4 | I128 => 5
       end)
     (λ n,
       match n with
-      | 0 => Schar | 1 => Sshort | 2 => Sint | 3 => Slong | 4 => Slonglong | 5 => S128
-      | _ => Schar	(* dummy *)
+      | 0 => Ichar | 1 => Ishort | 2 => Iint | 3 => Ilong | 4 => Ilong_long | 5 => I128
+      | _ => Ichar	(* dummy *)
       end)).
   abstract (by intros []).
 Defined.
 
 Definition bytesNat (s : int_type) : nat :=
   match s with
-  | Schar     => 1
-  | Sshort    => 2
-  | Sint      => 4
-  | Slong     => 8
-  | Slonglong => 8
-  | S128      => 16
+  | Ichar     => 1
+  | Ishort    => 2
+  | Iint      => 4
+  | Ilong     => 8
+  | Ilong_long => 8
+  | I128      => 16
   end.
 
 Definition bytesN (s : int_type) : N :=
@@ -130,19 +81,18 @@ Proof. destruct w; reflexivity. Qed.
 
 Definition max_val (bits : int_type) (sgn : signed) : Z :=
   match sgn with
-  | Signed => pow2N (bitsN bits - 1) - 1
-  | Unsigned => pow2N (bitsN bits) - 1
+  | Signed => 2 ^ (bitsN bits - 1) - 1
+  | Unsigned => 2 ^ (bitsN bits) - 1
   end%N.
 
 Definition min_val (bits : int_type) (sgn : signed) : Z :=
   match sgn with
   | Unsigned => 0
-  | Signed => - pow2N (bitsN bits - 1)
+  | Signed => - (2 ^ (bitsN bits - 1))
   end.
 
 Definition bound (bits : int_type) (sgn : signed) (v : Z) : Prop :=
   min_val bits sgn <= v <= max_val bits sgn.
-
 
 (*
 (** This record is what would be needed to support different compiler settings,

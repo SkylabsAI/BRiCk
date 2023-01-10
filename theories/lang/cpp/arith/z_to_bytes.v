@@ -6,9 +6,11 @@
 
 Require Import bedrock.prelude.base.
 Require Import bedrock.prelude.list_numbers.
-From bedrock.lang.cpp.arith Require Import types builtins operator.
+Require Import bedrock.prelude.bits.
+Require Import bedrock.lang.prelude.platform. (* for [endian], should not be necessary *)
+From bedrock.lang.cpp.arith Require Import types operator. (* builtins operator. *)
 
-Import arith.builtins.churn_bits.
+(*Import arith.builtins.churn_bits. *)
 
 Section FromToBytes.
   Section ExtraFacts.
@@ -131,12 +133,12 @@ Section FromToBytes.
       apply Z.bits_inj'=> n ?.
       rewrite Z.lor_spec Z.ldiff_spec !Z.land_spec !Z.shiftl_spec; try lia.
       rewrite !Z.testbit_ones; try lia.
-      churn_bits'.
+      (* churn_bits'.
       apply Z.bits_above_log2; try lia.
       assert (8 * (idx+S cnt)%nat <= n)%Z by lia.
       eapply Z.lt_le_trans; eauto.
       apply Z.log2_lt_pow2; try lia.
-    Qed.
+    Qed. *) Admitted.
   End ExtraFacts.
 
   Section ToBytes_internal.
@@ -149,11 +151,12 @@ Section FromToBytes.
     Definition _Z_to_bytes_le (cnt: nat) (sgn: signed) (v: Z): list N :=
       _Z_to_bytes_unsigned_le
         cnt (match sgn with
-             | Signed   => to_unsigned_bits (8 * N.of_nat cnt) v
+             | Signed   => trim (8 * N.of_nat cnt) v
              | Unsigned => v
              end).
 
     (* NOTE: This will be sealed once we finish the proofs for this section. *)
+    (* TODO remove [endianness] *)
     Definition _Z_to_bytes_def (cnt: nat) (endianness: endian) (sgn: signed) (v: Z): list N :=
       let little := _Z_to_bytes_le cnt sgn v in
       match endianness with

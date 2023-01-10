@@ -9,13 +9,13 @@
  *)
 
 From bedrock.prelude Require Import base numbers.
-From bedrock.lang.cpp.arith Require Import types.
+Require Import bedrock.lang.prelude.platform.
 
 #[local] Open Scope Z_scope.
 
 (** truncation (used for unsigned operations) *)
 Definition trim (w : N) (v : Z) : Z :=
-  v mod (2 ^ Z.of_N w).
+  v mod (2 ^ w).
 
 Lemma trim_0_l:
   forall (v: Z),
@@ -42,8 +42,8 @@ Qed.
 Notation to_unsigned_bits := (trim) (only parsing).
 Notation to_unsigned a    := (to_unsigned_bits (bitsN a)) (only parsing).
 
-Definition bitFlipZU (len : bitsize) (z : Z) : Z :=
-  to_unsigned len (Z.lnot z).
+Definition bitFlipZU (len : N) (z : Z) : Z :=
+  trim len (Z.lnot z).
 
 Lemma to_unsigned_bits_id : forall z (bits : N),
     0 <= z < 2 ^ (Z.of_N bits) ->
@@ -54,7 +54,7 @@ Proof.
 Qed.
 
 Lemma to_unsigned_id : forall z (sz : bitsize),
-    0 <= z < 2^bitsZ sz ->
+    0 <= z < 2^bitsN sz ->
     to_unsigned sz z = z.
 Proof. destruct sz; apply to_unsigned_bits_id. Qed.
 
@@ -85,8 +85,8 @@ Definition to_signed_bits (bits: N) (z: Z): Z :=
 Definition to_signed (sz: bitsize) (z: Z): Z :=
   Unfold to_signed_bits (to_signed_bits (bitsN sz) z).
 
-Local Transparent bitsZ bitsN.
-Arguments bitsZ !_/.
+#[local] Transparent (* bitsZ *) bitsN.
+(* Arguments bitsZ !_/. *)
 Arguments Z.of_N !_/.
 Arguments bitsN !_/.
 
@@ -105,7 +105,7 @@ Proof.
 Qed.
 
 Lemma to_signed_id : forall (z : Z) (n : bitsize),
-  0 <= z < 2^(bitsZ n - 1) -> to_signed n z = z.
+  0 <= z < 2^(bitsN n - 1) -> to_signed n z = z.
 Proof. destruct n; apply to_signed_bits_id. Qed.
 
 Lemma to_signed_bits_neg: forall (z: Z) (bits: N),
@@ -130,8 +130,8 @@ Proof.
 Qed.
 
 Lemma to_signed_neg : forall x (n : bitsize),
-    2^(bitsZ n - 1) - 1 < x < 2^bitsZ n ->
-    to_signed n x = trim (bitsN n) (x - 2^(bitsZ n - 1)) + - 2^(bitsZ n - 1).
+    2^(bitsN n - 1) - 1 < x < 2^bitsN n ->
+    to_signed n x = trim (bitsN n) (x - 2^(bitsN n - 1)) + - 2^(bitsN n - 1).
 Proof. move=> x n H; by pose proof (to_signed_bits_neg x (bitsN n) H). Qed.
 
 Lemma Z_opp1_mul_lt_ge:

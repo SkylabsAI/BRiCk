@@ -3,18 +3,22 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import bedrock.prelude.base.
-From bedrock.lang.cpp.arith Require Import types operator.
+From bedrock.prelude Require Import base bits.
+Require Import bedrock.lang.prelude.platform.
+Require Import bedrock.lang.cpp.arith.operator.
 
 #[local] Open Scope Z_scope.
+#[local] Notation bitsZ x := (Z.of_N (bitsN x)) (only parsing).
+#[local] Notation bytesNat x := (N.to_nat (bytesN x)) (only parsing).
+
 (* see
  * https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
  *)
 
 (* Returns one plus the index of the least significant 1-bit of x,
    or if x is zero, returns zero. *)
-Definition first_set (sz : bitsize) (n : Z) : Z :=
-  let n := trim (bitsN sz) n in
+Definition first_set (sz : N) (n : Z) : Z :=
+  let n := trim sz n in
   if Z.eqb n 0 then 0
   else
     (fix get ls : Z :=
@@ -24,12 +28,12 @@ Definition first_set (sz : bitsize) (n : Z) : Z :=
          if Z.testbit n l
          then 1 + l
          else get ls
-       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat sz))).
 #[global] Arguments first_set : simpl never.
 
 (* Returns the number of trailing 0-bits in x, starting at the least
    significant bit position. If x is 0, the result is undefined. *)
-Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
+Definition trailing_zeros (sz : N) (n : Z) : Z :=
   (fix get ls : Z :=
      match ls with
      | nil => 64
@@ -37,15 +41,14 @@ Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
        if Z.testbit n l
        then l
        else get ls
-     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsN sz)))).
+     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat sz))).
 #[global] Arguments trailing_zeros : simpl never.
 
 (* Returns the number of leading 0-bits in x, starting at the most significant
    bit position. If x is 0, the result is undefined. *)
-Definition leading_zeros (sz : bitsize) (l : Z) : Z :=
-  bitsZ sz - Z.log2 (l mod (2^64)).
+Definition leading_zeros (sz : N) (l : Z) : Z :=
+  Z.of_N sz - Z.log2 (l mod (2^64)).
 #[global] Arguments leading_zeros : simpl never.
-
 
 Section BitsTheory.
   Lemma log2_lt_pow2ge:
