@@ -400,7 +400,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
 
   #[global] Instance ptr_cong_reflexive {σ : genv} : Reflexive (ptr_cong σ).
   Proof.
-    red; unfold ptr_cong; intros p; exists p, (.[ Tu8 ! 0 ]), (.[ Tu8 ! 0]).
+    red; unfold ptr_cong; intros p; exists p, (.[ Tuchar ! 0 ]), (.[ Tuchar ! 0]).
     intuition; try solve [rewrite o_sub_0; auto; rewrite offset_ptr_id//].
     unfold offset_cong; apply same_property_iff.
     rewrite eval_o_sub/= Z.mul_0_r; eauto.

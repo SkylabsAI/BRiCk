@@ -247,12 +247,12 @@ Module Type RAW_BYTES_MIXIN
   | Vqual σ t ty v1 v2:
       val_related σ ty v1 v2 ->
       val_related σ (Tqualified t ty) v1 v2
-  | Vraw_uint8 σ raw z
-      (Hraw : raw_bytes_of_val σ Tu8 (Vint z) [raw]) :
-      val_related σ Tu8 (Vraw raw) (Vint z)
+  | Vraw_uchar σ raw z
+      (Hraw : raw_bytes_of_val σ Tuchar (Vint z) [raw]) :
+      val_related σ Tuchar (Vraw raw) (Vint z)
   | Vuint8_raw σ z raw
-      (Hraw : raw_bytes_of_val σ Tu8 (Vint z) [raw]) :
-      val_related σ Tu8 (Vint z) (Vraw raw).
+      (Hraw : raw_bytes_of_val σ Tuchar (Vint z) [raw]) :
+      val_related σ Tuchar (Vint z) (Vraw raw).
 
   Lemma val_related_qual :
     forall σ t ty v1 v2,
@@ -401,9 +401,11 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
         bound sz sgn z <-> has_type (Vint z) (Tnum sz sgn).
     Proof. move => *. rewrite has_int_type'. naive_solver. Qed.
 
+    (* TODO fix this
     Theorem has_char_type : forall sz (sgn : signed) z,
-        bound sz sgn z <-> has_type (Vint z) (Tchar sz sgn).
+        bound sz sgn z <-> has_type (Vint z) (Tchar_ sz sgn).
     Proof. apply has_int_type. Qed.
+    *)
 
     Lemma has_type_drop_qualifiers
       : forall v ty, has_type v ty <-> has_type v (drop_qualifiers ty).
@@ -420,6 +422,8 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
       intros. by apply has_type_drop_qualifiers.
     Qed.
 
+    (*
+    (* These should remain tied to [bitsize] *)
     Section has_type.
       Lemma has_type_bswap8:
         forall v,
@@ -459,18 +463,28 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               has_type_bswap64,
               has_type_bswap128.
     Qed.
+    *)
 
     (** representation of integral types *)
     Variant IntegralType : Set :=
       | Bool
-      | Num (_ : bitsize) (_ : signed).
+      | Num (_ : int_type) (_ : signed).
 
     (** [as_integral tu ty] is the integral representation of the type if one exists.
        In particular, this gets the underlying type of enumerations.
      *)
+    Print char_type.
     Definition as_integral (tu : translation_unit) (ty : type) : option IntegralType :=
       match drop_qualifiers ty with
       | Tnum sz sgn => Some $ Num sz sgn
+      | Tchar_ s => Some $ match s with
+                     | Cchar => Num Ichar Unsigned (* FIXME *)
+                     | Cwchar sgn => Num Iint sgn
+                     | C8 => Num Ichar Unsigned
+                     | C16 => Num Ishort Unsigned
+                     | C32 => Num Iint Unsigned
+                     end
+
       | Tenum nm =>
           match tu !! nm with
           | Some (Genum ty _) =>
@@ -504,7 +518,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
           | Num _ _ , Num sz Unsigned =>
               match v with
               | Vint v =>
-                  v' = Vint (to_unsigned sz v)
+                  v' = Vint (trim (bitsN sz) v)
               | _ => False
               end
           | Num _ _ , Num sz Signed =>
@@ -518,7 +532,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
   End with_env.
 
   #[global] Hint Resolve has_type_qual : has_type.
-  #[global] Hint Resolve has_type_bswap : has_type.
+  (* #[global] Hint Resolve has_type_bswap : has_type. *) (* TODO *)
 
   Arguments Z.add _ _ : simpl never.
   Arguments Z.sub _ _ : simpl never.

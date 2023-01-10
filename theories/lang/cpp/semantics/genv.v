@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From bedrock.prelude Require Import base.
+From bedrock.lang.prelude Require Import platform. (* needed for [endian] *)
 From bedrock.lang.cpp.syntax Require Export names types stmt translation_unit.
 From bedrock.lang.cpp.semantics Require Export sub_module.
 
@@ -40,7 +41,7 @@ Record genv : Type :=
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
-Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
+Definition pointer_size (g : genv) : N := platform.bytesN (pointer_size_bitsize g).
 
 (** * global environments *)
 
@@ -118,21 +119,21 @@ Qed.
 
 (** TODO deprecate this in favor of inlining it *)
 Definition glob_def (g : genv) (gn : globname) : option GlobDecl :=
-  g.(genv_tu) !! gn.
+  g.(genv_tu).(globals) !! gn.
 
 (* Supersedes glob_def_submodule *)
 Lemma glob_def_genv_compat_struct {σ gn tu} {Hσ : tu ⊧ σ} st
-  (Hl : tu !! gn = Some (Gstruct st)) :
+  (Hl : tu.(globals) !! gn = Some (Gstruct st)) :
   glob_def σ gn = Some (Gstruct st).
 Proof. move: Hσ Hl => /genv_compat_submodule. apply: sub_module_preserves_gstruct. Qed.
 
 Lemma glob_def_genv_compat_union {σ gn tu} {Hσ : tu ⊧ σ} st
-  (Hl : tu !! gn = Some (Gunion st)) :
+  (Hl : tu.(globals) !! gn = Some (Gunion st)) :
   glob_def σ gn = Some (Gunion st).
 Proof. move: Hσ Hl => /genv_compat_submodule. apply: sub_module_preserves_gunion. Qed.
 
 Lemma glob_def_genv_compat_enum {σ gn tu} {Hσ : tu ⊧ σ} ty brs
-  (Hl : tu !! gn = Some (Genum ty brs)) :
+  (Hl : tu.(globals) !! gn = Some (Genum ty brs)) :
   exists brs', glob_def σ gn = Some (Genum ty brs').
 Proof. move: Hσ Hl => /genv_compat_submodule. apply: sub_module_preserves_genum. Qed.
 
@@ -145,7 +146,7 @@ Section type_of_field.
   Context {σ: genv}.
 
   Definition type_of_field (cls : globname) (f : ident) : option type :=
-    match σ.(genv_tu) !! cls with
+    match σ.(genv_tu).(globals) !! cls with
     | None => None
     | Some (Gstruct st) =>
       match List.find (fun m => bool_decide (f = m.(mem_name))) st.(s_fields) with

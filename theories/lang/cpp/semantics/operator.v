@@ -45,10 +45,10 @@ Axiom eval_not_bool : forall a,
 
    NOTE [Z.lnot a = -1 - a]
  *)
-Axiom eval_unop_not : forall (w : bitsize) (sgn : signed) (a : Z),
+Axiom eval_unop_not : forall (w : int_type) (sgn : signed) (a : Z),
     let b := match sgn with
              | Signed => -1 - a
-             | Unsigned => bitFlipZU w a
+             | Unsigned => bitFlipZU (bitsN w) a
              end in
     has_type (Vint b) (Tnum w sgn) ->
     eval_unop Ubnot (Tnum w sgn) (Tnum w sgn)
@@ -103,14 +103,14 @@ Axiom eval_mul : Hnf (eval_int_op Bmul Z.mul).
 
    See https://eel.is/c++draft/expr.mul#4
  *)
-Axiom eval_div : forall (w : bitsize) (s : signed) (a b : Z),
+Axiom eval_div : forall (w : int_type) (s : signed) (a b : Z),
     b <> 0%Z ->
     has_type (Vint a) (Tnum w s) ->
     has_type (Vint b) (Tnum w s) ->
     let c := Z.quot a b in
     has_type (Vint c) (Tnum w s) ->
     eval_binop_pure Bdiv (Tnum w s) (Tnum w s) (Tnum w s) (Vint a) (Vint b) (Vint c).
-Axiom eval_mod : forall (w : bitsize) (s : signed) (a b : Z),
+Axiom eval_mod : forall (w : int_type) (s : signed) (a b : Z),
     b <> 0%Z ->
     has_type (Vint a) (Tnum w s) ->
     has_type (Vint b) (Tnum w s) ->
@@ -151,7 +151,7 @@ L operator>>(L, R)
   *)
 
 Axiom eval_shl :
-  forall (w : bitsize) w2 (s s2 : signed) (a b : Z),
+  forall (w : int_type) w2 (s s2 : signed) (a b : Z),
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
     has_type (Vint a) (Tnum w s) ->
@@ -169,7 +169,7 @@ Axiom eval_shl :
    part of the quotient of E1/(2^E2). If E1 has a signed type and a
    negative value, the resulting value is implementation-defined. *)
 Axiom eval_shr :
-  forall (w : bitsize) w2 (s s2: signed) (a b : Z),
+  forall (w : int_type) w2 (s s2: signed) (a b : Z),
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
     has_type (Vint a) (Tnum w s) ->
@@ -258,6 +258,6 @@ Lemma companion_type_1 {σ : genv} t : forall ct,
     has_type 1 ct.
 Proof.
   induction t; simpl; try congruence; eauto.
-  - inversion 1; subst. by apply has_int_type.
+  - inversion 1; subst. apply has_int_type. rewrite /bound. simpl.  compute.
   - inversion 1; subst. apply has_int_type. destruct size, signed; done.
 Qed.
