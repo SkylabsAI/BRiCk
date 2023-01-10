@@ -6,6 +6,7 @@
 Require Import stdpp.fin_maps.
 From bedrock.prelude Require Import base avl.
 From bedrock.lang.cpp.syntax Require Import names expr stmt types.
+Require Import bedrock.lang.prelude.platform. (* for [endian] *)
 
 #[local] Set Primitive Projections.
 

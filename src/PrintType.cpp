@@ -211,6 +211,20 @@ public:
             CASE(Bool, Tbool)
             CASE(Void, Tvoid)
             CASE(NullPtr, Tnullptr)
+            // TODO: What is the difference between [SChar] and [Char_S]?
+            CASE(Char_S, Tschar)
+            // TODO: What is the difference between [UChar] and [Char_U]?
+            CASE(Char_U, Tuchar)
+            CASE(WChar_S, (Tchar(Cwchar Signed)))
+            CASE(WChar_U, (Tchar(Cwchar Unsigned)))
+            CASE(Char8, (Tchar Cswchar))
+            CASE(Char16, (Tchar Cswchar))
+            CASE(Char32, (Tchar Cuwchar))
+
+            CASE(Float, (Tfloat Ffloat))
+            CASE(Double, (Tfloat Fdouble))
+            CASE(LongDouble, (Tfloat Flongdouble))
+
         case BuiltinType::Kind::Dependent:
             print.output() << "Tunsupported \"type-dependent type\"";
             using namespace logging;
@@ -240,9 +254,7 @@ public:
             break;
 #endif
         default:
-            if (type->isCharType()) {
-                print.output() << "Tchar_";
-            } else if (type->isAnyCharacterType()) {
+            if (type->isAnyCharacterType()) {
                 print.output()
                     << "(Tchar " << bitsize(cprint.getTypeSize(type)) << " "
                     << (type->isSignedInteger() ? "Signed" : "Unsigned") << ")";

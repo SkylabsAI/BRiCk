@@ -93,6 +93,7 @@ Module Export TypeNotations.
   Notation "'uint64'" := Tu64 (in custom CPP_type at level 0, only printing).
   Notation "'int128'" := Ti128 (in custom CPP_type at level 0, only printing).
   Notation "'uint128'" := Tu128 (in custom CPP_type at level 0, only printing).
+  *)
 
   (* The rest of the [type]s *)
   Notation "'ptr<' ty '>'"

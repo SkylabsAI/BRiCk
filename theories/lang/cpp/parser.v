@@ -5,6 +5,8 @@
  *)
 Require Export bedrock.prelude.base.
 Require Export bedrock.lang.cpp.ast.
+Require Export bedrock.lang.prelude.platform.
+(* ^^ explicit because it is only neede for [endian] *)
 
 Fixpoint do_end (ty : globname) : obj_name :=
   match ty with
@@ -162,7 +164,7 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) : translation_unit :=
+Definition decls ls (e : platform.endian) : translation_unit :=
   decls' ls ∅ ∅ (fun a b => {| symbols := avl.map_canon a
                            ; globals := avl.map_canon b
                            ; initializer := nil (* FIXME *)

@@ -140,27 +140,41 @@ Defined.
 Existing Class function_arity.
 #[global] Existing Instance Ar_Definite.
 
+(* There is overlap with the integral types, i.e. both
+   [signed char] and [unsigned char] are also integral types.
+   BRiCk represents these types as [Tnum Schar Signed] and
+   [Tnum Schar Unsigned] respectively.
+ *)
+Variant char_type : Set :=
+  | Cchar | Cwchar (_ : signed) | C16 | C32 | C8.
+#[global] Instance char_type_eq_dec : EqDecision char_type.
+Proof. solve_decision. Defined.
+
+Variant float_type : Set :=
+  | Ffloat | Fdouble | Flong_double.
+#[global] Instance float_type_eq_dec : EqDecision float_type.
+Proof. solve_decision. Defined.
 
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
 | Tref (_ : type)
 | Trv_ref (_ : type)
-| Tchar_ (* the [char] type *)
 | Tnum (size : int_type) (signed : signed)
+| Tchar_ (_ : char_type)
 | Tvoid
-| Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
+| Tarray (_ : type) (_ : N) (* arrays with unknown size are represented as pointers *)
 | Tnamed (_ : globname)
 | Tenum (_ : globname) (* enumerations *)
 | Tfunction {cc : calling_conv} {ar : function_arity} (_ : type) (_ : list type)
 | Tbool
 | Tmember_pointer (_ : globname) (_ : type)
-| Tfloat (sizes : bitsize.t)
   (* ^^ TODO incomplete. pointers to methods do not carry "this" qualifiers *)
+| Tfloat (sizes : float_type)
 | Tqualified (_ : type_qualifiers) (_ : type)
 | Tnullptr
 (* architecture-specific types; currently unused.
-   some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option size]. *)
+   some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option positive]. *)
 | Tarch (_ : option positive) (name : bs)
 .
 #[global] Instance type_inhabited : Inhabited type := populate Tvoid.
@@ -168,8 +182,6 @@ Inductive type : Set :=
 (** [description] is meant to be only used for documentation. *)
 Definition Tunsupported (description : bs) : type.
 Proof. exact inhabitant. Qed.
-
-Notation Tchar := Tnum (only parsing).
 
 (** Strengthened Induction Principle for [type]
 
@@ -199,7 +211,8 @@ Section type_ind'.
     P ty -> P (Trv_ref ty).
   Hypothesis Tnum_ind' : forall (size : int_type) (sign : signed),
     P (Tnum size sign).
-  Hypothesis Tchar_' : P Tchar_.
+  Hypothesis Tchar_ind' : forall (size : _),
+    P (Tchar_ size).
   Hypothesis Tvoid_ind' : P Tvoid.
   Hypothesis Tarray_ind' : forall (ty : type) (sz : N),
     P ty -> P (Tarray ty sz).
@@ -225,8 +238,8 @@ Section type_ind'.
     | Tptr ty                 => Tptr_ind' ty (type_ind' ty)
     | Tref ty                 => Tref_ind' ty (type_ind' ty)
     | Trv_ref ty              => Trv_ref_ind' ty (type_ind' ty)
-    | Tchar_                  => Tchar_'
     | Tnum sz sgn             => Tnum_ind' sz sgn
+    | Tchar_ sz                => Tchar_ind' sz
     | Tvoid                   => Tvoid_ind'
     | Tarray ty sz            => Tarray_ind' ty sz (type_ind' ty)
     | Tnamed name             => Tnamed_ind' name
@@ -262,6 +275,7 @@ Proof.
 Defined.
 #[global] Instance type_eq: EqDecision type := type_eq_dec.
 Section type_countable.
+  (*
   #[local] Notation BS x         := (GenLeaf (inr x)).
   #[local] Notation QUAL x       := (GenLeaf (inl (inr x))).
   #[local] Notation ARITH_SIZE x := (GenLeaf (inl (inl (inr x)))).
@@ -270,10 +284,12 @@ Section type_countable.
   #[local] Notation AR x         := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
   #[local] Notation POS x        := (GenLeaf (inl (inl (inl (inl (inl (inl (inr x)))))))).
   #[local] Notation N x          := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inr x))))))))).
-  #[local] Notation BITSIZE x    := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inl x))))))))).
+  #[local] Notation FLOAT_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inl x))))))))).
+  #[local] Notation CHAR_TYPE x  :=
+  *)
 
   #[global] Instance type_countable : Countable type.
-  Proof.
+  Proof. (*
     set enc := fix go (t : type) :=
       match t with
       | Tptr t => GenNode 0 [go t]
@@ -281,6 +297,7 @@ Section type_countable.
       | Trv_ref t => GenNode 2 [go t]
       | Tchar_ => GenNode 16 []
       | Tnum sz sgn => GenNode 3 [ARITH_SIZE sz; SIGNED sgn]
+      | Tchar sz sgn => GenNode 17 [BITSIZE sz; SIGNED sgn]
       | Tvoid => GenNode 4 []
       | Tarray t n => GenNode 5 [go t; N n]
       | Tnamed gn => GenNode 6 [BS gn]
@@ -313,12 +330,13 @@ Section type_countable.
       | GenNode 14 [POS sz; BS gn] => Tarch (Some sz) gn
       | GenNode 15 [BS gn] => Tenum gn
       | GenNode 16 [] => Tchar_
+      | GenNode 17 [BITSIZE sz; SIGNED sgn] => Tchar sz sgn
       | _ => Tvoid	(** dummy *)
       end.
     apply (inj_countable' enc dec). refine (fix go t := _).
     destruct t as [| | | | | | | | |cc ar ret args| | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
-  Defined.
+  Defined. *) Admitted.
 End type_countable.
 
 Notation Tpointer := Tptr (only parsing).
@@ -377,8 +395,8 @@ Fixpoint normalize_type (t : type) : type :=
     Tfunction (cc:=cc) (ar:=ar) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
   | Tqualified q t => qual_norm q t
-  | Tchar_
   | Tnum _ _
+  | Tchar_ _
   | Tbool
   | Tvoid
   | Tnamed _
@@ -435,21 +453,33 @@ End normalize_type_idempotent.
 Definition decompose_type : type -> type_qualifiers * type :=
   qual_norm (fun q t => (q, t)).
 
+Notation char_bits      := Ichar  (only parsing).
+Notation short_bits     := Ishort (only parsing).
+Notation int_bits       := Iint (only parsing).
+Notation long_bits      := Ilong (only parsing).
+Notation long_long_bits := Ilong_long (only parsing).
 
+(** ** Types with implicit size information. *)
+
+Notation Tchar      := (Tchar_ Cchar).
+Notation Tschar     := (Tnum Ichar Signed) (only parsing).
+Notation Tuchar     := (Tnum Ichar Unsigned) (only parsing).
+Notation Tushort    := (Tnum Ishort Unsigned) (only parsing).
+Notation Tshort     := (Tnum Ishort Signed) (only parsing).
+Notation Tint       := (Tnum Iint Signed) (only parsing).
+Notation Tuint      := (Tnum Iint Unsigned) (only parsing).
+Notation Tulong     := (Tnum Ilong Unsigned) (only parsing).
+Notation Tlong      := (Tnum Ilong Signed) (only parsing).
+Notation Tulonglong := (Tnum Ilong_long Unsigned) (only parsing).
+Notation Tlonglong  := (Tnum Ilong_long Signed) (only parsing).
+
+(* Used when we talk about the raw representation of objects *)
+Notation Tbyte      := Tuchar (only parsing).
+
+(*
 (** ** Types with explicit size information.
     TODO remove this.
  *)
-
-Notation Ti8    := (Tnum Schar Signed).
-Notation Tu8    := (Tnum Schar Unsigned).
-Notation Ti16   := (Tnum Sshort Signed).
-Notation Tu16   := (Tnum Sshort Unsigned).
-Notation Ti32   := (Tnum Sint Signed).
-Notation Tu32   := (Tnum Sint Unsigned).
-Notation Ti64   := (Tnum Slonglong Signed).
-Notation Tu64   := (Tnum Slonglong Unsigned).
-Notation Ti128  := (Tnum S128 Signed).
-Notation Tu128  := (Tnum S128 Unsigned).
 
 (* note(gmm): types without explicit size information need to
  * be parameters of the underlying code, otherwise we can't
@@ -458,31 +488,20 @@ Notation Tu128  := (Tnum S128 Unsigned).
  *)
 (**
 https://en.cppreference.com/w/cpp/language/types
-The 4 definitions below use the LP64 data model.
+The definitions below use the LP64 data model.
 LLP64 and LP64 agree except for the [long] type: see
 the warning below.
 In future, we may want to parametrize by a data model, or
 the machine word size.
 *)
-Notation char_bits      := Schar  (only parsing).
-Notation short_bits     := Sshort (only parsing).
-Notation int_bits       := Sint (only parsing).
-Notation long_bits      := Slong (only parsing).
-Notation long_long_bits := Slonglong (only parsing).
-
-(** ** Types with implicit size information. *)
-
-Notation Tschar  := (Tnum Schar Signed) (only parsing).
-Notation Tuchar  := (Tnum Schar Unsigned) (only parsing).
-
-Notation Tushort := (Tnum Sshort Unsigned) (only parsing).
-Notation Tshort := (Tnum Sshort Signed) (only parsing).
-
-Notation Tint := (Tnum Sint Signed) (only parsing).
-Notation Tuint := (Tnum Sint Unsigned) (only parsing).
-
-Notation Tulong := (Tnum Slong Unsigned) (only parsing).
-Notation Tlong := (Tnum Slong Signed) (only parsing).
-
-Notation Tulonglong := (Tnum Slonglong Unsigned) (only parsing).
-Notation Tlonglong := (Tnum Slonglong Signed) (only parsing).
+Notation Ti8    := (Tnum Ichar Signed).
+Notation Tu8    := (Tnum Ichar Unsigned).
+Notation Ti16   := (Tnum Ishort Signed).
+Notation Tu16   := (Tnum Ishort Unsigned).
+Notation Ti32   := (Tnum Iint Signed).
+Notation Tu32   := (Tnum Iint Unsigned).
+Notation Ti64   := (Tnum Ilong_long Signed).
+Notation Tu64   := (Tnum Ilong_long Unsigned).
+Notation Ti128  := (Tnum I128 Signed).
+Notation Tu128  := (Tnum I128 Unsigned).
+*)
