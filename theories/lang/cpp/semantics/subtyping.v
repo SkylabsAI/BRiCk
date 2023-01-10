@@ -35,11 +35,11 @@ Section extends.
    *)
   Inductive class_derives (derived : globname) : list globname -> Prop :=
   | Derives_here {st}
-      {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
+      {_ : σ.(genv_tu).(globals) !! derived = Some (Gstruct st)}
     : class_derives derived []
 
   | Derives_base {base st li rest}
-      {_ : σ.(genv_tu) !! derived = Some (Gstruct st)}
+      {_ : σ.(genv_tu).(globals) !! derived = Some (Gstruct st)}
       {_ : (base, li) ∈ st.(s_bases)}
       (_ : class_derives base rest)
     : class_derives derived (base :: rest)
@@ -75,7 +75,7 @@ Section tu.
   Variable tu : translation_unit.
 
   Fixpoint tu_class_derives (derived : globname) (path : list globname) : bool :=
-    match tu !! derived with
+    match tu.(globals) !! derived with
     | Some (Gstruct st) =>
         match path with
         | nil => true
