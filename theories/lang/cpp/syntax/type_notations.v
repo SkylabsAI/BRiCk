@@ -81,6 +81,7 @@ Module Export TypeNotations.
          , format "'[' const  volatile  ty ']'"
          , only printing).
 
+  (* TODO port these
   (* [Tnum] variants *)
   Notation "'int8'" := Ti8 (in custom CPP_type at level 0, only printing).
   Notation "'uint8'" := Tu8 (in custom CPP_type at level 0, only printing).
