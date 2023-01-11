@@ -36,11 +36,32 @@ Record genv : Type :=
   in the program. Might be replaced when fixing FM-2738. *)
 ; pointer_size_bitsize : bitsize
   (* ^ the size of a pointer *)
+; char_signed : signed
+  (* ^ whether or not `char` and `wchar` are signed or unsigned *)
 }.
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
+
+Definition equivalent_char_type (g : genv) (ct : char_type) : type :=
+  let bits :=
+    match char_type.bytesN ct with
+    | 8 => W8
+    | 16 => W16
+    | 32 => W32
+    | 64 => W64
+    | 128 => W128
+    | _ => W8
+    end%N
+  in
+  match ct with
+  | char_type.C8 => Tnum W8 Unsigned
+  | char_type.C16 => Tnum W16 Unsigned
+  | char_type.C32 => Tnum W32 Unsigned
+  | char_type.Cchar => Tnum bits g.(char_signed)
+  | char_type.Cwchar => Tnum bits g.(char_signed)
+  end.
 
 (** * global environments *)
 
