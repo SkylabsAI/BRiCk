@@ -164,7 +164,7 @@ Inductive Expr : Set :=
 | Evar     (_ : VarRef) (_ : type)
   (* ^ local and global variable reference *)
 
-| Echar    (_ : Z) (_ : type)
+| Echar    (_ : N) (_ : type)
 | Estring  (_ : bs) (_ : type)
 | Eint     (_ : Z) (_ : type)
 | Ebool    (_ : bool)

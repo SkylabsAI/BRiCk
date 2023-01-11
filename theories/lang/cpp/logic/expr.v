@@ -45,6 +45,26 @@ Module Type Expr.
     Context `{Σ : cpp_logic thread_info} {resolve:genv}.
     Variables (tu : translation_unit) (ρ : region).
 
+    (** UPSTREAM *)
+    Definition to_signedN (bits : N) (val : N) : Z :=
+        if bool_decide (bits = 0%N)
+        then 0%Z
+        else
+          if bool_decide (val `mod` 2 ^ bits >= 2 ^ (bits - 1))%Z
+          then (val `mod` 2 ^ bits - 2 ^ bits)%Z
+          else (val `mod` 2 ^ bits)%Z.
+
+    Definition to_char (t : char_type.t) (z : N) : val :=
+      match t with
+      | char_type.Cchar as c
+      | char_type.Cwchar as c =>
+          if resolve.(char_signed)
+          then Vint $ to_signedN (char_type.bitsN c) z
+          else Vint $ trim (char_type.bitsN c) z
+      | c => Vint $ trim (char_type.bitsN c) z
+      end.
+    (** UPSTREAM *)
+
     #[local] Notation wp_lval := (wp_lval tu ρ).
     #[local] Notation wp_prval := (wp_prval tu ρ).
     #[local] Notation wp_xval := (wp_xval tu ρ).
@@ -91,10 +111,13 @@ Module Type Expr.
       [! has_type (Vint n) (drop_qualifiers ty) !] //\\ Q (Vint n) FreeTemps.id
       |-- wp_operand (Eint n ty) Q.
 
-    (* note that `char` is actually `byte` *)
-    Axiom wp_operand_char : forall c ty Q,
-      [! has_type (Vint c) (drop_qualifiers ty) !] //\\ Q (Vint c) FreeTemps.id
-      |-- wp_operand (Echar c ty) Q.
+    (* NOTE: character literals represented in the AST as 32-bit unsigned integers
+             (with the Coq type [N]). In this rule, we convert them to the correct
+             internal representation.
+     *)
+    Axiom wp_operand_char : forall c cty Q,
+      Q (Vint $ to_char cty c) FreeTemps.id
+      |-- wp_operand (Echar c (Tchar_ cty)) Q.
 
     (* boolean literals are prvalues *)
     Axiom wp_operand_bool : forall (b : bool) Q,

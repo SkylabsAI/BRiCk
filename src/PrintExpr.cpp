@@ -591,7 +591,7 @@ public:
     void VisitCharacterLiteral(const CharacterLiteral* lit, CoqPrinter& print,
                                ClangPrinter& cprint, const ASTContext&,
                                OpaqueNames&) {
-        print.ctor("Echar", false) << lit->getValue() << "%Z";
+        print.ctor("Echar", false) << lit->getValue() << "%N";
         done(lit, print, cprint);
     }
 
