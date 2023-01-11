@@ -401,9 +401,11 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
         bound sz sgn z <-> has_type (Vint z) (Tnum sz sgn).
     Proof. move => *. rewrite has_int_type'. naive_solver. Qed.
 
-    Theorem has_char_type : forall sz (sgn : signed) z,
-        bound sz sgn z <-> has_type (Vint z) (Tchar sz sgn).
+    (* TODO: the signedness of [char] is architecture dependent
+    Theorem has_char_type : forall z ct,
+        bound sz sgn z <-> has_type (Vint z) (Tchar_ ct).
     Proof. apply has_int_type. Qed.
+    *)
 
     Lemma has_type_drop_qualifiers
       : forall v ty, has_type v ty <-> has_type v (drop_qualifiers ty).

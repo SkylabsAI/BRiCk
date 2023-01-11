@@ -69,6 +69,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tref t => Tref (erase_qualifiers t)
   | Trv_ref t => Trv_ref (erase_qualifiers t)
   | Tnum _ _
+  | Tchar_ _
   | Tbool
   | Tvoid
   | Tfloat _
@@ -179,6 +180,7 @@ Definition class_name (t : type) : option globname :=
 Definition is_value_type (t : type) : bool :=
   match drop_qualifiers t with
   | Tnum _ _
+  | Tchar_ _
   | Tbool
   | Tptr _
   | Tnullptr

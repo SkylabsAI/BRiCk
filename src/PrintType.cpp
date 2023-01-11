@@ -190,15 +190,24 @@ public:
     void VisitBuiltinType(const BuiltinType* type, CoqPrinter& print,
                           ClangPrinter& cprint) {
         switch (type->getKind()) {
-        case BuiltinType::Kind::Bool:
-            print.output() << "Tbool";
-            break;
-        case BuiltinType::Kind::Void:
-            print.output() << "Tvoid";
-            break;
-        case BuiltinType::Kind::NullPtr:
-            print.output() << "Tnullptr";
-            break;
+#define CASE(x, str)                                                           \
+    case BuiltinType::Kind::x:                                                 \
+        print.output() << str;                                                 \
+        break;
+            CASE(Bool, "Tbool")
+            CASE(Void, "Tvoid")
+            CASE(NullPtr, "Tnullptr")
+            // Both [Char_S] and [Char_U] are representations of the C++ 'char'
+            // type, but are used depending on the platform's choice of whether
+            // 'char' is signed or not.
+            CASE(Char_S, "Tchar")
+            CASE(Char_U, "Tchar")
+            CASE(WChar_S, "Twchar")
+            CASE(WChar_U, "Twchar")
+            CASE(Char16, "Tchar16")
+            CASE(Char32, "Tchar32")
+            CASE(Char8, "Tchar8");
+#undef CASE
         case BuiltinType::Kind::Dependent:
             print.output() << "Tunsupported \"type-dependent type\"";
             using namespace logging;

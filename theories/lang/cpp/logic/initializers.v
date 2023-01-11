@@ -85,6 +85,7 @@ Module Type Init.
                (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
       match ty with
       | Tnum _ _ as rty
+      | Tchar_ _ as rty
       | Tptr _ as rty
       | Tbool as rty
       | Tfloat _ as rty
@@ -149,6 +150,7 @@ Module Type Init.
       | Tmember_pointer _ _ as ty
       | Tbool as ty
       | Tnum _ _ as ty
+      | Tchar_ _ as ty
       | Tenum _ as ty
       | Tnullptr as ty =>
         wp_operand init (fun v free =>
