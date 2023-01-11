@@ -354,6 +354,9 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
     Axiom has_type_function : forall v cc rty args,
         has_type v (Tfunction (cc:=cc) rty args) -> exists p, v = Vptr p /\ p <> nullptr.
 
+    Axiom has_type_char : forall z,
+        has_type (Vint z) (equivalent_char_type σ) <-> has_type (Vint z) (Tchar_ char_type.Cchar).
+
     Axiom has_type_void : forall v,
         has_type v Tvoid -> v = Vundef.
 
@@ -400,12 +403,6 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
     Lemma has_int_type : forall sz (sgn : signed) z,
         bound sz sgn z <-> has_type (Vint z) (Tnum sz sgn).
     Proof. move => *. rewrite has_int_type'. naive_solver. Qed.
-
-    (* TODO: the signedness of [char] is architecture dependent
-    Theorem has_char_type : forall z ct,
-        bound sz sgn z <-> has_type (Vint z) (Tchar_ ct).
-    Proof. apply has_int_type. Qed.
-    *)
 
     Lemma has_type_drop_qualifiers
       : forall v ty, has_type v ty <-> has_type v (drop_qualifiers ty).
