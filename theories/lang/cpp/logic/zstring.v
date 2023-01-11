@@ -11,14 +11,19 @@ From iris.proofmode Require Import proofmode.
 Require Import bedrock.prelude.stdpp_ssreflect.
 
 Require Import bedrock.prelude.base.
-From bedrock.lang.bi Require Import
-     prelude observe.
-From bedrock.lang.cpp Require Import
-     semantics.values
-     logic.arr logic.heap_pred logic.pred.
+From bedrock.lang.bi Require Import prelude observe.
+From bedrock.lang.cpp.semantics Require Import values.
+From bedrock.lang.cpp.logic Require Import arr heap_pred (* pred *).
 
 Import ChargeNotation.
 #[local] Open Scope Z_scope.
+
+(** TODO: upstream *)
+Lemma has_type_char_127 {σ : genv} n : (0 <= n < 128)%Z -> has_type (Vint n) Tchar.
+Proof. intros. apply has_type_char. apply has_int_type; rewrite /bound/=; case_match; rewrite /=; lia. Qed.
+Lemma has_type_char_0 {σ : genv} :  has_type (Vint 0) Tchar.
+Proof. intros. apply has_type_char_127. lia. Qed.
+(** END: upstream *)
 
 (** * [zstring]s
 
@@ -76,7 +81,8 @@ Module zstring.
     Proof.
       rewrite /_WF; exists []; repeat split.
       - intro CONTRA; by inversion CONTRA.
-      - repeat constructor; apply has_int_type; rewrite /bound/=; by lia.
+      - repeat constructor. apply has_type_char. apply has_int_type; rewrite /bound/=.
+        case_match; simpl; lia.
     Qed.
 
     Lemma WF_singleton_inj :
@@ -388,7 +394,7 @@ Module zstring.
           - specialize (h2 n ltac:(lia)) as [? ?]; intuition; congruence.
           - specialize (h4 n Hn).
             rewrite h4 in Hnth; inversion Hnth.
-            apply has_char_type; rewrite /bound/=; by lia.
+            apply has_type_char_0.
           - exfalso; eapply nth_error_strlen_contra; by eauto.
         }
         suff: List.Forall (fun x => x <> 0 /\ has_type (σ:=σ) (Vint x) Tchar)
@@ -406,7 +412,7 @@ Module zstring.
           as [h2' | h2'] by lia; clear h2. 2: {
           subst; exists 0; clear h1; split.
           - by induction zs'=> //=.
-          - by apply has_char_type; rewrite /bound/=; lia.
+          - apply has_type_char_0.
         }
         rewrite nth_error_app1 => //.
         elim: zs' i h1 h2' => /=; first by lia.
@@ -547,7 +553,7 @@ Module zstring.
           forall (q : cQp.t) (sz : Z) (z : Z) (zs : t),
             z <> 0 ->
             bufR q sz (z :: zs) -|-
-            primR Tchar q z ** .[Tu8 ! 1] |-> bufR q (sz - 1) zs.
+            primR Tchar q z ** .[Tchar ! 1] |-> bufR q (sz - 1) zs.
         Proof.
           intros * Hz; split'.
           - rewrite /bufR arrayR_cons.
@@ -557,8 +563,8 @@ Module zstring.
             assert (WF zs) by (apply WF_cons in HWF; assumption).
             rewrite !_offsetR_sep !_offsetR_only_provable
                     size_cons -_offsetR_sub_sub
-                    Z.sub_add_distr;
-              by iFrame "∗%".
+                    Z.sub_add_distr.
+              iFrame "∗%".
           - rewrite /bufR arrayR_cons !_offsetR_sep !_offsetR_only_provable;
               iIntros "[H [%Hsz [? [%HWF Hrest]]]]".
             iDestruct (observe (type_ptrR Tchar) with "H") as "#?".
@@ -595,7 +601,7 @@ Module zstring.
             + iIntros "H"; iDestruct (observe [| a = 0 |]%Z with "H") as "%H'".
               iFrame "∗"; iPureIntro.
               try repeat constructor; subst.
-              apply has_char_type; rewrite /bound; simpl in *; lia.
+              apply has_type_char_0.
             + iIntros "H"; iDestruct (observe [| WF (a :: z :: zs) |] with "H") as "%H'".
               assert (1 <= size (a :: z :: zs)). {
                 rewrite -> size_cons in *.
@@ -617,7 +623,7 @@ Module zstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance bufR_type_ptrR_observe :
           forall q (sz : Z) (zs : t),
-            Observe (type_ptrR Tu8) (bufR q sz zs).
+            Observe (type_ptrR Tchar) (bufR q sz zs).
         Proof.
           move=> q sz zs; rewrite /bufR; destruct zs.
           - rewrite /Observe. iIntros "[? [? [%CONTRA ?]]]";
@@ -644,7 +650,7 @@ Module zstring.
             pose proof (arrayR_valid_obs (λ c : Z, primR Tchar q c) Tchar (Z.to_nat sz)
                                          (zs ++ repeat 0 (Z.to_nat (sz - size zs)))
                                          AUX).
-            iDestruct (observe (.[ Tnum char_bits Unsigned ! sz ] |-> validR) with "array'")
+            iDestruct (observe (.[ Tchar ! sz ] |-> validR) with "array'")
               as "#?"; auto.
             rewrite Z2Nat.id in H; auto.
             pose proof (size_nonneg zs).
@@ -675,14 +681,14 @@ Module zstring.
             assert (z <= length zs \/ length zs < z)%Z
               as [Hz' | Hz'] by lia.
             + iClear "zeros".
-              iDestruct (observe (.[Tnum char_bits Unsigned ! z] |-> validR) with "zs")
+              iDestruct (observe (.[ Tchar ! z] |-> validR) with "zs")
                 as "#valid"; last by iFrame "#".
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tnum char_bits Unsigned) q (Vint c))
-                            (Tnum char_bits Unsigned) (Z.to_nat z) zs ltac:(lia)).
+                            (fun c => primR (Tchar) q (Vint c))
+                            (Tchar) (Z.to_nat z) zs ltac:(lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
             + iClear "zs".
-              iDestruct (observe (.[Tnum char_bits Unsigned ! z] |-> validR) with "zeros")
+              iDestruct (observe (.[Tchar ! z] |-> validR) with "zeros")
                 as "#valid"; last by iFrame "#".
               assert (exists z', size zs + z' = z /\ 0 <= z')
                 as [z' [Hz'' Hneg]]
@@ -690,8 +696,8 @@ Module zstring.
                 subst.
               rewrite -_offsetR_sub_sub; apply _offsetR_observe.
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tnum char_bits Unsigned) q 0)
-                            (Tnum char_bits Unsigned) (Z.to_nat z')
+                            (fun c => primR (Tchar) q 0)
+                            (Tchar) (Z.to_nat z')
                             (repeat () (Z.to_nat (sz - size zs)))
                             ltac:(rewrite repeat_length; lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
@@ -722,7 +728,7 @@ Module zstring.
           forall (q : cQp.t) (sz : Z) (z : Z) (zs : t),
             z <> 0 ->
             bufR' q sz (z :: zs) -|-
-            primR Tchar q z ** .[Tu8 ! 1] |-> bufR' q (sz - 1) zs.
+            primR Tchar q z ** .[Tchar ! 1] |-> bufR' q (sz - 1) zs.
         Proof. lift_WF2WF' bufR_cons. Qed.
 
         #[global] Instance bufR'_cons_cons_head_nonzero :
@@ -739,7 +745,7 @@ Module zstring.
 
         #[global] Instance bufR'_type_ptrR_observe :
           forall q (sz : Z) (zs : t),
-            Observe (type_ptrR Tu8) (bufR' q sz zs).
+            Observe (type_ptrR Tchar) (bufR' q sz zs).
         Proof. lift_WF2WF' bufR_type_ptrR_observe. Qed.
 
         #[global] Instance bufR'_validR_end_observe :
@@ -806,7 +812,7 @@ Module zstring.
           forall (q : cQp.t) (z : Z) (zs : t),
             z <> 0 ->
             R q (z :: zs) -|-
-            primR Tchar q z ** .[Tu8 ! 1] |-> R q zs.
+            primR Tchar q z ** .[Tchar ! 1] |-> R q zs.
         Proof.
           intros **; rewrite !R_bufR_equiv.
           replace (size zs) with ((size (z :: zs)) - 1)
@@ -831,7 +837,7 @@ Module zstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance R_type_ptrR_observe :
           forall q (zs : t),
-            Observe (type_ptrR Tu8) (R q zs).
+            Observe (type_ptrR Tchar) (R q zs).
         Proof. try_lift_bufR bufR_type_ptrR_observe. Qed.
 
         #[global] Instance R_validR_end_observe :
@@ -859,8 +865,8 @@ Module zstring.
           intros * Hsize; unfold R; unfold size in Hsize.
           apply observe_sep_l.
           pose proof (arrayR_valid_obs
-                        (fun c => primR (Tnum char_bits Unsigned) q (Vint c))
-                        (Tnum char_bits Unsigned) (Z.to_nat z) zs ltac:(lia)).
+                        (fun c => primR (Tchar) q (Vint c))
+                        (Tchar) (Z.to_nat z) zs ltac:(lia)).
           by rewrite ->Z2Nat.id in H by lia.
         Qed.
       End R_Theory.
@@ -886,7 +892,7 @@ Module zstring.
           forall (q : cQp.t) (z : Z) (zs : t),
             z <> 0 ->
             R' q (z :: zs) -|-
-            primR Tchar q z ** .[Tu8 ! 1] |-> R' q zs.
+            primR Tchar q z ** .[Tchar ! 1] |-> R' q zs.
         Proof. lift_WF2WF' R_cons. Qed.
 
         #[global] Instance R'_cons_cons_head_nonzero :
@@ -902,7 +908,7 @@ Module zstring.
 
         #[global] Instance R'_type_ptrR_observe :
           forall q (zs : t),
-            Observe (type_ptrR Tu8) (R' q zs).
+            Observe (type_ptrR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_type_ptrR_observe. Qed.
 
         #[global] Instance R'_validR_end_observe :

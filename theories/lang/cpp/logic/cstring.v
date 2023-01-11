@@ -806,7 +806,7 @@ Module cstring.
             b <> "000"%byte ->
                 bufR q sz (BS.String b cstr)
             -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
-                .[Tu8 ! 1] |-> bufR q (sz - 1) cstr.
+                .[Tchar ! 1] |-> bufR q (sz - 1) cstr.
         Proof.
           lift_zstring_bufR2bufR zstring.bufR_cons.
           rewrite ascii_of_byte_via_N N_ascii_embedding;
@@ -826,7 +826,7 @@ Module cstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance bufR_type_ptrR_observe :
           forall q (sz : Z) (cstr : t),
-            Observe (type_ptrR Tu8) (bufR q sz cstr).
+            Observe (type_ptrR Tchar) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
           iDestruct (observe (type_ptrR Tchar) with "zstr") as "#?".
@@ -882,7 +882,7 @@ Module cstring.
             b <> "000"%byte ->
                 bufR' q sz (BS.String b cstr)
             -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
-                .[Tu8 ! 1] |-> bufR' q (sz - 1) cstr.
+                .[Tchar ! 1] |-> bufR' q (sz - 1) cstr.
         Proof. by lift_WF2WF' bufR_cons. Qed.
 
         #[global] Instance bufR'_cons_cons_head_nonzero :
@@ -893,7 +893,7 @@ Module cstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance bufR'_type_ptrR_observe :
           forall q (sz : Z) (zs : t),
-            Observe (type_ptrR Tu8) (bufR' q sz zs).
+            Observe (type_ptrR Tchar) (bufR' q sz zs).
         Proof. by lift_WF2WF' bufR_type_ptrR_observe. Qed.
 
         #[global] Instance bufR'_validR_end_observe :
@@ -962,7 +962,7 @@ Module cstring.
             b <> "000"%byte ->
                 R q (BS.String b cstr)
             -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
-                .[Tu8 ! 1] |-> R q cstr.
+                .[Tchar ! 1] |-> R q cstr.
         Proof.
           intros **; rewrite !R_bufR_equiv.
           replace (size cstr) with ((size (BS.String b cstr)) - 1)
@@ -978,7 +978,7 @@ Module cstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance R_type_ptrR_observe :
           forall q (cstr : t),
-            Observe (type_ptrR Tu8) (R q cstr).
+            Observe (type_ptrR Tchar) (R q cstr).
         Proof. refine _. Qed.
 
         #[global] Instance R_validR_end_observe :
@@ -1057,7 +1057,7 @@ Module cstring.
             b <> "000"%byte ->
                 R' q (BS.String b cstr)
             -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
-                .[Tu8 ! 1] |-> R' q cstr.
+                .[Tchar ! 1] |-> R' q cstr.
         Proof. lift_WF2WF' R_cons. Qed.
 
         #[global] Instance R'_cons_cons_head_nonzero :
@@ -1068,7 +1068,7 @@ Module cstring.
         (* TODO (AUTO): Fix this once we add the correct observations for arrayR *)
         #[global] Instance R'_type_ptrR_observe :
           forall q (cstr : t),
-            Observe (type_ptrR Tu8) (R' q cstr).
+            Observe (type_ptrR Tchar) (R' q cstr).
         Proof. lift_WF2WF' R_type_ptrR_observe. Qed.
 
         #[global] Instance R'_validR_end_observe :
