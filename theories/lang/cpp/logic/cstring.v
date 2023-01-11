@@ -136,7 +136,7 @@ Module cstring.
     Lemma to_from_zstring {σ : genv}
           (zs : zstring.t)
           (H : zstring.WF zs)
-          (X : List.Forall (fun c => has_type (Vint c) Tuchar) zs) :
+          (X : List.Forall (fun c => has_type (Vint c) Tchar) zs) :
       to_zstring (from_zstring zs) = zs.
     Proof.
       induction zs. 1: exfalso; by apply not_WF_nil.
@@ -756,7 +756,7 @@ Module cstring.
         Lemma bufR_nil :
           forall (q : cQp.t) (sz : Z),
             (1 <= sz)%Z ->
-                arrayR Tuchar (fun _ => primR Tuchar q 0) (repeat () (Z.to_nat sz))
+                arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat sz))
             |-- bufR q sz "".
         Proof.
           intros **; iIntros "rest"; rewrite /bufR/zstring.bufR.
@@ -805,7 +805,7 @@ Module cstring.
           forall (q : cQp.t) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR q sz (BS.String b cstr)
-            -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
                 .[Tu8 ! 1] |-> bufR q (sz - 1) cstr.
         Proof.
           lift_zstring_bufR2bufR zstring.bufR_cons.
@@ -829,26 +829,26 @@ Module cstring.
             Observe (type_ptrR Tu8) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
-          iDestruct (observe (type_ptrR Tuchar) with "zstr") as "#?".
+          iDestruct (observe (type_ptrR Tchar) with "zstr") as "#?".
           by iModIntro.
         Qed.
 
         #[global] Instance bufR_validR_end_observe :
           forall q (sz : Z) (cstr : t),
-            Observe (.[Tuchar ! sz] |-> validR) (bufR q sz cstr).
+            Observe (.[Tchar ! sz] |-> validR) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
-          iDestruct (observe (.[Tuchar ! sz] |-> validR) with "zstr") as "#?".
+          iDestruct (observe (.[Tchar ! sz] |-> validR) with "zstr") as "#?".
           by iModIntro.
         Qed.
 
         #[global] Instance bufR_validR_inbounds_observe :
           forall q (sz : Z) (z : Z) (cstr : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tuchar ! z] |-> validR) (bufR q sz cstr).
+            Observe (.[Tchar ! z] |-> validR) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
-          iDestruct (observe (.[Tuchar ! z] |-> validR) with "zstr") as "#?";
+          iDestruct (observe (.[Tchar ! z] |-> validR) with "zstr") as "#?";
             last by iModIntro.
           by pose proof (zstring.bufR_validR_inbounds_observe q sz z (to_zstring cstr) H).
         Qed.
@@ -861,7 +861,7 @@ Module cstring.
         Lemma bufR'_nil :
           forall (q : cQp.t) (sz : Z),
             (1 <= sz)%Z ->
-                arrayR Tuchar (fun _ => primR Tuchar q 0) (repeat () (Z.to_nat sz))
+                arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat sz))
             |-- bufR' q sz "".
         Proof. by lift_WF2WF' bufR_nil. Qed.
 
@@ -881,7 +881,7 @@ Module cstring.
           forall (q : cQp.t) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR' q sz (BS.String b cstr)
-            -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
                 .[Tu8 ! 1] |-> bufR' q (sz - 1) cstr.
         Proof. by lift_WF2WF' bufR_cons. Qed.
 
@@ -898,13 +898,13 @@ Module cstring.
 
         #[global] Instance bufR'_validR_end_observe :
           forall q (sz : Z) (zs : t),
-            Observe (.[Tuchar ! sz] |-> validR) (bufR' q sz zs).
+            Observe (.[Tchar ! sz] |-> validR) (bufR' q sz zs).
         Proof. by lift_WF2WF' bufR_validR_end_observe. Qed.
 
         #[global] Instance bufR'_validR_inbounds_observe :
           forall q (sz : Z) (z : Z) (cstr : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tuchar ! z] |-> validR) (bufR' q sz cstr).
+            Observe (.[Tchar ! z] |-> validR) (bufR' q sz cstr).
         Proof. by lift_WF2WF' bufR_validR_inbounds_observe. Qed.
       End bufR'.
 
@@ -912,7 +912,7 @@ Module cstring.
         forall (q : cQp.t) (sz : Z) (cstr : t),
           bufR q sz cstr -|-
           [| size cstr <= sz |] ** R q cstr **
-          .[ Tuchar ! size cstr] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
+          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q 0)
                                            (repeat () (Z.to_nat (sz - size cstr))).
       Proof.
         intros **; split'.
@@ -924,7 +924,7 @@ Module cstring.
         forall (q : cQp.t) (sz : Z) (cstr : t),
           bufR' q sz cstr -|-
           [| size cstr <= sz |] ** R' q cstr **
-          .[ Tuchar ! size cstr] |-> arrayR Tuchar (fun _ => primR Tuchar q 0)
+          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q 0)
                                            (repeat () (Z.to_nat (sz - size cstr))).
       Proof. intros **; rewrite -!bufRs_equiv -!Rs_equiv; by apply bufR_unfold. Qed.
 
@@ -939,7 +939,7 @@ Module cstring.
 
         Remark R_nil :
           forall (q : cQp.t),
-                arrayR Tuchar (fun c => primR Tuchar q (Vint c)) [0]
+                arrayR Tchar (fun c => primR Tchar q (Vint c)) [0]
             |-- R q "".
         Proof.
           intros *; rewrite /R !/zstring.R arrayR_singleton
@@ -961,7 +961,7 @@ Module cstring.
           forall (q : cQp.t) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R q (BS.String b cstr)
-            -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
                 .[Tu8 ! 1] |-> R q cstr.
         Proof.
           intros **; rewrite !R_bufR_equiv.
@@ -983,12 +983,12 @@ Module cstring.
 
         #[global] Instance R_validR_end_observe :
           forall q (cstr : t),
-            Observe (.[Tuchar ! size cstr] |-> validR) (R q cstr).
+            Observe (.[Tchar ! size cstr] |-> validR) (R q cstr).
         Proof. refine _. Qed.
 
         #[global] Instance R_validR_end_observe' :
           forall q (cstr : t),
-            Observe (.[Tuchar ! strlen cstr] |-> .[Tuchar ! 1] |-> validR) (R q cstr).
+            Observe (.[Tchar ! strlen cstr] |-> .[Tchar ! 1] |-> validR) (R q cstr).
         Proof.
           intros *; pose proof (R_validR_end_observe q cstr).
           rewrite _offsetR_sub_sub; unfold size, strlen, zstring.size, zstring.strlen in *.
@@ -1001,7 +1001,7 @@ Module cstring.
         #[global] Instance R_validR_inbounds_observe :
           forall q (z : Z) (cstr : t),
             (0 <= z <= size cstr)%Z ->
-            Observe (.[Tuchar ! z] |-> validR) (R q cstr).
+            Observe (.[Tchar ! z] |-> validR) (R q cstr).
         Proof. refine _. Qed.
 
         #[local] Lemma observe_2_aux q1 q2 a1 a2 :
@@ -1042,7 +1042,7 @@ Module cstring.
 
         Remark R'_nil :
           forall (q : cQp.t),
-                arrayR Tuchar (fun c => primR Tuchar q (Vint c)) [0]
+                arrayR Tchar (fun c => primR Tchar q (Vint c)) [0]
             |-- R' q "".
         Proof. lift_WF2WF' R_nil. Qed.
 
@@ -1056,7 +1056,7 @@ Module cstring.
           forall (q : cQp.t) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R' q (BS.String b cstr)
-            -|- primR Tuchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
                 .[Tu8 ! 1] |-> R' q cstr.
         Proof. lift_WF2WF' R_cons. Qed.
 
@@ -1073,31 +1073,31 @@ Module cstring.
 
         #[global] Instance R'_validR_end_observe :
           forall q (zs : t),
-            Observe (.[Tuchar ! size zs] |-> validR) (R' q zs).
+            Observe (.[Tchar ! size zs] |-> validR) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe. Qed.
 
         #[global] Instance R'_validR_end_observe' :
           forall q (zs : t),
-            Observe (.[Tuchar ! strlen zs] |-> .[Tuchar ! 1] |-> validR) (R' q zs).
+            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe'. Qed.
 
         #[global] Instance R'_validR_inbounds_observe :
           forall q (z : Z) (cstr : t),
             (0 <= z <= size cstr)%Z ->
-            Observe (.[Tuchar ! z] |-> validR) (R' q cstr).
+            Observe (.[Tchar ! z] |-> validR) (R' q cstr).
         Proof. lift_WF2WF' R_validR_inbounds_observe. Qed.
       End R'.
 
       Lemma R_unfold :
         forall (q : cQp.t) (cstr : t),
               R q cstr
-          -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) (to_zstring cstr) ** [| WF cstr |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) (to_zstring cstr) ** [| WF cstr |].
       Proof. intros **; split'; by rewrite /R. Qed.
 
       Lemma R'_unfold :
         forall (q : cQp.t) (cstr : t),
               R' q cstr
-          -|- arrayR Tuchar (fun c => primR Tuchar q (Vint c)) (to_zstring cstr) ** [| WF' cstr |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) (to_zstring cstr) ** [| WF' cstr |].
       Proof. intros **; split'; by rewrite /R'. Qed.
 
       Section Extra.

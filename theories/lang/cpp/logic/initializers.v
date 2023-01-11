@@ -92,6 +92,7 @@ Module Type Init.
     Fixpoint default_initialize (ty : type) (p : ptr) (Q : FreeTemps → epred) {struct ty} : mpred :=
       match ty with
       | Tnum _ _
+      | Tchar_ _
       | Tptr _
       | Tbool
       | Tfloat _
@@ -99,6 +100,7 @@ Module Type Init.
       | Tenum _ =>
           let rty := erase_qualifiers ty in
           p |-> uninitR rty (cQp.m 1) -* Q FreeTemps.id
+
       | Tarray ety sz =>
           default_initialize_array default_initialize ety sz p (fun _ => Q FreeTemps.id)
 
@@ -164,6 +166,7 @@ Module Type Init.
       | Tmember_pointer _ _ as ty
       | Tbool as ty
       | Tnum _ _ as ty
+      | Tchar_ _ as ty
       | Tenum _ as ty
       | Tnullptr as ty =>
         wp_operand init (fun v free =>
