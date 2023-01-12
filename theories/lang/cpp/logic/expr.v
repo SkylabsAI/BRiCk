@@ -152,16 +152,12 @@ Module Type Expr.
         the string pool is maintained within an invariant of the abstract
         machine.
      *)
-    Axiom wp_lval_string : forall bytes ty Q,
-          match drop_qualifiers ty with
-          | Tarray ty' _ =>
-            Forall (p : ptr) (q : Qp),
+    Axiom wp_lval_string : forall bytes len Q,
+          Forall (p : ptr) (q : Qp),
               p |-> cstring.R (cQp.c q) bytes -*
               (p |-> cstring.R (cQp.c q) bytes ={⊤}=∗ emp) -*
               Q p FreeTemps.id
-          | _ => False
-          end
-      |-- wp_lval (Estring bytes (Tptr (Tchar))) Q. (* TODO: generalize to other string types *)
+      |-- wp_lval (Estring bytes (Tarray (Qconst Tchar) len)) Q. (* TODO: generalize to other string types *)
 
     (* `this` is a prvalue *)
     Axiom wp_operand_this : forall ty Q,
