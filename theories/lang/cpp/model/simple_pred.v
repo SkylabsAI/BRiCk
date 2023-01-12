@@ -26,6 +26,9 @@ From bedrock.lang.cpp.logic Require Import mpred pred.
 
 #[local] Set Printing Coercions.
 
+
+
+
 Implicit Types (vt : validity_type) (σ resolve : genv) (q : cQp.t).
 
 (* todo: does this not exist as a library somewhere? *)
