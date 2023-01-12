@@ -432,6 +432,9 @@ dune-build:
     - export PATH="/usr/lib/llvm/bin/:$PATH"
     - time dune build -j ${NJOBS}
     - time dune build -j ${NJOBS} coq-cpp2v.install coq-cpp2v-bin.install
+    - declare -p DUNE_CACHE
+    - declare -p DUNE_CACHE_STORAGE_MODE
+    - declare -p DUNE_PROFILE
     - time dune build -j ${NJOBS} -p coq-cpp2v,coq-cpp2v-bin --display short
     - cd $CI_PROJECT_DIR/
     # Adding built files to the artifact.
