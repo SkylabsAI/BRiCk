@@ -610,6 +610,7 @@ Module Type Expr.
         end
         |-- wp_operand (Ecast Cptr2int Prvalue e ty) Q.
 
+    Axiom valid_type_ptr : ∀ {σ : genv}, type -> ptr -> mpred.
     (** [Cint2ptr] uses "angelic non-determinism" to allow the developer to
         pick any pointer that was previously exposed as the given integer.
      *)
@@ -617,7 +618,7 @@ Module Type Expr.
         match unptr ty with
         | Some ptype =>
           wp_operand e (fun v free => Exists va : N, [| v = Vint (Z.of_N va) |] **
-             (([| (0 < va)%N |] **
+             (
                Exists p,
                  pinned_ptr va p **
                  (* NOTE: In the future when we properly handle cv-qualifiers
@@ -626,10 +627,13 @@ Module Type Expr.
                     [ptype].
 
                     <https://eel.is/c++draft/conv.qual#note-3>
+                    TODO: probably drop this, the cast isn't const
+                    https://eel.is/c++draft/expr.const.cast
                   *)
-                 type_ptr (erase_qualifiers ptype) p **
-                 Q (Vptr p) free) \\//
-              ([| va = 0%N |] ** Q (Vptr nullptr) free)))
+                 (* TODO: we might only need [alignedR], but then we should
+                  need to preserve the original constness *)
+                 valid_type_ptr (erase_qualifiers ptype) p **
+                 Q (Vptr p) free))
         | _ => False
         end
         |-- wp_operand (Ecast Cint2ptr Prvalue e ty) Q.
