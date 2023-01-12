@@ -43,7 +43,6 @@ Module Type RAW_BYTES.
       The following might help but will likely require other
       axioms which reflect boundedness or round-trip properties.
 
-
     Parameter of_raw_byte : raw_byte -> N.
     Axiom inj_of_raw_byte : Inj (=) (=) of_raw_byte.
     #[global] Existing Instance inj_of_raw_byte.
@@ -59,7 +58,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
       primitive subobjects.
 
       There is also a distinguished undefined element [Vundef] that
-      models uninitialized values (https://eel.is/c++draft/basic.indet).
+      models uninitialized values <https://eel.is/c++draft/basic.indet>.
       Operations on [Vundef] are all undefined behavior.
       [Vraw] (a raw byte) represents the low-level bytewise view of data.
       See [logic/layout.v] for more axioms about it.
@@ -496,20 +495,54 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
     Definition to_char (from_sz : N) (from_sgn : signed) (to_bits : N) (*to_sgn : signed*) (v : Z) : N :=
       Z.to_N $ to_unsigned_bits from_sz v.
 
-    Definition of_char (from_bits : N) (*from_sgn : signed*) (to_bits : N) (to_sgn : signed) (n : N) : Z :=
+    Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : signed) (n : N) : Z :=
+      (* first we need to sign extend using frm_sgn *)
+      let n : Z :=
+        if from_sgn is Signed then
+          if bool_decide (n < 2^(from_bits-1)) then n else -(n - 1)
+        else n in
       if to_sgn is Signed then to_signed_bits to_bits n else to_unsigned_bits to_bits n.
 
-    Lemma to_char_of_char fsz (*fsgn*) tsz tsgn n :
+    (*
+    Lemma to_char_of_char fsz fsgn tsz tsgn n :
       (n < 2^tsz)%N ->
-      to_char tsz tsgn fsz (*fsgn*) (of_char fsz (*fsgn*) tsz tsgn n) = n.
+      to_char tsz tsgn fsz (*fsgn*) (of_char fsz fsgn tsz tsgn n) = n.
     Proof.
       rewrite /to_char/of_char.
       destruct tsgn.
       { intros.
-        rewrite /to_signed_bits. case_bool_decide.
+        rewrite /to_signed_bits. Print to_unsigned_bits. Print trim. Compute (-127) `mod` 255. case_bool_decide.
         { subst. simpl in H. have->: n = 0%N by lia. done. }
         { case_bool_decide.
-          { rewrite /trim. rewrite -Zminus_mod_idemp_r Z_mod_same_full.
+          { rewrite /trim.
+            rewrite -Zminus_mod_idemp_r Z_mod_same_full Z.sub_0_r Zmod_mod.
+            case_match.
+            { case_bool_decide.
+              - rewrite Zmod_small; lia.
+              - destruct (decide (n = 1%N)).
+                { subst. simpl. case_bool_decide; try congruence.
+                  revert H1.
+                  have->: (-(1%N - 1))%Z = 0%Z. reflexivity.
+                  rewrite Zmod_0_l. lia. }
+                { case_bool_decide; try congruence.
+                  rewrite Z.mod_opp_l_nz. 2: lia.
+
+
+                  Search Z.modulo.
+                  simpl in *. cbn in H1.
+                  Set Printing All.
+
+                  lia. rewrite e. simpl. assert (n = 1%N). subst.
+                  exfalso.
+
+                Search Z.modulo Z.opp.
+            case_match; rewrite -Zminus_mod_idemp_r Zmod_0_l.
+            rewrite -Zminus_mod_idemp_r.
+            rewrite -Zminus_mod_idemp_r.
+
+            Set Printing Coercions.
+Search Z.modulo.
+            ?Z_mod_same_full.
             rewrite Z.sub_0_r Zmod_mod Zmod_small; lia. }
           { rewrite /trim Zmod_mod Zmod_small; lia. } } }
       { rewrite trim_idem. intros. rewrite to_unsigned_bits_id; lia. }
@@ -527,12 +560,27 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
       { intros. rewrite trim_idem. rewrite to_unsigned_bits_id; lia. }
     Qed.
 
+    (* suppose that you are in an architecture with unsigned characters
+       and you wrote (128)
+     *)
+
+    Succeed Example TEST : of_char 8 Signed 32 Signed 1 = 1 := eq_refl.
+    Succeed Example TEST : of_char 8 Signed 32 Signed 128 = -127 := eq_refl.
+    *)
+
+    Definition signedness_of_char (σ : genv) (ct : char_type) : signed :=
+      match ct with
+      | char_type.Cchar => σ.(char_signed)
+      | char_type.Cwchar => σ.(wchar_signed)
+      | _ => Unsigned
+      end.
+
     (** Integral conversions. For use in the semantics of C++ operators.
 
         TODO: [conv_int] will need to use architecture-specific information, so it
               should not use [translation_unit].
      *)
-    Definition conv_int (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
+    Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
       match as_integral tu from , as_integral tu to with
       | Some from , Some to =>
           match from , to with
@@ -572,7 +620,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               end
           | Char ct , Num sz sgn =>
               match v with
-              | Vchar v => v' = Vint (of_char (char_type.bitsN ct) (bitsN sz) sgn v)
+              | Vchar v => v' = Vint (of_char (char_type.bitsN ct) (signedness_of_char σ ct) (bitsN sz) sgn v)
               | _ => False
               end
           | Char ct , Char ct' =>
