@@ -100,11 +100,11 @@ Existing Class function_arity.
  *)
 Module char_type.
   Variant t : Set :=
-    | Cchar
-    | Cwchar
-    | C8
-    | C16
-    | C32.
+    | Cchar (* signedness defined by platform *)
+    | Cwchar (* signedness defined by platform *)
+    | C8 (* unsigned *)
+    | C16 (* unsigned *)
+    | C32. (* unsigned *)
   #[global] Instance t_eq_dec: EqDecision t.
   Proof. solve_decision. Defined.
   #[global] Instance t_countable : Countable t.
