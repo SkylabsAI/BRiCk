@@ -65,19 +65,27 @@ Module Type Expr.
         match rem with
         | 0 => K acc cs
         | S n => match cs with
-                | BS.String c cs => take_bytes n (N.lor (N.shiftl 8 acc) (Byte.to_N c)) cs
+                | BS.String c cs => take_bytes n (N.lor acc (N.shiftl (Byte.to_N c) (8* N.of_nat rem))) cs
                 | BS.EmptyString => None
                 end
         end.
     End with_K.
-    Fixpoint build_string (bytes_per_char : nat) (cs : bs) {struct cs} : option (list N) :=
+    Fixpoint build_string (len : nat) (bytes_per_char : nat) (cs : bs) {struct cs} : option (list N) :=
       match cs with
-      | BS.EmptyString => Some nil
+      | BS.EmptyString =>
+          match len with
+          | 1 => Some [0%N]
+          | _ => None
+          end
       | BS.String c cs =>
-          match bytes_per_char with
+          match len with
           | 0 => None
-          | S rem => take_bytes  (fun n cs => cons n <$> build_string bytes_per_char cs)
-                      rem (Byte.to_N c) cs
+          | S len =>
+              match bytes_per_char with
+              | 0 => None
+              | S rem => take_bytes  (fun n cs => cons n <$> build_string len bytes_per_char cs)
+                          rem (N.shiftl (Byte.to_N c) (8*N.of_nat rem))%N cs
+              end
           end
       end.
     (** UPSTREAM *)
@@ -179,7 +187,7 @@ Module Type Expr.
         machine.
      *)
     Axiom wp_lval_string : forall bytes ct len Q,
-        match build_string (N.to_nat $ char_type.bytesN ct) bytes with
+        match build_string (N.to_nat len) (N.to_nat $ char_type.bytesN ct) bytes with
         | None => BAD_STRING (Tchar_ ct) bytes
         | Some bytes =>
           Forall (p : ptr) (q : Qp),

@@ -37,7 +37,9 @@ Record genv : Type :=
 ; pointer_size_bitsize : bitsize
   (* ^ the size of a pointer *)
 ; char_signed : signed
-  (* ^ whether or not `char` and `wchar` are signed or unsigned *)
+  (* ^ whether or not `char` is signed or unsigned *)
+; wchar_signed : signed
+  (* ^ whether or not `wchar` is signed or unsigned *)
 }.
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
@@ -60,7 +62,7 @@ Definition equivalent_char_type (g : genv) (ct : char_type) : type :=
   | char_type.C16 => Tnum W16 Unsigned
   | char_type.C32 => Tnum W32 Unsigned
   | char_type.Cchar => Tnum bits g.(char_signed)
-  | char_type.Cwchar => Tnum bits g.(char_signed)
+  | char_type.Cwchar => Tnum bits g.(wchar_signed)
   end.
 
 (** * global environments *)
