@@ -57,6 +57,29 @@ Module Type Expr.
     Definition trimN (bits : N) (v : N) : N := v `mod` 2^bits.
     Definition to_char (t : char_type.t) (z : N) : val :=
       Vchar $ trimN (char_type.bitsN t) z.
+
+    (* going to assume that characters are encoded in little endian order. *)
+    Section with_K.
+      Variable (K : N -> bs -> option (list N)).
+      Fixpoint take_bytes (rem : nat) (acc : N) (cs : bs) {struct cs} : option (list N) :=
+        match rem with
+        | 0 => K acc cs
+        | S n => match cs with
+                | BS.String c cs => take_bytes n (N.lor (N.shiftl 8 acc) (Byte.to_N c)) cs
+                | BS.EmptyString => None
+                end
+        end.
+    End with_K.
+    Fixpoint build_string (bytes_per_char : nat) (cs : bs) {struct cs} : option (list N) :=
+      match cs with
+      | BS.EmptyString => Some nil
+      | BS.String c cs =>
+          match bytes_per_char with
+          | 0 => None
+          | S rem => take_bytes  (fun n cs => cons n <$> build_string bytes_per_char cs)
+                      rem (Byte.to_N c) cs
+          end
+      end.
     (** UPSTREAM *)
 
     #[local] Notation wp_lval := (wp_lval tu ρ).
@@ -118,6 +141,9 @@ Module Type Expr.
       Q (Vbool b) FreeTemps.id
       |-- wp_operand (Ebool b) Q.
 
+    Definition BAD_STRING (ty : type) (bytes : bs) : mpred.
+    Proof. exact False%I. Qed.
+
     (** * String Literals
 
         The standard states <https://eel.is/c++draft/lex.string#9>:
@@ -152,12 +178,16 @@ Module Type Expr.
         the string pool is maintained within an invariant of the abstract
         machine.
      *)
-    Axiom wp_lval_string : forall bytes len Q,
+    Axiom wp_lval_string : forall bytes ct len Q,
+        match build_string (N.to_nat $ char_type.bytesN ct) bytes with
+        | None => BAD_STRING (Tchar_ ct) bytes
+        | Some bytes =>
           Forall (p : ptr) (q : Qp),
-              p |-> cstring.R (cQp.c q) bytes -*
-              (p |-> cstring.R (cQp.c q) bytes ={⊤}=∗ emp) -*
+              p |-> zstring.R (cQp.c q) bytes -*
+              (p |-> zstring.R (cQp.c q) bytes ={⊤}=∗ emp) -*
               Q p FreeTemps.id
-      |-- wp_lval (Estring bytes (Tarray (Qconst Tchar) len)) Q. (* TODO: generalize to other string types *)
+        end
+      |-- wp_lval (Estring bytes (Tarray (Qconst (Tchar_ ct)) len)) Q.
 
     (* `this` is a prvalue *)
     Axiom wp_operand_this : forall ty Q,
