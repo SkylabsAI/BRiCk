@@ -54,15 +54,9 @@ Module Type Expr.
           then (val `mod` 2 ^ bits - 2 ^ bits)%Z
           else (val `mod` 2 ^ bits)%Z.
 
+    Definition trimN (bits : N) (v : N) : N := v `mod` 2^bits.
     Definition to_char (t : char_type.t) (z : N) : val :=
-      match t with
-      | char_type.Cchar as c
-      | char_type.Cwchar as c =>
-          if resolve.(char_signed)
-          then Vint $ to_signedN (char_type.bitsN c) z
-          else Vint $ trim (char_type.bitsN c) z
-      | c => Vint $ trim (char_type.bitsN c) z
-      end.
+      Vchar $ trimN (char_type.bitsN t) z.
     (** UPSTREAM *)
 
     #[local] Notation wp_lval := (wp_lval tu ρ).
@@ -167,7 +161,7 @@ Module Type Expr.
               Q p FreeTemps.id
           | _ => False
           end
-      |-- wp_lval (Estring bytes ty) Q.
+      |-- wp_lval (Estring bytes (Tptr (Tchar))) Q. (* TODO: generalize to other string types *)
 
     (* `this` is a prvalue *)
     Axiom wp_operand_this : forall ty Q,
