@@ -19,10 +19,10 @@ Import ChargeNotation.
 #[local] Open Scope Z_scope.
 
 (** TODO: upstream *)
-Lemma has_type_char_127 {σ : genv} n : (0 <= n < 128)%Z -> has_type (Vint n) Tchar.
-Proof. intros. apply has_type_char. apply has_int_type; rewrite /bound/=; case_match; rewrite /=; lia. Qed.
-Lemma has_type_char_0 {σ : genv} :  has_type (Vint 0) Tchar.
-Proof. intros. apply has_type_char_127. lia. Qed.
+Lemma has_type_char_255 {σ : genv} (n : N) : (0 <= n < 255)%N -> has_type (Vchar n) Tchar.
+Proof. intros. apply has_type_char. simpl. lia. Qed.
+Lemma has_type_char_0 {σ : genv} :  has_type (Vchar 0) Tchar.
+Proof. intros. apply has_type_char_255. lia. Qed.
 (** END: upstream *)
 
 (** * [zstring]s
@@ -31,7 +31,7 @@ Proof. intros. apply has_type_char_127. lia. Qed.
     in C++. These arrays include the null-terminator
  *)
 Module zstring.
-  Definition t := list Z.
+  Definition t := list N.
   Bind Scope list_scope with t.
 
   (* [size] reflects the in-memory footprint of the null-terminated string (i.e. the
@@ -51,8 +51,8 @@ Module zstring.
   Notation strlen zs := (_strlen zs%Z).
 
   Definition _WF {σ : genv} (zs : t) : Prop :=
-    exists zs', zs = zs' ++ [0] /\ not (In 0 zs') /\
-    List.Forall (λ c : Z, has_type c Tchar) zs.
+    exists zs', zs = zs' ++ [0]%N /\ not (In 0%N zs') /\
+    List.Forall (λ c : N, has_type (Vchar c) Tchar) zs.
   #[global] Arguments _WF {σ} zs : simpl never.
   Notation WF zs := (_WF zs%Z).
 
@@ -61,10 +61,10 @@ Module zstring.
   Definition _WF' {σ : genv} (zs : t) : Prop :=
     (exists v, nth_error zs 0 = Some v) /\
     (forall i, Z.of_nat i <= strlen zs ->
-          exists z, nth_error zs i = Some z /\ has_type (Vint z) Tchar) /\
+          exists z, nth_error zs i = Some z /\ has_type (Vchar z) Tchar) /\
     (forall i, Z.of_nat i < strlen zs ->
-          exists z, nth_error zs i = Some z /\ z <> 0) /\
-    forall i, Z.of_nat i = strlen zs -> nth_error zs i = Some 0.
+          exists z, nth_error zs i = Some z /\ z <> 0%N) /\
+    forall i, Z.of_nat i = strlen zs -> nth_error zs i = Some 0%N.
   #[global] Arguments _WF' {σ} zs : simpl never.
   Notation WF' zs := (_WF' zs%Z).
 
@@ -77,18 +77,17 @@ Module zstring.
         eapply app_cons_not_nil; eauto.
     Qed.
 
-    Remark WF_singleton : WF [0].
+    Remark WF_singleton : WF [0%N].
     Proof.
       rewrite /_WF; exists []; repeat split.
       - intro CONTRA; by inversion CONTRA.
-      - repeat constructor. apply has_type_char. apply has_int_type; rewrite /bound/=.
-        case_match; simpl; lia.
+      - repeat constructor. apply has_type_char_0.
     Qed.
 
     Lemma WF_singleton_inj :
-      forall (z : Z),
+      forall (z : N),
         WF [z] ->
-        z = 0.
+        z = 0%N.
     Proof.
       intros * [zs [Hzs [Hin Hbounds]]].
       destruct zs; simpl in *; inversion Hzs.
@@ -108,9 +107,9 @@ Module zstring.
     Qed.
 
     Lemma WF_cons :
-      forall (z : Z) (zs : t),
-        (z <> 0)%Z ->
-        has_type (Vint z) Tchar ->
+      forall (z : N) (zs : t),
+        (z <> 0)%N ->
+        has_type (Vchar z) Tchar ->
         WF (z :: zs) <->
         WF zs.
     Proof.
@@ -171,13 +170,13 @@ Module zstring.
     Proof. by rewrite size_unfold. Qed.
 
     Lemma size_cons :
-      forall (z : Z) (zs : t),
+      forall (z : N) (zs : t),
         size (z :: zs) = 1 + size zs.
     Proof. intros *; rewrite !size_unfold/=; by lia. Qed.
 
     Lemma size_cons':
-      forall (z : Z) (zs : t),
-        (z <> 0)%Z ->
+      forall (z : N) (zs : t),
+        (z <> 0)%N ->
         WF (z :: zs) ->
         Z.to_nat (size (z :: zs)) = S (Z.to_nat (size zs)).
     Proof.
@@ -191,7 +190,6 @@ Module zstring.
     Qed.
 
     Lemma size_app :
-
       forall (zs zs' : t),
         size (zs ++ zs') = size zs + size zs'.
     Proof.
@@ -201,7 +199,7 @@ Module zstring.
     Qed.
 
     Lemma size_nil_cons_contra :
-      forall (z : Z) (zs : t),
+      forall (z : _) (zs : t),
         not (size (z :: zs) = size []).
     Proof. intros *; intro CONTRA; unfold size in CONTRA; by inversion CONTRA. Qed.
 
@@ -231,13 +229,13 @@ Module zstring.
     Proof. by rewrite strlen_unfold. Qed.
 
     Lemma strlen_cons (zs : t) :
-      forall (z : Z),
+      forall (z : _),
         strlen (z :: zs) = 1 + strlen zs.
     Proof. intros *; rewrite !strlen_unfold/=; by lia. Qed.
 
     Lemma strlen_cons':
-      forall (z : Z) (zs : t),
-        (z <> 0)%Z ->
+      forall (z : N) (zs : t),
+        (z <> 0)%N ->
         WF (z :: zs) ->
         Z.to_nat (strlen (z :: zs)) = S (Z.to_nat (strlen zs)).
     Proof.
@@ -261,7 +259,7 @@ Module zstring.
     Qed.
 
     Lemma strlen_nil_cons_contra :
-      forall (z : Z) (zs : t),
+      forall (z : _) (zs : t),
         not (strlen (z :: zs) = strlen []).
     Proof.
       intros *.
@@ -303,8 +301,8 @@ Module zstring.
     Section helpers.
       Lemma len0_take (zs : t)
             (H0 : 0 < List.length zs)
-            (H : forall i : nat, Z.of_nat i = strlen zs -> nth_error zs i = Some 0%Z) :
-        zs = take (List.length zs - 1) zs ++ [0%Z].
+            (H : forall i : nat, Z.of_nat i = strlen zs -> nth_error zs i = Some 0%N) :
+        zs = take (List.length zs - 1) zs ++ [0%N].
       Proof.
         rewrite -[zs](firstn_skipn (List.length zs - 1)). f_equal.
         { rewrite app_length take_length drop_length.
@@ -317,16 +315,16 @@ Module zstring.
         destruct zs; first by move: (H 1%nat eq_refl); inversion 1.
         apply: IH; first by simpl; lia.
         case; unfold strlen, size; rewrite /List.length -/List.length; first by lia.
-        move => n ?. simpl. move: (H (S (S n))). apply.
+        move => n' ?. simpl. move: (H (S (S n'))). apply.
         rewrite Nat2Z.inj_succ; unfold strlen, size; rewrite /List.length -/List.length. lia.
       Qed.
 
       Lemma forall_not0 (zs : t)
             (H : ∀ i : nat, (i <= strlen zs)%Z →
-                          ∃ z : Z, nth_error zs i = Some z ∧ has_type (Vint z) Tchar)
+                          ∃ z : N, nth_error zs i = Some z ∧ has_type (Vchar z) Tchar)
             (H' : forall i : nat, (i < strlen zs)%Z ->
-                          ∃ z : Z, nth_error zs i = Some z /\ z <> 0):
-        List.Forall (fun z : Z => z <> 0 /\ has_type (Vint z) Tchar) (take (List.length zs - 1) zs).
+                          ∃ z : N, nth_error zs i = Some z /\ z <> 0%N):
+        List.Forall (fun z : N => z <> 0%N /\ has_type (Vchar z) Tchar) (take (List.length zs - 1) zs).
       Proof.
         induction zs; first by constructor.
         simpl. have ->: (List.length zs - 0 = List.length zs)%nat by lia. destruct zs.
@@ -341,7 +339,7 @@ Module zstring.
               simpl in *; inversion H1; congruence. }
         have <-: (List.length zs - 0 = List.length zs)%nat by lia. apply: IHzs.
         case.
-        { move => h1; exists z. split => //.
+        { move => h1; exists n. split => //.
           destruct zs. 1: {
             specialize (H 1%nat ltac:(rewrite strlen_unfold/=; lia))
               as [z' [Hnth Htype]].
@@ -350,8 +348,8 @@ Module zstring.
           move: (H 1%nat); unfold strlen, size; case => //.
           { rewrite /List.length -/List.length. lia. }
             by move => x /=; case; inversion 1; subst. }
-        move => n; unfold strlen, size; rewrite /List.length -/List.length => h.
-        move: (H (S (S n))); case.
+        move => n'; unfold strlen, size; rewrite /List.length -/List.length => h.
+        move: (H (S (S n'))); case.
         { unfold strlen, size; rewrite /List.length -/List.length. lia. }
         move => x /=; case => h1 h2; exists x; split => //.
         intros i Hstrlen.
@@ -397,20 +395,20 @@ Module zstring.
             apply has_type_char_0.
           - exfalso; eapply nth_error_strlen_contra; by eauto.
         }
-        suff: List.Forall (fun x => x <> 0 /\ has_type (σ:=σ) (Vint x) Tchar)
+        suff: List.Forall (fun x => x <> 0%N /\ has_type (σ:=σ) (Vchar x) Tchar)
                           (take (Datatypes.length zs - 1) zs).
         { clear - zs. elim: zs => //= [_ [] //|a zs IH /=]. rewrite Nat.sub_0_r.
           destruct zs as [|z zs]; first done. move => /= /Forall_cons [[??]?].
           move => [//|]. simpl in IH. rewrite Nat.sub_0_r in IH. apply IH. done. }
         apply: forall_not0. apply h2. apply h3. }
       case => zs' []-> h1. split.
-      { destruct zs'; simpl; first by exists 0.
-                                          by exists z. }
+      { destruct zs'; simpl; first by exists 0%N.
+        by exists n. }
       split.
       { move => i. unfold strlen, size; rewrite app_length Nat2Z.inj_add /= => h2.
         assert (i < List.length zs' \/ i = List.length zs')%nat
           as [h2' | h2'] by lia; clear h2. 2: {
-          subst; exists 0; clear h1; split.
+          subst; exists 0%N; clear h1; split.
           - by induction zs'=> //=.
           - apply has_type_char_0.
         }
@@ -432,9 +430,9 @@ Module zstring.
         move => i; unfold strlen, size.
         rewrite app_length/=; intros Hi.
         assert (i < length zs')%nat as Hzs' by lia; clear Hi.
-        pose proof (nth_error_app1 zs' [0] Hzs') as Hnth.
-        pose proof (nth_In zs' 0 Hzs') as Hin.
-        rewrite Hnth; erewrite nth_error_nth' with (d:=0); eauto; eexists;
+        pose proof (nth_error_app1 zs' [0%N] Hzs') as Hnth.
+        pose proof (nth_In zs' 0%N Hzs') as Hin.
+        rewrite Hnth; erewrite nth_error_nth' with (d:=0%N); eauto; eexists;
           split; eauto.
         intro CONTRA; rewrite CONTRA in Hin.
         inversion h1; by congruence.
@@ -447,9 +445,9 @@ Module zstring.
     Qed.
 
     Lemma WF'_singleton_inj :
-      forall (z : Z),
+      forall (z : N),
         WF' [z] ->
-        z = 0.
+        z = 0%N.
     Proof. intros *; rewrite WFs_equiv; by apply WF_singleton_inj. Qed.
 
     Remark not_WF'_nil : not (WF' []).
@@ -462,9 +460,9 @@ Module zstring.
     Proof. intros *; rewrite WFs_equiv; by apply WF_nonempty_inj. Qed.
 
     Lemma WF'_cons :
-      forall (z : Z) (zs : t),
-        (z <> 0)%Z ->
-        has_type (Vint z) Tchar ->
+      forall (z : _) (zs : t),
+        (z <> 0)%N ->
+        has_type (Vchar z) Tchar ->
         WF' (z :: zs) <->
         WF' zs.
     Proof. intros *; rewrite !WFs_equiv; by apply WF_cons. Qed.
@@ -477,15 +475,15 @@ Module zstring.
 
     Definition bufR (q : cQp.t) (sz : Z) (zs : t) : Rep :=
       [| size zs <= sz |] **
-      arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF zs |] **
+      arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF zs |] **
       .[Tchar ! size zs]
-         |-> arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat (sz - size zs))).
+         |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0)) (repeat () (Z.to_nat (sz - size zs))).
     (* The toplevel definition of [zstring.bufR']: *)
     Definition bufR' (q : cQp.t) (sz : Z) (zs : t) : Rep :=
       [| size zs <= sz |] **
-      arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF' zs |] **
+      arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF' zs |] **
       .[Tchar ! size zs]
-         |-> arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat (sz - size zs))).
+         |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0)) (repeat () (Z.to_nat (sz - size zs))).
 
     #[global] Instance bufR_WF_observe :
       forall q (sz : Z) (zs : t),
@@ -503,10 +501,10 @@ Module zstring.
 
     (* The toplevel definition of [zstring.R]: *)
     Definition R (q : cQp.t) (zs : t) : Rep :=
-      arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF zs |].
+      arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF zs |].
     (* The toplevel definition of [zstring.R']: *)
     Definition R' (q : cQp.t) (zs : t) : Rep :=
-      arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF' zs |].
+      arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF' zs |].
 
     #[global] Instance R_WF_observe :
       forall q (zs : t),
@@ -542,24 +540,24 @@ Module zstring.
         Proof. intros *; rewrite /Observe2/bufR; iIntros "%H [%CONTRA ?]"; by lia. Qed.
 
         #[global] Instance bufR_singleton :
-          forall (q : cQp.t) (sz : Z) (z : Z),
-            Observe [| z = 0 |]%Z (bufR q sz [z]).
+          forall (q : cQp.t) (sz : Z) (z : _),
+            Observe [| z = 0%N |] (bufR q sz [z]).
         Proof.
           intros *; rewrite /Observe/bufR; iIntros "(% & Hz & %HWF & rest)".
           iModIntro; iPureIntro; by apply WF_singleton_inj.
         Qed.
 
         Lemma bufR_cons :
-          forall (q : cQp.t) (sz : Z) (z : Z) (zs : t),
-            z <> 0 ->
+          forall (q : cQp.t) (sz : Z) (z : _) (zs : t),
+            z <> 0%N ->
             bufR q sz (z :: zs) -|-
-            primR Tchar q z ** .[Tchar ! 1] |-> bufR q (sz - 1) zs.
+            primR Tchar q (Vchar z) ** .[Tchar ! 1] |-> bufR q (sz - 1) zs.
         Proof.
           intros * Hz; split'.
           - rewrite /bufR arrayR_cons.
             iIntros "[%Hsz [[? [Hz Hzs]] [%HWF Hrest]]]".
             assert (size zs <= sz - 1) by (rewrite size_cons in Hsz; by lia).
-            iDestruct (observe [| has_type (Vint z) _ |] with "Hz") as "%".
+            iDestruct (observe [| has_type (Vchar z) _ |] with "Hz") as "%".
             assert (WF zs) by (apply WF_cons in HWF; assumption).
             rewrite !_offsetR_sep !_offsetR_only_provable
                     size_cons -_offsetR_sub_sub
@@ -569,15 +567,15 @@ Module zstring.
               iIntros "[H [%Hsz [? [%HWF Hrest]]]]".
             iDestruct (observe (type_ptrR Tchar) with "H") as "#?".
             assert (size (z :: zs) <= sz) by (rewrite size_cons; by lia).
-            iDestruct (observe [| has_type (Vint z) _ |] with "H") as "%".
+            iDestruct (observe [| has_type (Vchar z) _ |] with "H") as "%".
             assert (WF (z :: zs)) by (apply WF_cons; assumption).
             rewrite size_cons -!_offsetR_sub_sub Z.sub_add_distr.
             iFrame "∗#%"; iPureIntro; by lia.
         Qed.
 
         #[global] Instance bufR_cons_cons_head_nonzero :
-          forall (q : cQp.t) (sz : Z) (z z' : Z) (zs : t),
-            Observe [| z <> 0 |]%Z (bufR q sz (z :: z' :: zs)).
+          forall (q : cQp.t) (sz : Z) (z z' : _) (zs : t),
+            Observe [| z <> 0 |]%N (bufR q sz (z :: z' :: zs)).
         Proof.
           intros *.
           apply: observe_intro_only_provable.
@@ -593,22 +591,22 @@ Module zstring.
           forall (q : cQp.t) (sz : Z) (zs : t),
             strlen zs < sz ->
                 bufR q sz zs
-            |-- bufR q sz zs ** [| List.Forall (fun c => has_type (Vint c) Tchar) zs |].
+            |-- bufR q sz zs ** [| List.Forall (fun c => has_type (Vchar c) Tchar) zs |].
         Proof.
           intros **; generalize dependent sz; induction zs; intros **.
           - rewrite {1}bufR_nil; by iIntros.
           - destruct zs=> //=.
-            + iIntros "H"; iDestruct (observe [| a = 0 |]%Z with "H") as "%H'".
+            + iIntros "H"; iDestruct (observe [| a = 0 |]%N with "H") as "%H'".
               iFrame "∗"; iPureIntro.
               try repeat constructor; subst.
               apply has_type_char_0.
-            + iIntros "H"; iDestruct (observe [| WF (a :: z :: zs) |] with "H") as "%H'".
-              assert (1 <= size (a :: z :: zs)). {
+            + iIntros "H"; iDestruct (observe [| WF (a :: n :: zs) |] with "H") as "%H'".
+              assert (1 <= size (a :: n :: zs)). {
                 rewrite -> size_cons in *.
-                pose proof (size_nonneg (z :: zs)).
+                pose proof (size_nonneg (n :: zs)).
                 by lia.
               }
-              iDestruct (observe [| a <> 0 |]%Z with "H") as "%H''"; iStopProof.
+              iDestruct (observe [| a <> 0 |]%N with "H") as "%H''"; iStopProof.
               rewrite {1}bufR_cons; auto; rewrite primR_has_type IHzs.
               iIntros "[[? %has_type] ?]"; iStopProof.
               rewrite _offsetR_sep _offsetR_only_provable.
@@ -616,7 +614,7 @@ Module zstring.
               rewrite -bufR_cons; [| done]; iFrame "∗"; iPureIntro.
               apply Forall_cons_2; auto.
               rewrite -> !strlen_cons in *.
-              pose proof (size_nonneg (z :: zs)).
+              pose proof (size_nonneg (n :: zs)).
               by lia.
         Qed.
 
@@ -637,18 +635,18 @@ Module zstring.
         Proof.
           move=> q sz zs; rewrite /bufR/Observe.
           iIntros "[%Hsz [array [%HWF rest]]]".
-          iAssert (arrayR Tchar (fun c => primR Tchar q (Vint c))
-                          (zs ++ repeat 0 (Z.to_nat (sz - size zs))))
+          iAssert (arrayR Tchar (fun c => primR Tchar q (Vchar c))
+                          (zs ++ repeat 0%N (Z.to_nat (sz - size zs))))
             with "[array rest]" as "array'". 2: {
-            assert (Z.to_nat sz <= length (zs ++ repeat 0%Z (Z.to_nat (sz - size zs))))%nat
+            assert (Z.to_nat sz <= length (zs ++ repeat 0%N (Z.to_nat (sz - size zs))))%nat
               as AUX. 1: {
               rewrite app_length repeat_length.
               unfold strlen in Hsz.
               unfold size in *.
               lia.
             }
-            pose proof (arrayR_valid_obs (λ c : Z, primR Tchar q c) Tchar (Z.to_nat sz)
-                                         (zs ++ repeat 0 (Z.to_nat (sz - size zs)))
+            pose proof (arrayR_valid_obs (λ c : N, primR Tchar q (Vchar c)) Tchar (Z.to_nat sz)
+                                         (zs ++ repeat 0%N (Z.to_nat (sz - size zs)))
                                          AUX).
             iDestruct (observe (.[ Tchar ! sz ] |-> validR) with "array'")
               as "#?"; auto.
@@ -684,7 +682,7 @@ Module zstring.
               iDestruct (observe (.[ Tchar ! z] |-> validR) with "zs")
                 as "#valid"; last by iFrame "#".
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tchar) q (Vint c))
+                            (fun c => primR (Tchar) q (Vchar c))
                             (Tchar) (Z.to_nat z) zs ltac:(lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
             + iClear "zs".
@@ -696,7 +694,7 @@ Module zstring.
                 subst.
               rewrite -_offsetR_sub_sub; apply _offsetR_observe.
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tchar) q 0)
+                            (fun c => primR (Tchar) q (Vchar 0))
                             (Tchar) (Z.to_nat z')
                             (repeat () (Z.to_nat (sz - size zs)))
                             ltac:(rewrite repeat_length; lia)).
@@ -719,28 +717,28 @@ Module zstring.
         Proof. lift_WF2WF' bufR_sz_contra. Qed.
 
         #[global] Instance bufR'_singleton :
-          forall (q : cQp.t) (sz : Z) (z : Z),
+          forall (q : cQp.t) (sz : Z) (z : _),
             0 <= sz ->
-            Observe [| z = 0 |]%Z (bufR' q sz [z]).
+            Observe [| z = 0 |]%N (bufR' q sz [z]).
         Proof. lift_WF2WF' bufR_singleton. Qed.
 
         Lemma bufR'_cons :
-          forall (q : cQp.t) (sz : Z) (z : Z) (zs : t),
-            z <> 0 ->
+          forall (q : cQp.t) (sz : Z) (z : _) (zs : t),
+            z <> 0%N ->
             bufR' q sz (z :: zs) -|-
-            primR Tchar q z ** .[Tchar ! 1] |-> bufR' q (sz - 1) zs.
+            primR Tchar q (Vchar z) ** .[Tchar ! 1] |-> bufR' q (sz - 1) zs.
         Proof. lift_WF2WF' bufR_cons. Qed.
 
         #[global] Instance bufR'_cons_cons_head_nonzero :
-          forall (q : cQp.t) (sz : Z) (z z' : Z) (zs : t),
-            Observe [| z <> 0 |]%Z (bufR' q sz (z :: z' :: zs)).
+          forall (q : cQp.t) (sz : Z) (z z' : _) (zs : t),
+            Observe [| z <> 0 |]%N (bufR' q sz (z :: z' :: zs)).
         Proof.  lift_WF2WF' bufR_cons_cons_head_nonzero. Qed.
 
         Lemma bufR'_has_type :
           forall (q : cQp.t) (sz : Z) (zs : t),
             strlen zs < sz ->
                 bufR' q sz zs
-            |-- bufR' q sz zs ** [| List.Forall (fun c => has_type (Vint c) Tchar) zs |].
+            |-- bufR' q sz zs ** [| List.Forall (fun c => has_type (Vchar c) Tchar) zs |].
         Proof. lift_WF2WF' bufR_has_type. Qed.
 
         #[global] Instance bufR'_type_ptrR_observe :
@@ -764,7 +762,7 @@ Module zstring.
         forall (q : cQp.t) (sz : Z) (zs : t),
           bufR q sz zs -|-
           [| size zs <= sz |] ** R q zs **
-          .[ Tchar ! size zs] |-> arrayR Tchar (fun _ => primR Tchar q 0)
+          .[ Tchar ! size zs] |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0))
                                            (repeat () (Z.to_nat (sz - size zs))).
       Proof.
         intros **; split'.
@@ -776,7 +774,7 @@ Module zstring.
         forall (q : cQp.t) (sz : Z) (cstr : t),
           bufR' q sz cstr -|-
           [| size cstr <= sz |] ** R' q cstr **
-          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q 0)
+          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0))
                                              (repeat () (Z.to_nat (sz - size cstr))).
       Proof. intros **; rewrite -!bufRs_equiv -!Rs_equiv; by apply bufR_unfold. Qed.
 
@@ -804,15 +802,15 @@ Module zstring.
         Proof. try_lift_bufR bufR_nil. Qed.
 
         #[global] Instance R_singleton :
-          forall (q : cQp.t) (z : Z),
-            Observe [| z = 0 |]%Z (R q [z]).
+          forall (q : cQp.t) (z : _),
+            Observe [| z = 0 |]%N (R q [z]).
         Proof. try_lift_bufR bufR_singleton. Qed.
 
         Lemma R_cons :
-          forall (q : cQp.t) (z : Z) (zs : t),
-            z <> 0 ->
+          forall (q : cQp.t) (z : _) (zs : t),
+            z <> 0%N ->
             R q (z :: zs) -|-
-            primR Tchar q z ** .[Tchar ! 1] |-> R q zs.
+            primR Tchar q (Vchar z) ** .[Tchar ! 1] |-> R q zs.
         Proof.
           intros **; rewrite !R_bufR_equiv.
           replace (size zs) with ((size (z :: zs)) - 1)
@@ -821,14 +819,14 @@ Module zstring.
         Qed.
 
         #[global] Instance R_cons_cons_head_nonzero :
-          forall (q : cQp.t) (z z' : Z) (zs : t),
-            Observe [| z <> 0 |]%Z (R q (z :: z' :: zs)).
+          forall (q : cQp.t) (z z' : _) (zs : t),
+            Observe [| z <> 0 |]%N (R q (z :: z' :: zs)).
         Proof. try_lift_bufR bufR_cons_cons_head_nonzero. Qed.
 
         Lemma R_has_type :
           forall (q : cQp.t) (zs : t),
                 R q zs
-            |-- R q zs ** [| List.Forall (fun c => has_type (Vint c) Tchar) zs |].
+            |-- R q zs ** [| List.Forall (fun c => has_type (Vchar c) Tchar) zs |].
         Proof.
           try_lift_bufR bufR_has_type.
           unfold strlen; by lia.
@@ -865,7 +863,7 @@ Module zstring.
           intros * Hsize; unfold R; unfold size in Hsize.
           apply observe_sep_l.
           pose proof (arrayR_valid_obs
-                        (fun c => primR (Tchar) q (Vint c))
+                        (fun c => primR (Tchar) q (Vchar c))
                         (Tchar) (Z.to_nat z) zs ltac:(lia)).
           by rewrite ->Z2Nat.id in H by lia.
         Qed.
@@ -884,26 +882,26 @@ Module zstring.
         Proof. lift_WF2WF' R_nil. Qed.
 
         #[global] Instance R'_singleton :
-          forall (q : cQp.t) (z : Z),
-            Observe [| z = 0 |]%Z (R' q [z]).
+          forall (q : cQp.t) (z : _),
+            Observe [| z = 0 |]%N (R' q [z]).
         Proof. lift_WF2WF' R_singleton. Qed.
 
         Lemma R'_cons :
-          forall (q : cQp.t) (z : Z) (zs : t),
-            z <> 0 ->
+          forall (q : cQp.t) (z : _) (zs : t),
+            z <> 0%N ->
             R' q (z :: zs) -|-
-            primR Tchar q z ** .[Tchar ! 1] |-> R' q zs.
+            primR Tchar q (Vchar z) ** .[Tchar ! 1] |-> R' q zs.
         Proof. lift_WF2WF' R_cons. Qed.
 
         #[global] Instance R'_cons_cons_head_nonzero :
-          forall (q : cQp.t) (z z' : Z) (zs : t),
-            Observe [| z <> 0 |]%Z (R' q (z :: z' :: zs)).
+          forall (q : cQp.t) (z z' : _) (zs : t),
+            Observe [| z <> 0 |]%N (R' q (z :: z' :: zs)).
         Proof. lift_WF2WF' R_cons_cons_head_nonzero. Qed.
 
         Lemma R'_has_type :
           forall (q : cQp.t) (zs : t),
                 R' q zs
-            |-- R' q zs ** [| List.Forall (fun c => has_type (Vint c) Tchar) zs |].
+            |-- R' q zs ** [| List.Forall (fun c => has_type (Vchar c) Tchar) zs |].
         Proof. lift_WF2WF' R_has_type. Qed.
 
         #[global] Instance R'_type_ptrR_observe :
@@ -931,13 +929,13 @@ Module zstring.
       Lemma R_unfold :
         forall (q : cQp.t) (zs : t),
               R q zs
-          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF zs |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF zs |].
       Proof. intros **; split'; by rewrite /R. Qed.
 
       Lemma R'_unfold :
         forall (q : cQp.t) (zs : t),
               R' q zs
-          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) zs ** [| WF' zs |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vchar c)) zs ** [| WF' zs |].
       Proof. intros **; split'; by rewrite /R'. Qed.
     End Theory.
   End with_Σ.

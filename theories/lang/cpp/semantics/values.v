@@ -66,6 +66,14 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   *)
   Variant val : Set :=
   | Vint (_ : Z)
+  | Vchar (_ : N)
+    (* ^ value used for non-integral character types, e.g.
+         [char], [wchar], etc, but *not* [unsigned char] and [signed char]
+
+         The values here are *always* unsigned. When arithmetic is performed
+         the semantics will convert the unsigned value into the appropriate
+         equivalent on the target platform based on the signedness of the type.
+     *)
   | Vptr (_ : ptr)
   | Vraw (_ : raw_byte)
   | Vundef
@@ -80,12 +88,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   #[global] Instance val_eq_dec : EqDecision val := val_dec.
   #[global] Instance val_inhabited : Inhabited val := populate (Vint 0).
 
-  (** wrappers for constructing certain values *)
-  (** [Vchar] is currently not well supported. *)
-  Definition Vchar (a : Byte.byte) : val :=
-    Vint (Z.of_N (Byte.to_N a)).
-
-  (** wrappers for constructing certain values *)
+  (** ** Notation wrappers for [val] *)
   Definition Vbool (b : bool) : val :=
     Vint (if b then 1 else 0).
   Definition Vnat (b : nat) : val :=
@@ -101,6 +104,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
     match v with
     | Vint v => Some (bool_decide (v <> 0))
     | Vptr p => Some (bool_decide (p <> nullptr))
+    | Vchar n => Some (bool_decide (n <> 0%N))
     | Vundef | Vraw _ => None
     end.
   #[global] Arguments is_true !_.
@@ -116,11 +120,14 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   Proof. by move=> []. Qed.
   Lemma Vint_inj a b : Vint a = Vint b -> a = b.
   Proof. by move=> []. Qed.
+  Lemma Vchar_inj a b : Vchar a = Vchar b -> a = b.
+  Proof. by move=> []. Qed.
   Lemma Vbool_inj a b : Vbool a = Vbool b -> a = b.
   Proof. by move: a b =>[] [] /Vint_inj. Qed.
 
   #[global] Instance Vptr_Inj : Inj (=) (=) Vptr := Vptr_inj.
   #[global] Instance Vint_Inj : Inj (=) (=) Vint := Vint_inj.
+  #[global] Instance Vchar_Inj : Inj (=) (=) Vchar := Vchar_inj.
   #[global] Instance Vbool_Inj : Inj (=) (=) Vbool := Vbool_inj.
 
   (* the default value for a type.
@@ -354,8 +361,8 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
     Axiom has_type_function : forall v cc rty args,
         has_type v (Tfunction (cc:=cc) rty args) -> exists p, v = Vptr p /\ p <> nullptr.
 
-    Axiom has_type_char : forall z,
-        has_type (Vint z) (equivalent_char_type σ) <-> has_type (Vint z) (Tchar_ char_type.Cchar).
+    Axiom has_type_char : forall ct n,
+        (0 <= n < 2^(char_type.bitsN ct))%N <-> has_type (Vchar n) (Tchar_ ct).
 
     Axiom has_type_void : forall v,
         has_type v Tvoid -> v = Vundef.
@@ -462,7 +469,8 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
     (** representation of integral types *)
     Variant IntegralType : Set :=
       | Bool
-      | Num (_ : bitsize) (_ : signed).
+      | Num (_ : bitsize) (_ : signed)
+      | Char (_ : char_type).
 
     (** [as_integral tu ty] is the integral representation of the type if one exists.
        In particular, this gets the underlying type of enumerations.
@@ -470,6 +478,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
     Definition as_integral (tu : translation_unit) (ty : type) : option IntegralType :=
       match drop_qualifiers ty with
       | Tnum sz sgn => Some $ Num sz sgn
+      | Tchar_ ct => Some $ Char ct
       | Tenum nm =>
           match tu !! nm with
           | Some (Genum ty _) =>
@@ -484,7 +493,11 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
       | _ => None
       end.
 
-    (** Integral conversions. For use in the semantics of C++ operators. *)
+    (** Integral conversions. For use in the semantics of C++ operators.
+
+        TODO: [conv_int] will need to use architecture-specific information, so it
+              should not use [translation_unit].
+     *)
     Definition conv_int (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
       match as_integral tu from , as_integral tu to with
       | Some from , Some to =>
@@ -494,21 +507,32 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               | Some v => v' = Vbool v
               | _ => False
               end
+          | Bool , Char _ =>
+              match is_true v with
+              | Some v => v' = Vchar (if v then 1 else 0)%N
+              | _ => False
+              end
           | Num _ _ , Bool =>
               match v with
-              | Vint v =>
-                  v' = Vbool (bool_decide (v <> 0))
+              | Vint v => v' = Vbool (bool_decide (v <> 0))
               | _ => False
               end
           | Num _ _ , Num sz Unsigned =>
               match v with
-              | Vint v =>
-                  v' = Vint (to_unsigned sz v)
+              | Vint v => v' = Vint (to_unsigned sz v)
               | _ => False
               end
           | Num _ _ , Num sz Signed =>
               has_type v (Tnum sz Signed) /\ v' = v
           | Bool , Bool => v = v'
+          | Char _ , Bool =>
+              match v with
+              | Vchar v => v' = Vbool (bool_decide (v <> 0%N))
+              | _ => False
+              end
+          | Num sz sgn , Char ct => False (* TODO *)
+          | Char _ , Num _ _ => False (* TODO *)
+          | Char _ , Char _ => False (* TODO *)
           end
       | _ , _ => False
       end.

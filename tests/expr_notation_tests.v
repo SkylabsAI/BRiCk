@@ -19,8 +19,8 @@ Section TestExprNotations.
   #[local] Definition Evar_gname : Expr := Evar (Gname "FooBarBaz") ty.
   Print Evar_lname. Print Evar_gname.
 
-  #[local] Definition A_ascii : Z := Evaluate (Z.of_N (Ascii.N_of_ascii "A"%char)).
-  #[local] Definition newline_ascii : Z := Evaluate (Z.of_N (Ascii.N_of_ascii "010"%char)).
+  #[local] Definition A_ascii : N := Evaluate (Ascii.N_of_ascii "A"%char).
+  #[local] Definition newline_ascii : N := Evaluate (Ascii.N_of_ascii "010"%char).
   #[local] Definition Echar_letter : Expr := Echar (Unfold A_ascii A_ascii) ty.
   #[local] Definition Echar_newline : Expr := Echar (Unfold newline_ascii newline_ascii) ty.
   Print Echar_letter. Print Echar_newline.

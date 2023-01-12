@@ -65,7 +65,7 @@ Module cstring.
   Bind Scope bs_scope with t.
 
   Definition _from_zstring (zs : zstring.t) : cstring.t :=
-    BS.parse (map (byte_of_ascii ∘ ascii_of_N ∘ Z.to_N)
+    BS.parse (map (byte_of_ascii ∘ ascii_of_N)
                   (take (List.length zs - 1) zs)).
   #[global] Arguments ascii_of_pos _%positive_scope /.
   #[global] Arguments _from_zstring !zs /.
@@ -76,7 +76,7 @@ Module cstring.
      than lists of [Z]s.
    *)
   Definition _to_zstring' (cstr : cstring.t) (l : list Byte.byte) : zstring.t :=
-    map (Z.of_N ∘ N_of_ascii ∘ ascii_of_byte) ((BS.print cstr) ++ l).
+    map (N_of_ascii ∘ ascii_of_byte) ((BS.print cstr) ++ l).
   #[global] Arguments BS.print !b%bs /.
 
   #[global] Arguments _to_zstring' !cstr !l /.
@@ -111,13 +111,13 @@ Module cstring.
   Proof. by rewrite /to_zstring. Qed.
 
   Remark to_zstring_unfold_EmptyString :
-      to_zstring "" = [0].
+      to_zstring "" = [0%N].
   Proof. by intros *; rewrite !to_zstring_unfold/=. Qed.
 
   Lemma to_zstring_unfold_String :
     forall (b : Byte.byte) (cstr : cstring.t),
       to_zstring (BS.String b cstr) =
-      (Z.of_N ∘ N_of_ascii ∘ ascii_of_byte $ b) :: to_zstring cstr.
+      (N_of_ascii ∘ ascii_of_byte $ b) :: to_zstring cstr.
   Proof. by intros *; rewrite !to_zstring_unfold/=. Qed.
 
   Section from_zstring_to_zstring_Theory.
@@ -129,20 +129,20 @@ Module cstring.
                 Nat.add_sub/=.
       set f := fun x => byte_of_ascii _.
       have ->: forall l, map f l = l.
-      { by induction l => //=; rewrite /f /= IHl N2Z.id ascii_N_embedding byte_of_ascii_of_byte. }
+      { by induction l => //=; rewrite /f /= IHl ascii_N_embedding byte_of_ascii_of_byte. }
         by rewrite take_app BS.print_parse_inv.
     Qed.
 
     Lemma to_from_zstring {σ : genv}
           (zs : zstring.t)
           (H : zstring.WF zs)
-          (X : List.Forall (fun c => has_type (Vint c) Tchar) zs) :
+          (X : List.Forall (fun c => has_type (Vchar c) Tchar) zs) :
       to_zstring (from_zstring zs) = zs.
     Proof.
       induction zs. 1: exfalso; by apply not_WF_nil.
       unfold from_zstring, to_zstring, to_zstring' in *; simpl in *.
       rewrite -> BS.parse_print_inv in *.
-      replace ["000"%byte] with (map (byte_of_ascii ∘ ascii_of_N ∘ Z.to_N) [0%Z])
+      replace ["000"%byte] with (map (byte_of_ascii ∘ ascii_of_N) [0%N])
         in IHzs by reflexivity; rewrite -map_app in IHzs.
       destruct zs; simpl in *.
       - apply WF_singleton_inj in H; by subst.
@@ -157,10 +157,11 @@ Module cstring.
             inversion H''; by subst.
           }
           rewrite -{2}IHzs; auto; f_equal.
-          * apply has_char_type in H2; rewrite /bound/= in H2;
-              rewrite ascii_of_byte_of_ascii N_ascii_embedding; by lia.
+          * apply has_type_char in H2.
+            rewrite ascii_of_byte_of_ascii N_ascii_embedding; eauto.
+            simpl in H2. lia.
           * rewrite map_app; rewrite -> map_map in *; simpl in *.
-            set f := fun x => Z.of_N _.
+(*            set f := fun x => Z.of_N _. *)
             assert (length zs = 0 \/ length zs <> 0)%nat
               as [Hlen | Hlen] by lia.
             -- apply nil_length_inv in Hlen; subst; simpl in *.
@@ -168,38 +169,36 @@ Module cstring.
             -- rewrite map_map IHzs; auto.
                destruct (length zs) eqn:Hlen'=> //=.
                f_equal.
-               ++ inversion H3; apply has_char_type in H4;
-                    rewrite /bound/= in H4;
-                    rewrite /f/= ascii_of_byte_of_ascii N_ascii_embedding;
+               ++ inversion H3; apply has_type_char in H4;
+                    rewrite /bound/= in H4; subst.
+                    rewrite ascii_of_byte_of_ascii N_ascii_embedding;
                     by lia.
                ++ rewrite map_take -take_S_r.
                   ** rewrite -map_take -Hlen' firstn_all.
-                     rewrite /f/=.
+                     rewrite /=.
                      under map_ext_in => x HIn. 1: {
                        inversion H3.
                        rewrite -> (@List.Forall_forall _ _ zs) in H5.
                        specialize (H5 x HIn).
-                       apply has_char_type in H5; rewrite /bound/= in H5.
+                       apply has_type_char in H5; rewrite /bound/= in H5.
 
                        rewrite -> ascii_of_byte_of_ascii, N_ascii_embedding by lia.
-                       rewrite -> Z2N.id by lia.
                        over.
                      }
                      by rewrite map_id.
                   ** apply WFs_equiv in H; inversion H as [Hhead [Hty [Hnonzero Hnull]]].
-                     assert (Z.of_nat (S n) = strlen (z :: zs)) as Hn
+                     assert (Z.of_nat (S n0) = strlen (n :: zs)) as Hn
                        by (unfold strlen, size; rewrite cons_length Hlen'; lia).
-                     specialize (Hnull (S n) Hn); simpl in Hnull.
+                     specialize (Hnull (S n0) Hn); simpl in Hnull.
                      rewrite -Hnull.
                      under map_ext_in => x HIn. 1: {
                        inversion H3.
                        rewrite -> (@List.Forall_forall _ _ zs) in H5.
                        specialize (H5 x HIn).
-                       apply has_char_type in H5; rewrite /bound/= in H5.
+                       apply has_type_char in H5; rewrite /bound/= in H5.
 
-                       rewrite /f/=.
+                       rewrite /=.
                        rewrite -> ascii_of_byte_of_ascii, N_ascii_embedding by lia.
-                       rewrite -> Z2N.id by lia.
                        over.
                      }
                      rewrite map_id.
@@ -207,7 +206,7 @@ Module cstring.
           * assumption.
         + apply WFs_equiv in H; inversion H as [Hhead [Hty [Hbody Hnull]]].
           intros i Hi.
-          assert (Z.of_nat (S i) = strlen (a :: z :: zs)) as Hi'
+          assert (Z.of_nat (S i) = strlen (a :: n :: zs)) as Hi'
             by (unfold strlen, size in *; simpl in *; lia).
           specialize (Hnull (S i) Hi').
           by simpl in Hnull.
@@ -215,7 +214,7 @@ Module cstring.
 
     Lemma to_zstring_singleton_contra :
       forall (b : Byte.byte) (cstr : cstring.t),
-        to_zstring (BS.String b cstr) = [0] ->
+        to_zstring (BS.String b cstr) = [0%N] ->
         False.
     Proof.
       intros * H; rewrite to_zstring_unfold/= in H.
@@ -271,8 +270,7 @@ Module cstring.
       exists []; split.
       - by rewrite app_nil_l.
       - split; [intro CONTRA; by inversion CONTRA |].
-        repeat constructor.
-        apply has_char_type; rewrite /bound/=; by lia.
+        repeat constructor. apply has_type_char_0.
     Qed.
 
     Lemma WF_string_inj :
@@ -308,7 +306,7 @@ Module cstring.
         induction cstr as [| b' cstr' IHcstr']; intros.
       - unfold zstring.WF, to_zstring, to_zstring'.
         exists []; simpl; intuition.
-        repeat constructor; apply has_char_type; rewrite /bound/=; by lia.
+        repeat constructor. apply has_type_char_0.
       - unfold zstring.WF, to_zstring in Hzstring; simpl in Hzstring;
           unfold zstring.WF, to_zstring, _to_zstring';
           destruct Hzstring as [zs [Hzstring [Hnonzero Hforall]]];
@@ -318,7 +316,7 @@ Module cstring.
           * by rewrite -app_comm_cons/= H4.
           * rewrite map_app/= in H4; exfalso; eapply app_cons_not_nil; eauto.
         + rewrite /BS.print; fold (BS.print cstr'); rewrite -app_comm_cons/=.
-          rewrite H3; exists (z0 :: zs); subst; split; [rewrite -> H4 in *; by reflexivity | ].
+          rewrite H3; exists (n0 :: zs); subst; split; [rewrite -> H4 in *; by reflexivity | ].
           split.
           * intro CONTRA; apply Hnonzero; simpl in *; intuition.
           * rewrite {}H4.
@@ -342,13 +340,13 @@ Module cstring.
       rewrite /BS.print; fold (BS.print cstr); rewrite -app_comm_cons/= map_app/=.
       match goal with
       | |- context[_ :: ?zs ++ _] =>
-        exists (Z.of_N (N_of_ascii (ascii_of_byte b)) :: zs); split;
+        exists (N_of_ascii (ascii_of_byte b) :: zs); split;
           [by rewrite app_comm_cons | ]
       end.
       split. 2: {
         constructor.
-        - destruct b=> //=; apply has_char_type;
-            rewrite /bound/=; by lia.
+        - apply has_type_char. simpl.
+          generalize (N_ascii_bounded (ascii_of_byte b)). lia.
         - unfold to_zstring, to_zstring' in Hforall.
           by rewrite map_app/= in Hforall.
       }
@@ -374,7 +372,7 @@ Module cstring.
       rewrite BS.parse_print_inv in H.
       rewrite map_map in H.
       match goal with
-      | H : In 0 (map ?f ?zs) |- _ =>
+      | H : In 0%N (map ?f ?zs) |- _ =>
         replace (map f zs) with zs in H
       end. 2: {
         under map_ext_in=> x Hin. 1: {
@@ -408,8 +406,7 @@ Module cstring.
                 inversion Hforall; by subst.
           }
 
-          simpl; rewrite ascii_of_byte_of_ascii N_ascii_embedding;
-            [rewrite -> Z2N.id by lia; by over | by lia].
+          simpl; rewrite ascii_of_byte_of_ascii N_ascii_embedding. over; lia. lia.
         }
         by rewrite map_id.
       }
@@ -756,7 +753,7 @@ Module cstring.
         Lemma bufR_nil :
           forall (q : cQp.t) (sz : Z),
             (1 <= sz)%Z ->
-                arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat sz))
+                arrayR Tchar (fun _ => primR Tchar q (Vchar 0)) (repeat () (Z.to_nat sz))
             |-- bufR q sz "".
         Proof.
           intros **; iIntros "rest"; rewrite /bufR/zstring.bufR.
@@ -789,10 +786,10 @@ Module cstring.
             Observe [| b <> "000" |]%byte (bufR q sz (BS.String b ""%bs)).
         Proof.
           intros **; rewrite /bufR/Observe to_zstring_unfold_String/=; iIntros "buf".
-          iDestruct (observe [| Z.of_N (N_of_ascii (ascii_of_byte b)) <> 0%Z |] with "buf")
+          iDestruct (observe [| N_of_ascii (ascii_of_byte b) <> 0%N |] with "buf")
             as "%Hb". 1: {
             rewrite ascii_of_byte_via_N; rewrite -> N_ascii_embedding by (destruct b=> //).
-            pose proof (zstring.bufR_singleton q sz (Z.of_N (Byte.to_N b))).
+            pose proof (zstring.bufR_singleton q sz (Byte.to_N b)).
             rewrite zstring.bufR_cons. 2: {
               rewrite ascii_of_byte_via_N N_ascii_embedding in Hb; auto.
               by (destruct b=> //).
@@ -805,7 +802,7 @@ Module cstring.
           forall (q : cQp.t) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR q sz (BS.String b cstr)
-            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Vchar (N_of_ascii (ascii_of_byte b))) **
                 .[Tchar ! 1] |-> bufR q (sz - 1) cstr.
         Proof.
           lift_zstring_bufR2bufR zstring.bufR_cons.
@@ -861,7 +858,7 @@ Module cstring.
         Lemma bufR'_nil :
           forall (q : cQp.t) (sz : Z),
             (1 <= sz)%Z ->
-                arrayR Tchar (fun _ => primR Tchar q 0) (repeat () (Z.to_nat sz))
+                arrayR Tchar (fun _ => primR Tchar q (Vchar 0)) (repeat () (Z.to_nat sz))
             |-- bufR' q sz "".
         Proof. by lift_WF2WF' bufR_nil. Qed.
 
@@ -881,7 +878,7 @@ Module cstring.
           forall (q : cQp.t) (sz : Z) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 bufR' q sz (BS.String b cstr)
-            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Vchar (N_of_ascii (ascii_of_byte b))) **
                 .[Tchar ! 1] |-> bufR' q (sz - 1) cstr.
         Proof. by lift_WF2WF' bufR_cons. Qed.
 
@@ -912,7 +909,7 @@ Module cstring.
         forall (q : cQp.t) (sz : Z) (cstr : t),
           bufR q sz cstr -|-
           [| size cstr <= sz |] ** R q cstr **
-          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q 0)
+          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0))
                                            (repeat () (Z.to_nat (sz - size cstr))).
       Proof.
         intros **; split'.
@@ -924,7 +921,7 @@ Module cstring.
         forall (q : cQp.t) (sz : Z) (cstr : t),
           bufR' q sz cstr -|-
           [| size cstr <= sz |] ** R' q cstr **
-          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q 0)
+          .[ Tchar ! size cstr] |-> arrayR Tchar (fun _ => primR Tchar q (Vchar 0))
                                            (repeat () (Z.to_nat (sz - size cstr))).
       Proof. intros **; rewrite -!bufRs_equiv -!Rs_equiv; by apply bufR_unfold. Qed.
 
@@ -939,7 +936,7 @@ Module cstring.
 
         Remark R_nil :
           forall (q : cQp.t),
-                arrayR Tchar (fun c => primR Tchar q (Vint c)) [0]
+                arrayR Tchar (fun c => primR Tchar q (Vchar c)) [0%N]
             |-- R q "".
         Proof.
           intros *; rewrite /R !/zstring.R arrayR_singleton
@@ -961,7 +958,7 @@ Module cstring.
           forall (q : cQp.t) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R q (BS.String b cstr)
-            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Vchar (N_of_ascii (ascii_of_byte b))) **
                 .[Tchar ! 1] |-> R q cstr.
         Proof.
           intros **; rewrite !R_bufR_equiv.
@@ -1042,7 +1039,7 @@ Module cstring.
 
         Remark R'_nil :
           forall (q : cQp.t),
-                arrayR Tchar (fun c => primR Tchar q (Vint c)) [0]
+                arrayR Tchar (fun c => primR Tchar q (Vchar c)) [0%N]
             |-- R' q "".
         Proof. lift_WF2WF' R_nil. Qed.
 
@@ -1056,7 +1053,7 @@ Module cstring.
           forall (q : cQp.t) (b : Byte.byte) (cstr : t),
             b <> "000"%byte ->
                 R' q (BS.String b cstr)
-            -|- primR Tchar q (Z.of_N (N_of_ascii (ascii_of_byte b))) **
+            -|- primR Tchar q (Vchar (N_of_ascii (ascii_of_byte b))) **
                 .[Tchar ! 1] |-> R' q cstr.
         Proof. lift_WF2WF' R_cons. Qed.
 
@@ -1091,13 +1088,13 @@ Module cstring.
       Lemma R_unfold :
         forall (q : cQp.t) (cstr : t),
               R q cstr
-          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) (to_zstring cstr) ** [| WF cstr |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vchar c)) (to_zstring cstr) ** [| WF cstr |].
       Proof. intros **; split'; by rewrite /R. Qed.
 
       Lemma R'_unfold :
         forall (q : cQp.t) (cstr : t),
               R' q cstr
-          -|- arrayR Tchar (fun c => primR Tchar q (Vint c)) (to_zstring cstr) ** [| WF' cstr |].
+          -|- arrayR Tchar (fun c => primR Tchar q (Vchar c)) (to_zstring cstr) ** [| WF' cstr |].
       Proof. intros **; split'; by rewrite /R'. Qed.
 
       Section Extra.
