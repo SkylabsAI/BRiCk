@@ -493,6 +493,40 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
       | _ => None
       end.
 
+    Definition to_char (from_sz : N) (from_sgn : signed) (to_bits : N) (*to_sgn : signed*) (v : Z) : N :=
+      Z.to_N $ to_unsigned_bits from_sz v.
+
+    Definition of_char (from_bits : N) (*from_sgn : signed*) (to_bits : N) (to_sgn : signed) (n : N) : Z :=
+      if to_sgn is Signed then to_signed_bits to_bits n else to_unsigned_bits to_bits n.
+
+    Lemma to_char_of_char fsz (*fsgn*) tsz tsgn n :
+      (n < 2^tsz)%N ->
+      to_char tsz tsgn fsz (*fsgn*) (of_char fsz (*fsgn*) tsz tsgn n) = n.
+    Proof.
+      rewrite /to_char/of_char.
+      destruct tsgn.
+      { intros.
+        rewrite /to_signed_bits. case_bool_decide.
+        { subst. simpl in H. have->: n = 0%N by lia. done. }
+        { case_bool_decide.
+          { rewrite /trim. rewrite -Zminus_mod_idemp_r Z_mod_same_full.
+            rewrite Z.sub_0_r Zmod_mod Zmod_small; lia. }
+          { rewrite /trim Zmod_mod Zmod_small; lia. } } }
+      { rewrite trim_idem. intros. rewrite to_unsigned_bits_id; lia. }
+    Qed.
+
+    Lemma of_char_to_char (fsz : N) fsgn tsz (*tsgn*) z :
+      ((if fsgn is Signed then - (2^(fsz - 1)) else 0) <= z < (if fsgn is Signed then 2^(fsz - 1) else 2^fsz))%Z ->
+      of_char tsz (*tsgn*) fsz fsgn (to_char fsz fsgn tsz (*tsgn*) z) = z.
+    Proof.
+      rewrite /to_char/of_char.
+      rewrite Z2N.id; last first.
+      { rewrite /trim. apply Z.mod_pos. lia. }
+      case_match; subst.
+      { intros. eapply to_signed_unsigned_bits_roundtrip; lia. }
+      { intros. rewrite trim_idem. rewrite to_unsigned_bits_id; lia. }
+    Qed.
+
     (** Integral conversions. For use in the semantics of C++ operators.
 
         TODO: [conv_int] will need to use architecture-specific information, so it
@@ -530,9 +564,22 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               | Vchar v => v' = Vbool (bool_decide (v <> 0%N))
               | _ => False
               end
-          | Num sz sgn , Char ct => False (* TODO *)
-          | Char _ , Num _ _ => False (* TODO *)
-          | Char _ , Char _ => False (* TODO *)
+          | Num sz sgn , Char ct =>
+              match v with
+              | Vint v =>
+                  v' = Vchar (to_char (bitsN sz) sgn (char_type.bitsN ct) v)
+              | _ => False
+              end
+          | Char ct , Num sz sgn =>
+              match v with
+              | Vchar v => v' = Vint (of_char (char_type.bitsN ct) (bitsN sz) sgn v)
+              | _ => False
+              end
+          | Char ct , Char ct' =>
+              match v with
+              | Vchar v => v' = Vchar (to_char (char_type.bitsN ct) Unsigned (char_type.bitsN ct') v)
+              | _ => False
+              end
           end
       | _ , _ => False
       end.
