@@ -19,9 +19,9 @@ Import ChargeNotation.
 #[local] Open Scope Z_scope.
 
 (** TODO: upstream *)
-Lemma has_type_char_255 {σ : genv} (n : N) : (0 <= n < 255)%N -> has_type (Vchar n) Tchar.
-Proof. intros. apply has_type_char. simpl. lia. Qed.
-Lemma has_type_char_0 {σ : genv} :  has_type (Vchar 0) Tchar.
+Lemma has_type_char_255 {σ : genv} (n : N) ct : (0 <= n < 255)%N -> has_type (Vchar n) (Tchar_ ct).
+Proof. intros. apply has_type_char. simpl. destruct ct; simpl; lia. Qed.
+Lemma has_type_char_0 {σ : genv} ct :  has_type (Vchar 0) (Tchar_ ct).
 Proof. intros. apply has_type_char_255. lia. Qed.
 (** END: upstream *)
 
@@ -33,6 +33,10 @@ Proof. intros. apply has_type_char_255. lia. Qed.
 Module zstring.
   Definition t := list N.
   Bind Scope list_scope with t.
+
+Section with_ct.
+  Variable ct : char_type.
+  #[local] Notation Tchar := (Tchar_ ct).
 
   (* [size] reflects the in-memory footprint of the null-terminated string (i.e. the
      length is one greater than that of the string as given by `std::strlen`).
@@ -939,6 +943,14 @@ Module zstring.
       Proof. intros **; split'; by rewrite /R'. Qed.
     End Theory.
   End with_Σ.
+End with_ct.
+
+(* refresh notation outside of the section *)
+Notation size zs := (_size zs%Z).
+Notation strlen zs := (_strlen zs%Z).
+Notation WF zs := (_WF zs%Z).
+Notation WF' zs := (_WF' zs%Z).
+
 End zstring.
 
 Section zstring_pure_hint_test_pre.
@@ -957,7 +969,7 @@ Section zstring_pure_hint_test_pre.
   Abort.
   #[local] Unset Ltac Backtrace.
 
-  Goal forall {σ : genv}, not (zstring.WF []).
+  Goal forall {σ : genv}, not (zstring.WF char_type.Cchar []).
   Proof. Fail (by auto with pure). Abort.
 
   Goal
@@ -991,7 +1003,7 @@ End zstring_pure_hint_test_pre.
 Section zstring_pure_hint_test_post.
   #[local] Unset Ltac Backtrace.
 
-  Goal forall {σ : genv}, not (zstring.WF []).
+  Goal forall {σ : genv}, not (zstring.WF char_type.Cchar []).
   Proof. by auto with pure. Abort.
 
   Goal
