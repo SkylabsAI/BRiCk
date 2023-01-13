@@ -135,11 +135,11 @@ Module cstring.
 
     Lemma to_from_zstring {σ : genv}
           (zs : zstring.t)
-          (H : zstring.WF zs)
+          (H : zstring.WF char_type.Cchar zs)
           (X : List.Forall (fun c => has_type (Vchar c) Tchar) zs) :
       to_zstring (from_zstring zs) = zs.
     Proof.
-      induction zs. 1: exfalso; by apply not_WF_nil.
+      induction zs. 1: exfalso; by eapply not_WF_nil.
       unfold from_zstring, to_zstring, to_zstring' in *; simpl in *.
       rewrite -> BS.parse_print_inv in *.
       replace ["000"%byte] with (map (byte_of_ascii ∘ ascii_of_N) [0%N])
@@ -234,7 +234,7 @@ Module cstring.
 
     Lemma from_zstring_to_zstring_swap {σ : genv} :
       forall (zs : zstring.t) (cstr : t),
-        zstring.WF zs ->
+        zstring.WF char_type.Cchar zs ->
         zs = to_zstring cstr <-> cstr = from_zstring zs.
     Proof.
       intros * HWF; split; intro; subst.
@@ -256,10 +256,10 @@ Module cstring.
   Definition strlen (cstr : t) := zstring.strlen (to_zstring cstr).
   #[global] Arguments size cstr : simpl never.
 
-  Definition WF {σ : genv} (cstr : t) : Prop := zstring.WF (to_zstring cstr).
+  Definition WF {σ : genv} (cstr : t) : Prop := zstring.WF char_type.Cchar (to_zstring cstr).
   #[global] Arguments WF {σ} cstr : simpl never.
 
-  Definition WF' {σ : genv} (cstr : t) : Prop := zstring.WF' (to_zstring cstr).
+  Definition WF' {σ : genv} (cstr : t) : Prop := zstring.WF' char_type.Cchar (to_zstring cstr).
   #[global] Arguments WF' {σ} cstr : simpl never.
 
   Section WF_Theory.
@@ -293,14 +293,14 @@ Module cstring.
 
     Lemma to_zstring_WF :
       forall (cstr : t),
-        WF cstr <-> zstring.WF (to_zstring cstr).
+        WF cstr <-> zstring.WF char_type.Cchar (to_zstring cstr).
     Proof. done. Qed.
 
     Lemma to_zstring_WF_cons_shrink :
       forall (b : Byte.byte) (cstr : t),
         b <> "000"%byte ->
-        zstring.WF (to_zstring (BS.String b cstr)) ->
-        zstring.WF (to_zstring cstr).
+        zstring.WF char_type.Cchar (to_zstring (BS.String b cstr)) ->
+        zstring.WF char_type.Cchar (to_zstring cstr).
     Proof.
       move=> b cstr Hb Hzstring; generalize dependent b;
         induction cstr as [| b' cstr' IHcstr']; intros.
@@ -328,8 +328,8 @@ Module cstring.
     Lemma to_zstring_WF_cons_grow :
       forall (b : Byte.byte) (cstr : t),
         b <> Byte.x00 ->
-        zstring.WF (to_zstring cstr) ->
-        zstring.WF (to_zstring (BS.String b cstr)).
+        zstring.WF char_type.Cchar (to_zstring cstr) ->
+        zstring.WF char_type.Cchar (to_zstring (BS.String b cstr)).
     Proof.
       move=> b cstr Hb Hzstring;
         unfold zstring.WF in Hzstring;
@@ -415,7 +415,7 @@ Module cstring.
 
     Lemma to_zstring_WF_zero :
       forall (cstr : t),
-        zstring.WF (to_zstring (BS.String Byte.x00 cstr)) ->
+        zstring.WF char_type.Cchar (to_zstring (BS.String Byte.x00 cstr)) ->
         cstr = ""%bs.
     Proof.
       move=> cstr Hzstring; induction cstr=> //; exfalso.
@@ -429,8 +429,8 @@ Module cstring.
     Lemma to_zstring_WF_cons :
       forall (b : Byte.byte) (cstr : t),
         b <> "000"%byte ->
-        zstring.WF (to_zstring (BS.String b cstr)) <->
-        zstring.WF (to_zstring cstr).
+        zstring.WF char_type.Cchar (to_zstring (BS.String b cstr)) <->
+        zstring.WF char_type.Cchar (to_zstring cstr).
     Proof.
       split; move=> Hzstring;
         [ eapply to_zstring_WF_cons_shrink in Hzstring
@@ -637,14 +637,14 @@ Module cstring.
 
     Lemma to_zstring_WF' :
       forall (cstr : t),
-        WF' cstr <-> zstring.WF' (to_zstring cstr).
+        WF' cstr <-> zstring.WF' char_type.Cchar (to_zstring cstr).
     Proof. done. Qed.
 
     Lemma to_zstring_WF'_cons_shrink :
       forall (b : Byte.byte) (cstr : t),
         b <> "000"%byte ->
-        zstring._WF' (to_zstring (BS.String b cstr)) ->
-        zstring._WF' (to_zstring cstr).
+        zstring._WF' char_type.Cchar (to_zstring (BS.String b cstr)) ->
+        zstring._WF' char_type.Cchar (to_zstring cstr).
     Proof.
       intros **; rewrite -> zstring.WFs_equiv in *;
         by eapply to_zstring_WF_cons_shrink.
@@ -653,8 +653,8 @@ Module cstring.
     Lemma to_zstring_WF'_cons_grow :
       forall (b : Byte.byte) (cstr : t),
         b <> Byte.x00 ->
-        zstring.WF' (to_zstring cstr) ->
-        zstring.WF' (to_zstring (BS.String b cstr)).
+        zstring.WF' char_type.Cchar (to_zstring cstr) ->
+        zstring.WF' char_type.Cchar (to_zstring (BS.String b cstr)).
     Proof.
       intros **; rewrite -> zstring.WFs_equiv in *;
         by eapply to_zstring_WF_cons_grow.
@@ -662,7 +662,7 @@ Module cstring.
 
     Lemma to_zstring_WF'_zero :
       forall (cstr : t),
-        zstring.WF' (to_zstring (BS.String Byte.x00 cstr)) ->
+        zstring.WF' char_type.Cchar (to_zstring (BS.String Byte.x00 cstr)) ->
         cstr = ""%bs.
     Proof.
       intros **; rewrite -> zstring.WFs_equiv in H;
@@ -672,8 +672,8 @@ Module cstring.
     Lemma to_zstring_WF'_cons :
       forall (b : Byte.byte) (cstr : t),
         b <> "000"%byte ->
-        zstring.WF' (to_zstring (BS.String b cstr)) <->
-        zstring.WF' (to_zstring cstr).
+        zstring.WF' char_type.Cchar (to_zstring (BS.String b cstr)) <->
+        zstring.WF' char_type.Cchar (to_zstring cstr).
     Proof.
       split; move=> Hzstring;
         [ eapply to_zstring_WF'_cons_shrink in Hzstring
@@ -702,9 +702,9 @@ Module cstring.
     (* The toplevel definition of [cstring.bufR]: *)
     Definition bufR (q : cQp.t) (sz : Z) (cstr : t) : Rep :=
     (* The toplevel definition of [cstring.bufR']: *)
-      zstring.bufR q sz (to_zstring cstr).
+      zstring.bufR char_type.Cchar q sz (to_zstring cstr).
     Definition bufR' (q : cQp.t) (sz : Z) (cstr : t) : Rep :=
-      zstring.bufR' q sz (to_zstring cstr).
+      zstring.bufR' char_type.Cchar q sz (to_zstring cstr).
 
     #[global] Instance bufR_WF_observe :
       forall q (sz : Z) (zs : t),
@@ -722,10 +722,10 @@ Module cstring.
 
     (* The toplevel definition of [cstring.R]: *)
     Definition R (q : cQp.t) (cstr : t) : Rep :=
-      zstring.R q (to_zstring cstr).
+      zstring.R char_type.Cchar q (to_zstring cstr).
     (* The toplevel definition of [cstring.R']: *)
     Definition R' (q : cQp.t) (cstr : t) : Rep :=
-      zstring.R' q (to_zstring cstr).
+      zstring.R' char_type.Cchar q (to_zstring cstr).
 
     #[global] Instance R_WF_observe :
       forall q (zs : t),
@@ -789,7 +789,7 @@ Module cstring.
           iDestruct (observe [| N_of_ascii (ascii_of_byte b) <> 0%N |] with "buf")
             as "%Hb". 1: {
             rewrite ascii_of_byte_via_N; rewrite -> N_ascii_embedding by (destruct b=> //).
-            pose proof (zstring.bufR_singleton q sz (Byte.to_N b)).
+            pose proof (zstring.bufR_singleton char_type.Cchar q sz (Byte.to_N b)).
             rewrite zstring.bufR_cons. 2: {
               rewrite ascii_of_byte_via_N N_ascii_embedding in Hb; auto.
               by (destruct b=> //).
@@ -847,7 +847,7 @@ Module cstring.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
           iDestruct (observe (.[Tchar ! z] |-> validR) with "zstr") as "#?";
             last by iModIntro.
-          by pose proof (zstring.bufR_validR_inbounds_observe q sz z (to_zstring cstr) H).
+          by pose proof (zstring.bufR_validR_inbounds_observe char_type.Cchar q sz z (to_zstring cstr) H).
         Qed.
       End bufR.
 
@@ -1098,14 +1098,14 @@ Module cstring.
       Proof. intros **; split'; by rewrite /R'. Qed.
 
       Section Extra.
-        Lemma R_to_zstringR (q : cQp.t) (cstr : t) : R q cstr |-- zstring.R q (to_zstring cstr).
+        Lemma R_to_zstringR (q : cQp.t) (cstr : t) : R q cstr |-- zstring.R char_type.Cchar q (to_zstring cstr).
         Proof. by []. Qed.
 
         Lemma R_from_zstringR (q : cQp.t) (zs : zstring.t) :
-          zstring.R q zs |-- R q (from_zstring zs).
+          zstring.R char_type.Cchar q zs |-- R q (from_zstring zs).
         Proof.
           iIntros "R";
-            iDestruct (observe [| zstring.WF zs |] with "R") as "%WF";
+            iDestruct (observe [| zstring.WF char_type.Cchar zs |] with "R") as "%WF";
             iStopProof.
           rewrite zstring.R_has_type; iIntros "[? %]".
           rewrite /R to_from_zstring //.

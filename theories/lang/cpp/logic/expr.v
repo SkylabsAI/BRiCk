@@ -191,8 +191,8 @@ Module Type Expr.
         | None => BAD_STRING (Tchar_ ct) bytes
         | Some bytes =>
           Forall (p : ptr) (q : Qp),
-              p |-> zstring.R (cQp.c q) bytes -*
-              (p |-> zstring.R (cQp.c q) bytes ={⊤}=∗ emp) -*
+              p |-> zstring.R ct (cQp.c q) bytes -*
+              (p |-> zstring.R ct (cQp.c q) bytes ={⊤}=∗ emp) -*
               Q p FreeTemps.id
         end
       |-- wp_lval (Estring bytes (Tarray (Qconst (Tchar_ ct)) len)) Q.
