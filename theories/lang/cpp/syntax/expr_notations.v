@@ -75,7 +75,7 @@ Module ExprNotations.
          , only printing).
 
   Notation "'ASCII#' ascii_code"
-      := (Echar ascii_code%Z _)
+      := (Echar ascii_code%N _)
          ( in custom CPP_expr at level 0
          , ascii_code constr
          , format "'[' ASCII# ascii_code ']'"
