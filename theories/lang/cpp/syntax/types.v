@@ -462,7 +462,8 @@ Section normalize_type_idempotent.
   Qed.
 End normalize_type_idempotent.
 
-(** ** Character types *)
+(** ** Notation for character types *)
+Coercion Tchar_ : char_type.t >-> type.
 Notation Tchar := (Tchar_ char_type.Cchar).
 Notation Twchar := (Tchar_ char_type.Cwchar).
 Notation Tchar8 := (Tchar_ char_type.C8).
