@@ -16,7 +16,7 @@ From bedrock.lang.cpp.logic Require Import
      operator
      destroy
      initializers
-     wp call string
+     wp call
      translation_unit
      dispatch layout.
 Require Import bedrock.lang.bi.errors.
@@ -55,39 +55,8 @@ Module Type Expr.
           else (val `mod` 2 ^ bits)%Z.
 
     Definition trimN (bits : N) (v : N) : N := v `mod` 2^bits.
-    Definition to_char (t : char_type.t) (z : N) : val :=
+    Definition N_to_char (t : char_type.t) (z : N) : val :=
       Vchar $ trimN (char_type.bitsN t) z.
-
-    (* going to assume that characters are encoded in little endian order. *)
-    Section with_K.
-      Variable (K : N -> bs -> option (list N)).
-      Fixpoint take_bytes (rem : nat) (acc : N) (cs : bs) {struct cs} : option (list N) :=
-        match rem with
-        | 0 => K acc cs
-        | S n => match cs with
-                | BS.String c cs => take_bytes n (N.lor acc (N.shiftl (Byte.to_N c) (8* N.of_nat rem))) cs
-                | BS.EmptyString => None
-                end
-        end.
-    End with_K.
-    Fixpoint build_string (len : nat) (bytes_per_char : nat) (cs : bs) {struct cs} : option (list N) :=
-      match cs with
-      | BS.EmptyString =>
-          match len with
-          | 1 => Some [0%N]
-          | _ => None
-          end
-      | BS.String c cs =>
-          match len with
-          | 0 => None
-          | S len =>
-              match bytes_per_char with
-              | 0 => None
-              | S rem => take_bytes  (fun n cs => cons n <$> build_string len bytes_per_char cs)
-                          rem (N.shiftl (Byte.to_N c) (8*N.of_nat rem))%N cs
-              end
-          end
-      end.
     (** UPSTREAM *)
 
     #[local] Notation wp_lval := (wp_lval tu ρ).
@@ -141,16 +110,24 @@ Module Type Expr.
              internal representation.
      *)
     Axiom wp_operand_char : forall c cty Q,
-      Q (to_char cty c) FreeTemps.id
+          Q (N_to_char cty c) FreeTemps.id
       |-- wp_operand (Echar c (Tchar_ cty)) Q.
 
     (* boolean literals are prvalues *)
     Axiom wp_operand_bool : forall (b : bool) Q,
-      Q (Vbool b) FreeTemps.id
+          Q (Vbool b) FreeTemps.id
       |-- wp_operand (Ebool b) Q.
 
-    Definition BAD_STRING (ty : type) (bytes : bs) : mpred.
-    Proof. exact False%I. Qed.
+    (** [strings_bytesR ct q chars] is [q] (const) fractional ownership of
+        [chars] with a trailing [0].
+
+        NOTE that [chars] is in units of *characters* using the standard
+             character encoding (see [syntax/expr.v]). This is *not* the
+             same as bytes, and will not be for multi-byte characters.
+     *)
+    Definition string_bytesR (cty : char_type) (q : Qp) (ls : list N) : Rep :=
+      let ty := Tchar_ cty in
+      ([∗list] i ↦ c ∈ (ls ++ [0%N]), .[ ty ! i ] |-> primR ty (cQp.c q) (N_to_char cty c)).
 
     (** * String Literals
 
@@ -186,16 +163,12 @@ Module Type Expr.
         the string pool is maintained within an invariant of the abstract
         machine.
      *)
-    Axiom wp_lval_string : forall bytes ct len Q,
-        match build_string (N.to_nat len) (N.to_nat $ char_type.bytesN ct) bytes with
-        | None => BAD_STRING (Tchar_ ct) bytes
-        | Some bytes =>
+    Axiom wp_lval_string : forall chars ct Q,
           Forall (p : ptr) (q : Qp),
-              p |-> zstring.R ct (cQp.c q) bytes -*
-              (p |-> zstring.R ct (cQp.c q) bytes ={⊤}=∗ emp) -*
-              Q p FreeTemps.id
-        end
-      |-- wp_lval (Estring bytes (Tarray (Qconst (Tchar_ ct)) len)) Q.
+            p |-> string_bytesR ct q chars -*
+            □ (Forall q, p |-> string_bytesR ct q chars ={⊤}=∗ emp) -*
+            Q p FreeTemps.id
+      |-- wp_lval (Estring chars (Tchar_ ct)) Q.
 
     (* `this` is a prvalue *)
     Axiom wp_operand_this : forall ty Q,
