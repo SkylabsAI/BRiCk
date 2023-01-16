@@ -22,7 +22,12 @@ Canonical Structure AT_offset `{Σ : cpp_logic} : AT :=
 #[global] Bind Scope bi_scope with AT_RHS.
 
 mlock Definition __at := @AT_at.
-#[global] Arguments __at {AT} _ _ : rename.
+(**
+Bidirectional typechecking enables the canonical projection
+[AT_Result]. Without the [&], the following tests [infer_pointer],
+[infer_offset] would fail.
+*)
+#[global] Arguments __at {_} _ & _ : assert.
 
 #[global] Notation _at := (@__at AT_ptr) (only parsing).
 #[global] Notation _offsetR := (@__at AT_offset) (only parsing).
@@ -41,6 +46,15 @@ End INTERNAL.
 (* Test suite *)
 Section test_suite.
   Context {σ : genv} `{Σ : cpp_logic} (R : Rep) (f g : field) (o : offset) (p : ptr) (v : val).
+
+  (**
+  Unfortunately, inferred types can be ugly (e.g., [AT_LHS AT_ptr]
+  rather than [ptr]).
+  *)
+  Let infer_pointer x (R : Rep) : mpred := x |-> R.
+  Let infer_offset x (R : Rep) : Rep := x |-> R.
+  Let infer_rep_1 (x : ptr) R : mpred := x |-> R.
+  Let infer_rep_2 (x : offset) R : Rep := x |-> R.
 
   #[local] Ltac syntactically_equal :=
     lazymatch goal with
