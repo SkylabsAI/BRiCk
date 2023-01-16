@@ -13,7 +13,9 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.inc"
+#include <bit>
 
 using namespace clang;
 using namespace fmt;
@@ -599,11 +601,41 @@ public:
     }
 
     void VisitStringLiteral(const StringLiteral* lit, CoqPrinter& print,
-                            ClangPrinter& cprint, const ASTContext&,
+                            ClangPrinter& cprint, const ASTContext& ctxt,
                             OpaqueNames&) {
         print.ctor("Estring", false);
-        print.escaped_str(lit);
-        done(lit, print, cprint);
+        // We get the string literal in bytes, but we need to encode it
+        // as unsigned characters (not necessarily `char`) using the
+        // internal character representation of BRiCk.
+        auto bytes = lit->getBytes();
+        const bool big_endian = ctxt.getTargetInfo().isBigEndian();
+        const unsigned width = lit->getCharByteWidth();
+        print.begin_list();
+        for (unsigned i = 0, len = lit->getByteLength(); i < len;) {
+            unsigned long long byte = 0ull;
+            if (big_endian) { // TODO this is incorrect, I thikn that it should use the compiler's byte order
+                for (auto j = 0; j < width; ++j) {
+                    byte = (byte << 8) | static_cast<unsigned char>(bytes[i++]);
+                }
+            } else {
+                for (auto j = 0; j < width; ++j) {
+                    byte = (byte << 8) |
+                           static_cast<unsigned char>(bytes[i + width - j - 1]);
+                }
+                i += width;
+            }
+            print.output() << byte << "%N";
+            print.cons();
+        }
+        print.end_list();
+        // NOTE: the trailing `\0` is added by the semantics
+        if (auto at = dyn_cast<ArrayType>(lit->getType().getTypePtr())) {
+            print.output() << fmt::nbsp;
+            cprint.printType(at->getElementType().getTypePtr(), print);
+            print.end_ctor();
+        } else {
+            assert(false && "string literal does not have array type");
+        }
     }
 
     void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr* lit,

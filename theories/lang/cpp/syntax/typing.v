@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
+From bedrock.prelude Require Import list_numbers.
 From bedrock.lang.cpp.syntax Require Import names expr types.
 
 (** [type_of e] returns the type of the expression [e]. *)
@@ -10,8 +11,8 @@ Fixpoint type_of (e : Expr) : type :=
   match e with
   | Econst_ref _ t
   | Evar _ t
-  | Echar _ t
-  | Estring _ t
+  | Echar _ t => t
+  | Estring vs t => Tarray (Qconst t) (1 + lengthN vs)
   | Eint _ t => t
   | Ebool _ => Tbool
   | Eunop _ _ t
