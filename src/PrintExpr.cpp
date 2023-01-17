@@ -608,12 +608,13 @@ public:
         // as unsigned characters (not necessarily `char`) using the
         // internal character representation of BRiCk.
         auto bytes = lit->getBytes();
-        const bool big_endian = ctxt.getTargetInfo().isBigEndian();
         const unsigned width = lit->getCharByteWidth();
         print.begin_list();
         for (unsigned i = 0, len = lit->getByteLength(); i < len;) {
-            unsigned long long byte = 0ull;
-            if (big_endian) { // TODO this is incorrect, I thikn that it should use the compiler's byte order
+            unsigned long long byte = 0;
+            // TODO confirm that this is correct
+            if (llvm::support::endian::system_endianness() ==
+                llvm::support::endianness::big) {
                 for (auto j = 0; j < width; ++j) {
                     byte = (byte << 8) | static_cast<unsigned char>(bytes[i++]);
                 }
