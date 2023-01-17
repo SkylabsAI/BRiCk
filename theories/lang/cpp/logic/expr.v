@@ -106,11 +106,11 @@ Module Type Expr.
       |-- wp_operand (Eint n ty) Q.
 
     (* NOTE: character literals represented in the AST as 32-bit unsigned integers
-             (with the Coq type [N]). In this rule, we convert them to the correct
-             internal representation.
+             (with the Coq type [N]). We assume that the AST is well-typed so the
+             value here will be well-typed according to the character type.
      *)
     Axiom wp_operand_char : forall c cty Q,
-          Q (N_to_char cty c) FreeTemps.id
+          Q (Vchar c) FreeTemps.id
       |-- wp_operand (Echar c (Tchar_ cty)) Q.
 
     (* boolean literals are prvalues *)

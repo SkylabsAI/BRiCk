@@ -615,11 +615,11 @@ public:
             // TODO confirm that this is correct
             if (llvm::support::endian::system_endianness() ==
                 llvm::support::endianness::big) {
-                for (auto j = 0; j < width; ++j) {
+                for (unsigned j = 0; j < width; ++j) {
                     byte = (byte << 8) | static_cast<unsigned char>(bytes[i++]);
                 }
             } else {
-                for (auto j = 0; j < width; ++j) {
+                for (unsigned j = 0; j < width; ++j) {
                     byte = (byte << 8) |
                            static_cast<unsigned char>(bytes[i + width - j - 1]);
                 }
