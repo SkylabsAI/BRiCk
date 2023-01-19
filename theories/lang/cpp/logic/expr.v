@@ -305,7 +305,7 @@ Module Type Expr.
          let eety := erase_qualifiers ety in
          match companion_type eety with
          | Some cty =>
-          wp_lval e (fun a free => Exists v' v'',
+           wp_lval e (fun a free => Exists v' v'',
               (eval_binop tu Badd eety cty (erase_qualifiers ty) v' (Vint 1) v'' ** True) //\\
               (a |-> primR eety (cQp.mut 1) v' **
                 (a |-> primR eety (cQp.mut 1) v'' -* Q a free)))
