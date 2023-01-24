@@ -19,6 +19,18 @@ public:
         DEFINITION = 2
     };
 
+    static const char *whatstr(What w) {
+        switch (w) {
+        case What::NOTHING:
+            return "Nothing";
+        case What::DECLARATION:
+            return "Declaration";
+        case What::DEFINITION:
+            return "Definition";
+        }
+        return nullptr;
+    }
+
     static What min(What a, What b) {
         if (a < b) {
             return a;

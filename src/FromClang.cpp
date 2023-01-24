@@ -15,7 +15,8 @@ using namespace clang;
 // The following code is based on [ForceDeclarationOfImplicitMembers]
 // except that it does not generate deprecated members.
 // See https://github.com/llvm/llvm-project/blob/ed4afd1bba8347e1d7ea943c242fccabf606489c/clang/lib/Sema/SemaLookup.cpp#L992
-void GenerateUndeprecatedImplicitMembers(CXXRecordDecl *decl, Sema& sema) {
+void
+GenerateUndeprecatedImplicitMembers(CXXRecordDecl* decl, Sema& sema) {
     if (decl->needsImplicitDefaultConstructor())
         sema.DeclareImplicitDefaultConstructor(decl);
 

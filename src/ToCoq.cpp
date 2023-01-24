@@ -34,21 +34,24 @@ using namespace fmt;
 
 void
 ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
-                           clang::TranslationUnitDecl *decl) {
-#if 0
-    NoInclude noInclude(ctxt->getSourceManager());
-    FromComment fromComment(ctxt);
-    std::list<Filter*> filters;
-    filters.push_back(&noInclude);
-    filters.push_back(&fromComment);
-    Combine<Filter::What::NOTHING, Filter::max> filter(filters);
-#endif
+                           clang::TranslationUnitDecl *decl, bool elaborate,
+                           bool noInclude) {
+
     SpecCollector specs;
-    Default filter(Filter::What::DEFINITION);
-
     ::Module mod;
-
-    build_module(decl, mod, filter, specs, compiler_, elaborate_);
+    if (noInclude) {
+        llvm::errs() << "running with no-include\n";
+        NoInclude noInclude(ctxt->getSourceManager());
+        FromComment fromComment(ctxt);
+        std::list<Filter *> filters;
+        filters.push_back(&noInclude);
+        filters.push_back(&fromComment);
+        Combine<Filter::What::NOTHING, Filter::max> filter(filters);
+        build_module(decl, mod, filter, specs, compiler_, elaborate_);
+    } else {
+        Default filter(Filter::What::DEFINITION);
+        build_module(decl, mod, filter, specs, compiler_, elaborate_);
+    }
 
     if (output_file_.hasValue()) {
         std::error_code ec;

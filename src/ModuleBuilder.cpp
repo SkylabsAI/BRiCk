@@ -8,9 +8,9 @@
 #include "DeclVisitorWithArgs.h"
 #include "Filter.hpp"
 #include "Formatter.hpp"
+#include "FromClang.hpp"
 #include "Logging.hpp"
 #include "SpecCollector.hpp"
-#include "FromClang.hpp"
 #include "clang/Basic/Builtins.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Sema/Sema.h"
@@ -22,9 +22,10 @@ class Elaborate : public DeclVisitorArgs<Elaborate, void, bool> {
 private:
     clang::CompilerInstance *const ci_;
     std::set<int64_t> visited_;
+    Filter &filter_;
 
 public:
-    Elaborate(clang::CompilerInstance *ci) : ci_(ci) {}
+    Elaborate(clang::CompilerInstance *ci, Filter &f) : ci_(ci), filter_(f) {}
 
     void Visit(Decl *d, bool s) {
         if (visited_.find(d->getID()) == visited_.end()) {
@@ -67,7 +68,8 @@ public:
             return;
         }
 
-        if (decl->isCompleteDefinition()) {
+        if (decl->isCompleteDefinition() &&
+            Filter::What::DEFINITION <= filter_.shouldInclude(decl)) {
             // Do *not* generate deprecated members
             GenerateImplicitMembers(decl, false);
         }
@@ -81,17 +83,22 @@ public:
         if (decl->isDeleted() or decl->isDependentContext())
             return;
 
-        if (not decl->getBody() && decl->isDefaulted()) {
-            if (decl->isMoveAssignmentOperator()) {
-                ci_->getSema().DefineImplicitMoveAssignment(decl->getLocation(),
-                                                            decl);
+        if (Filter::What::DEFINITION <= filter_.shouldInclude(decl)) {
+            if (not decl->getBody() && decl->isDefaulted()) {
+                if (decl->isMoveAssignmentOperator()) {
+                    ci_->getSema().DefineImplicitMoveAssignment(
+                        decl->getLocation(), decl);
 
-            } else if (decl->isCopyAssignmentOperator()) {
-                ci_->getSema().DefineImplicitCopyAssignment(decl->getLocation(),
-                                                            decl);
-            } else {
-                logging::log() << "Didn't generate body for defaulted method\n";
+                } else if (decl->isCopyAssignmentOperator()) {
+                    ci_->getSema().DefineImplicitCopyAssignment(
+                        decl->getLocation(), decl);
+                } else {
+                    logging::log()
+                        << "Didn't generate body for defaulted method\n";
+                }
             }
+        } else {
+            decl->setBody(nullptr);
         }
     }
 
@@ -111,19 +118,23 @@ public:
         if (decl->isDeleted())
             return;
 
-        if (not decl->getBody() && decl->isDefaulted()) {
-            if (decl->isDefaultConstructor()) {
-                ci_->getSema().DefineImplicitDefaultConstructor(
-                    decl->getLocation(), decl);
-            } else if (decl->isCopyConstructor()) {
-                ci_->getSema().DefineImplicitCopyConstructor(
-                    decl->getLocation(), decl);
-            } else if (decl->isMoveConstructor()) {
-                ci_->getSema().DefineImplicitMoveConstructor(
-                    decl->getLocation(), decl);
-            } else {
-                logging::debug() << "Unknown defaulted constructor.\n";
+        if (Filter::What::DEFINITION <= filter_.shouldInclude(decl)) {
+            if (not decl->getBody() && decl->isDefaulted()) {
+                if (decl->isDefaultConstructor()) {
+                    ci_->getSema().DefineImplicitDefaultConstructor(
+                        decl->getLocation(), decl);
+                } else if (decl->isCopyConstructor()) {
+                    ci_->getSema().DefineImplicitCopyConstructor(
+                        decl->getLocation(), decl);
+                } else if (decl->isMoveConstructor()) {
+                    ci_->getSema().DefineImplicitMoveConstructor(
+                        decl->getLocation(), decl);
+                } else {
+                    logging::debug() << "Unknown defaulted constructor.\n";
+                }
             }
+        } else {
+            decl->setBody(nullptr);
         }
 
         this->DeclVisitorArgs::VisitCXXConstructorDecl(decl, false);
@@ -133,8 +144,18 @@ public:
         if (decl->isDeleted())
             return;
 
-        if (not decl->hasBody() && decl->isDefaulted()) {
-            ci_->getSema().DefineImplicitDestructor(decl->getLocation(), decl);
+        if (Filter::What::DEFINITION <= filter_.shouldInclude(decl)) {
+            if (not decl->hasBody() && decl->isDefaulted()) {
+                ci_->getSema().DefineImplicitDestructor(decl->getLocation(),
+                                                        decl);
+            }
+        } else {
+            decl->setBody(nullptr);
+        }
+    }
+    void VisitFunctionDecl(FunctionDecl *decl, bool) {
+        if (filter_.shouldInclude(decl) < Filter::What::DEFINITION) {
+            decl->setBody(nullptr);
         }
     }
 
@@ -169,6 +190,9 @@ private:
 private:
     Filter::What go(const NamedDecl *decl, bool definition = true) {
         auto what = filter_.shouldInclude(decl);
+
+        llvm::errs() << "go: " << decl->getNameAsString() << " = "
+                     << Filter::whatstr(what) << "\n";
         switch (what) {
         case Filter::What::DEFINITION:
             if (definition) {
@@ -401,7 +425,7 @@ build_module(clang::TranslationUnitDecl *tu, ::Module &mod, Filter &filter,
         // these at all. This would decrease our file representation size and
         // bring us a little bit closer to the semantics rather than relying
         // on choices for how clang implements defaulted operations.
-        Elaborate(ci).VisitTranslationUnitDecl(tu, false);
+        Elaborate(ci, filter).VisitTranslationUnitDecl(tu, false);
 
         // Once we are done visiting the AST, we run all the actions that
         // are pending in the translation unit.
