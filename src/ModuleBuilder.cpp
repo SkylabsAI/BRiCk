@@ -191,8 +191,8 @@ private:
     Filter::What go(const NamedDecl *decl, bool definition = true) {
         auto what = filter_.shouldInclude(decl);
 
-        llvm::errs() << "go: " << decl->getNameAsString() << " = "
-                     << Filter::whatstr(what) << "\n";
+        // llvm::errs() << "go: " << decl->getNameAsString() << " = "
+        //              << Filter::whatstr(what) << "\n";
         switch (what) {
         case Filter::What::DEFINITION:
             if (definition) {

@@ -81,7 +81,7 @@ public:
 #endif
         auto result =
             new ToCoqConsumer(&Compiler, to_opt(VFileOutput), to_opt(NamesFile),
-                              not Naked.getValue(), NoInclude);
+                              not Naked.getValue(), /* NoInclude */ true);
         return std::unique_ptr<clang::ASTConsumer>(result);
     }
 
