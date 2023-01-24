@@ -164,8 +164,7 @@ public:
         if (decl->isDeleted())
             return;
 
-        // this goes to [VisitFunctionDecl]
-        this->ConstDeclVisitorArgs::VisitCXXMethodDecl(decl, flags);
+        this->Visitor::VisitCXXMethodDecl(decl, flags);
     }
 
     void VisitFunctionDecl(const FunctionDecl *decl, Flags flags) {

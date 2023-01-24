@@ -120,112 +120,17 @@ templateArgumentKindName(TemplateArgument::ArgKind kind) {
 #undef CASE
 }
 
-void
-printFunction(const FunctionDecl *decl, CoqPrinter &print,
-              ClangPrinter &cprint) {
-    print.ctor("Build_Func");
-
-    cprint.printQualType(decl->getReturnType(), print);
-    print.output() << fmt::nbsp << fmt::line;
-
-    print.list(decl->parameters(), [&cprint](auto print, auto *i) {
-        parameter(i, print, cprint);
-    }) << fmt::nbsp;
-
-    cprint.printCallingConv(getCallingConv(decl), print);
-    print.output() << fmt::nbsp;
-    cprint.printVariadic(decl->isVariadic(), print);
-    print.output() << fmt::line;
-
-    if (decl->getBody()) {
-        print.ctor("Some", false);
-        print.ctor("Impl", false);
-        cprint.printStmt(decl->getBody(), print);
-        print.end_ctor();
-        print.end_ctor();
-    } else if (auto builtin = builtin_id(decl)) {
-        print.ctor("Some", false);
-        print.ctor("Builtin", false);
-        PrintBuiltin(builtin, decl, print, cprint);
-        print.end_ctor();
-        print.end_ctor();
-    } else {
-        print.output() << "None";
-    }
-    print.end_ctor();
-}
-
-void
-printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
-            ClangPrinter &cprint) {
-    print.ctor("Build_Method");
-    cprint.printQualType(decl->getReturnType(), print);
-    print.output() << fmt::nbsp;
-    cprint.printInstantiatableRecordName(decl->getParent(), print);
-    print.output() << fmt::nbsp;
-    cprint.printQualifier(decl->isConst(), decl->isVolatile(), print);
-    print.output() << fmt::nbsp;
-
-    print.list(decl->parameters(), [&cprint](auto print, auto i) {
-        parameter(i, print, cprint);
-    }) << fmt::nbsp;
-
-    cprint.printCallingConv(getCallingConv(decl), print);
-    print.output() << fmt::nbsp;
-    cprint.printVariadic(decl->isVariadic(), print);
-
-    print.output() << fmt::line;
-    if (decl->getBody()) {
-        print.ctor("Some", false);
-        print.ctor("UserDefined");
-        cprint.printStmt(decl->getBody(), print);
-        print.end_ctor();
-        print.end_ctor();
-    } else if (decl->isDefaulted()) {
-        print.output() << "(Some Defaulted)";
-    } else {
-        print.output() << "None";
-    }
-
-    print.end_ctor();
-}
-
-void
-printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
-                ClangPrinter &cprint) {
-    auto record = decl->getParent();
-    print.ctor("Build_Dtor");
-    cprint.printInstantiatableRecordName(record, print);
-    print.output() << fmt::nbsp;
-
-    cprint.printCallingConv(getCallingConv(decl), print);
-    print.output() << fmt::nbsp;
-
-    if (decl->getBody()) {
-        print.some();
-        print.ctor("UserDefined");
-        cprint.printStmt(decl->getBody(), print);
-
-        print.end_ctor();
-        print.end_ctor();
-    } else if (decl->isDefaulted()) {
-        print.output() << "(Some Defaulted)";
-    } else {
-        print.output() << fmt::nbsp;
-        print.none();
-    }
-
-    print.end_ctor();
-}
-
 class PrintDecl :
     public ConstDeclVisitorArgs<PrintDecl, bool, CoqPrinter &, ClangPrinter &,
                                 const ASTContext &> {
 private:
-    PrintDecl() = default;
+    const bool no_body_;
+
+    PrintDecl(bool no_body) : no_body_(no_body) {}
 
 public:
     static PrintDecl printer;
+    static PrintDecl declaration_only;
 
     bool VisitDecl(const Decl *d, CoqPrinter &print, ClangPrinter &cprint,
                    const ASTContext &) {
@@ -405,11 +310,6 @@ public:
 
         cprint.printTypeName(decl, print);
         print.output() << fmt::nbsp;
-        if (!decl->isCompleteDefinition()) {
-            print.none();
-            print.end_ctor();
-            return true;
-        }
 
         print.some();
         print.ctor("Build_Struct");
@@ -549,7 +449,7 @@ public:
     bool VisitCXXRecordDecl(const CXXRecordDecl *decl, CoqPrinter &print,
                             ClangPrinter &cprinter, const ASTContext &ctxt) {
         auto cprint = cprinter.withDecl(decl);
-        if (!decl->isCompleteDefinition()) {
+        if (no_body_ or !decl->isCompleteDefinition()) {
             print.ctor("Dtype");
             cprint.printTypeName(decl, print);
             print.end_ctor();
@@ -831,6 +731,106 @@ public:
         return false;
     }
 
+    void printFunction(const FunctionDecl *decl, CoqPrinter &print,
+                       ClangPrinter &cprint) {
+        print.ctor("Build_Func");
+
+        cprint.printQualType(decl->getReturnType(), print);
+        print.output() << fmt::nbsp << fmt::line;
+
+        print.list(decl->parameters(), [&cprint](auto print, auto *i) {
+            parameter(i, print, cprint);
+        }) << fmt::nbsp;
+
+        cprint.printCallingConv(getCallingConv(decl), print);
+        print.output() << fmt::nbsp;
+        cprint.printVariadic(decl->isVariadic(), print);
+        print.output() << fmt::line;
+
+        if (no_body_) {
+            print.none();
+        } else if (decl->getBody()) {
+            print.ctor("Some", false);
+            print.ctor("Impl", false);
+            cprint.printStmt(decl->getBody(), print);
+            print.end_ctor();
+            print.end_ctor();
+        } else if (auto builtin = builtin_id(decl)) {
+            print.ctor("Some", false);
+            print.ctor("Builtin", false);
+            PrintBuiltin(builtin, decl, print, cprint);
+            print.end_ctor();
+            print.end_ctor();
+        } else {
+            print.none();
+        }
+        print.end_ctor();
+    }
+
+    void printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
+                     ClangPrinter &cprint) {
+        print.ctor("Build_Method");
+        cprint.printQualType(decl->getReturnType(), print);
+        print.output() << fmt::nbsp;
+        cprint.printInstantiatableRecordName(decl->getParent(), print);
+        print.output() << fmt::nbsp;
+        cprint.printQualifier(decl->isConst(), decl->isVolatile(), print);
+        print.output() << fmt::nbsp;
+
+        print.list(decl->parameters(), [&cprint](auto print, auto i) {
+            parameter(i, print, cprint);
+        }) << fmt::nbsp;
+
+        cprint.printCallingConv(getCallingConv(decl), print);
+        print.output() << fmt::nbsp;
+        cprint.printVariadic(decl->isVariadic(), print);
+
+        print.output() << fmt::line;
+        if (no_body_) {
+            print.none();
+        } else if (decl->getBody()) {
+            print.ctor("Some", false);
+            print.ctor("UserDefined");
+            cprint.printStmt(decl->getBody(), print);
+            print.end_ctor();
+            print.end_ctor();
+        } else if (decl->isDefaulted()) {
+            print.output() << "(Some Defaulted)";
+        } else {
+            print.none();
+        }
+
+        print.end_ctor();
+    }
+
+    void printDestructor(const CXXDestructorDecl *decl, CoqPrinter &print,
+                         ClangPrinter &cprint) {
+        auto record = decl->getParent();
+        print.ctor("Build_Dtor");
+        cprint.printInstantiatableRecordName(record, print);
+        print.output() << fmt::nbsp;
+
+        cprint.printCallingConv(getCallingConv(decl), print);
+        print.output() << fmt::nbsp;
+
+        if (no_body_) {
+            print.none();
+        } else if (decl->getBody()) {
+            print.some();
+            print.ctor("UserDefined");
+            cprint.printStmt(decl->getBody(), print);
+
+            print.end_ctor();
+            print.end_ctor();
+        } else if (decl->isDefaulted()) {
+            print.output() << "(Some Defaulted)";
+        } else {
+            print.none();
+        }
+
+        print.end_ctor();
+    }
+
     bool VisitFunctionDecl(const FunctionDecl *decl, CoqPrinter &print,
                            ClangPrinter &cprinter, const ASTContext &) {
         auto cprint = cprinter.withDecl(decl);
@@ -1000,7 +1000,7 @@ public:
             print.output() << fmt::nbsp;
             cprint.printQualType(decl->getType(), print);
             print.output() << fmt::nbsp;
-            if (decl->hasInit()) {
+            if (not no_body_ && decl->hasInit()) {
                 print.some();
                 cprint.printExpr(decl->getInit(), print);
                 print.output() << fmt::rparen;
@@ -1180,9 +1180,12 @@ public:
     }
 };
 
-PrintDecl PrintDecl::printer;
+PrintDecl PrintDecl::printer{false};
+PrintDecl PrintDecl::declaration_only{true};
 
 bool
-ClangPrinter::printDecl(const clang::Decl *decl, CoqPrinter &print) {
-    return PrintDecl::printer.Visit(decl, print, *this, *context_);
+ClangPrinter::printDecl(const clang::Decl *decl, CoqPrinter &print,
+                        bool decl_only) {
+    return (decl_only ? PrintDecl::declaration_only : PrintDecl::printer)
+        .Visit(decl, print, *this, *context_);
 }

@@ -44,7 +44,8 @@ public:
     void printNameForAnonTemplateParam(unsigned depth, unsigned index,
                                        CoqPrinter& print);
 
-    bool printDecl(const clang::Decl* d, CoqPrinter& print);
+    bool printDecl(const clang::Decl* d, CoqPrinter& print,
+                   bool decl_only = false);
 
     bool printLocalDecl(const clang::Decl* d, CoqPrinter& print);
 

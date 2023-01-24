@@ -19,6 +19,18 @@ public:
         DEFINITION = 2
     };
 
+    static const char *whatstr(What w) {
+        switch (w) {
+        case What::NOTHING:
+            return "Nothing";
+        case What::DECLARATION:
+            return "Declaration";
+        case What::DEFINITION:
+            return "Definition";
+        }
+        return nullptr;
+    }
+
     static What min(What a, What b) {
         if (a < b) {
             return a;
@@ -116,16 +128,10 @@ public:
     virtual What shouldInclude(const Decl *d) {
         if (auto comment = ctxt->getRawCommentForDeclNoCache(d)) {
             auto text = comment->getRawText(ctxt->getSourceManager());
-            if (StringRef::npos != text.find("definition")) {
+            if (StringRef::npos != text.find("\\verify-inline")) {
                 return What::DEFINITION;
-            } else if (StringRef::npos != text.find("declaration")) {
-                return What::DECLARATION;
-            } else {
-                return What::NOTHING;
             }
-        } else {
-            // private by default
-            return What::NOTHING;
         }
+        return What::NOTHING;
     }
 };

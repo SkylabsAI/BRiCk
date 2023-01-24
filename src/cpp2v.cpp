@@ -46,6 +46,12 @@ static cl::opt<std::string> VFileOutput("o",
                                         cl::desc("path to generate the module"),
                                         cl::Optional, cl::cat(Cpp2V));
 
+static cl::opt<bool> NoInclude(
+    "s",
+    cl::desc(
+        "only include definitions (for code) that are included in the file"),
+    cl::Optional, cl::cat(Cpp2V));
+
 static cl::opt<bool> Verbose("v", cl::desc("verbose"), cl::Optional,
                              cl::cat(Cpp2V));
 static cl::opt<bool> Verboser("vv", cl::desc("verboser"), cl::Optional,
@@ -78,7 +84,8 @@ public:
         }
 #endif
         auto result = new ToCoqConsumer(&Compiler, to_opt(VFileOutput),
-                                        to_opt(NamesFile), to_opt(Templates));
+                                        to_opt(NamesFile), to_opt(Templates),
+                                        not Naked.getValue(), NoInclude);
         return std::unique_ptr<clang::ASTConsumer>(result);
     }
 

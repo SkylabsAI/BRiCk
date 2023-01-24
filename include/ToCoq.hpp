@@ -30,15 +30,16 @@ public:
                            const std::optional<std::string> output_file,
                            const std::optional<std::string> notations_file,
                            const std::optional<std::string> templates_file,
-                           bool elaborate = true)
+                           bool elaborate = true, bool noInclude = false)
         : compiler_(compiler), output_file_(output_file),
           notations_file_(notations_file), templates_file_(templates_file),
-          elaborate_(elaborate) {}
+          elaborate_(elaborate), noInclude_(noInclude) {}
 
 public:
     // Implementation of `clang::ASTConsumer`
     virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
-        toCoqModule(&Context, Context.getTranslationUnitDecl());
+        toCoqModule(&Context, Context.getTranslationUnitDecl(), elaborate_,
+                    noInclude_);
     }
 
     virtual void HandleTagDeclDefinition(TagDecl *decl) override;
@@ -52,9 +53,9 @@ public:
 
 public:
     // Implementation of clang::ASTMutationListener
-    virtual void
-    AddedCXXTemplateSpecialization(const ClassTemplateDecl *TD,
-                                   const ClassTemplateSpecializationDecl *D) override {
+    virtual void AddedCXXTemplateSpecialization(
+        const ClassTemplateDecl *TD,
+        const ClassTemplateSpecializationDecl *D) override {
         // TODO [const_cast] is a code-smell.
         // The implementation calls this method from a non-`const` method.
         // it is not clear why this method should take a
@@ -64,7 +65,8 @@ public:
     }
 
 private:
-    void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl);
+    void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl,
+                     bool elaborate = true, bool noInclude = false);
     void elab(Decl *, bool = false);
 
 private:
@@ -73,4 +75,5 @@ private:
     const std::optional<std::string> notations_file_;
     const std::optional<std::string> templates_file_;
     bool elaborate_;
+    bool noInclude_;
 };

@@ -49,14 +49,16 @@ with_open_file(const std::optional<std::string> path,
 }
 
 void
-printDecl(const clang::Decl* decl, CoqPrinter& print, ClangPrinter& cprint) {
-    if (cprint.printDecl(decl, print))
+printDecl(const clang::Decl* decl, CoqPrinter& print, ClangPrinter& cprint,
+          bool decl_only) {
+    if (cprint.printDecl(decl, print, decl_only))
         print.cons();
 }
 
 void
 ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
-                           clang::TranslationUnitDecl* decl) {
+                           clang::TranslationUnitDecl* decl, bool elaborate,
+                           bool noInclude) {
 #if 0
     NoInclude noInclude(ctxt->getSourceManager());
     FromComment fromComment(ctxt);
@@ -66,12 +68,23 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
     Combine<Filter::What::NOTHING, Filter::max> filter(filters);
 #endif
     SpecCollector specs;
-    Default filter(Filter::What::DEFINITION);
-
     ::Module mod;
 
     bool templates = templates_file_.has_value();
-    build_module(decl, mod, filter, specs, compiler_, elaborate_, templates);
+    if (noInclude) {
+        NoInclude noInclude(ctxt->getSourceManager());
+        FromComment fromComment(ctxt);
+        std::list<Filter*> filters;
+        filters.push_back(&noInclude);
+        filters.push_back(&fromComment);
+        Combine<Filter::What::NOTHING, Filter::max> filter(filters);
+        build_module(decl, mod, filter, specs, compiler_, elaborate_,
+                     templates);
+    } else {
+        Default filter(Filter::What::DEFINITION);
+        build_module(decl, mod, filter, specs, compiler_, elaborate_,
+                     templates);
+    }
 
     with_open_file(output_file_, [this, &ctxt, &mod](Formatter& fmt) {
         CoqPrinter print(fmt, false);
@@ -88,13 +101,13 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
         print.begin_list();
         for (auto decl : mod.declarations()) {
-            printDecl(decl, print, cprint);
+            printDecl(decl, print, cprint, true);
         }
         for (auto decl : mod.definitions()) {
-            printDecl(decl, print, cprint);
+            printDecl(decl, print, cprint, false);
         }
         for (auto decl : mod.asserts()) {
-            printDecl(decl, print, cprint);
+            printDecl(decl, print, cprint, false);
         }
         print.end_list();
         print.output() << fmt::nbsp;
@@ -147,10 +160,10 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
         print.begin_list();
         for (auto decl : mod.template_declarations()) {
-            printDecl(decl, print, cprint);
+            printDecl(decl, print, cprint, false);
         }
         for (auto decl : mod.template_definitions()) {
-            printDecl(decl, print, cprint);
+            printDecl(decl, print, cprint, true);
         }
         print.end_list();
 
