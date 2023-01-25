@@ -1066,6 +1066,11 @@ Module Type Expr.
           Q (Vbool false) FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
+    Axiom wp_operand_implicit_init_char : forall ty ct Q,
+        drop_qualifiers ty = Tchar_ ct ->
+          Q (Vchar 0) FreeTemps.id
+      |-- wp_operand (Eimplicit_init ty) Q.
+
     Axiom wp_init_constructor : forall cls (addr : ptr) cnd es Q,
         (* NOTE because the AST does not include the types of the arguments of
            the constructor, we have to look up the type in the environment.
