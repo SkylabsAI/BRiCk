@@ -25,7 +25,13 @@ Section TestExprNotations.
   #[local] Definition Echar_newline : Expr := Echar (Unfold newline_ascii newline_ascii) ty.
   Print Echar_letter. Print Echar_newline.
 
-  #[local] Definition Estring_1 : Expr := Estring "FooBarBazQux" ty.
+  Fixpoint to_chars (b : bs) : list N :=
+    match b with
+    | BS.EmptyString => nil
+    | BS.String b bs => Byte.to_N b :: to_chars bs
+    end.
+  #[local] Notation Estring' s ty := (Estring (to_chars s) ty) (only parsing).
+  #[local] Definition Estring_1 : Expr := Estring' "FooBarBazQux" ty.
   Print Estring_1.
 
   #[local] Definition Eint_1 : Expr := Eint 42 ty.
@@ -226,8 +232,8 @@ Section TestExprNotations.
   (* TODO (JH): Fix up the printing boxes s.t. the widths/splits correspond (and extra
      breaks aren't inserted; cf. [Ecall_cons_wrap_2].
    *)
-  #[local] Definition Ecall_cons_wrap_1 : Expr := Ecall e [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
-  #[local] Definition Ecall_cons_wrap_2 : Expr := Ecall (Evar (Gname "fn") ty) [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
+  #[local] Definition Ecall_cons_wrap_1 : Expr := Ecall e [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
+  #[local] Definition Ecall_cons_wrap_2 : Expr := Ecall (Evar (Gname "fn") ty) [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
   Print Ecall_cons_wrap_1. Print Ecall_cons_wrap_2.
 
   #[local] Definition Ecast_elide_1 (cast : Cast) (vc : ValCat) := Ecast cast e vc ty.
@@ -288,7 +294,7 @@ Section TestExprNotations.
   (* TODO (JH): Fix up the printing boxes s.t. the widths/splits correspond (and extra
      breaks aren't inserted; cf. [Ecall_cons_wrap_2].
    *)
-  #[local] Definition Econstructor_cons_wrap : Expr := Econstructor "Qux::Zop" [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
+  #[local] Definition Econstructor_cons_wrap : Expr := Econstructor "Qux::Zop" [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
   Print Econstructor_cons_wrap.
 
   #[local] Definition Eimplicit_1 : Expr := Eimplicit e.
@@ -312,16 +318,16 @@ Section TestExprNotations.
   #[local] Definition Einitlist_cons_no_wrap_no_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false]%list None (Tnum W64 Unsigned).
   Print Einitlist_cons_no_wrap_no_default_1. Print Einitlist_cons_no_wrap_no_default_2.
 
-  #[local] Definition Einitlist_cons_wrap_no_default_1 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list None ty.
-  #[local] Definition Einitlist_cons_wrap_no_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list None (Tnum W64 Unsigned).
+  #[local] Definition Einitlist_cons_wrap_no_default_1 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list None ty.
+  #[local] Definition Einitlist_cons_wrap_no_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list None (Tnum W64 Unsigned).
   Print Einitlist_cons_wrap_no_default_1. Print Einitlist_cons_wrap_no_default_2.
 
   #[local] Definition Einitlist_cons_no_wrap_default_1 : Expr := Einitlist [Eint 42 ty; Ebool false]%list (Some (Eint 314 ty)) ty.
   #[local] Definition Einitlist_cons_no_wrap_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false]%list (Some (Eint 314 ty)) (Tnum W64 Unsigned).
   Print Einitlist_cons_no_wrap_default_1. Print Einitlist_cons_no_wrap_default_2.
 
-  #[local] Definition Einitlist_cons_wrap_default_1 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list (Some (Eint 314 ty)) ty.
-  #[local] Definition Einitlist_cons_wrap_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list (Some (Eint 314 ty)) (Tnum W64 Unsigned).
+  #[local] Definition Einitlist_cons_wrap_default_1 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list (Some (Eint 314 ty)) ty.
+  #[local] Definition Einitlist_cons_wrap_default_2 : Expr := Einitlist [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list (Some (Eint 314 ty)) (Tnum W64 Unsigned).
   Print Einitlist_cons_wrap_default_1. Print Einitlist_cons_wrap_default_2.
 
   #[local] Definition Enew_nonarray_nil_1 : Expr := Enew ("fn"%bs, ty) []%list ty None (Some e).
