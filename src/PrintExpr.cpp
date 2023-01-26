@@ -600,6 +600,16 @@ public:
         done(lit, print, cprint);
     }
 
+    static void print_string_type(const Expr* expr, CoqPrinter& print,
+                                  ClangPrinter& cprint) {
+        if (auto at = dyn_cast<ArrayType>(expr->getType().getTypePtr())) {
+            print.output() << fmt::nbsp;
+            cprint.printType(at->getElementType().getTypePtr(), print);
+        } else {
+            assert(false && "string literal does not have array type");
+        }
+    }
+
     void VisitStringLiteral(const StringLiteral* lit, CoqPrinter& print,
                             ClangPrinter& cprint, const ASTContext& ctxt,
                             OpaqueNames&) {
@@ -630,13 +640,20 @@ public:
         }
         print.end_list();
         // NOTE: the trailing `\0` is added by the semantics
-        if (auto at = dyn_cast<ArrayType>(lit->getType().getTypePtr())) {
-            print.output() << fmt::nbsp;
-            cprint.printType(at->getElementType().getTypePtr(), print);
-            print.end_ctor();
-        } else {
-            assert(false && "string literal does not have array type");
-        }
+        print_string_type(lit, print, cprint);
+        print.end_ctor();
+    }
+
+    void VisitPredefinedExpr(const PredefinedExpr* expr, CoqPrinter& print,
+                             ClangPrinter& cprint, const ASTContext&,
+                             OpaqueNames&) {
+        // [PredefinedExpr] constructs a [string] which is always ascii
+        print.ctor("Estring");
+        print.ctor("string_to_bytes");
+        print.str(expr->getFunctionName()->getString());
+        print.end_ctor();
+        print_string_type(expr, print, cprint);
+        print.end_ctor();
     }
 
     void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr* lit,
@@ -1200,14 +1217,6 @@ public:
         print.ctor("Edefault_init_expr");
         cprint.printExpr(expr->getExpr(), print, li);
         print.end_ctor();
-    }
-
-    void VisitPredefinedExpr(const PredefinedExpr* expr, CoqPrinter& print,
-                             ClangPrinter& cprint, const ASTContext&,
-                             OpaqueNames&) {
-        print.ctor("Estring");
-        print.str(expr->getFunctionName()->getString());
-        done(expr, print, cprint);
     }
 
     void VisitVAArgExpr(const VAArgExpr* expr, CoqPrinter& print,
