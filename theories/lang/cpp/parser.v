@@ -62,6 +62,12 @@ Definition mk_virtuals (methods : list (obj_name * option obj_name)) : list (obj
 
 Definition NStop : list ident := nil.
 
+Fixpoint string_to_bytes (b : bs) : list N :=
+  match b with
+  | BS.EmptyString => nil
+  | BS.String b bs => Byte.to_N b :: string_to_bytes bs
+  end.
+
 Bind Scope Z_scope with Z.
 
 Declare Custom Entry cppglobal.
