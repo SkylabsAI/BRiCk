@@ -78,17 +78,42 @@ Axiom eval_minus_int : forall (s : signed) a w,
 
 (** * Binary Operators *)
 
-(** ** arithmetic operators *)
+(* [arith_as ty] returns [Some (sz, sgn)] if arithmetic operations are allowed on
+   the type [ty] using the size [sz] and the signedness [sgn].
+ *)
+Definition arith_as (ty : type) : option (bitsize * signed) :=
+  match ty with
+  | Tnum sz sgn => if bool_decide (bytesN W32 <= bytesN sz) then Some (sz, sgn) else None
+  | _ => None
+  end.
+
+Definition supports_arith (ty : type) : Prop :=
+  arith_as ty <> None.
+
+Notation int_type := bitsize.
+
+
+(** ** Arithmetic Operators
+
+    (includes: `+`, `-`, `*`, `/`, and `%`)
+    These are type homogeneous, i.e. both arguments must be the same type.
+    Further, these operations only apply to arithmetic types with rank
+    greater than or equal to `int`.
+
+    NOTE: Integral conversions will occur outside of [eval_binop_pure] to
+          make the arguments homogeneous.
+ *)
 Let eval_int_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
-  forall w (s : signed) (a b : Z),
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w s) ->
-    let c := match s with
-             | Signed => o a b
-             | Unsigned => trim (bitsN w) (o a b)
-             end in
-    has_type (Vint c) (Tnum w s) ->
-    eval_binop_pure bo (Tnum w s) (Tnum w s) (Tnum w s) (Vint a) (Vint b) (Vint c).
+  forall ty (a b c : Z),
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty ->
+    match arith_as ty with
+    | Some (_, Signed) => c = o a b
+    | Some (sz, Unsigned) => c = trim (bitsN sz) (o a b)
+    | None => False
+    end ->
+    has_type (Vint c) ty ->
+    eval_binop_pure bo ty ty ty (Vint a) (Vint b) (Vint c).
 
 Axiom eval_add : Hnf (eval_int_op Badd Z.add).
 Axiom eval_sub : Hnf (eval_int_op Bsub Z.sub).
@@ -103,33 +128,54 @@ Axiom eval_mul : Hnf (eval_int_op Bmul Z.mul).
 
    See https://eel.is/c++draft/expr.mul#4
  *)
-Axiom eval_div : forall (w : bitsize) (s : signed) (a b : Z),
+Axiom eval_div : forall ty (a b : Z),
     b <> 0%Z ->
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w s) ->
+    supports_arith ty ->
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty ->
     let c := Z.quot a b in
-    has_type (Vint c) (Tnum w s) ->
-    eval_binop_pure Bdiv (Tnum w s) (Tnum w s) (Tnum w s) (Vint a) (Vint b) (Vint c).
-Axiom eval_mod : forall (w : bitsize) (s : signed) (a b : Z),
+    has_type (Vint c) ty ->
+    eval_binop_pure Bdiv ty ty ty (Vint a) (Vint b) (Vint c).
+Axiom eval_mod : forall ty (a b : Z),
     b <> 0%Z ->
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w s) ->
-    has_type (Vint (Z.quot a b)) (Tnum w s) ->
+    supports_arith ty ->
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty ->
+    has_type (Vint (Z.quot a b)) ty ->
+    supports_arith ty ->
     let c := Z.rem a b in
-    eval_binop_pure Bmod (Tnum w s) (Tnum w s) (Tnum w s) (Vint a) (Vint b) (Vint c).
+    eval_binop_pure Bdiv ty ty ty (Vint a) (Vint b) (Vint c).
 
-(** ** bitwise operators *)
+(** ** bitwise operators
+
+    (includes: `&`, `|`, and `^`)
+    These are type homogeneous, i.e. both arguments must be the same type.
+    Further, these operations only apply to arithmetic types with rank
+    greater than or equal to `int`.
+
+    NOTE: Integral conversions will occur outside of [eval_binop_pure] to
+          make the arguments homogeneous.
+
+ *)
 Let eval_int_bitwise_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
-  forall w (s : signed) (a b : Z),
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w s) ->
+  forall ty (a b : Z),
+    supports_arith ty ->
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty ->
     let c := o a b in (* note that bitwise operators respect bounds *)
-    eval_binop_pure bo (Tnum w s) (Tnum w s) (Tnum w s) (Vint a) (Vint b) (Vint c).
+    eval_binop_pure bo ty ty ty (Vint a) (Vint b) (Vint c).
 
 (* bitwise(logical) operators *)
 Axiom eval_or : Hnf (eval_int_bitwise_op Bor Z.lor).
 Axiom eval_and : Hnf (eval_int_bitwise_op Band Z.land).
 Axiom eval_xor : Hnf (eval_int_bitwise_op Bxor Z.lxor).
+
+(** ** Shifting Operators
+
+    (includes: `<<` and `>>`)
+    Note that these are *not* homogeneous but boths sides must still be
+    arithmetic types. The result type is always the type of the left-hand-side.
+ *)
 
 (* C++14 <= VER < C++20 *)
 (* The value of E1 << E2 is E1 left-shifted E2 bit positions; vacated
@@ -148,59 +194,61 @@ In overload resolution against user-defined operators, for every pair of promote
 L operator<<(L, R)
 L operator>>(L, R)
 
+NOTE: Shift operators are *not* homogeneous.
   *)
 
-Axiom eval_shl :
-  forall (w : bitsize) w2 (s s2 : signed) (a b : Z),
+Axiom eval_shl : forall ty ty_by w sgn (a b : Z),
+    supports_arith ty_by ->
+    arith_as ty = Some (w, sgn) ->
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w2 s2) ->
-    let c := match s with
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty_by ->
+    let c := match sgn with
              | Signed => Z.shiftl a b
              | Unsigned => trim (bitsN w) (Z.shiftl a b)
              end in
-    has_type (Vint c) (Tnum w s) ->
-    eval_binop_pure Bshl (Tnum w s) (Tnum w2 s2) (Tnum w s) (Vint a) (Vint b) (Vint c).
+    has_type (Vint c) ty ->
+    eval_binop_pure Bshl ty ty_by ty (Vint a) (Vint b) (Vint c).
 
 (* C++14 <= VER < C++20: The value of E1 >> E2 is E1 right-shifted E2 bit
    positions. If E1 has an unsigned type or if E1 has a signed type
    and a non-negative value, the value of the result is the integral
    part of the quotient of E1/(2^E2). If E1 has a signed type and a
    negative value, the resulting value is implementation-defined. *)
-Axiom eval_shr :
-  forall (w : bitsize) w2 (s s2: signed) (a b : Z),
+Axiom eval_shr : forall ty ty_by w sgn (a b : Z),
+    supports_arith ty_by ->
+    arith_as ty = Some (w, sgn) ->
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
-    has_type (Vint a) (Tnum w s) ->
-    has_type (Vint b) (Tnum w2 s2) ->
-    let c := match s with
+    has_type (Vint a) ty ->
+    has_type (Vint b) ty_by ->
+    let c := match sgn with
              | Signed => Z.shiftr a b
              | Unsigned => trim (bitsN w) (Z.shiftr a b)
              end in
-    eval_binop_pure Bshr (Tnum w s) (Tnum w2 s2) (Tnum w s) (Vint a) (Vint b) (Vint c).
+    has_type (Vint c) ty ->
+    eval_binop_pure Bshr ty ty_by ty (Vint a) (Vint b) (Vint c).
 
-(** ** comparison operators *)
+(** ** comparison operators
 
-(** [relop_result_type ty] holds on types [ty] that can be the result of a relational
-    operator comparison, e.g. `==` or `<`.
+    (includes: `<`, `<=`, `==`, `!=`, `>=`, `>`, and `<=>`)
+    These are type-homogeneous on inputs and have an output
+    of either `bool` (in C++) or `int` (in C).
+
+    As with other operators, the arguments are always arithmetic.
+ *)
+
+(** [relop_result_type ty] holds on types [ty] that can be the result of a
+    relational operator comparison, e.g. `==` or `<`.
     In C++ this is the type `bool`, in C this is the type `int`.
+
+    NOTE: We rely on the AST to have the appropriate type for the language
+          being used.
  *)
 Definition relop_result_type (ty : type) : Prop :=
   match ty with
   | Tint (* this is literally the type `int`, *not* any numeric type *)
-  | Tbool => True
-  | _ => False
-  end.
-
-(** [relop_int_comparable ty] holds on types [ty] that have integral comparison
-    semantics when comparing them.
-    These are bool, integral types, and enum types.
- *)
-Definition relop_int_comparable (ty : type) : Prop :=
-  match ty with
-  | Tenum _
-  | Tnum _ _
   | Tbool => True
   | _ => False
   end.
@@ -219,7 +267,7 @@ Definition b2i (b : bool) : Z := if b then 1 else 0.
   forall ty ty' (av bv : Z),
     let a := Vint av in
     let b := Vint bv in
-    relop_int_comparable ty ->
+    supports_arith ty ->
     relop_result_type ty' ->
     has_type a ty ->
     has_type b ty ->
@@ -240,24 +288,3 @@ End OPERATOR_INTF_FUNCTOR.
 Module Export OPERATOR_INTF_AXIOM <: OPERATOR_INTF_FUNCTOR PTRS_INTF_AXIOM VALUES_INTF_AXIOM.
   Include OPERATOR_INTF_FUNCTOR PTRS_INTF_AXIOM VALUES_INTF_AXIOM.
 End OPERATOR_INTF_AXIOM.
-
-(** for pre- and post- increment/decrement, this function determines the type
-    of the [1] that is added or subtracted.
- *)
-Fixpoint companion_type (t : type) : option type :=
-  match t with
-  | Tpointer _ => Some (Tnum int_bits Signed)
-  | Tnum _ _ => Some t
-  | Tqualified _ t => companion_type t
-  | _ => None
-  end.
-
-(* [1] is well-typed in any type that is a companion type *)
-Lemma companion_type_1 {σ : genv} t : forall ct,
-    companion_type t = Some ct ->
-    has_type 1 ct.
-Proof.
-  induction t; simpl; try congruence; eauto.
-  - inversion 1; subst. by apply has_int_type.
-  - inversion 1; subst. apply has_int_type. destruct size, signed; done.
-Qed.
