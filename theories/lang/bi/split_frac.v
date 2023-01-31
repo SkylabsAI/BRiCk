@@ -8,6 +8,9 @@
 Require Export bedrock.lang.bi.fractional.
 
 Require Import bedrock.prelude.numbers.
+Import iris.proofmode.classes.
+Import bedrock.lang.bi.prelude.
+Import ChargeNotation.
 
 (** * Splitting and combining fractions *)
 (**
@@ -20,6 +23,8 @@ fractions
 up from constants, [+], [*], and [/]. They simpilfy their outputs more
 aggressively than Iris' [IntoSep], [FromSep] instances for splitting
 and combining predicates satisfying [AsFractional].
+
+- Replace the IPM's [IntoSep], [FromSep] instances for [AsFractional]
 *)
 
 (**
@@ -296,3 +301,82 @@ Class CombineFrac (q1 q2 q : Qp) : Prop := combine_frac : (q1 + q2)%Qp = q.
 #[global] Instance combine_frac_add q1 q2 q :
   QpTC.ADD q1 q2 q -> CombineFrac q1 q2 q | 10.
 Proof. by case. Qed.
+
+(** ** Proof mode *)
+
+(**
+Disable all upstream hints for splitting and combining on [Qp].
+
+TODO: Check bedrock.{proofmode,bi} for others.
+*)
+#[global] Remove Hints
+  from_and_fractional_fwd
+  from_sep_fractional_bwd
+  from_sep_fractional_half_fwd
+  from_sep_fractional_half_bwd
+  into_sep_fractional
+  into_sep_fractional_half
+: typeclass_instances.
+
+(** Splitting and combining via [SplitFrac], [CombineFrac] *)
+Section fractional.
+  Context {PROP : bi}.
+  Implicit Types (P Q : PROP) (F G : Qp -> PROP).
+
+  #[local] Lemma as_fractional_split P P1 P2 F q q1 q2 :
+    AsFractional P F q -> SplitFrac q q1 q2 ->
+    AsFractional P1 F q1 -> AsFractional P2 F q2 ->
+    P -|- P1 ** P2.
+  Proof.
+    intros [->?] ? [->_] [->_]. by rewrite (split_frac q) fractional.
+  Qed.
+
+  #[local] Lemma as_fractional_combine P1 P2 P F q1 q2 q :
+    AsFractional P1 F q1 -> AsFractional P2 F q2 ->
+    CombineFrac q1 q2 q -> AsFractional P F q ->
+    P -|- P1 ** P2.
+  Proof.
+    intros [->?] [->_] ? [->_]. by rewrite -fractional combine_frac.
+  Qed.
+
+  (**
+  Support the IPM's [P1 P2] intro pattern: [P] an input; [P1], [P2]
+  outputs.
+  *)
+
+  #[global] Instance into_sep_fractional P P1 P2 F q q1 q2 :
+    AsFractional P F q -> SplitFrac q q1 q2 ->
+    AsFractional P1 F q1 -> AsFractional P2 F q2 ->
+    IntoSep P P1 P2.
+  Proof.
+    intros. rewrite/IntoSep. by rewrite (as_fractional_split P).
+  Qed.
+
+  (**
+  Support the IPM's [iSplitL], [iSplitR] tactics: [P] an input; [P1],
+  [P2] outputs.
+  *)
+  #[global] Instance from_sep_fractional_split P P1 P2 F q q1 q2 :
+    AsFractional P F q -> SplitFrac q q1 q2 ->
+    AsFractional P1 F q1 -> AsFractional P2 F q2 ->
+    FromSep P P1 P2.
+  Proof.
+    intros. rewrite/FromSep. by rewrite -(as_fractional_split P).
+  Qed.
+
+  (**
+  Support the IPM's [iCombine] tactic: [P1], [P2] inputs, [P] an
+  output.
+
+  This instance has a higher cost so it doesn't interfere with
+  [iSplitL], [iSplitR]. (Overall, things might be simpler if the IPM
+  used a dedicated class for combining.)
+  *)
+  #[global] Instance from_sep_fractional_combine P1 P2 P F q1 q2 q :
+    AsFractional P1 F q1 -> AsFractional P2 F q2 ->
+    CombineFrac q1 q2 q -> AsFractional P F q ->
+    FromSep P P1 P2 | 100.
+  Proof.
+    intros. rewrite/FromSep. by rewrite -as_fractional_combine.
+  Qed.
+End fractional.
