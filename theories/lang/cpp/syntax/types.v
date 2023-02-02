@@ -75,7 +75,6 @@ Variant calling_conv : Set :=
 | CC_C
 | CC_MsAbi
 | CC_RegCall.
-
 #[only(inhabited,eq_dec,countable)] derive calling_conv.
 
 (* in almost all contexts, we are going to use [CC_C], so we're going to make
@@ -201,11 +200,6 @@ Inductive type : Set :=
 .
 
 #[only(inhabited)] derive type.
-
-
-(** [description] is meant to be only used for documentation. *)
-Definition Tunsupported (description : bs) : type.
-Proof. exact inhabitant. Qed.
 
 (** Strengthened Induction Principle for [type]
 
