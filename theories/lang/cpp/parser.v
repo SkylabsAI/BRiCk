@@ -6,6 +6,12 @@
 Require Export bedrock.prelude.base.
 Require Export bedrock.lang.cpp.ast.
 
+(** Unsupported types.
+    [description] is meant to be only used for documentation.
+ *)
+Definition Tunsupported (description : bs) : type.
+Proof. exact inhabitant. Qed.
+
 Fixpoint do_end (ty : globname) : obj_name :=
   match ty with
   | BS.String _ BS.EmptyString => "D0Ev"
