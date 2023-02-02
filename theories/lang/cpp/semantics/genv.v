@@ -46,7 +46,14 @@ Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
 
-Definition equivalent_char_type (g : genv) (ct : char_type) : type :=
+Module integral_type.
+  Record t : Set := mk { size : bitsize ; signedness : signed }.
+  Coercion to_type (v : t) : type :=
+    Tnum v.(size) v.(signedness).
+End integral_type.
+Coercion integral_type.to_type : integral_type.t >-> type.
+
+Definition equivalent_char_type (g : genv) (ct : char_type) : integral_type.t :=
   let bits :=
     match char_type.bytesN ct with
     | 8 => W8
@@ -58,11 +65,11 @@ Definition equivalent_char_type (g : genv) (ct : char_type) : type :=
     end%N
   in
   match ct with
-  | char_type.C8 => Tnum W8 Unsigned
-  | char_type.C16 => Tnum W16 Unsigned
-  | char_type.C32 => Tnum W32 Unsigned
-  | char_type.Cchar => Tnum bits g.(char_signed)
-  | char_type.Cwchar => Tnum bits g.(wchar_signed)
+  | char_type.C8 => integral_type.mk W8 Unsigned
+  | char_type.C16 => integral_type.mk W16 Unsigned
+  | char_type.C32 => integral_type.mk W32 Unsigned
+  | char_type.Cchar => integral_type.mk bits g.(char_signed)
+  | char_type.Cwchar => integral_type.mk bits g.(wchar_signed)
   end.
 
 (** * global environments *)
