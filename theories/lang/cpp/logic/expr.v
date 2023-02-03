@@ -219,14 +219,6 @@ Module Type Expr.
         end%I
       |-- wp_xval (Emember a m ty) Q.
 
-    Fixpoint is_pointer (ty : type) : bool :=
-      match ty with
-      | Tpointer _
-      | Tarray _ _ => true
-      | Tqualified _ t => is_pointer t
-      | _ => false
-      end.
-
     (* [Esubscript e i _ _] when one operand is an array lvalue
      *   (in clang's syntax tree, this value is converted to an rvalue via
      *    an array2pointer cast)
@@ -297,71 +289,105 @@ Module Type Expr.
           Q v' free)
         |-- wp_operand (Eunop o e ty) Q.
 
+    Lemma conv_int_id : forall ty v,
+        has_type v ty ->
+        conv_int tu ty ty v v.
+    Proof. (* TODO *) Admitted.
+
+    Lemma conv_int_unique : forall from to v,
+        has_type v from ->
+        forall v' v'', conv_int tu from to v v' ->
+                  conv_int tu from to v v'' ->
+                  v' = v''.
+    Proof. (* TODO -- prove this *) Admitted.
+
+    (* asserion needed to justify the promotion of `char` to `int` rather than `unsigned int`
+    Succeed Example bool_decide (char_type.bitsN char_type.Cchar < 32)%N = true := eq_refl.
+     *)
+
+    (* The semantics of pre- and post- increment/decrement.
+
+       NOTE: This function assumes that [ty1] is the LHS and that the result will
+             that type.
+     *)
+    Definition inc_dec_op (op : BinOp) (ty : type) (v : val) : val -> mpred :=
+      if is_arithmetic ty then
+        match promote_integral tu ty with
+        | Some ity => fun v_result =>
+            Exists v' v'',
+              [| conv_int tu ty ity v v' |] **
+              eval_binop tu op ity ity ity v (Vint 1) v'' **
+              [| conv_int tu ity ty v'' v_result |]
+        | None => fun _ => UNSUPPORTED ""
+        end
+      else if is_pointer ty then
+            (* use eval_binop_impure *)
+             fun v_result => eval_binop tu op ty Tint ty v (Vint 1) v_result
+      else fun _ => UNSUPPORTED "cast-op".
+
+    (*
+    (* The semantics of operators including casting.
+       In the Clang AST (and therefore the BRiCk AST), integral promotions and casts
+       are *explicit* in the AST for binary operators, e.g. `e1 + e1`. However,
+       for self operators, e.g. `e++`, `e1 += e2`, etc, the casting semantics
+       needs to be computed.
+
+       NOTE: This function assumes that [ty1] is the LHS and that the result will
+             that type.
+     *)
+    Definition self_op (b : BinOp) (ty1 ty2 : type) (v1 v2 : val) : val -> mpred :=
+      if is_arithmetic ty1 && is_arithmetic ty2 then
+        if
+        (* use semantics/operators *)
+        (* 1) promote both types (enum -> int),
+            2) promote arith (to Tresult)
+            3) perform the operator -- always produces a Tresult
+            4) cast result from Tresult -> t1
+        *)
+        TODO
+      else if is_pointer ty1 && is_arithmetic ty2 then
+            (* use eval_binop_impure *)
+            eval_binop tu b ty1 ty2 ty1 v1 v2
+      else fun _ => UNSUPPORTED "cast-op".
+      *)
+
+    Definition pre_op (b : BinOp) (ty : type) (e : Expr) (Q : ptr -> FreeTemps.t -> mpred) : mpred :=
+      let ety := erase_qualifiers $ type_of e in
+      wp_lval e (fun a free => Exists v v',
+                   (inc_dec_op b ety v v' ** True) //\\
+                   (a |-> primR ety (cQp.mut 1) v **
+                      (a |-> primR ety (cQp.mut 1) v' -* Q a free))).
+
     (** `++e`
         https://eel.is/c++draft/expr.pre.incr#1
      *)
     Axiom wp_lval_preinc : forall e ty Q,
-        (let ety := type_of e in
-         let eety := erase_qualifiers ety in
-         match companion_type eety with
-         | Some cty =>
-           wp_lval e (fun a free => Exists v' v'',
-              (eval_binop tu Badd eety cty (erase_qualifiers ty) v' (Vint 1) v'' ** True) //\\
-              (a |-> primR eety (cQp.mut 1) v' **
-                (a |-> primR eety (cQp.mut 1) v'' -* Q a free)))
-         | None => False
-         end)
-        |-- wp_lval (Epreinc e ty) Q.
+        pre_op Badd ty e Q |-- wp_lval (Epreinc e ty) Q.
 
     (** `--e`
         https://eel.is/c++draft/expr.pre.incr#2
      *)
     Axiom wp_lval_predec : forall e ty Q,
-        (let ety := type_of e in
-         let eety := erase_qualifiers ety in
-         match companion_type eety with
-         | Some cty =>
-          wp_lval e (fun a free => Exists v' v'',
-              (eval_binop tu Bsub eety cty (erase_qualifiers ty) v' (Vint 1) v'' ** True) //\\
-              (a |-> primR eety (cQp.mut 1) v' **
-                (a |-> primR eety (cQp.mut 1) v'' -* Q a free)))
-         | None => False
-         end)
-        |-- wp_lval (Epredec e ty) Q.
+        pre_op Bsub ty e Q |-- wp_lval (Epredec e ty) Q.
+
+    Definition post_op (b : BinOp) (ty : type) (e : Expr) (Q : val -> FreeTemps.t -> mpred) : mpred :=
+      let ety := erase_qualifiers $ type_of e in
+      wp_lval e (fun a free => Exists v v',
+                   (inc_dec_op b ety v v' ** True) //\\
+                   (a |-> primR ety (cQp.mut 1) v **
+                      (a |-> primR ety (cQp.mut 1) v' -* Q v free))).
 
     (** `e++`
         https://eel.is/c++draft/expr.post.incr#1
      *)
     Axiom wp_operand_postinc : forall e ty Q,
-        (let ety := type_of e in
-         let eety := erase_qualifiers ety in
-         match companion_type eety with
-         | Some cty =>
-             wp_lval e (fun a free => Exists v', Exists v'',
-                          (eval_binop tu Badd eety cty
-                             (erase_qualifiers ty) v' (Vint 1) v'' ** True) //\\
-                            (a |-> primR eety (cQp.mut 1) v' **
-                               (a |-> primR eety (cQp.mut 1) v'' -* Q v' free)))
-         | None => False
-         end)
-      |-- wp_operand (Epostinc e ty) Q.
+        post_op Badd ty e Q |-- wp_operand (Epostinc e ty) Q.
 
     (** `e--`
         https://eel.is/c++draft/expr.post.incr#2
      *)
     Axiom wp_operand_postdec : forall e ty Q,
-        (let ety := type_of e in
-         let eety := erase_qualifiers ety in
-         match companion_type eety with
-         | Some cty =>
-             wp_lval e (fun a free => Exists v', Exists v'',
-                          (eval_binop tu Bsub eety cty
-                             (erase_qualifiers ty) v' (Vint 1) v'' ** True) //\\
-                            (a |-> primR eety (cQp.mut 1) v' **
-                               (a |-> primR eety (cQp.mut 1) v'' -* Q v' free)))
-         | None => False
-         end)
-     |-- wp_operand (Epostdec e ty) Q.
+        post_op Bsub ty e Q |-- wp_operand (Epostdec e ty) Q.
 
     (** * Binary Operators *)
     (* NOTE the following axioms assume that [eval_binop] is deterministic *)
@@ -383,15 +409,210 @@ Module Type Expr.
            (la |-> primR (erase_qualifiers ty) (cQp.mut 1) rv -* Q la free))
         |-- wp_lval (Eassign l r ty) Q.
 
-    (* Assignemnt operators are *almost* like regular assignments except that they
-       guarantee to evaluate the left hand side *exactly* once (rather than twice
-       which is what would come from the standard desugaring)
+    Definition to_integral (ty : type) (v : val) (Q : type -> val -> mpred) : mpred :=
+      match promote_integral tu ty with
+      | Some ity =>
+          Exists v', [| conv_int tu ty ity v v' |] ** Q ity v'
+      | _ => False
+      end.
+
+    (** This is willing to insert casts on the inputs, but computes the result type
+        from that
+     *)
+    Definition cast_op (b : BinOp) (ty1 ty2 : type) (resultT : type) (v1 v2 : val) : val -> mpred :=
+      if is_pointer ty1 && is_pointer ty2 then
+        (* pointer-pointer operations *)
+        eval_binop tu b ty1 ty2 resultT v1 v2
+      else if is_pointer ty1 && is_arithmetic ty2 then
+        (* pointer-integer operations *)
+        fun v_result =>
+          to_integral ty2 v2 (fun ity2 iv2 =>
+            eval_binop tu b ty1 ity2 resultT v1 iv2 v_result)
+      else if is_arithmetic ty1 && is_pointer ty2 then
+        (* integer-pointer operations *)
+        fun v_result =>
+          to_integral ty1 v1 (fun ity1 iv1 =>
+            eval_binop tu b ity1 ty2 resultT iv1 v2 v_result)
+      else if is_arithmetic ty1 && is_arithmetic ty2 then
+        (* integer-integer operations *)
+        fun v_result =>
+        to_integral ty1 v1 (fun ity1 iv1 =>
+        to_integral ty2 v2 (fun ity2 iv2 =>
+          match b with
+          | Bshl | Bshr =>
+            (* heterogeneous operators *)
+            eval_binop tu b ity1 ity2 resultT iv1 iv2 v_result
+          | Badd | Bsub | Bmul | Bdiv | Bmod
+          | Band | Bor | Bxor
+          | Beq | Bneq
+          | Blt | Ble | Bgt | Bge
+          | Bcmp =>
+            (* homogeneous operators *)
+            match promote_arith ity1 ity2 with
+            | Some to =>
+              Exists tv1 tv2, [| conv_int tu ity1 to iv1 tv1 |] **
+                              [| conv_int tu ity2 to iv2 tv2 |] **
+                              eval_binop tu b to to resultT tv1 tv2 v_result
+            | _ => False
+            end
+          | Bdotp => False
+          | Bdotip => False
+          end%I))
+      else fun _ => UNSUPPORTED "cast-op".
+
+    Notation Tsize_t := Tlonglong (only parsing).
+
+    Definition convert_type_op (b : BinOp) (ty1 ty2 : type) : option (type * type * type) :=
+      if is_pointer ty1 && is_pointer ty2 then
+        (* pointer-pointer operations *)
+        match b with
+        | Bsub => Some (ty1, ty2, Tsize_t)
+        | _ => None
+        end
+      else if is_pointer ty1 && is_arithmetic ty2 then
+        (* pointer-integer operations *)
+        match b with
+        | Bsub | Badd =>
+          match promote_integral tu ty2 with
+          | Some ty2 => Some (ty1, ty2, ty1)
+          | _ => None
+          end
+        | _ => None
+        end
+      else if is_arithmetic ty1 && is_pointer ty2 then
+        (* integer-pointer operations *)
+        match b with
+        | Bsub | Badd =>
+          match promote_integral tu ty1 with
+          | Some ty1 => Some (ty1, ty2, ty2)
+          | _ => None
+          end
+        | _ => None
+        end
+      else if is_arithmetic ty1 && is_arithmetic ty2 then
+        (* integer-integer operations *)
+        match promote_integral tu ty1 , promote_integral tu ty2 with
+        | Some ty1 , Some ty2 =>
+          match b with
+          | Bshl | Bshr =>
+            (* heterogeneous operators *)
+            Some (ty1, ty2, ty1)
+          | Badd | Bsub | Bmul | Bdiv | Bmod
+          | Band | Bor | Bxor
+          | Beq | Bneq
+          | Blt | Ble | Bgt | Bge
+          | Bcmp =>
+            (* homogeneous operators *)
+            match promote_arith ty1 ty2 with
+            | Some to => Some (to, to, to)
+            | _ => None
+            end
+          | Bdotp => None
+          | Bdotip => None
+          end
+        | _ , _ => None
+        end
+      else None.
+
+    (* This (effectively) lifts [conv_int] to arbitrary types *)
+    Definition convert (from to : type) (v : val) (v' : val) : Prop :=
+      if is_pointer from && is_pointer to then
+        v' = v
+      else if is_arithmetic from && is_arithmetic to then
+        conv_int tu from to v v'
+      else False.
+
+    Lemma is_pointer_not_arithmetic : forall ty, is_pointer ty = true -> is_arithmetic ty = false.
+    Proof. induction ty; simpl; intros; eauto. Qed.
+
+    Definition cast_op_alt b ty1 ty2 rty v1 v2 rv :
+      match convert_type_op b ty1 ty2 with
+      | Some (tl, tr, rty') =>
+          [| rty = rty' |] **
+          Exists v1' v2', [| convert ty1 tl v1 v1' |] **
+                          [| convert ty2 tr v2 v2' |] **
+                          eval_binop tu b tl tr rty v1' v2' rv
+      | _ => False
+      end
+      |-- cast_op b ty1 ty2 rty v1 v2 rv.
+    Proof.
+      rewrite /convert_type_op/cast_op.
+      destruct (is_pointer ty1) eqn:?; simpl; try rewrite andb_false_r.
+      { destruct (is_pointer ty2) eqn:?; simpl; try rewrite andb_false_r.
+        { destruct b; try iIntros "[]".
+          rewrite /convert. rewrite Heqb0 Heqb1/=.
+          iIntros "X"; iDestruct "X" as (? ?) "(% & % & % & X)"; subst; eauto.
+        }
+        {           rewrite (is_pointer_not_arithmetic _ Heqb0); simpl.
+          destruct (is_arithmetic ty2) eqn:?; simpl; try solve [ iIntros "[]" ].
+          rewrite /to_integral.
+          destruct b; try solve [ iIntros "[]" ];
+            destruct (promote_integral tu ty2) eqn:?; eauto.
+          - rewrite /convert. rewrite Heqb0 Heqb1 Heqb2/=.
+            iIntros "X"; iDestruct "X" as (??) "(% & % & % & X)"; subst.
+            case_match; try contradiction.
+            iExists _; iFrame. eauto.
+          - rewrite /convert. rewrite Heqb0 Heqb1 Heqb2/=.
+            iIntros "X"; iDestruct "X" as (??) "(% & % & % & X)"; subst.
+            case_match; try contradiction.
+            iExists _; iFrame. eauto. } }
+      { (* is_pointer ty1 = false *)
+        destruct (is_arithmetic ty1) eqn:?; simpl; try rewrite andb_false_r; try iIntros "[]".
+        { destruct (is_pointer ty2) eqn:?; simpl; try rewrite andb_false_r; try iIntros "[]".
+          { destruct b; try solve [ iIntros "[]" ];
+              rewrite /to_integral;
+              destruct (promote_integral tu ty1) eqn:?; eauto;
+              rewrite /convert Heqb0 Heqb1 Heqb2/=;
+                iIntros "X"; iDestruct "X" as (??) "(% & % & % & X)"; subst;
+              case_match; try contradiction;
+              iExists _; iFrame; eauto. }
+          { destruct (is_arithmetic ty2) eqn:?; simpl; try iIntros "[]".
+            { rewrite /to_integral.
+              destruct (promote_integral tu ty1) eqn:?; eauto.
+              destruct (promote_integral tu ty2) eqn:?; eauto.
+              case_match; try solve [ iIntros "[]" ].
+              destruct p as [[??]?].
+              iIntros "X".
+              rewrite /convert. rewrite Heqb0 Heqb1 Heqb2 Heqb3/=.
+              iDestruct "X" as (v1' v2') "(%C1 & %C2 & % & X)"; subst.
+              destruct (is_arithmetic t1) eqn:?; try contradiction.
+              destruct (is_arithmetic t2) eqn:?; try contradiction.
+              (* this relies on:
+                 1. integral promotions are lossless
+                 2. [conv_int] is transitive when the first one is lossless.
+               *)
+              admit. } } } }
+    Admitted.
+
+    Axiom wp_lval_bop_assign : forall ty o l r Q,
+            match convert_type_op o (type_of l) (type_of r) with
+            | Some (tl, tr, resultT) =>
+              nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free => Exists v cv v',
+                    ((* cast and perform the computation *)
+                      [| convert (type_of l) tl v cv |] **
+                      [| (* ensured by our AST *) tr = type_of r |] **
+                      eval_binop tu o tl tr resultT cv rv v' **
+                        (* convert the value back to the target type so it can be stored *)
+                        [| convert resultT ty cv v' |] ** True) //\\
+                    (la |-> primR (erase_qualifiers ty) (cQp.mut 1) v **
+                      (la |-> primR (erase_qualifiers ty) (cQp.mut 1) v' -* Q la free)))
+            | _ => False%I
+            end
+        |-- wp_lval (Eassign_op o l r ty) Q.
+
+
+    (* Assignment operators are *almost* like regular assignments except that they
+       guarantee to evaluate the left hand side *exactly* once.
      *)
     Axiom wp_lval_bop_assign : forall ty o l r Q,
-        nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free =>
-             (Exists v v', la |-> primR (erase_qualifiers ty) (cQp.mut 1) v **
-                 ((eval_binop tu o (erase_qualifiers (type_of l)) (erase_qualifiers (type_of r)) (erase_qualifiers (type_of l)) v rv v' ** True) //\\
-                 (la |-> primR (erase_qualifiers ty) (cQp.mut 1) v' -* Q la free))))
+        nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free => Exists v v',
+               (Exists computeType computeVal,
+                   (* cast and perform the computation *)
+                   cast_op o ty (type_of r) computeType v rv computeVal **
+                   (* convert the value back to the target type so it can be stored *)
+                   [| convert computeType ty computeVal v' |] ** True) //\\
+               (la |-> primR (erase_qualifiers ty) (cQp.mut 1) v **
+                 (la |-> primR (erase_qualifiers ty) (cQp.mut 1) v' -* Q la free)))
         |-- wp_lval (Eassign_op o l r ty) Q.
 
     (** The comma operator can be both an lvalue and a prvalue
