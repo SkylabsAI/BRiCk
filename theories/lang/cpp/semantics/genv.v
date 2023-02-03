@@ -47,13 +47,23 @@ Definition genv_byte_order (g : genv) : endian :=
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
 
 Module integral_type.
-  Record t : Set := mk { size : bitsize ; signedness : signed }.
+  Record t : Set := mk { size : int_type.t ; signedness : signed }.
   Coercion to_type (v : t) : type :=
     Tnum v.(size) v.(signedness).
 End integral_type.
 Coercion integral_type.to_type : integral_type.t >-> type.
 
-Definition equivalent_char_type (g : genv) (ct : char_type) : integral_type.t :=
+Definition signedness_of_char (σ : genv) (ct : char_type) : signed :=
+  match ct with
+  | char_type.Cchar => σ.(char_signed)
+  | char_type.Cwchar => σ.(wchar_signed)
+  | _ => Unsigned
+  end.
+
+(** [equivalent_int_type g ct] is the integral type that is equivalent
+    (in rank and signedness) of [ct].
+ *)
+Definition equivalent_int_type (g : genv) (ct : char_type) : integral_type.t :=
   let bits :=
     match char_type.bytesN ct with
     | 8 => W8
@@ -64,13 +74,7 @@ Definition equivalent_char_type (g : genv) (ct : char_type) : integral_type.t :=
     | _ => W8
     end%N
   in
-  match ct with
-  | char_type.C8 => integral_type.mk W8 Unsigned
-  | char_type.C16 => integral_type.mk W16 Unsigned
-  | char_type.C32 => integral_type.mk W32 Unsigned
-  | char_type.Cchar => integral_type.mk bits g.(char_signed)
-  | char_type.Cwchar => integral_type.mk bits g.(wchar_signed)
-  end.
+  integral_type.mk W8 (signedness_of_char g ct).
 
 (** * global environments *)
 

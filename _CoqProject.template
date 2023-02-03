@@ -157,6 +157,8 @@ theories/lang/cpp/semantics/builtins.v
 theories/lang/cpp/semantics/genv.v
 theories/lang/cpp/semantics/sub_module.v
 theories/lang/cpp/semantics/subtyping.v
+theories/lang/cpp/semantics/promotion.v
+theories/lang/cpp/semantics/cast.v
 theories/lang/cpp/semantics/types.v
 theories/lang/cpp/semantics/dispatch.v
 theories/lang/cpp/semantics/intensional.v
