@@ -137,6 +137,39 @@ Module char_type.
 End char_type.
 Notation char_type := char_type.t.
 
+(** Integer types
+    See https://en.cppreference.com/w/cpp/language/types
+ *)
+Module int_type.
+  (* the rank <https://eel.is/c++draft/conv.rank> *)
+  Notation t := bitsize (only parsing).
+  Notation rank := t (only parsing).
+
+  Notation Ichar := W8 (only parsing).
+  Notation Ishort := W16 (only parsing).
+  Notation Iint := W32 (only parsing).
+  Notation Ilong := W64 (only parsing).
+  Notation Ilonglong := W64 (only parsing).
+
+  Definition bytesN (t : t) : N :=
+    arith.types.bytesN t. (* from [arith.types] *)
+
+  Definition bitsN (t : t) : N :=
+    8 * bytesN t.
+
+  Definition t_le (a b : t) : Prop :=
+    (bytesN a <= bytesN b)%N.
+
+  #[global] Instance t_le_dec : RelDecision t_le :=
+    fun a b => N_le_dec (bytesN a) (bytesN b).
+
+  (* [max] on the rank. *)
+  Definition t_max (a b : bitsize) : bitsize :=
+    if bool_decide (t_le a b) then b else a.
+
+End int_type.
+Notation int_type := int_type.t.
+
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
@@ -150,7 +183,7 @@ Inductive type : Set :=
   https://en.cppreference.com/w/cpp/language/reference#Reference_collapsing
   https://www.eel.is/c++draft/dcl.ref#5
   *)
-| Tnum (size : bitsize) (signed : signed)
+| Tnum (size : int_type.t) (signed : signed)
 | Tchar_ (_ : char_type)
 | Tvoid
 | Tarray (_ : type) (_ : N) (* unknown sizes are represented by pointers *)
@@ -464,9 +497,9 @@ End normalize_type_idempotent.
 
 (** ** Notation for character types *)
 Coercion Tchar_ : char_type.t >-> type.
-Notation Tchar := (Tchar_ char_type.Cchar).
-Notation Twchar := (Tchar_ char_type.Cwchar).
-Notation Tchar8 := (Tchar_ char_type.C8).
+Notation Tchar   := (Tchar_ char_type.Cchar).
+Notation Twchar  := (Tchar_ char_type.Cwchar).
+Notation Tchar8  := (Tchar_ char_type.C8).
 Notation Tchar16 := (Tchar_ char_type.C16).
 Notation Tchar32 := (Tchar_ char_type.C32).
 
@@ -495,28 +528,27 @@ LLP64 and LP64 agree except for the [long] type: see
 the warning below.
 In future, we may want to parametrize by a data model, or
 the machine word size.
-*)
-Notation char_bits :=  (W8)  (only parsing).
-Notation short_bits := (W16) (only parsing).
-Notation int_bits :=   (W32) (only parsing).
-
 (** warning: LLP64 model uses [long_bits := W32] *)
-Notation long_bits :=      (W64) (only parsing).
-Notation long_long_bits := (W64) (only parsing).
+*)
+Notation char_bits      := (int_type.Ichar)     (only parsing).
+Notation short_bits     := (int_type.Ishort)    (only parsing).
+Notation int_bits       := (int_type.Iint)      (only parsing).
+Notation long_bits      := (int_type.Ilong)     (only parsing).
+Notation long_long_bits := (int_type.Ilonglong) (only parsing).
 
 (** ** Types with implicit size information. *)
 
-Notation Tschar  := Ti8 (only parsing).
-Notation Tuchar  := Tu8 (only parsing).
+Notation Tschar  := (Tnum int_type.Ichar Signed) (only parsing).
+Notation Tuchar  := (Tnum int_type.Ichar Unsigned) (only parsing).
 
-Notation Tushort := (Tnum short_bits Unsigned) (only parsing).
-Notation Tshort := (Tnum short_bits Signed) (only parsing).
+Notation Tushort := (Tnum int_type.Ishort Unsigned) (only parsing).
+Notation Tshort  := (Tnum int_type.Ishort Signed) (only parsing).
 
-Notation Tint := (Tnum int_bits Signed) (only parsing).
-Notation Tuint := (Tnum int_bits Unsigned) (only parsing).
+Notation Tint  := (Tnum int_type.Iint Signed) (only parsing).
+Notation Tuint := (Tnum int_type.Iint Unsigned) (only parsing).
 
-Notation Tulong := (Tnum long_bits Unsigned) (only parsing).
-Notation Tlong := (Tnum long_bits Signed) (only parsing).
+Notation Tulong := (Tnum int_type.Ilong Unsigned) (only parsing).
+Notation Tlong  := (Tnum int_type.Ilong Signed) (only parsing).
 
-Notation Tulonglong := (Tnum long_long_bits Unsigned) (only parsing).
-Notation Tlonglong := (Tnum long_long_bits Signed) (only parsing).
+Notation Tulonglong := (Tnum int_type.Ilonglong Unsigned) (only parsing).
+Notation Tlonglong  := (Tnum int_type.Ilonglong Signed) (only parsing).
