@@ -174,6 +174,28 @@ Definition class_name (t : type) : option globname :=
   | _ => None
   end.
 
+(** [is_arithmetic ty] states whether [ty] is an arithmetic type *)
+Definition is_arithmetic (ty : type) : bool :=
+  match drop_qualifiers ty with
+  | Tnum _ _
+  | Tchar_ _
+  | Tenum _
+  | Tbool => true
+  | _ => false
+  end.
+
+(** [is_pointer ty] is [true] if [ty] is a pointer type *)
+Definition is_pointer (ty : type) : bool :=
+  match drop_qualifiers ty with
+  | Tptr _ => true
+  | _ => false
+  end.
+
+Lemma is_pointer_not_arithmetic : forall ty, is_pointer ty = true -> is_arithmetic ty = false.
+Proof. induction ty; simpl; intros; eauto. Qed.
+Lemma is_arithmetic_not_pointer : forall ty, is_arithmetic ty = true -> is_pointer ty = false.
+Proof. induction ty; simpl; intros; eauto. Qed.
+
 (** [is_value_type t] returns [true] if [t] has value semantics.
     A value type is one that can be represented by [val].
  *)
