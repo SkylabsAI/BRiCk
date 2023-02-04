@@ -135,8 +135,8 @@ Section with_ct.
 
     (* WF is prefix-free predicate *)
     Lemma WF_eq_prefix_eq a1 a2 :
-      zstring.WF a1
-      -> zstring.WF a2
+      WF a1
+      -> WF a2
       -> a1 = take (length a1) a2
       -> a1 = a2.
     Proof.
