@@ -113,3 +113,13 @@ Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' :
   | _ , _ => False
   end.
 Arguments conv_int !_ !_ _ _ /.
+
+(* This (effectively) lifts [conv_int] to arbitrary types
+   TODO: inline this.
+ *)
+Definition convert {σ : genv} (tu : translation_unit) (from to : type) (v : val) (v' : val) : Prop :=
+  if is_pointer from && is_pointer to then
+    v' = v
+  else if is_arithmetic from && is_arithmetic to then
+    conv_int tu from to v v'
+  else False.
