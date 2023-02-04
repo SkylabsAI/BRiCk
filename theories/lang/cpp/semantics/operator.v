@@ -1,16 +1,12 @@
 (*
- * Copyright (c) 2020-22 BedRock Systems, Inc.
+ * Copyright (c) 2020-23 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 (**
- * Semantics of arithmetic and pointer operators.
- *)
-
-(* Note, the syntax tree provides explicit nodes for integral promotion so
- * we only describes the semantics of operators on uniform types. The one
- * exception is pointer operations (e.g. ptr + int) because that can not be
- * made uniform.
+   Semantics of arithmetic operators on primitives.
+   This does not include the semantics of pointer operations because they
+   require side conditions on the abstract machine state.
  *)
 
 From bedrock.prelude Require Import base numbers.
@@ -19,12 +15,59 @@ From bedrock.lang.cpp Require Import ast semantics.values.
 
 #[local] Open Scope Z_scope.
 
+(* [arith_as ty] returns [Some (sz, sgn)] if arithmetic operations are allowed on
+   the type [ty] using the size [sz] and the signedness [sgn].
+ *)
+Definition arith_as (ty : type) : option (int_type.t * signed) :=
+  match ty with
+  | Tnum sz sgn => if bool_decide (int_type.t_le int_type.Iint sz) then Some (sz, sgn) else None
+  | _ => None
+  end.
+
+Class supports_arith (ty : type) : Prop :=
+  { _ : arith_as ty <> None }.
+
+#[global] Instance: supports_arith Tint.
+Proof. constructor; compute; congruence. Qed.
+#[global] Instance: supports_arith Tuint.
+Proof. constructor; compute; congruence. Qed.
+#[global] Instance: supports_arith Tlonglong.
+Proof. constructor; compute; congruence. Qed.
+#[global] Instance: supports_arith Tulonglong.
+Proof. constructor; compute; congruence. Qed.
+
+(* These work because BRiCk does not *currently* distinguish
+   integer types with the same bitwidth *)
+Succeed Example supports_arith_long : supports_arith Tlong := _.
+Succeed Example supports_arith_ulong : supports_arith Tulong := _.
+
 Module Type OPERATOR_INTF_FUNCTOR
   (Import P : PTRS_INTF)
   (Import INTF : VALUES_INTF_FUNCTOR PTRS_INTF_AXIOM).
-  (** operator semantics *)
-  Parameter eval_unop : translation_unit -> UnOp -> forall (argT resT : type) (arg res : val), Prop.
-  Parameter eval_binop_pure : translation_unit -> BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
+  (** * Operator semantics
+
+      To support implementation-defined semantics and semantics that differs
+      (usually by removing undefined behavior) between language versions,
+      we expose these as relations, though they could also be exposed as
+      partial functions.
+   *)
+
+  (** [eval_unop tu op argT resT arg res] holds when evaluating
+      [op] on [arg] (such that [has_type arg argT]) result in [res]
+      (and [has_type res resT]).
+
+      NOTE: the reasoning principles for [eval_unop] require that
+            the values are well-typed.
+
+      This could be made explicit with an axiom saying
+      [[
+      forall tu u argT resT arg res,
+        eval_unop tu u argT resT arg res ->
+        has_type arg argT /\ has_type res resT
+      ]]
+   *)
+  Parameter eval_unop : forall {σ : genv}, translation_unit -> UnOp -> forall (argT resT : type) (arg res : val), Prop.
+  Parameter eval_binop_pure : forall `{σ : genv}, translation_unit -> BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
 
 Section operator_axioms.
   Context {σ : genv} (tu : translation_unit).
@@ -57,41 +100,26 @@ Axiom eval_unop_not : forall (w : bitsize) (sgn : signed) (a : Z),
 (* The builtin unary `+` operator is the identity on arithmetic types.
    https://eel.is/c++draft/expr.unary.op#7
  *)
-Axiom eval_plus_int : forall (s : signed) a w,
-    has_type (Vint a) (Tnum w s) ->
-    eval_unop Uplus (Tnum w s) (Tnum w s)
-              (Vint a) (Vint a).
+Axiom eval_plus_int : forall `{supports_arith ty} a,
+    has_type (Vint a) ty ->
+    eval_unop Uplus ty ty (Vint a) (Vint a).
 
 (* The builtin unary `-` operator calculates the negative of its
    promoted operand. For unsigned a, the value of -a is 2^b -a, where b
    is the number of bits after promotion.
    https://eel.is/c++draft/expr.unary.op#8
  *)
-Axiom eval_minus_int : forall (s : signed) a w,
-    let c := match s with
-             | Signed => 0 - a
-             | Unsigned => trim (bitsN w) (0 - a)
-             end in
-    has_type (Vint c) (Tnum w s) ->
-    eval_unop Uminus (Tnum w s) (Tnum w s)
-              (Vint a) (Vint c).
+Axiom eval_minus_int : forall ty a c,
+    has_type (Vint a) ty ->
+    match arith_as ty with
+    | Some (_, Signed) => c = 0 - a
+    | Some (w, Unsigned) => c = trim (bitsN w) (0 - a)
+    | None => False
+    end ->
+    has_type (Vint c) ty ->
+    eval_unop Uminus ty ty (Vint a) (Vint c).
 
 (** * Binary Operators *)
-
-(* [arith_as ty] returns [Some (sz, sgn)] if arithmetic operations are allowed on
-   the type [ty] using the size [sz] and the signedness [sgn].
- *)
-Definition arith_as (ty : type) : option (bitsize * signed) :=
-  match ty with
-  | Tnum sz sgn => if bool_decide (bytesN W32 <= bytesN sz) then Some (sz, sgn) else None
-  | _ => None
-  end.
-
-Definition supports_arith (ty : type) : Prop :=
-  arith_as ty <> None.
-
-Notation int_type := bitsize.
-
 
 (** ** Arithmetic Operators
 
@@ -128,23 +156,20 @@ Axiom eval_mul : Hnf (eval_int_op Bmul Z.mul).
 
    See https://eel.is/c++draft/expr.mul#4
  *)
-Axiom eval_div : forall ty (a b : Z),
+Axiom eval_div : forall `{supports_arith ty} (a b : Z),
     b <> 0%Z ->
-    supports_arith ty ->
     has_type (Vint a) ty ->
     has_type (Vint b) ty ->
     let c := Z.quot a b in
     has_type (Vint c) ty ->
     eval_binop_pure Bdiv ty ty ty (Vint a) (Vint b) (Vint c).
-Axiom eval_mod : forall ty (a b : Z),
+Axiom eval_mod : forall `{supports_arith ty} (a b : Z),
     b <> 0%Z ->
-    supports_arith ty ->
     has_type (Vint a) ty ->
     has_type (Vint b) ty ->
     has_type (Vint (Z.quot a b)) ty ->
-    supports_arith ty ->
     let c := Z.rem a b in
-    eval_binop_pure Bdiv ty ty ty (Vint a) (Vint b) (Vint c).
+    eval_binop_pure Bmod ty ty ty (Vint a) (Vint b) (Vint c).
 
 (** ** bitwise operators
 
@@ -158,8 +183,7 @@ Axiom eval_mod : forall ty (a b : Z),
 
  *)
 Let eval_int_bitwise_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
-  forall ty (a b : Z),
-    supports_arith ty ->
+  forall ty (_ : supports_arith ty) (a b : Z),
     has_type (Vint a) ty ->
     has_type (Vint b) ty ->
     let c := o a b in (* note that bitwise operators respect bounds *)
@@ -169,6 +193,11 @@ Let eval_int_bitwise_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
 Axiom eval_or : Hnf (eval_int_bitwise_op Bor Z.lor).
 Axiom eval_and : Hnf (eval_int_bitwise_op Band Z.land).
 Axiom eval_xor : Hnf (eval_int_bitwise_op Bxor Z.lxor).
+Arguments eval_or _ {_} _ _ _ _.
+Arguments eval_and _ {_} _ _ _ _.
+Arguments eval_xor _ {_} _ _ _ _.
+
+
 
 (** ** Shifting Operators
 
@@ -197,8 +226,7 @@ L operator>>(L, R)
 NOTE: Shift operators are *not* homogeneous.
   *)
 
-Axiom eval_shl : forall ty ty_by w sgn (a b : Z),
-    supports_arith ty_by ->
+Axiom eval_shl : forall ty `{supports_arith ty_by} w sgn (a b : Z),
     arith_as ty = Some (w, sgn) ->
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
@@ -216,8 +244,7 @@ Axiom eval_shl : forall ty ty_by w sgn (a b : Z),
    and a non-negative value, the value of the result is the integral
    part of the quotient of E1/(2^E2). If E1 has a signed type and a
    negative value, the resulting value is implementation-defined. *)
-Axiom eval_shr : forall ty ty_by w sgn (a b : Z),
-    supports_arith ty_by ->
+Axiom eval_shr : forall ty `{supports_arith ty_by} w sgn (a b : Z),
     arith_as ty = Some (w, sgn) ->
     (0 <= b < bitsZ w)%Z ->
     (0 <= a)%Z ->
@@ -264,10 +291,9 @@ Definition b2i (b : bool) : Z := if b then 1 else 0.
    Note that the [has_type] facts guarantees that the enum is valid if [ty] is
    an enum. *)
 #[local] Definition eval_int_rel_op (o : Z -> Z -> Prop) {RD : RelDecision o} (bo : BinOp) : Prop :=
-  forall ty ty' (av bv : Z),
+  forall ty (_ : supports_arith ty) ty' (av bv : Z),
     let a := Vint av in
     let b := Vint bv in
-    supports_arith ty ->
     relop_result_type ty' ->
     has_type a ty ->
     has_type b ty ->
@@ -279,6 +305,12 @@ Axiom eval_lt : Hnf (eval_int_rel_op Z.lt Blt).
 Axiom eval_gt : Hnf (eval_int_rel_op Z.gt Bgt).
 Axiom eval_le : Hnf (eval_int_rel_op Z.le Ble).
 Axiom eval_ge : Hnf (eval_int_rel_op Z.ge Bge).
+Arguments eval_eq _ {_}.
+Arguments eval_neq _ {_}.
+Arguments eval_lt _ {_}.
+Arguments eval_le _ {_}.
+Arguments eval_gt _ {_}.
+Arguments eval_ge _ {_}.
 
 End operator_axioms.
 End OPERATOR_INTF_FUNCTOR.
