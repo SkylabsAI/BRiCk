@@ -92,7 +92,7 @@ Module cstring.
     !map_app=>/(Inj_instance_1) /map_Inj H.
 
     have: BS.print x = BS.print y.
-    { apply: H=>x' y' /N2Z.inj.
+    { apply: H=>x' y'. rewrite /compose.
       rewrite !ascii_of_byte_via_N !N_ascii_embedding ?byte_to_N_inj //.
       move: (Byte.to_N_bounded y'). lia.
       move: (Byte.to_N_bounded x'). lia. }
@@ -1007,7 +1007,7 @@ Module cstring.
         Proof.
           rewrite /R/zstring.R.
           iIntros (Hlen) "[L %] [K %]".
-          iDestruct (arrayR_agree_prefix _ (fun q (c : Z) => primR Tu8 q c) with "L K") as %Heq;
+          iDestruct (arrayR_agree_prefix _ (fun q c => primR Tchar q (Vchar c)) with "L K") as %Heq;
             first done;
             iIntros "!>"; iPureIntro.
           by apply: to_zstring_Inj; apply: zstring.WF_eq_prefix_eq.
