@@ -9,5 +9,7 @@ From bedrock.lang.cpp.semantics Require Export
      cast
      operator
      intensional
+     promotion
+     cast_operator
      subtyping
      dispatch.
