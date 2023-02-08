@@ -14,6 +14,7 @@ From bedrock.lang.cpp Require Import ast semantics.
 From bedrock.lang.cpp.logic Require Import mpred operator.
 Require Import bedrock.lang.bi.errors.
 
+(*
 Section with_cpp.
   Context `{Σ : cpp_logic} {σ : genv} (tu : translation_unit).
 
@@ -139,4 +140,6 @@ Section with_cpp.
               *)
             admit. } } } }
   Admitted.
+
 End with_cpp.
+*)
