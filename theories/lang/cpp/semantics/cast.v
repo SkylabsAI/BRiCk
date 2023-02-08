@@ -58,11 +58,16 @@ Succeed Example TEST : of_char 8 Signed 32 Signed 127 = 127 := eq_refl.
 Succeed Example TEST : of_char 8 Signed 16 Unsigned 128 = 65409 := eq_refl.
 (* END TODO move to syntax *)
 
-(** Integral conversions. For use in the semantics of C++ operators.
+(** Numeric conversions.
 
-    TODO documentation needed.
+    This includes both conversions and promotions between fundamental
+    numeric types and enumerations (which have underlying fundamental
+    types).
+
+    This relation only holds on well-typed values, see [conv_int_well_typed].
   *)
 Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
+  has_type v from /\
   match underlying_type tu from , underlying_type tu to with
   | Tbool , Tnum _ _ =>
       match is_true v with
@@ -109,17 +114,71 @@ Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' :
       | _ => False
       end
   | Tenum _ , _
-  | _ , Tenum _ => False (* not reachable due to [underlying_type] *)
+  | _ , Tenum _ (* not reachable due to [underlying_type] *)
   | _ , _ => False
   end.
 Arguments conv_int !_ !_ _ _ /.
 
-(* This (effectively) lifts [conv_int] to arbitrary types
-   TODO: inline this.
+Section conv_int.
+  Context `{Hmod : tu ⊧ σ}.
+
+  Lemma conv_int_well_typed ty ty' v v' :
+       tu ⊧ σ ->
+       conv_int tu ty ty' v v' ->
+       has_type v ty /\ has_type v' ty'.
+  Proof. (*
+    rewrite /conv_int;
+    destruct (underlying_type tu ty) eqn:src_ty; rewrite /=; try tauto;
+    destruct (underlying_type tu ty') eqn:dst_ty; rewrite /=; try tauto;
+    intuition.
+    { case_match.
+      { destruct H2. subst. }
+
+    { } *)
+  Admitted.
+
+  (* Note that a no-op conversion on a raw value is not permitted. *)
+  Lemma conv_int_num_id sz sgn v :
+    let ty := Tnum sz sgn in
+    ~(exists r, v = Vraw r) ->
+    has_type v ty ->
+    conv_int tu ty ty v v.
+  Proof using Hmod.
+    rewrite /=/conv_int/underlying_type/=.
+    intros. split; eauto.
+    destruct sgn. split; eauto.
+    apply has_int_type' in H0.
+    destruct H0.
+    - destruct H0 as [?[??]].
+      subst.
+      revert H1.
+      rewrite /bound/min_val/max_val.
+      intros.
+      rewrite to_unsigned_id; eauto.
+      destruct sz; simpl; try lia.
+    - exfalso. apply H. destruct H0 as [?[??]]. eauto.
+  Qed.
+
+  (* conversion is deterministic *)
+  Lemma conv_int_unique : forall from to v,
+      forall v' v'', conv_int tu from to v v' ->
+                conv_int tu from to v v'' ->
+                v' = v''.
+  Proof using Hmod.
+    (* TODO -- prove this *)
+  Admitted.
+End conv_int.
+
+(* This (effectively) lifts [conv_int] to arbitrary types.
+
+   TODO: it makes sense for this to mirror the properties of [conv_int], but
+   pointer casts require side-conditions that are only expressible in
+   separation logic.
  *)
 Definition convert {σ : genv} (tu : translation_unit) (from to : type) (v : val) (v' : val) : Prop :=
-  if is_pointer from && is_pointer to then
-    v' = v
+  if is_pointer from && bool_decide (erase_qualifiers from = erase_qualifiers to) then
+    (* TODO: this conservative *)
+    has_type v from /\ has_type v' to /\ v' = v
   else if is_arithmetic from && is_arithmetic to then
     conv_int tu from to v v'
   else False.
