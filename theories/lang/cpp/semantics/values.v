@@ -360,8 +360,8 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
     Axiom has_type_function : forall v cc rty args,
         has_type v (Tfunction (cc:=cc) rty args) -> exists p, v = Vptr p /\ p <> nullptr.
 
-    Axiom has_type_char : forall ct n,
-        (0 <= n < 2^(char_type.bitsN ct))%N <-> has_type (Vchar n) (Tchar_ ct).
+    Axiom has_type_char : forall ct v,
+        (exists n, v = Vchar n /\ 0 <= n < 2^(char_type.bitsN ct))%N <-> has_type v (Tchar_ ct).
 
     Axiom has_type_void : forall v,
         has_type v Tvoid -> v = Vundef.
@@ -372,6 +372,8 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
     Axiom has_type_bool : forall v,
         has_type v Tbool <-> exists b, v = Vbool b.
 
+    (* NOTE: even if an enumeration's underlying type is `unsigned int` (which contains
+       raw values), raw values are not well typed at the enumeration type. *)
     Axiom has_type_enum : forall v nm,
         has_type v (Tenum nm) ->
         exists tu ty ls e, tu ⊧ σ /\ tu !! nm = Some (Genum ty ls) /\
