@@ -289,22 +289,6 @@ Module Type Expr.
           Q v' free)
         |-- wp_operand (Eunop o e ty) Q.
 
-    Lemma conv_int_id : forall ty v,
-        has_type v ty ->
-        conv_int tu ty ty v v.
-    Proof. (* TODO *) Admitted.
-
-    Lemma conv_int_unique : forall from to v,
-        has_type v from ->
-        forall v' v'', conv_int tu from to v v' ->
-                  conv_int tu from to v v'' ->
-                  v' = v''.
-    Proof. (* TODO -- prove this *) Admitted.
-
-    (* asserion needed to justify the promotion of `char` to `int` rather than `unsigned int`
-    Succeed Example bool_decide (char_type.bitsN char_type.Cchar < 32)%N = true := eq_refl.
-     *)
-
     (* The semantics of pre- and post- increment/decrement.
 
        NOTE: This function assumes that [ty1] is the LHS and that the result will
@@ -324,32 +308,6 @@ Module Type Expr.
             (* use eval_binop_impure *)
              fun v_result => eval_binop tu op ty Tint ty v (Vint 1) v_result
       else fun _ => UNSUPPORTED "cast-op".
-
-    (*
-    (* The semantics of operators including casting.
-       In the Clang AST (and therefore the BRiCk AST), integral promotions and casts
-       are *explicit* in the AST for binary operators, e.g. `e1 + e1`. However,
-       for self operators, e.g. `e++`, `e1 += e2`, etc, the casting semantics
-       needs to be computed.
-
-       NOTE: This function assumes that [ty1] is the LHS and that the result will
-             that type.
-     *)
-    Definition self_op (b : BinOp) (ty1 ty2 : type) (v1 v2 : val) : val -> mpred :=
-      if is_arithmetic ty1 && is_arithmetic ty2 then
-        if
-        (* use semantics/operators *)
-        (* 1) promote both types (enum -> int),
-            2) promote arith (to Tresult)
-            3) perform the operator -- always produces a Tresult
-            4) cast result from Tresult -> t1
-        *)
-        TODO
-      else if is_pointer ty1 && is_arithmetic ty2 then
-            (* use eval_binop_impure *)
-            eval_binop tu b ty1 ty2 ty1 v1 v2
-      else fun _ => UNSUPPORTED "cast-op".
-      *)
 
     Definition pre_op (b : BinOp) (ty : type) (e : Expr) (Q : ptr -> FreeTemps.t -> mpred) : mpred :=
       let ety := erase_qualifiers $ type_of e in
