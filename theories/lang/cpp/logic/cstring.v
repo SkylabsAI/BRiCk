@@ -159,7 +159,8 @@ Module cstring.
           rewrite -{2}IHzs; auto; f_equal.
           * apply has_type_char in H2.
             rewrite ascii_of_byte_of_ascii N_ascii_embedding; eauto.
-            simpl in H2. lia.
+            simpl in H2. destruct H2 as [?[Hchar?]].
+            inversion Hchar; subst. lia.
           * rewrite map_app; rewrite -> map_map in *; simpl in *.
 (*            set f := fun x => Z.of_N _. *)
             assert (length zs = 0 \/ length zs <> 0)%nat
@@ -171,6 +172,8 @@ Module cstring.
                f_equal.
                ++ inversion H3; apply has_type_char in H4;
                     rewrite /bound/= in H4; subst.
+                  destruct H4 as [?[Hchar?]].
+                  inversion Hchar; subst.
                     rewrite ascii_of_byte_of_ascii N_ascii_embedding;
                     by lia.
                ++ rewrite map_take -take_S_r.
@@ -181,7 +184,7 @@ Module cstring.
                        rewrite -> (@List.Forall_forall _ _ zs) in H5.
                        specialize (H5 x HIn).
                        apply has_type_char in H5; rewrite /bound/= in H5.
-
+                       inversion H5 as [?[Hchar?]]; inversion Hchar;
                        rewrite -> ascii_of_byte_of_ascii, N_ascii_embedding by lia.
                        over.
                      }
@@ -196,7 +199,7 @@ Module cstring.
                        rewrite -> (@List.Forall_forall _ _ zs) in H5.
                        specialize (H5 x HIn).
                        apply has_type_char in H5; rewrite /bound/= in H5.
-
+                       destruct H5 as [?[Hchar?]]; inversion Hchar; subst.
                        rewrite /=.
                        rewrite -> ascii_of_byte_of_ascii, N_ascii_embedding by lia.
                        over.
@@ -346,7 +349,8 @@ Module cstring.
       split. 2: {
         constructor.
         - apply has_type_char. simpl.
-          generalize (N_ascii_bounded (ascii_of_byte b)). lia.
+          generalize (N_ascii_bounded (ascii_of_byte b)).
+          intros. eexists; split; eauto.
         - unfold to_zstring, to_zstring' in Hforall.
           by rewrite map_app/= in Hforall.
       }
