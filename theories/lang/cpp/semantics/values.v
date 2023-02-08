@@ -99,6 +99,13 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   (** we use [Vundef] as our value of type [void] *)
   Definition Vvoid := Vundef.
 
+  (** [is_raw v] holds when [v] is a raw value. *)
+  Definition is_raw (v : val) : bool :=
+    match v with
+    | Vraw _ => true
+    | _ => false
+    end.
+
   Definition is_true (v : val) : option bool :=
     match v with
     | Vint v => Some (bool_decide (v <> 0))
@@ -376,8 +383,9 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
        raw values), raw values are not well typed at the enumeration type. *)
     Axiom has_type_enum : forall v nm,
         has_type v (Tenum nm) ->
-        exists tu ty ls e, tu ⊧ σ /\ tu !! nm = Some (Genum ty ls) /\
-                  v = Vint e /\ has_type v ty.
+        exists tu ty ls,
+          tu ⊧ σ /\ tu !! nm = Some (Genum ty ls) /\
+          (~is_raw v) /\ has_type v ty.
 
     (** Note in the case of [Tuchar], the value [v] could be a
         raw value. *)
