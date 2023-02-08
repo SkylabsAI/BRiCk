@@ -20,7 +20,7 @@ Import ChargeNotation.
 
 (** TODO: upstream *)
 Lemma has_type_char_255 {σ : genv} (n : N) ct : (0 <= n < 255)%N -> has_type (Vchar n) (Tchar_ ct).
-Proof. intros. apply has_type_char. simpl. destruct ct; simpl; lia. Qed.
+Proof. intros. apply has_type_char. simpl. eexists; split; eauto. destruct ct; simpl; lia. Qed.
 Lemma has_type_char_0 {σ : genv} ct :  has_type (Vchar 0) (Tchar_ ct).
 Proof. intros. apply has_type_char_255. lia. Qed.
 (** END: upstream *)
