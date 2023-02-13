@@ -50,3 +50,12 @@ Section gset_bind.
     gset_bind f {[ a ]} = f a.
   Proof. set_solver. Qed.
 End gset_bind.
+
+(* Making a gmap from a list of keys and a list of values *)
+Fixpoint kv_lists_to_gmap {K V M : Type} `{Insert K V M} (k_s : list K)
+    (v_s : list V) (orig : M) :=
+  match k_s, v_s with
+  | k_hd :: k_tl, v_hd :: v_tl =>
+    kv_lists_to_gmap k_tl v_tl (<[ k_hd := v_hd ]> orig)
+  | _, _ => orig
+  end.
