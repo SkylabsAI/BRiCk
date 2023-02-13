@@ -37,8 +37,8 @@ Definition to_char (from_sz : N) (from_sgn : signed) (to_bits : N) (*to_sgn : si
   if from_sgn is Signed then
     if bool_decide (v < 0) then
       Z.to_N $ 2^to_bits - (v `mod` 2^to_bits)
-    else Z.to_N $ to_unsigned_bits from_sz v
-  else Z.to_N $ to_unsigned_bits from_sz v.
+    else Z.to_N $ to_unsigned_bits to_bits v
+  else Z.to_N $ to_unsigned_bits to_bits v.
 
 Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : signed) (n : N) : Z :=
   (* first we need to sign extend using frm_sgn *)
@@ -56,6 +56,11 @@ Succeed Example TEST : of_char 8 Signed 32 Signed 1 = 1 := eq_refl.
 Succeed Example TEST : of_char 8 Signed 32 Signed 128 = -127 := eq_refl.
 Succeed Example TEST : of_char 8 Signed 32 Signed 127 = 127 := eq_refl.
 Succeed Example TEST : of_char 8 Signed 16 Unsigned 128 = 65409 := eq_refl.
+Succeed Example TEST : of_char 32 Signed 8 Signed 256 = 0 := eq_refl.
+Succeed Example TEST : of_char 32 Signed 8 Signed 128 = -128 := eq_refl.
+Succeed Example TEST : of_char 32 Signed 16 Signed 128 = 128 := eq_refl.
+Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
+
 (* END TODO move to syntax *)
 
 (** Numeric conversions.
