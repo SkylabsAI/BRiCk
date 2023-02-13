@@ -59,10 +59,10 @@ unsupported_type(const Type* type, CoqPrinter& print, ClangPrinter& cprint) {
 class PrintType :
     public TypeVisitor<PrintType, void, CoqPrinter&, ClangPrinter&> {
 private:
-    PrintType() {}
+    const bool templates_;
 
 public:
-    static PrintType printer;
+    PrintType(bool templates) : templates_(templates) {}
 
     void VisitType(const Type* type, CoqPrinter& print, ClangPrinter& cprint) {
         unsupported_type(type, print, cprint);
@@ -117,8 +117,8 @@ public:
 
     void VisitTemplateTypeParmType(const TemplateTypeParmType* type,
                                    CoqPrinter& print, ClangPrinter& cprint) {
-        print.ctor("Ttemplate")
-            << "\"" << type->getDecl()->getNameAsString() << "\"";
+        print.ctor("Tvar");
+        print.str(type->getDecl()->getNameAsString());
         print.end_ctor();
     }
 
@@ -189,7 +189,7 @@ public:
 
     void VisitBuiltinType(const BuiltinType* type, CoqPrinter& print,
                           ClangPrinter& cprint) {
-        switch (type->getKind()) {
+        switch (auto kind = type->getKind()) {
         case BuiltinType::Kind::Bool:
             print.output() << "Tbool";
             break;
@@ -198,15 +198,6 @@ public:
             break;
         case BuiltinType::Kind::NullPtr:
             print.output() << "Tnullptr";
-            break;
-        case BuiltinType::Kind::Dependent:
-            print.output() << "Tunsupported \"type-dependent type\"";
-            using namespace logging;
-            fatal() << "Clang failed to resolve type, due to earlier errors or "
-                       "unresolved templates\n"
-                    << "Try fixing earlier errors, or ask for help. Aborting\n";
-            die();
-
             break;
 #if CLANG_VERSION_MAJOR == 10
         case BuiltinType::Kind::SveInt8:
@@ -228,6 +219,16 @@ public:
             break;
 #endif
         default:
+            if (!templates_ && kind == BuiltinType::Kind::Dependent) {
+                print.output() << "Tunsupported \"type-dependent type\"";
+                using namespace logging;
+                fatal() << "Clang failed to resolve type, due to earlier errors or "
+                           "unresolved templates\n"
+                        << "Try fixing earlier errors, or ask for help. Aborting\n";
+                die();
+                break;
+            }
+
             if (type->isAnyCharacterType()) {
                 print.output()
                     << "(Tchar " << bitsize(cprint.getTypeSize(type)) << " "
@@ -247,6 +248,8 @@ public:
                                << "\"" << fmt::rparen;
                 break;
 #endif
+            } else if (templates_ && type->isDependentType()) {
+                print.output() << "Tdependent";
             } else {
                 using namespace logging;
                 fatal() << "[ERR] Unsupported builtin type (" << type->getKind()
@@ -415,12 +418,10 @@ public:
 #endif
 };
 
-PrintType PrintType::printer;
-
 void
 ClangPrinter::printType(const clang::Type* type, CoqPrinter& print) {
     __attribute__((unused)) auto depth = print.output().get_depth();
-    PrintType::printer.Visit(type, print, *this);
+    PrintType(templates_).Visit(type, print, *this);
     assert(depth == print.output().get_depth());
 }
 

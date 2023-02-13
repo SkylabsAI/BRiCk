@@ -99,10 +99,137 @@ parameter(const ParmVarDecl *decl, CoqPrinter &print, ClangPrinter &cprint) {
     print.output() << fmt::rparen;
 }
 
+const std::string
+templateArgumentKindName(TemplateArgument::ArgKind kind) {
+    #define CASE(k) case TemplateArgument::ArgKind::k: return #k;
+    switch (kind) {
+    CASE(Null)
+    CASE(Type)
+    CASE(Declaration)
+    CASE(NullPtr)
+    CASE(Integral)
+    CASE(Template)
+    CASE(TemplateExpansion)
+    CASE(Expression)
+    CASE(Pack)
+    default:
+        return "<unknown>";
+    }
+    #undef CASE
+}
+
+class FunctionTemplate final {
+public:
+    // A regular function having nothing to do with templates
+    static const FunctionTemplate none;
+
+    // A template function
+    using Params = const TemplateParameterList;
+    static FunctionTemplate abs(Params*);
+
+    // A function defined by template specialization
+    using Args = const FunctionTemplateSpecializationInfo;
+    static FunctionTemplate app(Args*);
+
+    void print(CoqPrinter&, ClangPrinter&) const;
+
+private:
+    enum class Tag { Abs, App, None };
+
+    const Tag tag_;
+    union {
+        Params * const  params_;
+        Args * const args_;
+    };
+
+    FunctionTemplate() : tag_(Tag::None) {};
+    FunctionTemplate(Params* ps) : tag_(Tag::Abs), params_(ps) { assert(ps != nullptr); };
+    FunctionTemplate(Args* xs) : tag_(Tag::App), args_(xs) { assert(xs != nullptr); };
+
+};
+
+const FunctionTemplate
+FunctionTemplate::none = FunctionTemplate();
+
+FunctionTemplate
+FunctionTemplate::abs(Params* params) {
+    if (params == nullptr){
+        using namespace logging;
+        fatal() << "unexpected null template parameters\n";
+        die();
+    }
+    return FunctionTemplate(params);
+}
+
+FunctionTemplate
+FunctionTemplate::app(Args* args) {
+    if (args == nullptr){
+        using namespace logging;
+        fatal() << "unexpected null template specialization\n";
+        die();
+    }
+    return FunctionTemplate(args);
+}
+
 void
-printFunction(const FunctionDecl *decl, CoqPrinter &print,
-              ClangPrinter &cprint) {
+FunctionTemplate::print(CoqPrinter &print, ClangPrinter  &cprint) const {
+    switch(tag_){
+    case Tag::Abs:
+        print.ctor("TemplateAbs");
+        print.list(params_->asArray(), [&cprint](auto print, auto *decl) {
+            cprint.printDecl(decl, print);
+        });
+        print.end_ctor();
+        break;
+
+    case Tag::App: {
+        auto info = args_;
+        auto tdecl = info->getTemplate();
+        auto targs = info->TemplateArguments;
+        assert(tdecl && "FunctionTemplateSpecializationInfo without template");
+        assert(targs && "FunctionTemplateSpecializationInfo without arguments");
+
+        auto function = tdecl->getTemplatedDecl();
+        assert(function && "FunctionTemplateDecl without function");
+
+        print.ctor("TemplateApp");
+        cprint.printObjName(function, print);
+        print.output() << fmt::nbsp;
+        print.list(targs->asArray(), [&cprint, &info](auto print, auto &arg){
+            switch(arg.getKind()){
+
+            case TemplateArgument::Type:
+                print.ctor("TypeArg");
+                cprint.printQualType(arg.getAsType(), print);
+                print.end_ctor();
+                break;
+
+            default:
+                using namespace logging;
+                unsupported() << "template argument of kind "
+                    << templateArgumentKindName(arg.getKind()) << " (at "
+                    << cprint.sourceRange(info->getPointOfInstantiation()) << ")\n";
+                break;
+            }
+        });
+        print.end_ctor();
+        break;
+    }
+
+    case Tag::None:
+        print.output() << "TemplateNone";
+        break;
+    }
+}
+
+void
+printFunction(const FunctionTemplate &tmpl, const FunctionDecl *decl,
+        CoqPrinter &print, ClangPrinter &cprint) {
     print.ctor("Build_Func");
+
+    tmpl.print(print, cprint);
+    print.output() << fmt::nbsp;
+
     cprint.printQualType(decl->getReturnType(), print);
     print.output() << fmt::nbsp << fmt::line;
 
@@ -199,10 +326,11 @@ class PrintDecl :
     public ConstDeclVisitorArgs<PrintDecl, bool, CoqPrinter &, ClangPrinter &,
                                 const ASTContext &> {
 private:
-    PrintDecl() {}
+    const bool templates_;
 
 public:
-    static PrintDecl printer;
+
+    PrintDecl(bool templates) : templates_(templates) {}
 
     bool VisitDecl(const Decl *d, CoqPrinter &print, ClangPrinter &cprint,
                    const ASTContext &) {
@@ -227,6 +355,16 @@ public:
                         ClangPrinter &cprint, const ASTContext &) {
         // ignore
         return false;
+    }
+
+    bool VisitTemplateTypeParmDecl(const TemplateTypeParmDecl* param,
+            CoqPrinter &print, ClangPrinter &cprint, const ASTContext &) {
+        assert(templates_ && "unexpected template type parameter");
+
+        print.ctor("TypeParam");
+        print.str(param->getName());
+        print.end_ctor();
+        return true;
     }
 
     bool VisitTypedefNameDecl(const TypedefNameDecl *type, CoqPrinter &print,
@@ -506,7 +644,11 @@ public:
                            ClangPrinter &cprint, const ASTContext &) {
         print.ctor("Dfunction");
         cprint.printObjName(decl, print);
-        printFunction(decl, print, cprint);
+        auto args = decl->getTemplateSpecializationInfo();
+        auto tmpl = templates_ && args
+            ? FunctionTemplate::app(args)
+            : FunctionTemplate::none;
+        printFunction(tmpl, decl, print, cprint);
         print.end_ctor();
         return true;
     }
@@ -516,7 +658,7 @@ public:
         if (decl->isStatic()) {
             print.ctor("Dfunction");
             cprint.printObjName(decl, print);
-            printFunction(decl, print, cprint);
+            printFunction(FunctionTemplate::none, decl, print, cprint);
             print.end_ctor();
         } else {
             print.ctor("Dmethod");
@@ -756,18 +898,36 @@ public:
 
     bool VisitFunctionTemplateDecl(const FunctionTemplateDecl *decl,
                                    CoqPrinter &print, ClangPrinter &cprint,
-                                   const ASTContext &) {
-        // we only print specializations
-        assert(false && "FunctionTemplateDecl");
-        return false;
+                                   const ASTContext &ctxt) {
+        assert(templates_ && "unexpected function template");
+
+        auto params = decl->getTemplateParameters();
+        assert(params && "FunctionTemplateDecl without parameters");
+        auto function = decl->getTemplatedDecl();
+        assert(function && "FunctionTemplateDecl without function");
+
+        print.ctor("Dfunction");
+        cprint.printObjName(function, print);
+        printFunction(FunctionTemplate::abs(params), function, print, cprint);
+        print.end_ctor();
+        return true;
     }
 
     bool VisitClassTemplateDecl(const ClassTemplateDecl *decl,
                                 CoqPrinter &print, ClangPrinter &cprint,
-                                const ASTContext &) {
-        // we only print specializations
-        assert(false && "ClassTemplateDecl");
-        return false;
+                                const ASTContext &ctxt) {
+        assert(templates_ && "unexpected class template");
+
+        if(false)
+            return this->Visit(decl->getTemplatedDecl(), print, cprint, ctxt);
+        else {
+            using namespace logging;
+            fatal()
+                << "Error: unsupported class template"
+                << " (at " << cprint.sourceRange(decl->getSourceRange()) << ")\n";
+            die();
+            return false;
+        }
     }
 
     bool VisitFriendDecl(const FriendDecl *, CoqPrinter &, ClangPrinter &,
@@ -796,9 +956,7 @@ public:
     }
 };
 
-PrintDecl PrintDecl::printer;
-
 bool
 ClangPrinter::printDecl(const clang::Decl *decl, CoqPrinter &print) {
-    return PrintDecl::printer.Visit(decl, print, *this, *context_);
+    return PrintDecl(templates_).Visit(decl, print, *this, *context_);
 }

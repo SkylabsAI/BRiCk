@@ -188,8 +188,14 @@ private:
 
 #endif
 
+private:
+    const bool templates_;
+
 public:
-    static PrintExpr printer;
+
+    PrintExpr(bool templates) : templates_(templates) {}
+
+public:
 
     void VisitStmt(const Stmt* stmt, CoqPrinter& print, ClangPrinter& cprint,
                    const ASTContext&, OpaqueNames&) {
@@ -869,6 +875,30 @@ public:
         this->Visit(e->getSubExpr(), print, cprint, ctxt, li);
     }
 
+    void VisitParenListExpr(const ParenListExpr* expr, CoqPrinter& print,
+                           ClangPrinter& cprint, const ASTContext&,
+                           OpaqueNames& li) {
+        if (templates_) {
+            print.ctor("Euninstantiated_initlist");
+
+            // `print.list` unavailable because there's no constant
+            // version of `ParenListExpr::exprs`.
+
+            auto n = expr->getNumExprs();
+            if (n == 0)
+                print.output() << "nil";
+            else {
+                print.begin_list();
+                for (auto i=0; i<n; i++){
+                    cprint.printExpr(expr->getExpr(i), print, li);
+                    print.cons();
+                }
+                print.end_list();
+            }
+            print.end_ctor();
+        }
+    }
+
     void VisitInitListExpr(const InitListExpr* expr, CoqPrinter& print,
                            ClangPrinter& cprint, const ASTContext&,
                            OpaqueNames& li) {
@@ -1267,13 +1297,11 @@ public:
     }
 };
 
-PrintExpr PrintExpr::printer;
-
 void
 ClangPrinter::printExpr(const clang::Expr* expr, CoqPrinter& print) {
     auto depth = print.output().get_depth();
     auto li = OpaqueNames();
-    PrintExpr::printer.Visit(expr, print, *this, *this->context_, li);
+    PrintExpr(templates_).Visit(expr, print, *this, *this->context_, li);
     if (depth != print.output().get_depth()) {
         using namespace logging;
         fatal() << "Error: BUG indentation bug in during: "
@@ -1286,7 +1314,7 @@ void
 ClangPrinter::printExpr(const clang::Expr* expr, CoqPrinter& print,
                         OpaqueNames& li) {
     auto depth = print.output().get_depth();
-    PrintExpr::printer.Visit(expr, print, *this, *this->context_, li);
+    PrintExpr(templates_).Visit(expr, print, *this, *this->context_, li);
     if (depth != print.output().get_depth()) {
         using namespace logging;
         fatal() << "Error: BUG indentation bug in during: "

@@ -123,6 +123,8 @@ Inductive type : Set :=
 (* architecture-specific types; currently unused.
    some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs)
+| Tvar (_ : bs)	(** named template parameter *)
+| Tdependent	(** unknown type dependent on template parameters *)
 .
 
 #[only(inhabited)] derive type.
@@ -181,6 +183,8 @@ Section type_ind'.
   Hypothesis Tnullptr_ind' : P Tnullptr.
   Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : bs),
     P (Tarch osize name).
+  Hypothesis Tvar_ind' : forall (id : ident), P (Tvar id).
+  Hypothesis Tdependent_ind' : P Tdependent.
 
   Fixpoint type_ind' (ty : type) : P ty :=
     match ty with
@@ -210,6 +214,8 @@ Section type_ind'.
     | Tqualified q ty         => Tqualified_ind' q ty (type_ind' ty)
     | Tnullptr                => Tnullptr_ind'
     | Tarch osize name        => Tarch_ind' osize name
+    | Tvar id                 => Tvar_ind' id
+    | Tdependent              => Tdependent_ind'
     end.
 End type_ind'.
 
@@ -250,6 +256,8 @@ Section type_countable.
       | Tarch None gn => GenNode 13 [BS gn]
       | Tarch (Some sz) gn => GenNode 14 [BITSIZE sz; BS gn]
       | Tenum gn => GenNode 15 [BS gn]
+      | Tvar id => GenNode 16 [BS id]
+      | Tdependent => GenNode 17 []
       end.
     set dec := fix go t :=
       match t with
@@ -269,10 +277,12 @@ Section type_countable.
       | GenNode 13 [BS gn] => Tarch None gn
       | GenNode 14 [BITSIZE sz; BS gn] => Tarch (Some sz) gn
       | GenNode 15 [BS gn] => Tenum gn
+      | GenNode 16 [BS id] => Tvar id
+      | GenNode 17 [] => Tdependent
       | _ => Tvoid	(** dummy *)
       end.
     apply (inj_countable' enc dec). refine (fix go t := _).
-    destruct t as [| | | | | | | |cc ar ret args| | | | | |[]]; simpl; f_equal; try done.
+    destruct t as [| | | | | | | |cc ar ret args| | | | | |[]| |]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
   Defined.
 End type_countable.
@@ -369,6 +379,8 @@ Fixpoint normalize_type (t : type) : type :=
   | Tnullptr => t
   | Tfloat _ => t
   | Tarch _ _ => t
+  | Tvar _ => t
+  | Tdependent => t
   end.
 
 Section normalize_type_idempotent.

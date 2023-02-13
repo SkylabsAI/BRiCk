@@ -452,6 +452,7 @@ Module SimpleCPP.
         | Tvoid
         | Tarray _ _
         | Tnamed _ => False (* not directly encoded in memory *)
+        | Tvar _ | Tdependent => False	(* uninstantiated *)
         end.
       Definition encodes (t : type) (v : val) (vs : list runtime_val) : mpred :=
         [| pure_encodes t v vs |].

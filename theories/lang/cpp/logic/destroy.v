@@ -104,6 +104,7 @@ Section destroy.
     | Tfunction _ _ => UNSUPPORTED Q
     | Tarch _ _ => UNSUPPORTED Q
     | Tqualified q ty => False
+    | Tvar _ | Tdependent => False	(* uninstantiated *)
     end%I.
 
   Axiom destroy_val_intro : forall ty p Q,

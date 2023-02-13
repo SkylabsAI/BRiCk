@@ -113,6 +113,8 @@ Module Type Init.
       | Tqualified q ty =>
           if q_const q then ERROR "default initialize const"
           else default_initialize ty p Q
+      | Tvar _ => ERROR "default initialization of type parameter"
+      | Tdependent => ERROR "default initialization of dependent type"
       end%bs%I.
     #[global] Arguments default_initialize !_ _ _ / : assert.
 
@@ -193,6 +195,8 @@ Module Type Init.
       | Tqualified _ ty => False (* unreachable *)
       | Tarch _ _ => UNSUPPORTED (initializing_type ty init)
       | Tfloat _ => UNSUPPORTED (initializing_type ty init)
+      | Tvar _ => ERROR "initialization of type parameter"
+      | Tdependent => ERROR "initialization of dependent type"
       end.
     #[global] Arguments wp_initialize !_ _ _ _ /.
 

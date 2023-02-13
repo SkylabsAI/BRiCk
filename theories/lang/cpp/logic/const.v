@@ -104,6 +104,7 @@ Section defs.
       | Tfunction _ _
       | Tarch _ _ => UNSUPPORTED Q
       | Tqualified cv ty' => False (* unreachable *)
+      | Tvar _ | Tdependent => False	(* uninstantiated *)
       end%I.
 
   (* NOTE: we prefer an entailment ([|--]) to a bi-entailment ([-|-]) or an equality

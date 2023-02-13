@@ -17,8 +17,8 @@
 using namespace clang;
 
 ClangPrinter::ClangPrinter(clang::CompilerInstance *compiler,
-                           clang::ASTContext *context)
-    : compiler_(compiler), context_(context) {
+                           clang::ASTContext *context, bool templates)
+    : compiler_(compiler), context_(context), templates_(templates) {
     mangleContext_ =
         ItaniumMangleContext::create(*context, compiler->getDiagnostics());
 }
@@ -422,6 +422,23 @@ ClangPrinter::printValCat(const Expr *d, CoqPrinter &print) {
 #endif
     // note(gmm): Classify doesn't work on dependent types which occur in templates
     // that clang can't completely eliminate.
+
+    if (templates_) {
+        if (d->isLValue())
+            print.output() << "Lvalue";
+        else if (d->isPRValue())
+            print.output() << "Prvalue";
+        else if (d->isXValue())
+            print.output() << "Xvalue";
+        else{
+            using namespace logging;
+            fatal()
+                << "Error: cannot determine value category"
+                << " (at " << sourceRange(d->getSourceRange()) << ")\n";
+            die();
+        }
+        return;
+    }
 
     auto Class = d->Classify(*this->context_);
     if (Class.isLValue()) {

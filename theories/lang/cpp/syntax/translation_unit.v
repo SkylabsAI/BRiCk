@@ -55,8 +55,29 @@ Variant FunctionBody : Set :=
 #[global] Instance: EqDecision FunctionBody.
 Proof. solve_decision. Defined.
 
+Variant TemplateParam : Set :=
+| TypeParam (_ : bs)
+.
+#[global] Instance: EqDecision TemplateParam.
+Proof. solve_decision. Defined.
+
+Variant TemplateArg : Set :=
+| TypeArg (_ : type)
+.
+#[global] Instance: EqDecision TemplateArg.
+Proof. solve_decision. Defined.
+
+Variant FunctionTemplate : Set :=
+| TemplateAbs (_ : list TemplateParam)
+| TemplateApp (_ : bs) (_ : list TemplateArg)
+| TemplateNone
+.
+#[global] Instance: EqDecision FunctionTemplate.
+Proof. solve_decision. Defined.
+
 Record Func : Set :=
-{ f_return : type
+{ f_template : FunctionTemplate
+; f_return : type
 ; f_params : list (ident * type)
 ; f_cc     : calling_conv
 ; f_arity  : function_arity

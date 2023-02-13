@@ -70,7 +70,7 @@ public:
 
     std::string sourceRange(const clang::SourceRange sr) const;
 
-    ClangPrinter(clang::CompilerInstance* compiler, clang::ASTContext* context);
+    ClangPrinter(clang::CompilerInstance* compiler, clang::ASTContext* context, bool templates);
 
     const clang::ASTContext& getContext() const {
         return *context_;
@@ -84,4 +84,5 @@ private:
     clang::CompilerInstance* compiler_;
     clang::ASTContext* context_;
     clang::MangleContext* mangleContext_;
+    const bool templates_;
 };

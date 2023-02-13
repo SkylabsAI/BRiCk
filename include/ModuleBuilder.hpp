@@ -50,5 +50,6 @@ class Filter;
 class SpecCollector;
 
 void build_module(clang::TranslationUnitDecl* tu, ::Module& mod, Filter& filter,
+                  bool templates,
                   SpecCollector& specs, clang::CompilerInstance*,
                   bool elaborate = true);

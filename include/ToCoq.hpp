@@ -26,11 +26,13 @@ using namespace clang;
 class ToCoqConsumer : public clang::ASTConsumer {
 public:
     explicit ToCoqConsumer(clang::CompilerInstance *compiler,
+                           bool templates,
                            const llvm::Optional<std::string> output_file,
                            const llvm::Optional<std::string> notations_file,
                            bool elaborate = true)
-        : compiler_(compiler), output_file_(output_file),
-          notations_file_(notations_file), elaborate_(elaborate) {}
+        : compiler_(compiler), templates_(templates),
+          output_file_(output_file), notations_file_(notations_file),
+          elaborate_(elaborate) {}
 
     virtual void HandleTranslationUnit(clang::ASTContext &Context) {
         toCoqModule(&Context, Context.getTranslationUnitDecl());
@@ -41,6 +43,7 @@ private:
 
 private:
     clang::CompilerInstance *compiler_;
+    const bool templates_;
     const Optional<std::string> output_file_;
     const Optional<std::string> notations_file_;
     bool elaborate_;

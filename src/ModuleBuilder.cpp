@@ -22,9 +22,10 @@ class Elaborate : public DeclVisitorArgs<Elaborate, void, bool> {
 private:
     clang::CompilerInstance *const ci_;
     std::set<int64_t> visited_;
+    const bool templates_;
 
 public:
-    Elaborate(clang::CompilerInstance *ci) : ci_(ci) {}
+    Elaborate(clang::CompilerInstance *ci, bool templates) : ci_(ci), templates_(templates) {}
 
     void Visit(Decl *d, bool s) {
         if (visited_.find(d->getID()) == visited_.end()) {
@@ -78,7 +79,8 @@ public:
         }
     }
     void VisitCXXMethodDecl(CXXMethodDecl *decl, bool) {
-        if (decl->isDeleted() or decl->isDependentContext())
+        if (decl->isDeleted()
+        || (!templates_ && decl->isDependentContext()))
             return;
 
         if (not decl->getBody() && decl->isDefaulted()) {
@@ -162,6 +164,7 @@ class BuildModule : public ConstDeclVisitorArgs<BuildModule, void, bool> {
 private:
     ::Module &module_;
     Filter &filter_;
+    const bool templates_;
     SpecCollector &specs_;
     clang::ASTContext *const context_;
     std::set<int64_t> visited_;
@@ -187,9 +190,9 @@ private:
     }
 
 public:
-    BuildModule(::Module &m, Filter &filter, clang::ASTContext *context,
+    BuildModule(::Module &m, Filter &filter, bool templates, clang::ASTContext *context,
                 SpecCollector &specs, clang::CompilerInstance *ci)
-        : module_(m), filter_(filter), specs_(specs), context_(context) {}
+        : module_(m), filter_(filter), templates_(templates), specs_(specs), context_(context) {}
 
     void Visit(const Decl *d, bool s) {
         if (visited_.find(d->getID()) == visited_.end()) {
@@ -270,7 +273,7 @@ public:
     }
 
     void VisitFunctionDecl(const FunctionDecl *decl, bool) {
-        if (decl->isDependentContext()) {
+        if (!templates_ && decl->isDependentContext()) {
             return;
         }
 
@@ -357,13 +360,18 @@ public:
     }
 
     void VisitFunctionTemplateDecl(const FunctionTemplateDecl *decl, bool) {
-        // note(gmm): for now, i am just going to return the specializations.
+        if (templates_)
+            go(decl);
+
         for (auto i : decl->specializations()) {
             this->Visit(i, true);
         }
     }
 
-    void VisitClassTemplateDecl(const ClassTemplateDecl *decl, bool) {
+    void VisitClassTemplateDecl(const ClassTemplateDecl *decl, bool p) {
+        if (templates_)
+            this->Visit(decl->getTemplatedDecl(), p);
+
         for (auto i : decl->specializations()) {
             this->Visit(i, true);
         }
@@ -381,6 +389,7 @@ public:
 
 void
 build_module(clang::TranslationUnitDecl *tu, ::Module &mod, Filter &filter,
+             bool templates,
              SpecCollector &specs, clang::CompilerInstance *ci,
              bool elaborate) {
 
@@ -401,7 +410,7 @@ build_module(clang::TranslationUnitDecl *tu, ::Module &mod, Filter &filter,
         // these at all. This would decrease our file representation size and
         // bring us a little bit closer to the semantics rather than relying
         // on choices for how clang implements defaulted operations.
-        Elaborate(ci).VisitTranslationUnitDecl(tu, false);
+        Elaborate(ci, templates).VisitTranslationUnitDecl(tu, false);
 
         // Once we are done visiting the AST, we run all the actions that
         // are pending in the translation unit.
@@ -412,7 +421,7 @@ build_module(clang::TranslationUnitDecl *tu, ::Module &mod, Filter &filter,
     }
 
     auto &ctxt = tu->getASTContext();
-    BuildModule(mod, filter, &ctxt, specs, ci)
+    BuildModule(mod, filter, templates, &ctxt, specs, ci)
         .VisitTranslationUnitDecl(tu, false);
 }
 
