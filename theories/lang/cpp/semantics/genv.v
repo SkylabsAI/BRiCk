@@ -74,7 +74,7 @@ Definition equivalent_int_type (g : genv) (ct : char_type) : integral_type.t :=
     | _ => W8
     end%N
   in
-  integral_type.mk W8 (signedness_of_char g ct).
+  integral_type.mk bits (signedness_of_char g ct).
 
 (** * global environments *)
 
