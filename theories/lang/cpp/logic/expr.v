@@ -300,7 +300,7 @@ Module Type Expr.
         | Some ity => fun v_result =>
             Exists v' v'',
               [| conv_int tu ty ity v v' |] **
-              eval_binop tu op ity ity ity v (Vint 1) v'' **
+              eval_binop tu op ity ity ity v' (Vint 1) v'' **
               [| conv_int tu ity ty v'' v_result |]
         | None => fun _ => UNSUPPORTED ""
         end
