@@ -50,3 +50,9 @@ Section gset_bind.
     gset_bind f {[ a ]} = f a.
   Proof. set_solver. Qed.
 End gset_bind.
+
+(** [option_lookup] instance works When the map might and might not exist *)
+Module OptionLookup.
+  #[export] Instance option_lookup {K V M}: Lookup K V M -> Lookup K V (option M) :=
+    fun lkup key map => if map is Some map then lkup key map else None.
+End OptionLookup.
