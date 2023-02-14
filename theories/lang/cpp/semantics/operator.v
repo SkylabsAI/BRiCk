@@ -58,16 +58,28 @@ Module Type OPERATOR_INTF_FUNCTOR
 
       NOTE: the reasoning principles for [eval_unop] require that
             the values are well-typed.
-
-      This could be made explicit with an axiom saying
-      [[
-      forall tu u argT resT arg res,
-        eval_unop tu u argT resT arg res ->
-        has_type arg argT /\ has_type res resT
-      ]]
    *)
-  Parameter eval_unop : forall {σ : genv}, translation_unit -> UnOp -> forall (argT resT : type) (arg res : val), Prop.
-  Parameter eval_binop_pure : forall `{σ : genv}, translation_unit -> BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
+  Parameter eval_unop : forall {σ : genv},
+      translation_unit -> UnOp -> forall (argT resT : type) (arg res : val), Prop.
+
+  Axiom eval_unop_pure_well_typed : forall `{MOD : tu ⊧ σ} uo ty1 ty2 v1 v2,
+      eval_unop tu uo ty1 ty2 v1 v2 ->
+      has_type v1 ty1 /\ has_type v2 ty2.
+
+  (** [eval_binop_pure tu op lhsT rhsT resultT lhsV rhsV resultV] holds when
+      evaluating [lhsV `op` rhsV] (such that [has_type lhsV lhsT] and
+      [has_type rhsV rhsT]) results in [resultT] (and
+      [has_type resultV resultT]).
+
+      NOTE: the reasoning principles for [eval_binop_pure] require that
+            the values are well-typed.
+   *)
+  Parameter eval_binop_pure : forall `{σ : genv},
+      translation_unit -> BinOp -> forall (lhsT rhsT resT : type) (lhs rhs res : val), Prop.
+
+  Axiom eval_binop_pure_well_typed : forall `{MOD : tu ⊧ σ} bo ty1 ty2 ty3 v1 v2 v3,
+      eval_binop_pure tu bo ty1 ty2 ty3 v1 v2 v3 ->
+      has_type v1 ty1 /\ has_type v2 ty2 /\ has_type v3 ty3.
 
 Section operator_axioms.
   Context {σ : genv} (tu : translation_unit).
