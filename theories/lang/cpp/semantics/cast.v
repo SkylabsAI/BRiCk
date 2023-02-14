@@ -128,10 +128,10 @@ Section conv_int.
   Context `{Hmod : tu ⊧ σ}.
 
   Lemma conv_int_well_typed ty ty' v v' :
-       tu ⊧ σ ->
+       tu ⊧ σ -> (* TODO only needed if either type is a [Tenum] *)
        conv_int tu ty ty' v v' ->
        has_type v ty /\ has_type v' ty'.
-  Proof. (*
+  Proof. (* TODO -- prove this
     rewrite /conv_int;
     destruct (underlying_type tu ty) eqn:src_ty; rewrite /=; try tauto;
     destruct (underlying_type tu ty') eqn:dst_ty; rewrite /=; try tauto;
