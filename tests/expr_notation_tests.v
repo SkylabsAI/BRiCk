@@ -254,8 +254,8 @@ Section TestExprNotations.
   (* TODO (JH): Fix up the printing boxes s.t. the widths/splits correspond (and extra
      breaks aren't inserted; cf. [Ecall_cons_wrap_2].
    *)
-  #[local] Definition Emember_call_cons_wrap_1 : Expr := Emember_call (inl ("fn"%bs, Direct, ty)) e [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
-  #[local] Definition Emember_call_cons_wrap_2 : Expr := Emember_call (inl ("fn"%bs, Direct, ty)) (Evar (Gname "foo") ty) [Eint 42 ty; Ebool false; Estring "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
+  #[local] Definition Emember_call_cons_wrap_1 : Expr := Emember_call (inl ("fn"%bs, Direct, ty)) e [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
+  #[local] Definition Emember_call_cons_wrap_2 : Expr := Emember_call (inl ("fn"%bs, Direct, ty)) (Evar (Gname "foo") ty) [Eint 42 ty; Ebool false; Estring' "FooBarBazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbazfoobarbaz" ty]%list ty.
   Print Emember_call_cons_wrap_1. Print Emember_call_cons_wrap_2.
 
   #[local] Definition Esubscript_1 : Expr := Esubscript e (Eint 42 ty) Lvalue ty.
