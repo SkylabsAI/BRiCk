@@ -67,8 +67,9 @@ Definition convert_type_op {σ : genv} (tu : translation_unit) (b : BinOp) (ty1 
         | Some to => Some (to, to, to)
         | _ => None
         end
-      | Bdotp => None
-      | Bdotip => None
+      | Bdotp
+      | Bdotip
+      | Bunsupported _ => None
       end
     | _ , _ => None
     end

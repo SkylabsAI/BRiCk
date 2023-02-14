@@ -535,7 +535,7 @@ Module Type Expr.
     Axiom wp_operand_cast_integral : forall e t Q,
         wp_operand e (fun v free =>
            Exists v', [| conv_int tu (type_of e) t v v' |] ** Q v' free)
-        |-- wp_operand (Ecast Cintegral Prvalue e t) Q.
+        |-- wp_operand (Ecast Cintegral e Prvalue t) Q.
 
     Axiom wp_operand_cast_null : forall e t Q,
         wp_operand e Q
