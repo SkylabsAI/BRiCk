@@ -19,7 +19,7 @@ From bedrock.lang.cpp Require Import ast semantics.values.
    the type [ty] using the size [sz] and the signedness [sgn].
  *)
 Definition arith_as (ty : type) : option (int_type.t * signed) :=
-  match ty with
+  match drop_qualifiers ty with
   | Tnum sz sgn => if bool_decide (int_type.t_le int_type.Iint sz) then Some (sz, sgn) else None
   | _ => None
   end.
@@ -274,9 +274,37 @@ Axiom eval_shr : forall ty `{supports_arith ty_by} w sgn (a b : Z),
     (includes: `<`, `<=`, `==`, `!=`, `>=`, `>`, and `<=>`)
     These are type-homogeneous on inputs and have an output
     of either `bool` (in C++) or `int` (in C).
-
-    As with other operators, the arguments are always arithmetic.
  *)
+
+(** Relational comparisons are allowed on *scoped* enumerations
+    in addition to integral types. We relax this to also allow
+    comparisons on unscoped enumerations.
+
+    This is safe because the dynamic semantics of comparison is
+    defined the same way as it is on the underlying type.
+
+    In addition, the BRiCk AST explicitly contains the conversions
+    for unscoped enumerations, so, in practice, comparison of naked
+    unscoped enumeration values will never occur.
+ *)
+Class supports_rel (ty : type) : Prop :=
+{ _ : supports_arith ty \/
+      match drop_qualifiers ty with
+      | Tenum _ => True
+      | _ => False
+      end }.
+
+#[global] Instance: supports_rel Tint.
+Proof. constructor; left; refine _. Qed.
+#[global] Instance: supports_rel Tuint.
+Proof. constructor; left; refine _. Qed.
+#[global] Instance: supports_rel Tlonglong.
+Proof. constructor; left; refine _. Qed.
+#[global] Instance: supports_rel Tulonglong.
+Proof. constructor; left; refine _. Qed.
+#[global] Instance: forall nm, supports_rel (Tenum nm).
+Proof. constructor; right; exact I. Qed.
+
 
 (** [relop_result_type ty] holds on types [ty] that can be the result of a
     relational operator comparison, e.g. `==` or `<`.
@@ -301,9 +329,10 @@ Definition b2i (b : bool) : Z := if b then 1 else 0.
    compared after integer conversion.
 
    Note that the [has_type] facts guarantees that the enum is valid if [ty] is
-   an enum. *)
+   an enum.
+ *)
 #[local] Definition eval_int_rel_op (o : Z -> Z -> Prop) {RD : RelDecision o} (bo : BinOp) : Prop :=
-  forall ty (_ : supports_arith ty) ty' (av bv : Z),
+  forall ty (_ : supports_rel ty) ty' (av bv : Z),
     let a := Vint av in
     let b := Vint bv in
     relop_result_type ty' ->
