@@ -143,6 +143,36 @@ with a value category).
 #[global] Instance Cast_eq_dec: EqDecision Cast.
 Proof. solve_decision. Defined.
 
+#[global] Instance Cast_is_dependent : IsDependent Cast :=
+  fix go c :=
+  let _ : IsDependent _ := go in
+  match c with
+  | Cdependent
+  | Cbitcast
+  | Clvaluebitcast
+  | Cl2r
+  | Cnoop
+  | Carray2ptr
+  | Cfun2ptr
+  | Cint2ptr
+  | Cptr2int
+  | Cptr2bool
+  | Cderived2base _
+  | Cbase2derived _
+  | Cintegral
+  | Cint2bool
+  | Cfloat2int
+  | Cnull2ptr
+  | Cbuiltin2fun
+  | Cctor
+  | C2void
+  | Cuser _ => false
+  | Creinterpret t => is_dependent t
+  | Cstatic c => is_dependent c
+  | Cdynamic _ _ => false
+  | Cconst t => is_dependent t
+  end.
+
 (** * References *)
 Variant VarRef : Set :=
 | Lname (_ : localname)
@@ -248,3 +278,68 @@ Proof.
 Defined.
 
 Definition Edefault_init_expr (e : Expr) : Expr := e.
+
+(** ** Dependent expressions *)
+
+(**
+An expression is dependent if carries a dependent type
+*)
+#[global] Instance Expr_is_dependent : IsDependent Expr :=
+  fix go e :=
+  let _ : IsDependent _ := go in
+  match e with
+  | Econst_ref _ t
+  | Evar _ t
+  | Echar _ t
+  | Estring _ t
+  | Eint _ t => is_dependent t
+  | Ebool _ => false
+  | Eunop _ e t => is_dependent e || is_dependent t
+  | Ebinop _ e1 e2 t => is_dependent e1 || is_dependent e2 || is_dependent t
+  | Eread_ref e => is_dependent e
+  | Ederef e t => is_dependent e || is_dependent t
+  | Eaddrof e => is_dependent e
+  | Eassign e1 e2 t
+  | Eassign_op _ e1 e2 t => is_dependent e1 || is_dependent e2 || is_dependent t
+  | Epreinc e t
+  | Epostinc e t
+  | Epredec e t
+  | Epostdec e t => is_dependent e || is_dependent t
+  | Eseqand e1 e2
+  | Eseqor e1 e2
+  | Ecomma e1 e2 => is_dependent e1 || is_dependent e2
+  | Ecall e args t => is_dependent e || is_dependent args || is_dependent t
+  | Ecast c e _ t => is_dependent c || is_dependent e || is_dependent t
+  | Emember e _ t => is_dependent e || is_dependent t
+  | Emember_call m obj args t =>
+    match m with
+    | inl (_, _, t) => is_dependent t
+    | inr e => is_dependent e
+    end || is_dependent obj || is_dependent args || is_dependent t
+  | Esubscript e1 e2 _ t => is_dependent e1 || is_dependent e2 || is_dependent t
+  | Esize_of x t
+  | Ealign_of x t =>
+    match x with
+    | inl t => is_dependent t
+    | inr e => is_dependent e
+    end || is_dependent t
+  | Eoffset_of _ t => is_dependent t
+  | Econstructor _ args t => is_dependent args || is_dependent t
+  | Eimplicit e => is_dependent e
+  | Eimplicit_init t => is_dependent t
+  | Eif e1 e2 e3 _ t => is_dependent e1 || is_dependent e2 || is_dependent e3 || is_dependent t
+  | Ethis t => is_dependent t
+  | Enull => false
+  | Einitlist es def t => is_dependent es || is_dependent def || is_dependent t
+  | Enew f args t sz init => is_dependent f.2 || is_dependent args || is_dependent t || is_dependent sz || is_dependent init
+  | Edelete _ f arg t => is_dependent f.2 || is_dependent arg || is_dependent t
+  | Eandclean e
+  | Ematerialize_temp e _ => is_dependent e
+  | Eatomic _ args t => is_dependent args || is_dependent t
+  | Eva_arg e t => is_dependent e || is_dependent t
+  | Epseudo_destructor t e => is_dependent t || is_dependent e
+  | Earrayloop_init _ e1 _ _ e2 t => is_dependent e1 || is_dependent e2 || is_dependent t
+  | Earrayloop_index _ t
+  | Eopaque_ref _ _ t
+  | Eunsupported _ _ t => is_dependent t
+  end.

@@ -29,6 +29,10 @@ Record Initializer :=
   ; init_init : Expr }.
 #[global] Instance: EqDecision Initializer.
 Proof. solve_decision. Defined.
+#[global] Instance Initializer_is_dependent : IsDependent Initializer :=
+  fun r =>
+  is_dependent r.(init_type) ||
+  is_dependent r.(init_init).
 
 Record Ctor : Set :=
 { c_class  : globname
@@ -39,6 +43,13 @@ Record Ctor : Set :=
 }.
 #[global] Instance: EqDecision Ctor.
 Proof. solve_decision. Defined.
+#[global] Instance Ctor_is_dependent : IsDependent Ctor :=
+  fun r =>
+  is_dependent r.(c_params).*2 ||
+  match r.(c_body) with
+  | Some (UserDefined p) => is_dependent p.1 || is_dependent p.2
+  | _ => false
+  end.
 
 Record Dtor : Set :=
 { d_class  : globname
@@ -47,6 +58,9 @@ Record Dtor : Set :=
 }.
 #[global] Instance: EqDecision Dtor.
 Proof. solve_decision. Defined.
+#[global] Instance Dtor_is_dependent : IsDependent Dtor :=
+  fun r =>
+  is_dependent r.(d_body).
 
 Variant FunctionBody : Set :=
 | Impl (_ : Stmt)
@@ -54,6 +68,12 @@ Variant FunctionBody : Set :=
 .
 #[global] Instance: EqDecision FunctionBody.
 Proof. solve_decision. Defined.
+#[global] Instance FunctionBody_is_dependent : IsDependent FunctionBody :=
+  fun f =>
+  match f with
+  | Impl s => is_dependent s
+  | Builtin _ => false
+  end.
 
 Variant TemplateParam : Set :=
 | TypeParam (_ : bs)
@@ -66,6 +86,11 @@ Variant TemplateArg : Set :=
 .
 #[global] Instance: EqDecision TemplateArg.
 Proof. solve_decision. Defined.
+#[global] Instance TemplateArg_is_dependent : IsDependent TemplateArg :=
+  fun arg =>
+  match arg with
+  | TypeArg t => is_dependent t
+  end.
 
 Variant FunctionTemplate : Set :=
 | TemplateAbs (_ : list TemplateParam)
@@ -74,6 +99,13 @@ Variant FunctionTemplate : Set :=
 .
 #[global] Instance: EqDecision FunctionTemplate.
 Proof. solve_decision. Defined.
+#[global] Instance FunctionTemplate_is_dependent : IsDependent FunctionTemplate :=
+  fun t =>
+  match t with
+  | TemplateAbs _ => true
+  | TemplateApp _ args => is_dependent args
+  | TemplateNone => false
+  end.
 
 Record Func : Set :=
 { f_template : FunctionTemplate
@@ -85,6 +117,12 @@ Record Func : Set :=
 }.
 #[global] Instance: EqDecision Func.
 Proof. solve_decision. Defined.
+#[global] Instance Func_is_dependent : IsDependent Func :=
+  fun r =>
+  is_dependent r.(f_template) ||
+  is_dependent r.(f_return) ||
+  is_dependent r.(f_params).*2 ||
+  is_dependent r.(f_body).
 
 Record Method : Set :=
 { m_return  : type
@@ -97,6 +135,11 @@ Record Method : Set :=
 }.
 #[global] Instance: EqDecision Method.
 Proof. solve_decision. Defined.
+#[global] Instance Method_is_dependent : IsDependent Method :=
+  fun r =>
+  is_dependent r.(m_return) ||
+  is_dependent r.(m_params).*2 ||
+  is_dependent r.(m_body).
 
 Record Member : Set := mkMember
 { mem_name : ident
@@ -106,7 +149,10 @@ Record Member : Set := mkMember
 ; mem_layout : LayoutInfo }.
 #[global] Instance: EqDecision Member.
 Proof. solve_decision. Defined.
-
+#[global] Instance Member_is_dependent : IsDependent Member :=
+  fun r =>
+  is_dependent r.(mem_type) ||
+  is_dependent r.(mem_init).
 
 Record Union : Set :=
 { u_fields : list Member
@@ -124,6 +170,9 @@ Record Union : Set :=
 }.
 #[global] Instance: EqDecision Union.
 Proof. solve_decision. Defined.
+#[global] Instance Union_is_dependent : IsDependent Union :=
+  fun r =>
+  is_dependent r.(u_fields).
 
 
 Variant LayoutType : Set := POD | Standard | Unspecified.
@@ -162,6 +211,9 @@ Record Struct : Set :=
 }.
 #[global] Instance: EqDecision Struct.
 Proof. solve_decision. Defined.
+#[global] Instance Struct_is_dependent : IsDependent Struct :=
+  fun r =>
+  is_dependent r.(s_fields).
 
 Definition has_vtable (s : Struct) : bool :=
   match s.(s_virtuals) with

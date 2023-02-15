@@ -54,3 +54,26 @@ Record field : Set :=
 }.
 #[global] Instance field_eq: EqDecision field.
 Proof. solve_decision. Defined.
+
+(**
+[is_dependent x] means that [x : A] depends on template parameters.
+*)
+Class IsDependent A := is_dependent (x : A) : bool.
+#[global] Hint Mode IsDependent + : typeclass_instances.
+#[global] Arguments is_dependent : simpl never.
+
+#[global] Instance option_is_dependent `{!names.IsDependent A} : IsDependent (option A) :=
+  fun m =>
+  if m is Some x then is_dependent x else false.
+
+#[global] Instance list_is_dependent `{!names.IsDependent A} : IsDependent (list A) :=
+  existsb is_dependent.
+
+Section list.
+  Context `{!names.IsDependent A}.
+  Implicit Types (x : A) (xs : list A).
+
+  Lemma is_dependent_True xs : is_dependent xs <-> Exists is_dependent xs.
+  Proof. apply existb_True. Qed.
+End list.
+

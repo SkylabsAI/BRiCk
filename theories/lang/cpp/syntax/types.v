@@ -477,3 +477,30 @@ Notation Tlong := (Tnum long_bits Signed) (only parsing).
 
 Notation Tulonglong := (Tnum long_long_bits Unsigned) (only parsing).
 Notation Tlonglong := (Tnum long_long_bits Signed) (only parsing).
+
+(** ** Dependent types *)
+
+(**
+A type is dependent if has a subterm [Tvar] or [Tdependent]
+*)
+#[global] Instance type_is_dependent : IsDependent type :=
+  fix go t :=
+  let _ : IsDependent _ := go in
+  match t with
+  | Tptr t
+  | Tref t
+  | Trv_ref t => is_dependent t
+  | Tnum _ _
+  | Tvoid => false
+  | Tarray t _ => is_dependent t
+  | Tnamed _
+  | Tenum _ => false
+  | @Tfunction _ _ ret args => is_dependent ret || is_dependent args
+  | Tbool => false
+  | Tmember_pointer _ t => is_dependent t
+  | Tfloat _ => false
+  | Tqualified _ t => is_dependent t
+  | Tnullptr
+  | Tarch _ _ => false
+  | Tvar _ | Tdependent => true
+  end.
