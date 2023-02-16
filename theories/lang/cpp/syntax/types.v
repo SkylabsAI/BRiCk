@@ -148,6 +148,7 @@ Module int_type.
   Notation Ishort := W16 (only parsing).
   Notation Iint := W32 (only parsing).
   Notation Ilong := W64 (only parsing).
+  (** warning: LLP64 model uses [long_bits := W32] *)
   Notation Ilonglong := W64 (only parsing).
 
   Definition bytesN (t : t) : N :=
