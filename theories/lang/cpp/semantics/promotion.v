@@ -169,18 +169,17 @@ Definition promote_integral {σ : genv} (tu : translation_unit) (ty : type) : op
   | Tarch _ _ => None
   end.
 
-(* With the BRiCk instantation of sizes, both `char` and `wchar` promote to `int` *)
 Goal forall {σ : genv} tu, promote_integral tu Tchar = Some Tint.
 Proof.
   intros. rewrite /promote_integral/=.
   destruct (char_signed σ); done.
-Qed.
-Goal forall {σ : genv} tu, promote_integral tu Twchar = Some Tint.
+Succeed Qed. Abort.
+Goal forall {σ : genv} tu, promote_integral tu Twchar = Some (integral_type.to_type $ equivalent_int_type _ char_type.Cwchar).
 Proof.
-  intros. rewrite /promote_integral/=.
+  intros. rewrite /promote_integral/equivalent_int_type/=.
   rewrite /fully_representable/=.
   destruct (wchar_signed σ); done.
-Qed.
+Succeed Qed. Abort.
 
 (* Test cases *)
 Succeed Example promote_short : forall {σ : genv} tu,
