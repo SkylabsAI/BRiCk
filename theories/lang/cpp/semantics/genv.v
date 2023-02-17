@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020 BedRock Systems, Inc.
+ * Copyright (c) 2020-2023 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -65,14 +65,18 @@ Definition signedness_of_char (σ : genv) (ct : char_type) : signed :=
  *)
 Definition equivalent_int_type (g : genv) (ct : char_type) : integral_type.t :=
   let bits :=
-    match char_type.bytesN ct with
-    | 8 => W8
-    | 16 => W16
-    | 32 => W32
-    | 64 => W64
-    | 128 => W128
-    | _ => W8
-    end%N
+    match ct with
+    | char_type.Cchar => int_type.Ichar
+    | _ =>
+        match char_type.bitsN ct with
+        | 8 => W8
+        | 16 => W16
+        | 32 => W32
+        | 64 => W64
+        | 128 => W128
+        | _ => W8
+        end%N
+    end
   in
   integral_type.mk bits (signedness_of_char g ct).
 
