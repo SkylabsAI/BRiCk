@@ -686,8 +686,8 @@ Section with_ct.
               iDestruct (observe (.[ Tchar ! z] |-> validR) with "zs")
                 as "#valid"; last by iFrame "#".
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tchar) q (Vchar c))
-                            (Tchar) (Z.to_nat z) zs ltac:(lia)).
+                            (fun c => primR Tchar q (Vchar c))
+                            Tchar (Z.to_nat z) zs ltac:(lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
             + iClear "zs".
               iDestruct (observe (.[Tchar ! z] |-> validR) with "zeros")
@@ -698,8 +698,8 @@ Section with_ct.
                 subst.
               rewrite -_offsetR_sub_sub; apply _offsetR_observe.
               pose proof (arrayR_valid_obs
-                            (fun c => primR (Tchar) q (Vchar 0))
-                            (Tchar) (Z.to_nat z')
+                            (fun c => primR Tchar q (Vchar 0))
+                            Tchar (Z.to_nat z')
                             (repeat () (Z.to_nat (sz - size zs)))
                             ltac:(rewrite repeat_length; lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
@@ -867,8 +867,8 @@ Section with_ct.
           intros * Hsize; unfold R; unfold size in Hsize.
           apply observe_sep_l.
           pose proof (arrayR_valid_obs
-                        (fun c => primR (Tchar) q (Vchar c))
-                        (Tchar) (Z.to_nat z) zs ltac:(lia)).
+                        (fun c => primR Tchar q (Vchar c))
+                        Tchar (Z.to_nat z) zs ltac:(lia)).
           by rewrite ->Z2Nat.id in H by lia.
         Qed.
       End R_Theory.
