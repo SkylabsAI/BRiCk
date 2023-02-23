@@ -40,6 +40,25 @@ Succeed Example underlying_int : forall tu, underlying_type tu Tint = Tint :=
 Succeed Example underlying_int : forall tu, underlying_type tu (Qconst Tint) = Qconst Tint :=
   ltac:(compute; auto).
 
+(** [underlying_unqual_type tu ty] is the unqualified type that underlies [ty].
+
+    This is the strip qualifiers function if [ty] is not an `enum`.
+
+ *)
+Definition underlying_unqual_type (tu : translation_unit) (ty : type) : type :=
+  let '(cv, ty') := decompose_type ty in
+  match ty' with
+  | Tenum nm as ty =>
+      match tu.(globals) !! nm with
+      | Some (Genum ty _) => ty
+      | _ => ty'
+      end
+  | _ => ty'
+  end.
+
+Succeed Example underlying_int : forall tu, underlying_unqual_type tu (Qconst Tint) = Tint :=
+  ltac:(compute; auto).
+
 
 Section representable.
   Context {σ : genv}.

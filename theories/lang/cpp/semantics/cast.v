@@ -73,7 +73,7 @@ Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
   *)
 Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' : val) : Prop :=
   has_type v from /\
-  match underlying_type tu from , underlying_type tu to with
+  match underlying_unqual_type tu from , underlying_unqual_type tu to with
   | Tbool , Tnum _ _ =>
       match is_true v with
       | Some v => v' = Vbool v
@@ -119,7 +119,7 @@ Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' :
       | _ => False
       end
   | Tenum _ , _
-  | _ , Tenum _ (* not reachable due to [underlying_type] *)
+  | _ , Tenum _ (* not reachable due to [underlying_unqual_type] *)
   | _ , _ => False
   end.
 Arguments conv_int !_ !_ _ _ /.
@@ -131,7 +131,8 @@ Section conv_int.
        tu ⊧ σ -> (* TODO only needed if either type is a [Tenum] *)
        conv_int tu ty ty' v v' ->
        has_type v ty /\ has_type v' ty'.
-  Proof. (* TODO -- prove this
+  Proof.
+  (* TODO -- prove this
     rewrite /conv_int;
     destruct (underlying_type tu ty) eqn:src_ty; rewrite /=; try tauto;
     destruct (underlying_type tu ty') eqn:dst_ty; rewrite /=; try tauto;
