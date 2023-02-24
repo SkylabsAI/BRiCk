@@ -209,8 +209,14 @@ Qed.
 #[global] Instance bool_size_of {σ : genv} : SizeOf Tbool 1.
 Proof. done. Qed.
 
+(* TODO?: consider using [SizeOf (Tnum sz sgn) (bytesN sz)]. *)
 #[global] Instance int_size_of {σ : genv} sz sgn n :
   TCEq (bytesN sz) n -> SizeOf (Tnum sz sgn) n.
+Proof. by rewrite /SizeOf TCEq_eq=><-. Qed.
+
+(* TODO?: consider using [SizeOf (Tnum sz sgn) (char_type.bytesN ct)]. *)
+#[global] Instance char_size_of {σ' : genv} ct n :
+  TCEq (char_type.bytesN ct) n -> SizeOf (Tchar_ ct) n.
 Proof. by rewrite /SizeOf TCEq_eq=><-. Qed.
 
 #[global] Instance qualified_size_of {σ : genv} qual ty n :
