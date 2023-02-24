@@ -7,6 +7,8 @@
 
     This file covers conversions between primitive types.
  *)
+From elpi Require Import locker.
+
 From bedrock.prelude Require Import base numbers.
 From bedrock.lang.cpp.arith Require Export operator.
 From bedrock.lang.cpp Require Import ast semantics.values semantics.promotion.
@@ -33,6 +35,8 @@ From bedrock.lang.cpp Require Import ast semantics.values semantics.promotion.
     the representation. [conv_int] abstracts these details for use in the
     rest of the semantics.
  *)
+
+mlock
 Definition to_char (from_sz : N) (from_sgn : signed) (to_bits : N) (*to_sgn : signed*) (v : Z) : N :=
   if from_sgn is Signed then
     if bool_decide (v < 0) then
@@ -40,6 +44,7 @@ Definition to_char (from_sz : N) (from_sgn : signed) (to_bits : N) (*to_sgn : si
     else Z.to_N $ to_unsigned_bits to_bits v
   else Z.to_N $ to_unsigned_bits to_bits v.
 
+mlock
 Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : signed) (n : N) : Z :=
   (* first we need to sign extend using frm_sgn *)
   let n : Z :=
@@ -52,30 +57,33 @@ Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : s
     and you wrote (128)
   *)
 
-Succeed Example TEST : of_char 8 Signed 32 Signed 1 = 1 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 32 Signed 128 = -128 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 32 Signed 127 = 127 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 16 Unsigned 128 = 65408 := eq_refl.
-Succeed Example TEST : of_char 32 Signed 8 Signed 256 = 0 := eq_refl.
-Succeed Example TEST : of_char 32 Signed 8 Signed 128 = -128 := eq_refl.
-Succeed Example TEST : of_char 32 Signed 16 Signed 128 = 128 := eq_refl.
-Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
+Module Type CHAR_TESTS.
+Example TEST : of_char 8 Signed 32 Signed 1 = 1. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 8 Signed 32 Signed 128 = -128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 8 Signed 32 Signed 127 = 127. Proof. by rewrite of_char.unlock. Abort.
+
+Example TEST : of_char 8 Signed 16 Unsigned 128 = 65408. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 32 Signed 8 Signed 256 = 0. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 32 Signed 8 Signed 128 = -128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 32 Signed 16 Signed 128 = 128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 16 Signed 8 Unsigned 128 = 128. Proof. by rewrite of_char.unlock. Abort.
 
 (* Other tests *)
-Succeed Example TEST : of_char 8 Signed 8 Unsigned 128 = 128 := eq_refl.
-Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
+Example TEST : of_char 8 Signed 8 Unsigned 128 = 128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 16 Signed 8 Unsigned 128 = 128. Proof. by rewrite of_char.unlock. Abort.
 
-Succeed Example TEST : of_char 8 Signed 8 Signed 128 = -128 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 8 Signed 129 = -127 := eq_refl.
+Example TEST : of_char 8 Signed 8 Signed 128 = -128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 8 Signed 8 Signed 129 = -127. Proof. by rewrite of_char.unlock. Abort.
 
-Succeed Example TEST : of_char 16 Signed 8 Signed 128 = -128 := eq_refl.
-Succeed Example TEST : of_char 16 Signed 8 Signed 129 = -127 := eq_refl.
+Example TEST : of_char 16 Signed 8 Signed 128 = -128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 16 Signed 8 Signed 129 = -127. Proof. by rewrite of_char.unlock. Abort.
 
-Succeed Example TEST : of_char 8 Unsigned 8 Signed 129 = -127 := eq_refl.
-Succeed Example TEST : of_char 16 Unsigned 8 Signed 129 = -127 := eq_refl.
+Example TEST : of_char 8 Unsigned 8 Signed 129 = -127. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 16 Unsigned 8 Signed 129 = -127. Proof. by rewrite of_char.unlock. Abort.
 
-Succeed Example TEST : of_char 8 Unsigned 8 Signed 128 = -128 := eq_refl.
-Succeed Example TEST : of_char 8 Unsigned 16 Signed 128 = 128 := eq_refl.
+Example TEST : of_char 8 Unsigned 8 Signed 128 = -128. Proof. by rewrite of_char.unlock. Abort.
+Example TEST : of_char 8 Unsigned 16 Signed 128 = 128. Proof. by rewrite of_char.unlock. Abort.
+End CHAR_TESTS.
 
 (* END TODO move to syntax *)
 
