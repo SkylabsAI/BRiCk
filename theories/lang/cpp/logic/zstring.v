@@ -47,11 +47,37 @@ Section with_ct.
   #[global] Arguments _strlen zs : simpl never.
   Notation strlen zs := (_strlen zs%Z).
 
+  Definition _WF_alt {σ : genv} (zs : t) : Prop :=
+    let zs' := take (length zs - 1) zs in
+    last zs = Some 0%N /\ 0%N ∉ zs' /\
+    List.Forall (λ c, 0 <= c < 2 ^ char_type.bitsN ct)%N zs'.
+  #[global] Instance _WF_alt_dec {σ : genv} zs : Decision (_WF_alt zs) := _.
+
   Definition _WF {σ : genv} (zs : t) : Prop :=
     exists zs', zs = zs' ++ [0]%N /\ not (In 0%N zs') /\
     List.Forall (λ c : N, has_type (Vchar c) Tchar) zs.
   #[global] Arguments _WF {σ} zs : simpl never.
-  Notation WF zs := (_WF zs%Z).
+
+  Lemma _WF_WF_alt {σ : genv} zs : _WF zs <-> _WF_alt zs.
+  Proof.
+    rewrite /_WF /_WF_alt elem_of_list_In; setoid_rewrite <-has_type_char'; split. {
+      move=> [] zs' [] -> [].
+      rewrite last_app /= app_length Nat.add_sub take_app Forall_app Forall_singleton.
+      naive_solver.
+    }
+    move=> [] Hl [] Hin Hall; exists (take (length zs - 1) zs).
+    destruct zs as [|z zs] using rev_ind => //= {IHzs}.
+    move: Hl Hin Hall;
+      rewrite last_app app_length /=. rewrite Nat.add_sub take_app.
+      rewrite Forall_app Forall_singleton.
+    intros [= ->]; intros; split_and! => //.
+    lia.
+  Qed.
+
+  Notation WF zs := (_WF zs%N).
+  #[global, program] Instance _WF_dec {σ : genv} zs : Decision (_WF zs) :=
+    cast_if (decide (_WF_alt zs)).
+  Solve All Obligations with intros; exact /_WF_WF_alt.
 
   (* this definition is less intensional, and seems to work more
      smoothly wrt. automation: *)
@@ -124,6 +150,23 @@ Section with_ct.
         + split.
           * intro CONTRA; apply Hin; by inversion CONTRA.
           * by constructor.
+    Qed.
+
+    (* Unlike WF_cons, here the explicit tail [++ [0]] lets us write a more elegant lemma. *)
+    Lemma WF_cons' (z : N) (zs : t) :
+      WF (z :: zs ++ [0%N]) <->
+      (z <> 0)%N /\ has_type (Vchar z) Tchar /\ WF (zs ++ [0%N]).
+    Proof.
+      rewrite /_WF/=. setoid_rewrite Forall_cons.
+      split.
+      - case => [[|z' zs'] [/= [-> Hzs']]]; first by destruct zs.
+        move: Hzs' => /(app_inj_2 _ _ _ _ eq_refl) [-> _].
+        move=> [/Decidable.not_or [Hz Hin] [Hz'Bounds Hrest]].
+        split_and! => //.
+        by exists zs'.
+      - case => Hz [HzBounds] [] zs' [] /(app_inj_2 _ _ _ _ eq_refl) [-> _] [Hin].
+        exists (z :: zs'); split_and! => //.
+        intros ?%in_inv. naive_solver.
     Qed.
 
     (* WF is prefix-free predicate *)
