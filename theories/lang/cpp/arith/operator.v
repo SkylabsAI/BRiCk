@@ -17,6 +17,9 @@ From bedrock.lang.cpp.arith Require Import types.
 Definition trim (w : N) (v : Z) : Z :=
   v mod (2 ^ Z.of_N w).
 
+(** [trim] on [N]. Not much theory available yet. *)
+Definition trimN (bits : N) (v : N) : N := v `mod` 2^bits.
+
 Lemma trim_0_l:
   forall (v: Z),
     trim 0 v = 0.

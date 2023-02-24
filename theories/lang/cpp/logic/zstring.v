@@ -8,8 +8,6 @@ From Coq Require Import ZArith.BinInt Lists.List.
 
 From iris.proofmode Require Import proofmode.
 
-Require Import bedrock.prelude.stdpp_ssreflect.
-
 Require Import bedrock.prelude.base.
 From bedrock.lang.bi Require Import prelude observe.
 From bedrock.lang.cpp.semantics Require Import values.

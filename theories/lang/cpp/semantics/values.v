@@ -136,6 +136,9 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   #[global] Instance Vchar_Inj : Inj (=) (=) Vchar := Vchar_inj.
   #[global] Instance Vbool_Inj : Inj (=) (=) Vbool := Vbool_inj.
 
+  Definition N_to_char (t : char_type.t) (z : N) : val :=
+    Vchar $ trimN (char_type.bitsN t) z.
+
   (* the default value for a type.
   * this is used to initialize primitives if you do, e.g.
   *   [int x{};]

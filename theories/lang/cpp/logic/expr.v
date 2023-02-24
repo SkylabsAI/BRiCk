@@ -16,7 +16,7 @@ From bedrock.lang.cpp.logic Require Import
      operator
      destroy
      initializers
-     wp call
+     wp call core_string
      translation_unit
      dispatch layout.
 Require Import bedrock.lang.bi.errors.
@@ -44,20 +44,6 @@ Module Type Expr.
   Section with_resolve.
     Context `{Σ : cpp_logic thread_info} {resolve:genv}.
     Variables (tu : translation_unit) (ρ : region).
-
-    (** UPSTREAM *)
-    Definition to_signedN (bits : N) (val : N) : Z :=
-        if bool_decide (bits = 0%N)
-        then 0%Z
-        else
-          if bool_decide (val `mod` 2 ^ bits >= 2 ^ (bits - 1))%Z
-          then (val `mod` 2 ^ bits - 2 ^ bits)%Z
-          else (val `mod` 2 ^ bits)%Z.
-
-    Definition trimN (bits : N) (v : N) : N := v `mod` 2^bits.
-    Definition N_to_char (t : char_type.t) (z : N) : val :=
-      Vchar $ trimN (char_type.bitsN t) z.
-    (** UPSTREAM *)
 
     #[local] Notation wp_lval := (wp_lval tu ρ).
     #[local] Notation wp_prval := (wp_prval tu ρ).
@@ -118,17 +104,6 @@ Module Type Expr.
           Q (Vbool b) FreeTemps.id
       |-- wp_operand (Ebool b) Q.
 
-    (** [strings_bytesR ct q chars] is [q] (const) fractional ownership of
-        [chars] with a trailing [0].
-
-        NOTE that [chars] is in units of *characters* using the standard
-             character encoding (see [syntax/expr.v]). This is *not* the
-             same as bytes, and will not be for multi-byte characters.
-     *)
-    Definition string_bytesR (cty : char_type) (q : Qp) (ls : list N) : Rep :=
-      let ty := Tchar_ cty in
-      ([∗list] i ↦ c ∈ (ls ++ [0%N]), .[ ty ! i ] |-> primR ty (cQp.c q) (N_to_char cty c)).
-
     (** * String Literals
 
         The standard states <https://eel.is/c++draft/lex.string#9>:
@@ -165,8 +140,8 @@ Module Type Expr.
      *)
     Axiom wp_lval_string : forall chars ct Q,
           Forall (p : ptr) (q : Qp),
-            p |-> string_bytesR ct q chars -*
-            □ (Forall q, p |-> string_bytesR ct q chars ={⊤}=∗ emp) -*
+            p |-> string_bytesR ct (cQp.c q) chars -*
+            □ (Forall q, p |-> string_bytesR ct (cQp.c q) chars ={⊤}=∗ emp) -*
             Q p FreeTemps.id
       |-- wp_lval (Estring chars (Tchar_ ct)) Q.
 
