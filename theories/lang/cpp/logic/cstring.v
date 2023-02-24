@@ -135,10 +135,11 @@ Module cstring.
 
     Lemma to_from_zstring {σ : genv}
           (zs : zstring.t)
-          (H : zstring.WF char_type.Cchar zs)
-          (X : List.Forall (fun c => has_type (Vchar c) Tchar) zs) :
+          (H : zstring.WF char_type.Cchar zs) :
       to_zstring (from_zstring zs) = zs.
     Proof.
+      have X : List.Forall (fun c => has_type (Vchar c) Tchar) zs by
+        rewrite /_WF in H; naive_solver.
       induction zs. 1: exfalso; by eapply not_WF_nil.
       unfold from_zstring, to_zstring, to_zstring' in *; simpl in *.
       rewrite -> BS.parse_print_inv in *.
@@ -242,8 +243,7 @@ Module cstring.
     Proof.
       intros * HWF; split; intro; subst.
       - by rewrite from_to_zstring.
-      - rewrite to_from_zstring; eauto.
-        unfold zstring.WF in HWF; by destruct HWF as [? [? [? ?]]].
+      - by rewrite to_from_zstring.
     Qed.
   End from_zstring_to_zstring_Theory.
 
