@@ -18,13 +18,6 @@ From bedrock.lang.cpp.logic Require Import arr heap_pred (* pred *).
 Import ChargeNotation.
 #[local] Open Scope Z_scope.
 
-(** TODO: upstream *)
-Lemma has_type_char_255 {σ : genv} (n : N) ct : (0 <= n < 256)%N -> has_type (Vchar n) (Tchar_ ct).
-Proof. intros. apply has_type_char. simpl. eexists; split; eauto. destruct ct; simpl; lia. Qed.
-Lemma has_type_char_0 {σ : genv} ct :  has_type (Vchar 0) (Tchar_ ct).
-Proof. intros. apply has_type_char_255. lia. Qed.
-(** END: upstream *)
-
 (** * [zstring]s
 
     [zstring]s reflect the "character array" which backs null-terminated strings

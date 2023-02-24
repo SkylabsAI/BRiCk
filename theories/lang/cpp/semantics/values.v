@@ -420,6 +420,11 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
         bound sz sgn z <-> has_type (Vint z) (Tnum sz sgn).
     Proof. move => *. rewrite has_int_type'. naive_solver. Qed.
 
+    Lemma has_type_char_255 (n : N) ct : (0 <= n < 256)%N -> has_type (Vchar n) (Tchar_ ct).
+    Proof. intros. apply has_type_char. simpl. eexists; split; eauto. destruct ct; simpl; lia. Qed.
+    Lemma has_type_char_0 ct :  has_type (Vchar 0) (Tchar_ ct).
+    Proof. intros. apply has_type_char_255. lia. Qed.
+
     Lemma has_type_drop_qualifiers
       : forall v ty, has_type v ty <-> has_type v (drop_qualifiers ty).
     Proof.
