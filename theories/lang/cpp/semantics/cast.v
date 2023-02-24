@@ -44,7 +44,7 @@ Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : s
   (* first we need to sign extend using frm_sgn *)
   let n : Z :=
     if from_sgn is Signed then
-      if bool_decide (n < 2^(from_bits-1)) then n else -n + 1
+      if bool_decide (n < 2^(from_bits-1)) then n else to_signed_bits from_bits n
     else n in
   if to_sgn is Signed then to_signed_bits to_bits n else to_unsigned_bits to_bits n.
 
@@ -53,13 +53,29 @@ Definition of_char (from_bits : N) (from_sgn : signed) (to_bits : N) (to_sgn : s
   *)
 
 Succeed Example TEST : of_char 8 Signed 32 Signed 1 = 1 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 32 Signed 128 = -127 := eq_refl.
+Succeed Example TEST : of_char 8 Signed 32 Signed 128 = -128 := eq_refl.
 Succeed Example TEST : of_char 8 Signed 32 Signed 127 = 127 := eq_refl.
-Succeed Example TEST : of_char 8 Signed 16 Unsigned 128 = 65409 := eq_refl.
+Succeed Example TEST : of_char 8 Signed 16 Unsigned 128 = 65408 := eq_refl.
 Succeed Example TEST : of_char 32 Signed 8 Signed 256 = 0 := eq_refl.
 Succeed Example TEST : of_char 32 Signed 8 Signed 128 = -128 := eq_refl.
 Succeed Example TEST : of_char 32 Signed 16 Signed 128 = 128 := eq_refl.
 Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
+
+(* Other tests *)
+Succeed Example TEST : of_char 8 Signed 8 Unsigned 128 = 128 := eq_refl.
+Succeed Example TEST : of_char 16 Signed 8 Unsigned 128 = 128 := eq_refl.
+
+Succeed Example TEST : of_char 8 Signed 8 Signed 128 = -128 := eq_refl.
+Succeed Example TEST : of_char 8 Signed 8 Signed 129 = -127 := eq_refl.
+
+Succeed Example TEST : of_char 16 Signed 8 Signed 128 = -128 := eq_refl.
+Succeed Example TEST : of_char 16 Signed 8 Signed 129 = -127 := eq_refl.
+
+Succeed Example TEST : of_char 8 Unsigned 8 Signed 129 = -127 := eq_refl.
+Succeed Example TEST : of_char 16 Unsigned 8 Signed 129 = -127 := eq_refl.
+
+Succeed Example TEST : of_char 8 Unsigned 8 Signed 128 = -128 := eq_refl.
+Succeed Example TEST : of_char 8 Unsigned 16 Signed 128 = 128 := eq_refl.
 
 (* END TODO move to syntax *)
 
