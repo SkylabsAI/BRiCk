@@ -139,10 +139,10 @@ Module Type Expr.
         machine.
      *)
     Axiom wp_lval_string : forall chars ct Q,
-          Forall (p : ptr) (q : Qp),
+          (Forall (p : ptr) (q : Qp),
             p |-> string_bytesR ct (cQp.c q) chars -*
-            □ (Forall q, p |-> string_bytesR ct (cQp.c q) chars ={⊤}=∗ emp) -*
-            Q p FreeTemps.id
+            □ (Forall q', (p |-> string_bytesR ct (cQp.c q') chars ={⊤}=∗ emp)) -*
+            Q p FreeTemps.id)
       |-- wp_lval (Estring chars (Tchar_ ct)) Q.
 
     (* `this` is a prvalue *)
