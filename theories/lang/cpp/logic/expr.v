@@ -1020,19 +1020,29 @@ Module Type Expr.
        [3] https://eel.is/c++draft/dcl.init#general-8.3
        [4] https://eel.is/c++draft/dcl.init#general-6
      *)
-    Axiom wp_operand_implicit_init_int : forall ty sz sgn Q,
-        drop_qualifiers ty = Tnum sz sgn ->
-          Q (Vint 0) FreeTemps.id
-      |-- wp_operand (Eimplicit_init ty) Q.
 
-    Axiom wp_operand_implicit_init_bool : forall ty Q,
-        drop_qualifiers ty = Tbool ->
-          Q (Vbool false) FreeTemps.id
-      |-- wp_operand (Eimplicit_init ty) Q.
+    Definition scalar_type (ty : type) : bool :=
+      match ty with
+      | Tnullptr | Tptr _ | Tmember_pointer _ _
+      | Tchar_ _
+      | Tbool
+      | Tnum _ _ | Tenum _ => true
+      | _ => false
+      end.
+    Definition zero_init_val (ty : type) : val :=
+      match ty with
+      | Tnullptr | Tptr _ | Tmember_pointer _ _ => Vptr nullptr
+      | Tchar_ _ => Vchar 0
+      | Tbool => Vbool false
+      | Tnum _ _ | Tenum _ => Vint 0
+      | _ => Vundef (* XXX do not use! *)
+      end.
 
-    Axiom wp_operand_implicit_init_char : forall ty ct Q,
-        drop_qualifiers ty = Tchar_ ct ->
-          Q (Vchar 0) FreeTemps.id
+    Axiom wp_operand_implicit_init : forall ty Q,
+      let unqual_ty := erase_qualifiers ty in
+          is_Some (size_of unqual_ty) ->
+          scalar_type unqual_ty = true ->
+          Q (zero_init_val unqual_ty) FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
     Axiom wp_init_constructor : forall cls (addr : ptr) cnd es Q,
