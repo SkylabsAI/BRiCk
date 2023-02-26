@@ -63,7 +63,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tref _ => None
   | Trv_ref _ => None
   | Tnum sz _ => Some (bytesN sz)
-  | Tchar_ sz => Some (char_type.bytesN sz)
+  | Tchar_ ct => Some (char_type.bytesN ct)
   | Tvoid => None
   | Tarray t n => N.mul n <$> size_of resolve t
   | Tnamed nm => glob_def resolve nm ≫= GlobDecl_size_of
