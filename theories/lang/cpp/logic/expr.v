@@ -1046,8 +1046,8 @@ Module Type Expr.
     Proof. by induction ty. Qed.
 
     Axiom wp_operand_implicit_init : forall ty Q,
-      let unqual_ty := erase_qualifiers ty in
-          is_Some (size_of unqual_ty) ->
+      let unqual_ty := drop_qualifiers ty in
+          is_Some (size_of ty) ->
           scalar_type unqual_ty = true ->
           Q (zero_init_val unqual_ty) FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
