@@ -92,6 +92,19 @@ Fixpoint drop_qualifiers (t : type) : type :=
   | _ => t
   end.
 
+Lemma decompose_type_drop ty :
+  (decompose_type ty).2 = drop_qualifiers ty.
+Proof. induction ty => //=. rewrite -IHty /= decompose_type_qual/=. by case: decompose_type. Qed.
+
+Lemma unqual_drop_qualifiers ty tq ty' : drop_qualifiers ty <> Tqualified tq ty'.
+Proof. by induction ty. Qed.
+Lemma unqual_erase_qualifiers ty tq ty' : erase_qualifiers ty <> Tqualified tq ty'.
+Proof. by induction ty. Qed.
+
+Lemma erase_drop_idemp ty :
+  erase_qualifiers ty = ty -> drop_qualifiers ty = ty.
+Proof. by destruct ty => // /unqual_erase_qualifiers. Qed.
+
 (* Lemmas for all [type] constructors; in constructor order for easy review. *)
 Lemma drop_qualifiers_Tptr : forall [ty ty'],
     drop_qualifiers ty = Tptr ty' -> erase_qualifiers ty = Tptr (erase_qualifiers ty').
