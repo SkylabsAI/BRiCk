@@ -1029,6 +1029,10 @@ Module Type Expr.
       | Tnum _ _ | Tenum _ => true
       | _ => false
       end.
+    Lemma scalar_type_erase_drop ty :
+      scalar_type (erase_qualifiers ty) = scalar_type (drop_qualifiers ty).
+    Proof. by induction ty. Qed.
+
     Definition zero_init_val (ty : type) : val :=
       match ty with
       | Tnullptr | Tptr _ | Tmember_pointer _ _ => Vptr nullptr
@@ -1037,6 +1041,9 @@ Module Type Expr.
       | Tnum _ _ | Tenum _ => Vint 0
       | _ => Vundef (* XXX do not use! *)
       end.
+    Lemma zero_init_val_erase_drop ty :
+      zero_init_val (erase_qualifiers ty) = zero_init_val (drop_qualifiers ty).
+    Proof. by induction ty. Qed.
 
     Axiom wp_operand_implicit_init : forall ty Q,
       let unqual_ty := erase_qualifiers ty in
