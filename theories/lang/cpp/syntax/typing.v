@@ -92,6 +92,7 @@ Fixpoint drop_qualifiers (t : type) : type :=
   | _ => t
   end.
 
+(* Lemmas for all [type] constructors; in constructor order for easy review. *)
 Lemma drop_qualifiers_Tptr : forall [ty ty'],
     drop_qualifiers ty = Tptr ty' -> erase_qualifiers ty = Tptr (erase_qualifiers ty').
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
@@ -101,27 +102,41 @@ Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 Lemma drop_qualifiers_Trv_ref : forall [ty ty'],
     drop_qualifiers ty = Trv_ref ty' -> erase_qualifiers ty = Trv_ref (erase_qualifiers ty').
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-Lemma drop_qualifiers_Tmember_pointer : forall [ty cls ty'],
-    drop_qualifiers ty = Tmember_pointer cls ty' ->
-    erase_qualifiers ty = Tmember_pointer cls (erase_qualifiers ty').
-Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-Lemma drop_qualifiers_Tint : forall [ty sz sgn],
+Lemma drop_qualifiers_Tnum : forall [ty sz sgn],
     drop_qualifiers ty = Tnum sz sgn -> erase_qualifiers ty = Tnum sz sgn.
+Proof. by induction ty. Qed.
+Lemma drop_qualifiers_Tchar_ : forall [ty ct],
+    drop_qualifiers ty = Tchar_ ct -> erase_qualifiers ty = Tchar_ ct.
+Proof. by induction ty. Qed.
+Lemma drop_qualifiers_Tvoid : forall [ty],
+    drop_qualifiers ty = Tvoid -> erase_qualifiers ty = Tvoid.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-Lemma drop_qualifiers_Tfloat : forall [ty sz],
-    drop_qualifiers ty = Tfloat sz -> erase_qualifiers ty = Tfloat sz.
+Lemma drop_qualifiers_Tarray : forall [ty ty' n],
+    drop_qualifiers ty = Tarray ty' n -> erase_qualifiers ty = Tarray (erase_qualifiers ty') n.
+Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+Lemma drop_qualifiers_Tnamed : forall [ty n],
+    drop_qualifiers ty = Tnamed n -> erase_qualifiers ty = Tnamed n.
+Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+Lemma drop_qualifiers_Tenum : forall [ty nm],
+    drop_qualifiers ty = Tenum nm -> erase_qualifiers ty = Tenum nm.
+Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+Lemma drop_qualifiers_Tfunction : forall [ty c ar ty' tArgs],
+    drop_qualifiers ty = @Tfunction c ar ty' tArgs ->
+    erase_qualifiers ty = @Tfunction c ar (erase_qualifiers ty') (map erase_qualifiers tArgs).
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 Lemma drop_qualifiers_Tbool : forall [ty],
     drop_qualifiers ty = Tbool -> erase_qualifiers ty = Tbool.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-Lemma drop_qualifiers_Tvoid : forall [ty],
-    drop_qualifiers ty = Tvoid -> erase_qualifiers ty = Tvoid.
+Lemma drop_qualifiers_Tmember_pointer : forall [ty cls ty'],
+    drop_qualifiers ty = Tmember_pointer cls ty' ->
+    erase_qualifiers ty = Tmember_pointer cls (erase_qualifiers ty').
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+Lemma drop_qualifiers_Tfloat : forall [ty sz],
+    drop_qualifiers ty = Tfloat sz -> erase_qualifiers ty = Tfloat sz.
+Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+(* Omit Tqualified on purpose *)
 Lemma drop_qualifiers_Tnullptr : forall [ty],
     drop_qualifiers ty = Tnullptr -> erase_qualifiers ty = Tnullptr.
-Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-Lemma drop_qualifiers_Tenum : forall [ty nm],
-    drop_qualifiers ty = Tenum nm -> erase_qualifiers ty = Tenum nm.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 
 
@@ -131,18 +146,26 @@ Proof. induction t; simpl; eauto. Qed.
 Lemma erase_drop : forall t, erase_qualifiers (drop_qualifiers t) = erase_qualifiers t.
 Proof. induction t; simpl; eauto. Qed.
 
-(** simplify instances where you have [drop_qualifiers ty = Txxx ..] for some [Txxx] *)
+(** simplify instances where you have [drop_qualifiers ty = Txxx ..] for some [Txxx]. *)
+(* Same order as above, for easier review. *)
 Ltac simpl_drop_qualifiers :=
   match goal with
-  | H : drop_qualifiers _ = _ |- _ =>
-    first [ rewrite (drop_qualifiers_Tbool H)
-          | rewrite (drop_qualifiers_Tfloat H)
-          | rewrite (drop_qualifiers_Tint H)
-          | rewrite (drop_qualifiers_Tmember_pointer H)
-          | rewrite (drop_qualifiers_Tnullptr H)
+  | H : drop_qualifiers _ = _ |- _ => first
+          [ rewrite (drop_qualifiers_Tptr H)
+          | rewrite (drop_qualifiers_Tref H)
+          | rewrite (drop_qualifiers_Trv_ref H)
+          | rewrite (drop_qualifiers_Tnum H)
+          | rewrite (drop_qualifiers_Tchar_ H)
           | rewrite (drop_qualifiers_Tvoid H)
-          | rewrite (drop_qualifiers_Tptr H)
-          | rewrite (drop_qualifiers_Tenum H) ]
+          | rewrite (drop_qualifiers_Tarray H)
+          | rewrite (drop_qualifiers_Tnamed H)
+          | rewrite (drop_qualifiers_Tenum H)
+          | rewrite (drop_qualifiers_Tfunction H)
+          | rewrite (drop_qualifiers_Tbool H)
+          | rewrite (drop_qualifiers_Tmember_pointer H)
+          | rewrite (drop_qualifiers_Tfloat H)
+          | rewrite (drop_qualifiers_Tnullptr H)
+          ]
   end.
 
 
