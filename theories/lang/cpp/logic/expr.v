@@ -1021,9 +1021,13 @@ Module Type Expr.
        [4] https://eel.is/c++draft/dcl.init#general-6
      *)
 
+    (* Formalizes https://eel.is/c++draft/basic.types.general#term.scalar.type.
+     We exclude [Tmember_pointer] and [Tfloat] because they are not properly supported yet.
+     *)
     Definition scalar_type (ty : type) : bool :=
       match ty with
-      | Tnullptr | Tptr _ | Tmember_pointer _ _
+      | Tnullptr | Tptr _
+      (* | Tmember_pointer _ _ *)
       | Tchar_ _
       | Tbool
       | Tnum _ _ | Tenum _ => true
@@ -1035,7 +1039,8 @@ Module Type Expr.
 
     Definition zero_init_val (ty : type) : val :=
       match ty with
-      | Tnullptr | Tptr _ | Tmember_pointer _ _ => Vptr nullptr
+      | Tnullptr | Tptr _  => Vptr nullptr
+      (* | Tmember_pointer _ _ *)
       | Tchar_ _ => Vchar 0
       | Tbool => Vbool false
       | Tnum _ _ | Tenum _ => Vint 0
