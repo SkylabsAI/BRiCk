@@ -710,11 +710,18 @@ public:
             print.output() << fmt::nbsp;
 
             // TODO the values are not necessary.
-            print.list(decl->enumerators(), [](auto &print, auto i) {
+            print.list(decl->enumerators(), [&cprint](auto &print, auto i) {
                 print.output() << fmt::line << "(";
                 print.str(i->getNameAsString());
-                print.output() << "," << fmt::nbsp << "("
-                               << i->getInitVal().getExtValue() << ")%Z)";
+                print.output() << "," << fmt::nbsp;
+                if (i->getInitExpr()) {
+                    print.some();
+                    cprint.printExpr(i->getInitExpr(), print);
+                    print.end_ctor();
+                } else {
+                    print.none();
+                }
+                print.output() << ")";
             });
 
             print.end_ctor();
@@ -724,6 +731,8 @@ public:
 
     bool VisitEnumConstantDecl(const EnumConstantDecl *decl, CoqPrinter &print,
                                ClangPrinter &cprint, const ASTContext &) {
+        return false;
+#if 0
         assert(not decl->getNameAsString().empty());
         auto ed = dyn_cast<EnumDecl>(decl->getDeclContext());
         print.ctor("Denum_constant");
@@ -745,6 +754,7 @@ public:
 
         print.end_ctor();
         return true;
+#endif
     }
 
     bool VisitLinkageSpecDecl(const LinkageSpecDecl *decl, CoqPrinter &print,

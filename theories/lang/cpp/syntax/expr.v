@@ -164,7 +164,7 @@ Variant OffsetInfo : Set :=
 Proof. solve_decision. Defined.
 
 Inductive Expr : Set :=
-| Econst_ref (_ : VarRef) (_ : type)
+| Econst_ref (_ : globname) (_ : ident)
   (* ^ these are different because they do not have addresses *)
 | Evar     (_ : VarRef) (_ : type)
   (* ^ local and global variable reference *)

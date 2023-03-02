@@ -9,7 +9,7 @@ From bedrock.lang.cpp.syntax Require Import names expr types.
 (** [type_of e] returns the type of the expression [e]. *)
 Fixpoint type_of (e : Expr) : type :=
   match e with
-  | Econst_ref _ t
+  | Econst_ref enum _ => Tenum enum
   | Evar _ t
   | Echar _ t => t
   | Estring vs t => Tarray (Qconst t) (1 + lengthN vs)

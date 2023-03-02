@@ -226,7 +226,7 @@ Variant GlobDecl : Set :=
 | Gtype     (* this is a type declaration, but not a definition *)
 | Gunion    (_ : Union) (* union body *)
 | Gstruct   (_ : Struct) (* struct body *)
-| Genum     (_ : type) (_ : list ident) (* *)
+| Genum     (_ : type) (_ : list (ident * option Expr)) (* *)
 | Gconstant (_ : type) (init : option Expr) (* used for enumerator constants*)
 | Gtypedef  (_ : type).
 #[global] Instance: EqDecision GlobDecl.

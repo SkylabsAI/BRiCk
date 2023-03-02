@@ -76,15 +76,36 @@ Module Type Expr.
            (Exists q, r |-> primR (Tref $ erase_qualifiers $ type_of e) q (Vptr p) ** True) //\\ Q p free)
       |-- wp_lval (Eread_ref e) Q.
 
+    Fixpoint get_branch (ty : type) (nm : ident) (last : option Expr) (since_last : N) (ls : list (ident * option Expr)) : option Expr :=
+      match ls with
+      | nil => None
+      | (nm', e) :: ls =>
+          if bool_decide (nm = nm') then
+            match e with
+            | None =>
+                match last with
+                | None => Some (Ecast Cintegral (Eint since_last Tint) Prvalue ty)
+                | Some e => Some (Ecast Cintegral (Ebinop Badd e (Eint since_last Tint) ty) Prvalue ty)
+                end
+            | Some e => Some e
+            end
+          else
+            match e with
+            | None => get_branch ty nm last (1 + since_last) ls
+            | Some _ => get_branch ty nm e 0 ls
+            end
+      end.
+
     (* constants are rvalues *)
-    Axiom wp_operand_constant : forall ty cnst e Q,
-      tu.(globals) !! cnst = Some (Gconstant ty (Some e)) ->
+    Axiom wp_operand_constant : forall ty enum id e branches Q,
+      tu.(globals) !! enum = Some (Genum ty branches) ->
+      get_branch ty id None 0 branches = Some e ->
           (* evaluation of the expression does not get access to
              local variables, so it gets [Remp] rather than [ρ].
              In addition, the evaluation is done at compile-time, so we clean
              up the temporaries eagerly. *)
           WPE.wp_operand tu (Remp None None ty) e (fun v frees => interp frees $ Q v FreeTemps.id)
-      |-- wp_operand (Econst_ref (Gname cnst) ty) Q.
+      |-- wp_operand (Econst_ref enum id) Q.
 
     (* integer literals are prvalues *)
     Axiom wp_operand_int : forall n ty Q,
@@ -506,6 +527,9 @@ Module Type Expr.
         - [short] -> [long]
         - [int] -> [unsigned int]
         - [enum Xxx] -> [int]
+        - [int] -> [char]
+        NOTE this includes [char] conversions, so the resulting value is not
+             always a [Vint].
      *)
     Axiom wp_operand_cast_integral : forall e t Q,
         wp_operand e (fun v free =>

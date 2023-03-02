@@ -95,7 +95,6 @@ class PrintExpr :
     public ConstStmtVisitor<PrintExpr, void, CoqPrinter&, ClangPrinter&,
                             const ASTContext&, OpaqueNames&> {
 private:
-
     enum Done : unsigned {
         V = 1,
         T = 2,
@@ -103,7 +102,7 @@ private:
     };
 
     void done(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
-            Done want = Done::T) {
+              Done want = Done::T) {
         if (want & Done::V) {
             print.output() << fmt::nbsp;
             cprint.printValCat(expr, print);
@@ -256,8 +255,10 @@ public:
         default:
             logging::unsupported()
                 << "defaulting binary operator"
-                << " (at " << cprint.sourceRange(expr->getSourceRange()) << ")\n";
-            print.ctor("Bunsupported") << "\"" << expr->getOpcodeStr() << "\"" << fmt::rparen;
+                << " (at " << cprint.sourceRange(expr->getSourceRange())
+                << ")\n";
+            print.ctor("Bunsupported")
+                << "\"" << expr->getOpcodeStr() << "\"" << fmt::rparen;
             break;
         }
     }
@@ -353,8 +354,10 @@ public:
         default:
             logging::unsupported()
                 << "Error: unsupported unary operator"
-                << " (at " << cprint.sourceRange(expr->getSourceRange()) << ")\n";
-            print.output() << "(Uunsupported \"" << UnaryOperator::getOpcodeStr(expr->getOpcode())
+                << " (at " << cprint.sourceRange(expr->getSourceRange())
+                << ")\n";
+            print.output() << "(Uunsupported \""
+                           << UnaryOperator::getOpcodeStr(expr->getOpcode())
                            << "\")";
             break;
         }
@@ -398,6 +401,9 @@ public:
                           OpaqueNames& on) {
         auto d = expr->getDecl();
         if (auto ecd = dyn_cast<EnumConstantDecl>(d)) {
+            auto ed = dyn_cast<EnumDecl>(ecd->getDeclContext());
+            assert(ed &&
+                   "EnumConstantDecl must be declared inside an EnumDecl");
             // References to `enum` constants are special because
             // they can be referenced both at the enumeration type
             // and (within the `enum` declaration) they can be
@@ -409,18 +415,18 @@ public:
             if (expr->getType()->isEnumeralType()) {
                 // nothing special to do.
                 print.ctor("Econst_ref", false);
-                print.ctor("Gname", false);
-                cprint.printObjName(d, print);
+                cprint.printTypeName(ed, print);
+                print.output() << fmt::nbsp;
+                print.str(ecd->getName());
                 print.end_ctor();
-                done(expr, print, cprint);
             } else {
                 // TODO: is is possible to determine the `DeclContext` that
                 // this expression occurs in? If so, then we could assert that
                 // this is in the scope of the enumeration.
                 print.ctor("Eenum_const_at", false);
-                cprint.printObjName(d, print);
+                cprint.printTypeName(ed, print);
                 print.output() << fmt::nbsp;
-                cprint.printQualType(ecd->getType(), print);
+                print.str(ecd->getName());
                 done(expr, print, cprint);
             }
         } else {

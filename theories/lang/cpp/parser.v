@@ -40,8 +40,8 @@ Definition Nanon (ty : globname) : globname :=
 
 Definition Cenum_const (e : globname) (x : ident) : obj_name :=
   e ++ "::" ++ x.
-Definition Eenum_const_at (e : globname) (ety ty : type) : Expr :=
-  Ecast Cintegral (Econst_ref (Gname e) ety) Prvalue ty.
+Definition Eenum_const_at (e : globname) (ety  : globname) (ty : type) : Expr :=
+  Ecast Cintegral (Econst_ref ety e) Prvalue ty.
 
 Definition pure_virt (x : obj_name) : obj_name * option obj_name :=
   (x, None).
@@ -136,8 +136,8 @@ Definition Dstruct (name : globname) (o : option Struct) : translation_unitK :=
                        end ]> tys).
 
 (* named enumerations *)
-Definition Denum (name : globname) (t : type) (branches : list (ident * BinNums.Z)) : translation_unitK :=
-  fun syms tys k => k syms $ <[ name := Genum t (List.map fst branches) ]> tys.
+Definition Denum (name : globname) (t : type) (branches : list (ident * option Expr)) : translation_unitK :=
+  fun syms tys k => k syms $ <[ name := Genum t branches ]> tys.
 (*
     let enum_ty := Tnamed name in
     let raw_ty :=
@@ -153,13 +153,14 @@ Definition Denum (name : globname) (t : type) (branches : list (ident * BinNums.
                            | None => tys
                            end). *)
   (* ^ enumerations (the initializers need to be constant expressions) *)
-
+(*
 Definition Dconstant    (name : globname) (t : type) (e : Expr) : translation_unitK :=
   fun syms tys k => k syms $ <[ name := Gconstant t (Some e) ]> tys.
 Definition Dconstant_undef  (name : globname) (t : type) : translation_unitK :=
   fun syms tys k => k syms $ <[ name := Gconstant t None ]> tys.
 Definition Denum_constant (name : globname) (t ut : type) (v : Z) (init : option Expr) : translation_unitK :=
   fun syms tys k => k syms $ <[ name := Gconstant t (Some (Ecast Cintegral (Eint v ut) Prvalue t)) ]> tys.
+*)
 Definition Dtypedef     (name : globname) (t : type) : translation_unitK :=
   fun syms tys k => k syms $ <[ name := Gtypedef t ]> tys.
 Definition Dtype (name : globname) : translation_unitK :=
