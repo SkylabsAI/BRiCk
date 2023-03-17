@@ -501,23 +501,21 @@ public:
         // than regular function calls. Because our semantics overapproximates
         // the possible behaviors, it is sound for us to directly desugar them.
         auto callee = expr->getCalleeDecl();
-        auto method = dyn_cast<CXXMethodDecl>(callee);
         // some operator calls are actually method calls.
         // because we (and C++) distinguish between member calls
         // and function calls, we need to desugar this to a method
         // if the called function is a method.
-        if (method and not method->isStatic()) {
-            print.ctor("Emember_call");
+        if (auto method = dyn_cast<CXXMethodDecl>(callee)) {
+            assert(!method->isStatic() &&
+                   "operator overloads can not be static");
+            print.ctor("Eoperator_member_call") << fmt::nbsp;
 
             // TODO Handle virtual dispatch.
-            print.ctor("inl") << fmt::lparen;
             cprint.printObjName(method, print);
-            print.output() << "," << fmt::nbsp
+            print.output() << fmt::nbsp
                            << (method->isVirtual() ? "Virtual" : "Direct")
-                           << "," << fmt::nbsp;
+                           << fmt::nbsp;
             cprint.printQualType(method->getType(), print);
-            print.output() << fmt::rparen;
-            print.end_ctor() << fmt::nbsp;
 
             cprint.printExpr(expr->getArg(0), print, li);
 
@@ -527,10 +525,24 @@ public:
                 ++expr->arg_begin(), expr->arg_end(),
                 [&](auto print, auto i) { cprint.printExpr(i, print, li); });
 
-            done(expr, print, cprint);
-        } else if (isa<FunctionDecl>(callee)) {
-            VisitCallExpr(expr, print, cprint, ctxt, li);
+        } else if (auto function = dyn_cast<FunctionDecl>(callee)) {
+            print.ctor("Eoperator_call") << fmt::nbsp;
+            cprint.printObjName(function, print);
+            print.output() << fmt::nbsp;
+            cprint.printQualType(function->getType(), print);
+
+            print.output() << fmt::nbsp;
+            // note skip the first parameter because it is the object.
+            print.list(expr->arguments(), [&](auto print, auto i) {
+                cprint.printExpr(i, print, li);
+            });
+        } else {
+            using namespace logging;
+            logging::unsupported() << "unsupported operator call";
+            logging::die();
         }
+
+        done(expr, print, cprint);
     }
 
     void VisitCastExpr(const CastExpr* expr, CoqPrinter& print,
