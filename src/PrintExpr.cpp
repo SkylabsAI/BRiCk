@@ -494,6 +494,17 @@ public:
         done(expr, print, cprint);
     }
 
+    auto&& printOverloadableOperator(OverloadedOperatorKind oo,
+                                     CoqPrinter& print) {
+        switch (oo) {
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+    case OO_##Name:                                                            \
+        return print.output() << "OO" << #Name;
+#include "clang/Basic/OperatorKinds.def"
+#undef OVERLOADED_OPERATOR
+        }
+    }
+
     void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr* expr,
                                   CoqPrinter& print, ClangPrinter& cprint,
                                   const ASTContext& ctxt, OpaqueNames& li) {
@@ -508,7 +519,8 @@ public:
         if (auto method = dyn_cast<CXXMethodDecl>(callee)) {
             assert(!method->isStatic() &&
                    "operator overloads can not be static");
-            print.ctor("Eoperator_member_call") << fmt::nbsp;
+            print.ctor("Eoperator_member_call");
+            printOverloadableOperator(expr->getOperator(), print) << fmt::nbsp;
 
             // TODO Handle virtual dispatch.
             cprint.printObjName(method, print);
@@ -516,6 +528,7 @@ public:
                            << (method->isVirtual() ? "Virtual" : "Direct")
                            << fmt::nbsp;
             cprint.printQualType(method->getType(), print);
+            print.output() << fmt::nbsp;
 
             cprint.printExpr(expr->getArg(0), print, li);
 
@@ -526,11 +539,12 @@ public:
                 [&](auto print, auto i) { cprint.printExpr(i, print, li); });
 
         } else if (auto function = dyn_cast<FunctionDecl>(callee)) {
-            print.ctor("Eoperator_call") << fmt::nbsp;
+            print.ctor("Eoperator_call");
+            printOverloadableOperator(expr->getOperator(), print) << fmt::nbsp;
+
             cprint.printObjName(function, print);
             print.output() << fmt::nbsp;
             cprint.printQualType(function->getType(), print);
-
             print.output() << fmt::nbsp;
             // note skip the first parameter because it is the object.
             print.list(expr->arguments(), [&](auto print, auto i) {
