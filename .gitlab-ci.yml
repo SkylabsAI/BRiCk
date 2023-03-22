@@ -117,7 +117,7 @@ stages:
       - build/cpp2v
       - build/bedrock
   tags:
-    - fm.shared
+    - fm.shared4
 
 .build:
   extends:
@@ -140,7 +140,7 @@ stages:
     - *clang_env
     - PATH=$PWD/build:$PATH make test -j ${NJOBS} TIMED=1 QPATH=`pwd`/build/bedrock
   tags:
-    - fm.shared
+    - fm.shared4
 
 build_latest:
   extends:
@@ -212,7 +212,7 @@ test_public:
 #    reports:
 #      dotenv: build.env
 #  tags:
-#    - fm.shared
+#    - fm.shared4
 #
 #.build_cpp2v_base:
 #  stage: build_proofs_downstream
@@ -301,7 +301,7 @@ prepare_pages:
     paths:
       - doc/sphinx/_build
   tags:
-    - fm.shared
+    - fm.shared4
 
 pages:
   stage: pages
@@ -353,7 +353,7 @@ pages:
     paths:
       - public
   tags:
-    - fm.shared
+    - fm.shared4
 
 prepare_cpp2v_env:
   extends:
@@ -384,7 +384,7 @@ prepare_cpp2v_env:
     reports:
       dotenv: build.env
   tags:
-    - fm.shared
+    - fm.shared4
 
 .setup-dunecache:
   stage: dune-build
@@ -457,7 +457,7 @@ dune-build:
       - build/cpp2v
       - build/bedrock
   tags:
-    - ${DUNE_TAG}
+    - fm.dune4
 
 build-cpp2v-trigger:
   extends:
