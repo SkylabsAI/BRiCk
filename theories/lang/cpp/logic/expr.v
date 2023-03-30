@@ -239,7 +239,7 @@ Module Type Expr.
     Axiom wp_lval_deref : forall ty e Q,
         wp_operand e (fun v free =>
                       match v with
-                      | Vptr p => Q p free
+                      | Vptr p => strict_valid_ptr p ** Q p free
                       | _ => False
                       end)
         |-- wp_lval (Ederef e ty) Q.
