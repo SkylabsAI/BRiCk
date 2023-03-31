@@ -49,15 +49,15 @@ Section with_Σ.
   Proof. solve_as_cfrac. Qed.
 
   #[global] Declare Instance struct_paddingR_type_ptr_observe : forall q cls, Observe (type_ptrR (Tnamed cls)) (struct_paddingR q cls).
-  #[global] Instance struct_paddingR_strict_valid_observe q cls : Observe svalidR (struct_paddingR q cls).
+  #[global] Instance struct_paddingR_strict_valid_observe q cls : Observe (svalidR $ Tnamed cls) (struct_paddingR q cls).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
-  #[global] Instance struct_paddingR_valid_observe q cls : Observe validR (struct_paddingR q cls).
+  #[global] Instance struct_paddingR_valid_observe q cls : Observe (validR $ Tnamed cls) (struct_paddingR q cls).
   Proof. rewrite -svalidR_validR; apply _. Qed.
 
   #[global] Declare Instance union_paddingR_type_ptr_observe : forall q cls i, Observe (type_ptrR (Tnamed cls)) (union_paddingR q cls i).
-  #[global] Instance union_paddingR_strict_valid_observe q cls i : Observe svalidR (union_paddingR q cls i).
+  #[global] Instance union_paddingR_strict_valid_observe q cls i : Observe (svalidR $ Tnamed cls) (union_paddingR q cls i).
   Proof. rewrite -type_ptrR_svalidR; apply _. Qed.
-  #[global] Instance union_paddingR_valid_observe q cls i : Observe validR (union_paddingR q cls i).
+  #[global] Instance union_paddingR_valid_observe q cls i : Observe (validR $ Tnamed cls) (union_paddingR q cls i).
   Proof. rewrite -svalidR_validR; apply _. Qed.
 
   (** Convert a `struct` to its raw representation.
@@ -174,7 +174,7 @@ Section with_Σ.
 
   (** Proof requires the generalization of [anyR] to support aggregates (and arrays) *)
   Lemma anyR_array_0 t q :
-    anyR (Tarray t 0) q -|- validR ** [| is_Some (size_of σ t) |].
+    anyR (Tarray t 0) q -|- validR t ** [| is_Some (size_of σ t) |].
   Proof. Admitted.
 
   Lemma anyR_array_succ t n q :
@@ -215,9 +215,9 @@ Section with_Σ.
   Lemma tblockR_array_better t n q sz :
         size_of σ t = Some sz ->
         tblockR (Tarray t n) q
-    -|- .[ Tu8 ! Z.of_N (n * sz) ] |-> validR **
+    -|- .[ Tbyte ! Z.of_N (n * sz) ] |-> validR Tbyte **
         [∗list] i ∈ seq 0 (N.to_nat n),
-           .[ Tu8 ! Z.of_N (N.of_nat i * sz) ] |-> tblockR t q.
+           .[ Tbyte ! Z.of_N (N.of_nat i * sz) ] |-> tblockR t q.
   Proof.
     rewrite /tblockR /= => Hsz.
     rewrite Hsz /= align_of_array.
@@ -240,7 +240,7 @@ Section with_Σ.
   (* TODO: migrate client to the statement above, and drop this. *)
   Lemma tblockR_array : forall t n q,
         tblockR (Tarray t n) q
-    -|- _sub t (Z.of_N n) |-> validR **
+    -|- _sub t (Z.of_N n) |-> validR t **
         [∗list] i ↦ _ ∈ repeat () (BinNatDef.N.to_nat n),
            _sub t (Z.of_nat i) |-> tblockR t q.
   Proof. Admitted.

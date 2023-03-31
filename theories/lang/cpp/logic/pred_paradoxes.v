@@ -27,11 +27,11 @@ Section with_cpp.
   if [p_base] points to the beginning of an array.
   *)
   Let bad_valid_ptr_sub : mpred :=
-    (∀ p (i : Z) ty, [| 0 <= i |]%Z -∗ valid_ptr (p ,, o_sub σ ty i) -∗ valid_ptr p).
+    (∀ p (i : Z) ty, [| 0 <= i |]%Z -∗ valid_ptr ty (p ,, o_sub σ ty i) -∗ valid_ptr ty p).
 
   Lemma not_strict_valid_ptr_sub_bad (p_base : ptr) i {ty} (Hsz : is_Some (size_of σ ty)) (_ : (0 ≤ i)%Z) :
     let p := p_base ,, o_sub σ ty (-i) in
-    bad_valid_ptr_sub ⊢ valid_ptr p_base -∗ (valid_ptr p -∗ False) -∗ False.
+    bad_valid_ptr_sub ⊢ valid_ptr ty p_base -∗ (valid_ptr ty p -∗ False) -∗ False.
   Proof.
     iIntros "H #V NV". iApply "NV".
     iApply ("H" $! (p_base ,, o_sub σ ty (-i)) i ty with "[//]").

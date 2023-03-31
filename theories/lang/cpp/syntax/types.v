@@ -559,6 +559,7 @@ Notation long_long_bits := (int_type.Ilonglong) (only parsing).
 
 Notation Tschar  := (Tnum int_type.Ichar Signed) (only parsing).
 Notation Tuchar  := (Tnum int_type.Ichar Unsigned) (only parsing).
+Notation Tbyte   := Tuchar (only parsing). (* the underlying type for [std::byte] *)
 
 Notation Tushort := (Tnum int_type.Ishort Unsigned) (only parsing).
 Notation Tshort  := (Tnum int_type.Ishort Signed) (only parsing).

@@ -231,7 +231,7 @@ Section defs.
    *)
   Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
     as_Rep (fun p =>
-         strict_valid_ptr p **
+         strict_valid_ptr (type_of_spec fs) p **
          □ (Forall vs Q,
          fs.(fs_spec) vs Q -*
          fspec resolve.(genv_tu).(globals) (type_of_spec fs) p vs Q)).
@@ -263,7 +263,7 @@ Section with_cpp.
   #[global] Instance cptrR_affine {s} : Affine (cptrR s).
   Proof. rewrite cptrR_eq. apply _. Qed.
 
-  Lemma cptrR_strict_valid_observe (p : ptr) f : Observe (strict_valid_ptr p) (_at p (cptrR f)).
+  Lemma cptrR_strict_valid_observe (p : ptr) f : Observe (strict_valid_ptr (type_of_spec f) p) (_at p (cptrR f)).
   Proof.
     apply observe_intro_persistent; refine _.
     rewrite cptrR_eq/cptrR_def.
@@ -272,7 +272,7 @@ Section with_cpp.
   Qed.
 
   (* NOTE this should become an instance. *)
-  Lemma cptrR_valid_observe (p : ptr) f : Observe (valid_ptr p) (_at p (cptrR f)).
+  Lemma cptrR_valid_observe (p : ptr) f : Observe (valid_ptr (type_of_spec f) p) (_at p (cptrR f)).
   Proof. apply observe_strict_valid_valid; apply cptrR_strict_valid_observe. Qed.
 
   Lemma cptrR_fs_impl f g :
@@ -281,7 +281,7 @@ Section with_cpp.
     rewrite cptrR_eq/cptrR_def /pureR /as_Rep.
     constructor => p; rewrite Rep_wand_force; iIntros "#(%ty & fs_impl)" => /=.
     iIntros "(val & #rest)"; iFrame.
-    rewrite ty. iModIntro. iIntros (vs Q) "fs_g".
+    rewrite ty. iFrame. iModIntro. iIntros (vs Q) "fs_g".
     iApply "rest".
     by iApply "fs_impl".
   Qed.
@@ -292,7 +292,7 @@ Section with_cpp.
     rewrite cptrR_eq/cptrR_def /pureR /as_Rep.
     constructor => p; rewrite Rep_wand_force; iIntros "#(%ty & fs_impl)" => /=.
     iIntros "(val & #rest)"; iFrame.
-    rewrite ty. iModIntro. iIntros (vs Q) "fs_g".
+    rewrite ty. iFrame. iModIntro. iIntros (vs Q) "fs_g".
     iApply fspec_fupd. iApply fupd_spec.
     iApply "rest".
     by iApply "fs_impl".
@@ -302,8 +302,10 @@ Section with_cpp.
   #[global] Instance cptrR_ne : NonExpansive cptrR.
   Proof.
     intros n P Q HPQ. rewrite cptrR_eq/cptrR_def.
-    apply as_Rep_ne=>p. (do 2!f_equiv). do 5 f_equiv. by apply fs_spec_ne.
-    f_equiv. apply HPQ.
+    apply as_Rep_ne=>p. (do 2!f_equiv).
+    { eapply HPQ. }
+    { do 5 f_equiv. by apply fs_spec_ne.
+      f_equiv. apply HPQ. }
   Qed.
   #[global] Instance cptrR_proper : Proper (equiv ==> equiv) cptrR.
   Proof. exact: ne_proper. Qed.

@@ -27,12 +27,12 @@ Section defs.
              (q : cQp.t) : Rep :=
     as_Rep (identity cls mdc q).
 
-  Definition validR_def : Rep := as_Rep valid_ptr.
+  Definition validR_def ty : Rep := as_Rep (valid_ptr ty).
   Definition validR_aux : seal (@validR_def). Proof. by eexists. Qed.
   Definition validR := validR_aux.(unseal).
   Definition validR_eq : @validR = _ := validR_aux.(seal_eq).
 
-  Definition svalidR_def : Rep := as_Rep strict_valid_ptr.
+  Definition svalidR_def ty : Rep := as_Rep (strict_valid_ptr ty).
   Definition svalidR_aux : seal (@svalidR_def). Proof. by eexists. Qed.
   Definition svalidR := svalidR_aux.(unseal).
   Definition svalidR_eq : @svalidR = _ := svalidR_aux.(seal_eq).
@@ -249,30 +249,30 @@ Section with_cpp.
   Context `{Σ : cpp_logic} {σ : genv}.
 
   (********************* DERIVED CONCEPTS ****************************)
-  #[global] Instance validR_persistent : Persistent validR.
+  #[global] Instance validR_persistent ty : Persistent (validR ty).
   Proof. rewrite validR_eq; refine _. Qed.
-  #[global] Instance validR_timeless : Timeless validR.
+  #[global] Instance validR_timeless ty : Timeless (validR ty).
   Proof. rewrite validR_eq; refine _. Qed.
-  #[global] Instance validR_affine : Affine validR.
+  #[global] Instance validR_affine ty : Affine (validR ty).
   Proof. rewrite validR_eq; refine _. Qed.
 
   Import heap_notations.INTERNAL.
 
-  Lemma monPred_at_validR p : validR p -|- valid_ptr p.
+  Lemma monPred_at_validR p ty : validR ty p -|- valid_ptr ty p.
   Proof. by rewrite validR_eq. Qed.
-  Lemma _at_validR (p : ptr) : _at p validR -|- valid_ptr p.
+  Lemma _at_validR (p : ptr) ty : _at p (validR ty) -|- valid_ptr ty p.
   Proof. by rewrite validR_eq _at_eq /_at_def. Qed.
 
-  #[global] Instance svalidR_persistent : Persistent svalidR.
+  #[global] Instance svalidR_persistent ty : Persistent (svalidR ty).
   Proof. rewrite svalidR_eq; refine _. Qed.
-  #[global] Instance svalidR_timeless : Timeless svalidR.
+  #[global] Instance svalidR_timeless ty : Timeless (svalidR ty).
   Proof. rewrite svalidR_eq; refine _. Qed.
-  #[global] Instance svalidR_affine : Affine svalidR.
+  #[global] Instance svalidR_affine ty : Affine (svalidR ty).
   Proof. rewrite svalidR_eq; refine _. Qed.
 
-  Lemma monPred_at_svalidR p : svalidR p -|- strict_valid_ptr p.
+  Lemma monPred_at_svalidR p ty : svalidR ty p -|- strict_valid_ptr ty p.
   Proof. by rewrite svalidR_eq. Qed.
-  Lemma _at_svalidR (p : ptr) : _at p svalidR -|- strict_valid_ptr p.
+  Lemma _at_svalidR (p : ptr) ty : _at p (svalidR ty) -|- strict_valid_ptr ty p.
   Proof. by rewrite svalidR_eq _at_eq. Qed.
 
   #[global] Instance type_ptrR_persistent t : Persistent (type_ptrR t).
@@ -289,22 +289,22 @@ Section with_cpp.
 
 
 
-  Lemma svalidR_validR : svalidR |-- validR.
+  Lemma svalidR_validR ty : svalidR ty |-- validR ty.
   Proof.
     rewrite validR_eq/validR_def svalidR_eq/svalidR_def.
     constructor =>p /=. by apply strict_valid_valid.
   Qed.
-  Lemma type_ptrR_svalidR ty : type_ptrR ty |-- svalidR.
+  Lemma type_ptrR_svalidR ty : type_ptrR ty |-- svalidR ty.
   Proof.
     rewrite type_ptrR_eq/type_ptrR_def svalidR_eq/svalidR_def.
     constructor =>p /=. by apply type_ptr_strict_valid.
   Qed.
-  Lemma type_ptrR_validR ty : type_ptrR ty |-- validR.
+  Lemma type_ptrR_validR ty : type_ptrR ty |-- validR ty.
   Proof. by rewrite type_ptrR_svalidR svalidR_validR. Qed.
 
-  #[global] Instance svalidR_validR_observe : Observe validR svalidR.
+  #[global] Instance svalidR_validR_observe ty : Observe (validR ty) (svalidR ty).
   Proof. rewrite svalidR_validR. red; iIntros "#$". Qed.
-  #[global] Instance type_ptrR_svalidR_observe t : Observe svalidR (type_ptrR t).
+  #[global] Instance type_ptrR_svalidR_observe t : Observe (svalidR t) (type_ptrR t).
   Proof. rewrite type_ptrR_svalidR; red; iIntros "#$". Qed.
 
   Definition nullR_def : Rep :=
@@ -380,7 +380,8 @@ Section with_cpp.
     by iIntros "->" (? <-%ptr_rel_elim) "%".
   Qed.
 
-  Lemma null_validR : nullR |-- validR.
+  (* Question: should this be provable even for illegal types? *)
+  Lemma null_validR t : nullR |-- validR t.
   Proof.
     rewrite nullR_eq /nullR_def validR_eq /validR_def.
     constructor => p /=. iIntros "->". iApply valid_ptr_nullptr.
@@ -390,7 +391,7 @@ Section with_cpp.
   (** [blockR sz q] represents [q] ownership of a contiguous chunk of
       [sz] bytes without any C++ structure on top of it. *)
   Definition blockR_def {σ} sz (q : cQp.t) : Rep :=
-    _offsetR (o_sub σ Tu8 (Z.of_N sz)) validR **
+    _offsetR (o_sub σ Tu8 (Z.of_N sz)) (validR Tu8) **
     (* ^ Encodes valid_ptr (this .[ Tu8 ! sz]). This is
     necessary to get [l |-> blockR n -|- l |-> blockR n ** l .[ Tu8 ! m] |-> blockR 0]. *)
     [∗list] i ∈ seq 0 (N.to_nat sz),
@@ -453,7 +454,7 @@ Section with_cpp.
     AsCFractional0 (identityR cls mdc).
   Proof. solve_as_cfrac. Qed.
 
-  #[global] Instance identityR_strict_valid cls mdc q : Observe svalidR (identityR cls mdc q).
+  #[global] Instance identityR_strict_valid cls mdc q : Observe (svalidR (Tnamed cls)) (identityR cls mdc q).
   Proof.
     red. eapply Rep_entails_at. intros.
     rewrite _at_as_Rep _at_pers svalidR_eq _at_as_Rep.
@@ -464,7 +465,7 @@ Section with_cpp.
     red.
     iIntros "X".
     destruct (decide (p = nullptr)); eauto.
-    iDestruct (observe (p |-> svalidR) with "X") as "#SV".
+    iDestruct (observe (p |-> svalidR _) with "X") as "#SV".
     subst; rewrite _at_svalidR not_strictly_valid_ptr_nullptr.
     iDestruct "SV" as "[]".
   Qed.
@@ -487,13 +488,13 @@ Section with_cpp.
 
   (** Observing [valid_ptr] *)
   #[global]
-  Instance primR_valid_observe {ty q v} : Observe validR (primR ty q v).
+  Instance primR_valid_observe {ty q v} : Observe (validR ty) (primR ty q v).
   Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
   #[global]
-  Instance anyR_valid_observe {ty q} : Observe validR (anyR ty q).
+  Instance anyR_valid_observe {ty q} : Observe (validR ty) (anyR ty q).
   Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
   #[global]
-  Instance uninitR_valid_observe {ty q} : Observe validR (uninitR ty q).
+  Instance uninitR_valid_observe {ty q} : Observe (validR ty) (uninitR ty q).
   Proof. rewrite -svalidR_validR -type_ptrR_svalidR; refine _. Qed.
 
   #[global]
@@ -508,18 +509,19 @@ Section with_cpp.
     rewrite monPred_at_type_ptrR. apply _.
   Qed.
 
+  (* Question: should this be provable for invalid types? *)
   #[global]
-  Instance null_valid_observe : Observe validR nullR.
+  Instance null_valid_observe ty : Observe (validR ty) nullR.
   Proof. rewrite -null_validR. refine _. Qed.
 
-  Lemma off_validR o
-    (Hv : ∀ p, valid_ptr (p ,, o) |-- valid_ptr p) :
-    _offsetR o validR |-- validR.
+  Lemma off_validR o ty1 ty2
+    (Hv : ∀ p, valid_ptr ty1 (p ,, o) |-- valid_ptr ty2 p) :
+    _offsetR o (validR ty1) |-- validR ty2.
   Proof.
     apply Rep_entails_at => p. by rewrite _at_offsetR !_at_validR.
   Qed.
 
-  Lemma _field_validR f : _offsetR (_field f) validR |-- validR.
+  Lemma _field_validR f ty : _offsetR (_field f) (validR ty) |-- validR (Tnamed f.(f_type)).
   Proof. apply off_validR => p. apply _valid_ptr_field. Qed.
 
   (** Observation of [nonnullR] *)
@@ -546,7 +548,7 @@ Section with_cpp.
     rewrite o_sub_0 ?_offsetR_id; [ | by eauto].
     apply _.
   Qed.
-  #[global] Instance blockR_valid_ptr sz q : Observe validR (blockR sz q).
+  #[global] Instance blockR_valid_ptr sz q : Observe (validR Tbyte) (blockR sz q).
   Proof.
     rewrite blockR_eq/blockR_def.
     destruct sz.
@@ -568,7 +570,8 @@ Section with_cpp.
     case_match; by apply _.
   Qed.
 
-  #[global] Instance tblockR_valid_ptr ty q : Observe validR (tblockR ty q).
+  (* Question: should this use [Tbyte] or [ty]? *)
+  #[global] Instance tblockR_valid_ptr ty q : Observe (validR Tbyte) (tblockR ty q).
   Proof.
     rewrite /tblockR. case_match; refine _.
     case_match; refine _.

@@ -836,20 +836,20 @@ Module cstring.
 
         #[global] Instance bufR_validR_end_observe :
           forall q (sz : Z) (cstr : t),
-            Observe (.[Tchar ! sz] |-> validR) (bufR q sz cstr).
+            Observe (.[Tchar ! sz] |-> validR Tchar) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
-          iDestruct (observe (.[Tchar ! sz] |-> validR) with "zstr") as "#?".
+          iDestruct (observe (.[Tchar ! sz] |-> validR Tchar) with "zstr") as "#?".
           by iModIntro.
         Qed.
 
         #[global] Instance bufR_validR_inbounds_observe :
           forall q (sz : Z) (z : Z) (cstr : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (bufR q sz cstr).
+            Observe (.[Tchar ! z] |-> validR Tchar) (bufR q sz cstr).
         Proof.
           intros **; rewrite /bufR/Observe/=; iIntros "zstr".
-          iDestruct (observe (.[Tchar ! z] |-> validR) with "zstr") as "#?";
+          iDestruct (observe (.[Tchar ! z] |-> validR Tchar) with "zstr") as "#?";
             last by iModIntro.
           by pose proof (zstring.bufR_validR_inbounds_observe char_type.Cchar q sz z (to_zstring cstr) H).
         Qed.
@@ -899,13 +899,13 @@ Module cstring.
 
         #[global] Instance bufR'_validR_end_observe :
           forall q (sz : Z) (zs : t),
-            Observe (.[Tchar ! sz] |-> validR) (bufR' q sz zs).
+            Observe (.[Tchar ! sz] |-> validR Tchar) (bufR' q sz zs).
         Proof. by lift_WF2WF' bufR_validR_end_observe. Qed.
 
         #[global] Instance bufR'_validR_inbounds_observe :
           forall q (sz : Z) (z : Z) (cstr : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (bufR' q sz cstr).
+            Observe (.[Tchar ! z] |-> validR Tchar) (bufR' q sz cstr).
         Proof. by lift_WF2WF' bufR_validR_inbounds_observe. Qed.
       End bufR'.
 
@@ -984,12 +984,12 @@ Module cstring.
 
         #[global] Instance R_validR_end_observe :
           forall q (cstr : t),
-            Observe (.[Tchar ! size cstr] |-> validR) (R q cstr).
+            Observe (.[Tchar ! size cstr] |-> validR Tchar) (R q cstr).
         Proof. refine _. Qed.
 
         #[global] Instance R_validR_end_observe' :
           forall q (cstr : t),
-            Observe (.[Tchar ! strlen cstr] |-> .[Tchar ! 1] |-> validR) (R q cstr).
+            Observe (.[Tchar ! strlen cstr] |-> .[Tchar ! 1] |-> validR Tchar) (R q cstr).
         Proof.
           intros *; pose proof (R_validR_end_observe q cstr).
           rewrite _offsetR_sub_sub; unfold size, strlen, zstring.size, zstring.strlen in *.
@@ -1002,7 +1002,7 @@ Module cstring.
         #[global] Instance R_validR_inbounds_observe :
           forall q (z : Z) (cstr : t),
             (0 <= z <= size cstr)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (R q cstr).
+            Observe (.[Tchar ! z] |-> validR Tchar) (R q cstr).
         Proof. refine _. Qed.
 
         #[local] Lemma observe_2_aux q1 q2 a1 a2 :
@@ -1074,18 +1074,18 @@ Module cstring.
 
         #[global] Instance R'_validR_end_observe :
           forall q (zs : t),
-            Observe (.[Tchar ! size zs] |-> validR) (R' q zs).
+            Observe (.[Tchar ! size zs] |-> validR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe. Qed.
 
         #[global] Instance R'_validR_end_observe' :
           forall q (zs : t),
-            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR) (R' q zs).
+            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe'. Qed.
 
         #[global] Instance R'_validR_inbounds_observe :
           forall q (z : Z) (cstr : t),
             (0 <= z <= size cstr)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (R' q cstr).
+            Observe (.[Tchar ! z] |-> validR Tchar) (R' q cstr).
         Proof. lift_WF2WF' R_validR_inbounds_observe. Qed.
       End R'.
 

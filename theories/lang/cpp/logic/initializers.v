@@ -55,7 +55,7 @@ Module Type Init.
     Definition default_initialize_array (default_initialize : type -> ptr -> (FreeTemps -> epred) -> mpred)
                (ty : type) (len : N) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
       fold_right (fun i PP => default_initialize ty (p ,, o_sub _ ty (Z.of_N i)) (fun free' => interp free' PP))
-                 (p .[ ty ! Z.of_N len ] |-> validR -* Q FreeTemps.id) (seqN 0 len).
+                 (p .[ ty ! Z.of_N len ] |-> validR ty -* Q FreeTemps.id) (seqN 0 len).
     #[global] Arguments default_initialize_array : simpl never.
 
     Lemma default_initialize_array_frame : ∀ di ty sz Q Q' (p : ptr),
@@ -64,7 +64,7 @@ Module Type Init.
           -* default_initialize_array di ty sz p Q -* default_initialize_array di ty sz p Q'.
     Proof.
       intros ? ? sz Q Q' p; rewrite /default_initialize_array.
-      generalize dependent (p .[ ty ! Z.of_N sz ] |-> validR).
+      generalize dependent (p .[ ty ! Z.of_N sz ] |-> validR ty).
       induction (seqN 0 sz) =>/=; intros.
       - iIntros "X #Y a b"; iApply "X"; iApply "a"; eauto.
       - iIntros "F #Hty". iApply "Hty".

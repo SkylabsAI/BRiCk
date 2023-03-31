@@ -669,7 +669,7 @@ Section with_ct.
 
         #[global] Instance bufR_validR_end_observe :
           forall q (sz : Z) (zs : t),
-            Observe (.[Tchar ! sz] |-> validR) (bufR q sz zs).
+            Observe (.[Tchar ! sz] |-> validR Tchar) (bufR q sz zs).
         Proof.
           move=> q sz zs; rewrite /bufR/Observe.
           iIntros "[%Hsz [array [%HWF rest]]]".
@@ -686,7 +686,7 @@ Section with_ct.
             pose proof (arrayR_valid_obs (λ c : N, primR Tchar q (Vchar c)) Tchar (Z.to_nat sz)
                                          (zs ++ repeat 0%N (Z.to_nat (sz - size zs)))
                                          AUX).
-            iDestruct (observe (.[ Tchar ! sz ] |-> validR) with "array'")
+            iDestruct (observe (.[ Tchar ! sz ] |-> validR Tchar) with "array'")
               as "#?"; auto.
             rewrite Z2Nat.id in H; auto.
             pose proof (size_nonneg zs).
@@ -705,7 +705,7 @@ Section with_ct.
         #[global] Instance bufR_validR_inbounds_observe :
           forall q sz (z : Z) (zs : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (bufR q sz zs).
+            Observe (.[Tchar ! z] |-> validR Tchar) (bufR q sz zs).
         Proof.
           intros **; generalize dependent zs; induction z; intros **; simpl in *.
           - rewrite ->o_sub_0 by eauto; rewrite _offsetR_id; refine _.
@@ -717,14 +717,14 @@ Section with_ct.
             assert (z <= length zs \/ length zs < z)%Z
               as [Hz' | Hz'] by lia.
             + iClear "zeros".
-              iDestruct (observe (.[ Tchar ! z] |-> validR) with "zs")
+              iDestruct (observe (.[ Tchar ! z] |-> validR Tchar) with "zs")
                 as "#valid"; last by iFrame "#".
               pose proof (arrayR_valid_obs
                             (fun c => primR Tchar q (Vchar c))
                             Tchar (Z.to_nat z) zs ltac:(lia)).
               by rewrite ->Z2Nat.id in H0 by lia.
             + iClear "zs".
-              iDestruct (observe (.[Tchar ! z] |-> validR) with "zeros")
+              iDestruct (observe (.[Tchar ! z] |-> validR Tchar) with "zeros")
                 as "#valid"; last by iFrame "#".
               assert (exists z', size zs + z' = z /\ 0 <= z')
                 as [z' [Hz'' Hneg]]
@@ -786,13 +786,13 @@ Section with_ct.
 
         #[global] Instance bufR'_validR_end_observe :
           forall q (sz : Z) (zs : t),
-            Observe (.[Tchar ! sz] |-> validR) (bufR' q sz zs).
+            Observe (.[Tchar ! sz] |-> validR Tchar) (bufR' q sz zs).
         Proof. lift_WF2WF' bufR_validR_end_observe. Qed.
 
         #[global] Instance bufR'_validR_inbounds_observe :
           forall q sz (z : Z) (zs : t),
             (0 <= z <= sz)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (bufR' q sz zs).
+            Observe (.[Tchar ! z] |-> validR Tchar) (bufR' q sz zs).
         Proof. lift_WF2WF' bufR_validR_inbounds_observe. Qed.
       End bufR'.
 
@@ -825,7 +825,7 @@ Section with_ct.
           - iIntros "[array %HWF]".
             assert (size zs <= size zs) by lia.
             rewrite Z.sub_diag/= arrayR_nil.
-            iDestruct (observe (.[Tchar ! size zs] |-> validR) with "array") as "#?". 1: {
+            iDestruct (observe (.[Tchar ! size zs] |-> validR Tchar) with "array") as "#?". 1: {
               unfold size; apply arrayR_valid_obs; by lia.
             }
             rewrite _offsetR_sep _offsetR_only_provable;
@@ -878,12 +878,12 @@ Section with_ct.
 
         #[global] Instance R_validR_end_observe :
           forall q (zs : t),
-            Observe (.[Tchar ! size zs] |-> validR) (R q zs).
+            Observe (.[Tchar ! size zs] |-> validR Tchar) (R q zs).
         Proof. try_lift_bufR bufR_validR_end_observe. Qed.
 
         #[global] Instance R_validR_end_observe' :
           forall q (zs : t),
-            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR) (R q zs).
+            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR Tchar) (R q zs).
         Proof.
           intros *; pose proof (R_validR_end_observe q zs).
           rewrite _offsetR_sub_sub; unfold size, strlen in *.
@@ -896,7 +896,7 @@ Section with_ct.
         #[global] Instance R_validR_inbounds_observe :
           forall q (z : Z) (zs : t),
             (0 <= z <= size zs)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (R q zs).
+            Observe (.[Tchar ! z] |-> validR Tchar) (R q zs).
         Proof.
           intros * Hsize; unfold R; unfold size in Hsize.
           apply observe_sep_l.
@@ -949,18 +949,18 @@ Section with_ct.
 
         #[global] Instance R'_validR_end_observe :
           forall q (zs : t),
-            Observe (.[Tchar ! size zs] |-> validR) (R' q zs).
+            Observe (.[Tchar ! size zs] |-> validR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe. Qed.
 
         #[global] Instance R'_validR_end_observe' :
           forall q (zs : t),
-            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR) (R' q zs).
+            Observe (.[Tchar ! strlen zs] |-> .[Tchar ! 1] |-> validR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_validR_end_observe'. Qed.
 
         #[global] Instance R'_validR_inbounds_observe :
           forall q (z : Z) (zs : t),
             (0 <= z <= size zs)%Z ->
-            Observe (.[Tchar ! z] |-> validR) (R' q zs).
+            Observe (.[Tchar ! z] |-> validR Tchar) (R' q zs).
         Proof. lift_WF2WF' R_validR_inbounds_observe. Qed.
       End R'_Theory.
 

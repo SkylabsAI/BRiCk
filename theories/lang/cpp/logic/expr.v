@@ -146,17 +146,17 @@ Module Type Expr.
 
     (* `this` is a prvalue *)
     Axiom wp_operand_this : forall ty Q,
-          valid_ptr (_this ρ) ** Q (Vptr $ _this ρ) FreeTemps.id
+          valid_ptr ty (_this ρ) ** Q (Vptr $ _this ρ) FreeTemps.id
       |-- wp_operand (Ethis ty) Q.
 
     (* variables are lvalues *)
     Axiom wp_lval_lvar : forall ty x Q,
-          valid_ptr (_local ρ x) ** Q (_local ρ x) FreeTemps.id
+          valid_ptr ty (_local ρ x) ** Q (_local ρ x) FreeTemps.id
       |-- wp_lval (Evar (Lname x) ty) Q.
 
     (* what about the type? if it exists *)
     Axiom wp_lval_gvar : forall ty x Q,
-          valid_ptr (_global x) ** Q (_global x) FreeTemps.id
+          valid_ptr ty (_global x) ** Q (_global x) FreeTemps.id
       |-- wp_lval (Evar (Gname x) ty) Q.
 
     (* [Emember a f ty] is an lvalue by default except when
@@ -169,7 +169,7 @@ Module Type Expr.
         | Lvalue =>
           wp_lval a (fun base free =>
                        let addr := base ,, _field m in
-                       valid_ptr addr ** Q addr free)
+                       valid_ptr ty addr ** Q addr free)
         | Xvalue => False
           (* NOTE If the object is a temporary, then the field access will also be a
              temporary. Being conservative is sensible in our semantic style.
@@ -188,7 +188,7 @@ Module Type Expr.
         | Xvalue =>
           wp_xval a (fun base free =>
                        let addr := base ,, _field m in
-                       valid_ptr addr ** Q addr free)
+                       valid_ptr ty addr ** Q addr free)
         | _ => False
         end%I
       |-- wp_xval (Emember a m ty) Q.
@@ -204,7 +204,7 @@ Module Type Expr.
          in
          Exists i, [| idx = Vint i |] **
          let addr := _eqv base .[ erase_qualifiers t ! i ] in
-         valid_ptr addr ** Q addr free)
+         valid_ptr t addr ** Q addr free)
       |-- wp_lval (Esubscript e i t) Q.
 
     (* [Esubscript e i _ _] when one operand is an array xvalue
@@ -220,7 +220,7 @@ Module Type Expr.
             Q (Vptr (basep .,, o_sub resolve (erase_qualifiers t) i)) (free' ** free)))) *)
           (Exists i, [| idx = Vint i |] **
            let addr := _eqv base .[ erase_qualifiers t ! i ] in
-           valid_ptr addr ** Q addr free))
+           valid_ptr t addr ** Q addr free))
       |-- wp_xval (Esubscript e i t) Q.
 
     (** * Unary Operators
@@ -239,7 +239,7 @@ Module Type Expr.
     Axiom wp_lval_deref : forall ty e Q,
         wp_operand e (fun v free =>
                       match v with
-                      | Vptr p => strict_valid_ptr p ** Q p free
+                      | Vptr p => strict_valid_ptr ty p ** Q p free
                       | _ => False
                       end)
         |-- wp_lval (Ederef e ty) Q.
@@ -646,7 +646,7 @@ Module Type Expr.
       | Tnamed derived , Tnamed base =>
           wp_glval e (fun addr free =>
             let addr' := addr ,, derived_to_base derived path in
-            valid_ptr addr' ** Q addr' free)
+            valid_ptr ty addr' ** Q addr' free)
       | _, _ => False
       end
       |-- wp_lval (Ecast (Cderived2base path) e Lvalue ty) Q.
@@ -656,7 +656,7 @@ Module Type Expr.
       | Tnamed derived , Tnamed base =>
           wp_glval e (fun addr free =>
             let addr' := addr ,, derived_to_base derived path in
-            valid_ptr addr' ** Q addr' free)
+            valid_ptr ty addr' ** Q addr' free)
       | _, _ => False
       end
       |-- wp_xval (Ecast (Cderived2base path) e Xvalue ty) Q.
@@ -666,7 +666,7 @@ Module Type Expr.
       | Some (Tnamed derived) , Some (Tnamed base) =>
           wp_operand e (fun addr free =>
             let addr' := _eqv addr ,, derived_to_base derived path in
-            valid_ptr addr' ** Q (Vptr addr') free)
+            valid_ptr ty addr' ** Q (Vptr addr') free)
       | _, _ => False
       end
       |-- wp_operand (Ecast (Cderived2base path) e Prvalue ty) Q.
@@ -678,7 +678,7 @@ Module Type Expr.
       | Tnamed base , Tnamed derived =>
           wp_glval e (fun addr free =>
             let addr' := addr ,, base_to_derived derived path in
-            valid_ptr addr' ** Q addr' free)
+            valid_ptr ty addr' ** Q addr' free)
       | _, _ => False
       end
       |-- wp_lval (Ecast (Cbase2derived path) e Lvalue ty) Q.
@@ -688,7 +688,7 @@ Module Type Expr.
       | Tnamed base , Tnamed derived =>
           wp_glval e (fun addr free =>
             let addr' := addr ,, base_to_derived derived path in
-            valid_ptr addr' ** Q addr' free)
+            valid_ptr ty addr' ** Q addr' free)
       | _, _ => False
       end
       |-- wp_xval (Ecast (Cbase2derived path) e Xvalue ty) Q.
@@ -698,7 +698,7 @@ Module Type Expr.
          | Some (Tnamed base), Some (Tnamed derived) =>
           wp_operand e (fun addr free =>
             let addr' := _eqv addr ,, base_to_derived derived path in
-            valid_ptr addr' ** Q (Vptr addr') free)
+            valid_ptr ty addr' ** Q (Vptr addr') free)
          | _, _ => False
         end
       |-- wp_operand (Ecast (Cbase2derived path) e Prvalue ty) Q.
@@ -1087,7 +1087,7 @@ Module Type Expr.
     Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
       match es with
       | nil =>
-        base .[ ety ! idx ] |-> validR -* Q FreeTemps.id
+        base .[ ety ! idx ] |-> validR ety -* Q FreeTemps.id
       | e :: rest =>
           (* NOTE: We nest the recursive calls to `wp_array_init` within
                the continuation of the `wp_initialize` statement to
@@ -1403,7 +1403,7 @@ Module Type Expr.
           wp_glval tu ρ src
                    (fun p free =>
                       Forall idxp,
-                      trg |-> validR -*
+                      trg |-> validR ety -*
                       _arrayloop_init (Rbind (opaque_val oname) p
                                              (Rbind (arrayloop_loop_index level) idxp ρ))
                                       level trg init ety

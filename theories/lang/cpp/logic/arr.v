@@ -55,7 +55,7 @@ Section validR.
   Context `{Σ : cpp_logic} {resolve : genv}.
 
   Lemma type_ptrR_validR_plus_one (ty : type) :
-    type_ptrR ty ⊢@{RepI (Σ := Σ)} .[ ty ! 1 ] |-> validR .
+    type_ptrR ty ⊢@{RepI (Σ := Σ)} .[ ty ! 1 ] |-> validR ty.
   Proof.
     apply Rep_entails_at => p.
     rewrite _at_type_ptrR _at_offsetR _at_validR.
@@ -69,7 +69,7 @@ Section validR.
   Proof. by rewrite _at_offsetR _at_validR. Qed. *)
 
   #[global] Instance _offsetR_sub_inv ty i :
-    Observe [| is_Some (size_of resolve ty) |] (_offsetR (_sub ty i) validR).
+    Observe [| is_Some (size_of resolve ty) |] (_offsetR (_sub ty i) (validR ty)).
   Proof.
     apply /observe_intro_persistent /Rep_entails_at => p.
     rewrite _at_offsetR _at_validR _at_only_provable.
@@ -118,7 +118,7 @@ Section validR.
 End validR.
 
 Definition arrR_def `{Σ : cpp_logic} {σ : genv} (ty : type) (Rs : list Rep) : Rep :=
-  .[ ty ! length Rs ] |-> validR ** [| is_Some (size_of σ ty) |] **
+  .[ ty ! length Rs ] |-> validR ty ** [| is_Some (size_of σ ty) |] **
   (* ^ both of these are only relevant for empty arrays, otherwise, they are implied by the
      following conjunct *)
   [∗ list] i ↦ Ri ∈ Rs, .[ ty ! Z.of_nat i ] |-> (type_ptrR ty ** Ri).
@@ -196,10 +196,10 @@ Section arrR.
   #[global] Instance arrR_size_of_observe {ty ys} : Observe [| is_Some (size_of σ ty) |] (arrR ty ys).
   Proof. rewrite arrR_eq/arrR_def; apply _. Qed.
 
-  #[global] Instance arrR_valid_end ty Rs : Observe (.[ ty ! length Rs ] |-> validR) (arrR ty Rs).
+  #[global] Instance arrR_valid_end ty Rs : Observe (.[ ty ! length Rs ] |-> validR ty) (arrR ty Rs).
   Proof. rewrite arrR_eq /arrR_def /=. refine _. Qed.
 
-  Lemma arrR_nil ty : arrR ty [] -|- validR ** [| is_Some (size_of σ ty) |].
+  Lemma arrR_nil ty : arrR ty [] -|- validR ty ** [| is_Some (size_of σ ty) |].
   Proof.
     rewrite arrR_eq /arrR_def /= right_id.
     apply: (observe_both (is_Some (size_of σ ty))).
@@ -219,7 +219,7 @@ Section arrR.
   Qed.
 
   Lemma arrR_valid_obs ty Rs (i : Z) (Hi : (0 ≤ i ≤ Z.of_nat (length Rs))%Z) :
-    Observe (.[ ty ! i ] |-> validR) (arrR ty Rs).
+    Observe (.[ ty ! i ] |-> validR ty) (arrR ty Rs).
   Proof.
     apply: observe_intro.
     apply: (observe_lhs (is_Some (size_of σ ty))) => Hsz.
@@ -236,7 +236,7 @@ Section arrR.
         iIntros "(#$ & $ & $)". } }
   Qed.
 
-  #[global] Instance arrR_validR_observe {ty ys} : Observe validR (arrR ty ys).
+  #[global] Instance arrR_validR_observe {ty ys} : Observe (validR ty) (arrR ty ys).
   Proof.
     destruct ys.
     { rewrite arrR_nil. refine _. }
@@ -347,7 +347,7 @@ Section with_array_R.
     Proper (pointwise_relation X (flip (⊢)) ==> (=) ==> flip (⊢)) (arrayR ty).
   Proof. solve_proper. Qed.
 
-  Lemma arrayR_nil : arrayR ty R [] -|- validR ** [| is_Some (size_of resolve ty) |].
+  Lemma arrayR_nil : arrayR ty R [] -|- validR ty ** [| is_Some (size_of resolve ty) |].
   Proof. by rewrite arrayR_eq /arrayR_def arrR_nil. Qed.
 
   (** Compared to [array'_valid], this is a bientailment *)
@@ -437,17 +437,17 @@ Section with_array_R.
 
   Lemma arrayR_sub_svalidR_obs (i : Z) xs  :
     (0 ≤ i < Z.of_nat $ length xs)%Z →
-    Observe (.[ ty ! i ] |-> svalidR) (arrayR ty R xs).
+    Observe (.[ ty ! i ] |-> svalidR ty) (arrayR ty R xs).
   Proof. intros. rewrite -type_ptrR_svalidR. exact: arrayR_sub_type_ptr_obs. Qed.
 
   Lemma arrayR_validR_obs (i : Z) xs :
     (0 ≤ i ≤ Z.of_nat $ length xs)%Z →
-    Observe (.[ ty ! i ] |-> validR) (arrayR ty R xs).
+    Observe (.[ ty ! i ] |-> validR ty) (arrayR ty R xs).
   Proof. intros. rewrite arrayR_eq/arrayR_def. apply arrR_valid_obs. rewrite fmap_length. lia. Qed.
 
   Lemma arrayR_valid_obs i xs
         (Hi : i ≤ length xs) :
-    Observe (.[ ty ! i ] |-> validR) (arrayR ty R xs).
+    Observe (.[ ty ! i ] |-> validR ty) (arrayR ty R xs).
   Proof.
     rewrite arrayR_eq/arrayR_def.
     apply arrR_valid_obs. rewrite fmap_length; lia.
@@ -455,20 +455,20 @@ Section with_array_R.
 
   Lemma _at_arrayR_valid_obs i xs p
         (Hi : i ≤ length xs) :
-    Observe (p .[ ty ! i ] |-> validR) (p |-> arrayR ty R xs).
+    Observe (p .[ ty ! i ] |-> validR ty) (p |-> arrayR ty R xs).
   Proof.
     rewrite -_at_offsetR.
     by apply _at_observe, arrayR_valid_obs.
   Qed.
 
-  #[global] Instance arrayR_valid_base_obs {xs} : Observe validR (arrayR ty R xs).
+  #[global] Instance arrayR_valid_base_obs {xs} : Observe (validR ty) (arrayR ty R xs).
   Proof. rewrite arrayR_eq/arrayR_def. apply _. Qed.
 
   (** Closer to [array'_valid] *)
   Lemma _at_arrayR_valid i xs p
         (Hi : i ≤ length xs) :
     p |-> arrayR ty R xs -|-
-      p |-> arrayR ty R xs ** p .[ ty ! i ] |-> validR.
+      p |-> arrayR ty R xs ** p .[ ty ! i ] |-> validR ty.
   Proof.
     split'; last exact: bi.sep_elim_l.
       by apply observe_elim, _at_arrayR_valid_obs.

@@ -211,6 +211,7 @@ Module Type SimpleCPP_VIRTUAL.
   End with_cpp.
 End SimpleCPP_VIRTUAL.
 
+(* TODO: uncomment
 Module SimpleCPP.
   Include SimpleCPP_BASE.
   Include SimpleCPP_VIRTUAL.
@@ -239,76 +240,80 @@ Module SimpleCPP.
       in_range Strict l o h |-- in_range Relaxed l o h.
     Proof. rewrite /in_range/=. f_equiv. rewrite/impl. tauto. Qed.
 
-    Definition _valid_ptr vt (p : ptr) : mpred :=
-      [| p = nullptr /\ vt = Relaxed |] \\//
-            Exists base l h o zo,
-                blocks_own base l h **
-                in_range vt l zo h **
-                 (* XXX this is wrong: [eval_offset] shouldn't take a genv. *)
-                [| exists resolve, eval_offset resolve o = Some zo /\ p = base ,, o |] **
-                [| ptr_vaddr p <> Some 0%N |].
-    (* strict validity (not past-the-end) *)
-    Notation strict_valid_ptr := (_valid_ptr Strict).
-    (* relaxed validity (past-the-end allowed) *)
-    Notation valid_ptr := (_valid_ptr Relaxed).
-
-    Instance _valid_ptr_persistent : forall b p, Persistent (_valid_ptr b p) := _.
-    Instance _valid_ptr_affine : forall b p, Affine (_valid_ptr b p) := _.
-    Instance _valid_ptr_timeless : forall b p, Timeless (_valid_ptr b p) := _.
-
-    (* Needs validity to exclude non-null pointers with 0 addresses but
-    non-null provenance (which can be created by pointer arithmetic!) as
-    invalid. *)
-    Lemma same_address_eq_null p tv :
-      _valid_ptr tv p |--
-      [| same_address p nullptr <-> p = nullptr |].
-    Proof.
-      rewrite /_valid_ptr same_address_eq; iIntros "[[-> _]|H]";
-        [ |iDestruct "H" as (?????) "(_ & _ & _ & %Hne)"]; iIntros "!%".
-      by rewrite same_property_iff ptr_vaddr_nullptr; naive_solver.
-      rewrite same_property_iff; split; last intros ->;
-        rewrite ptr_vaddr_nullptr; naive_solver.
-    Qed.
-
-    Theorem valid_ptr_nullptr : |-- valid_ptr nullptr.
-    Proof. by iLeft. Qed.
-
-    Theorem not_strictly_valid_ptr_nullptr : strict_valid_ptr nullptr |-- False.
-    Proof.
-      iDestruct 1 as "[[_ %]|H] /="; first done.
-      by iDestruct "H" as (?????) "(_ & _ & _ & %Hne)".
-    Qed.
-    Typeclasses Opaque _valid_ptr.
-
-    Lemma strict_valid_valid p :
-      strict_valid_ptr p |-- valid_ptr p.
-    Proof.
-      rewrite /_valid_ptr/=; f_equiv. { by iIntros "!%" ([_ ?]). }
-      by setoid_rewrite in_range_weaken.
-    Qed.
-
-    Axiom valid_ptr_alloc_id : forall p,
-      valid_ptr p |-- [| is_Some (ptr_alloc_id p) |].
-    (** This is a very simplistic definition of [provides_storage].
-    A more useful definition should probably not be persistent. *)
-    Definition provides_storage (storage_ptr obj_ptr : ptr) (_ : type) : mpred :=
-      [| same_address storage_ptr obj_ptr |] ** valid_ptr storage_ptr ** valid_ptr obj_ptr.
-    Global Instance provides_storage_persistent storage_ptr obj_ptr ty :
-      Persistent (provides_storage storage_ptr obj_ptr ty) := _.
-    Global Instance provides_storage_affine storage_ptr obj_ptr ty :
-      Affine (provides_storage storage_ptr obj_ptr ty) := _.
-    Global Instance provides_storage_timeless storage_ptr obj_ptr ty :
-      Timeless (provides_storage storage_ptr obj_ptr ty) := _.
-    Global Instance provides_storage_same_address storage_ptr obj_ptr ty :
-      Observe [| same_address storage_ptr obj_ptr |] (provides_storage storage_ptr obj_ptr ty) := _.
-
-    Global Instance provides_storage_valid_storage_ptr storage_ptr obj_ptr aty :
-      Observe (valid_ptr storage_ptr) (provides_storage storage_ptr obj_ptr aty) := _.
-    Global Instance provides_storage_valid_obj_ptr storage_ptr obj_ptr aty :
-      Observe (valid_ptr obj_ptr) (provides_storage storage_ptr obj_ptr aty) := _.
-
     Section with_genv.
-      Variable σ : genv.
+
+      Context {σ : genv}.
+
+      Definition _valid_ptr vt (ty : type) (p : ptr) : mpred :=
+        [| p = nullptr /\ vt = Relaxed |] \\//
+              Exists base l h o zo,
+                  blocks_own base l h **
+                  in_range vt l zo h **
+                  [| aligned_ptr_ty ty p |] ** (* this could move into valid_ptr *)
+                  [| is_Some (size_of σ ty) |] ** (* this could move into valid_ptr *)
+                  (* XXX this is wrong: [eval_offset] shouldn't take a genv. *)
+                  [| exists resolve, eval_offset resolve o = Some zo /\ p = base ,, o |] **
+                  [| ptr_vaddr p <> Some 0%N |].
+      (* strict validity (not past-the-end) *)
+      Notation strict_valid_ptr := (_valid_ptr Strict).
+      (* relaxed validity (past-the-end allowed) *)
+      Notation valid_ptr := (_valid_ptr Relaxed).
+
+      Instance _valid_ptr_persistent : forall b ty p, Persistent (_valid_ptr b ty p) := _.
+      Instance _valid_ptr_affine : forall b ty p, Affine (_valid_ptr b ty p) := _.
+      Instance _valid_ptr_timeless : forall b ty p, Timeless (_valid_ptr b ty p) := _.
+
+      (* Needs validity to exclude non-null pointers with 0 addresses but
+      non-null provenance (which can be created by pointer arithmetic!) as
+      invalid. *)
+      Lemma same_address_eq_null p ty tv :
+        _valid_ptr tv ty p |--
+        [| same_address p nullptr <-> p = nullptr |].
+      Proof.
+        rewrite /_valid_ptr same_address_eq; iIntros "[[-> _]|H]";
+          [ |iDestruct "H" as (?????) "(_ & _ & _ & %Hne)"]; iIntros "!%".
+        by rewrite same_property_iff ptr_vaddr_nullptr; naive_solver.
+        rewrite same_property_iff; split; last intros ->;
+          rewrite ptr_vaddr_nullptr; naive_solver.
+      Qed.
+
+      Theorem valid_ptr_nullptr ty : |-- valid_ptr ty nullptr.
+      Proof. by iLeft. Qed.
+
+      Theorem not_strictly_valid_ptr_nullptr ty : strict_valid_ptr ty nullptr |-- False.
+      Proof.
+        iDestruct 1 as "[[_ %]|H] /="; first done.
+        by iDestruct "H" as (?????) "(_ & _ & _ & _ & _ & %Hne)".
+      Qed.
+      Typeclasses Opaque _valid_ptr.
+
+      Lemma strict_valid_valid p ty :
+        strict_valid_ptr ty p |-- valid_ptr ty p.
+      Proof.
+        rewrite /_valid_ptr/=; f_equiv. { by iIntros "!%" ([_ ?]). }
+        by setoid_rewrite in_range_weaken.
+      Qed.
+
+      Axiom valid_ptr_alloc_id : forall p ty,
+        valid_ptr ty p |-- [| is_Some (ptr_alloc_id p) |].
+      (** This is a very simplistic definition of [provides_storage].
+      A more useful definition should probably not be persistent. *)
+      Definition provides_storage (storage_ptr obj_ptr : ptr) (ty : type) : mpred :=
+        [| same_address storage_ptr obj_ptr |] ** valid_ptr Tbyte storage_ptr ** valid_ptr ty obj_ptr.
+      Global Instance provides_storage_persistent storage_ptr obj_ptr ty :
+        Persistent (provides_storage storage_ptr obj_ptr ty) := _.
+      Global Instance provides_storage_affine storage_ptr obj_ptr ty :
+        Affine (provides_storage storage_ptr obj_ptr ty) := _.
+      Global Instance provides_storage_timeless storage_ptr obj_ptr ty :
+        Timeless (provides_storage storage_ptr obj_ptr ty) := _.
+      Global Instance provides_storage_same_address storage_ptr obj_ptr ty :
+        Observe [| same_address storage_ptr obj_ptr |] (provides_storage storage_ptr obj_ptr ty) := _.
+
+      Global Instance provides_storage_valid_storage_ptr storage_ptr obj_ptr aty :
+        Observe (valid_ptr Tbyte storage_ptr) (provides_storage storage_ptr obj_ptr aty) := _.
+      Global Instance provides_storage_valid_obj_ptr storage_ptr obj_ptr aty :
+        Observe (valid_ptr aty obj_ptr) (provides_storage storage_ptr obj_ptr aty) := _.
+
 
       Let POINTER_BITSZ : bitsize := pointer_size_bitsize σ.
       Notation POINTER_BYTES := (bytesNat POINTER_BITSZ).
@@ -537,22 +542,22 @@ Module SimpleCPP.
       Global Instance encodes_consistent t v1 v2 vs1 vs2 :
         Observe2 [| length vs1 = length vs2 |] (encodes t v1 vs1) (encodes t v2 vs2).
       Proof. iIntros "!%". by move=> /length_encodes -> /length_encodes ->. Qed.
-    End with_genv.
 
+    End with_genv.
     Instance Z_to_bytes_proper :
       Proper (genv_leq ==> eq ==> eq ==> eq ==> eq) (@Z_to_bytes).
     Proof. intros ?? Hσ%genv_byte_order_proper. solve_proper. Qed.
 
     Instance cptr_proper :
-      Proper (genv_leq ==> eq ==> eq) cptr.
+      Proper (genv_leq ==> eq ==> eq) (@cptr).
     Proof. rewrite /cptr => σ1 σ2 Heq ?? ->. by rewrite Heq. Qed.
 
     Instance aptr_proper :
-      Proper (genv_leq ==> eq ==> eq) aptr.
+      Proper (genv_leq ==> eq ==> eq) (@aptr).
     Proof. rewrite /aptr => σ1 σ2 Heq ?? ->. by rewrite Heq. Qed.
 
     Instance encodes_proper :
-      Proper (genv_leq ==> eq ==> eq ==> eq ==> lentails) encodes.
+      Proper (genv_leq ==> eq ==> eq ==> eq ==> lentails) (@encodes).
     Proof.
       unfold encodes; intros σ1 σ2 Heq t1 t2 -> v1 v2 -> vs1 vs2 ->.
       f_equiv; unfold pure_encodes, impl;
@@ -677,7 +682,7 @@ Module SimpleCPP.
       however, some of their proofs can be done via TC inference *)
     Local Definition addr_encodes
         (σ : genv) (t : type) q (a : addr) (v : val) (vs : list runtime_val) :=
-      encodes σ t v vs ** bytes a vs q ** vbytes a vs q.
+      encodes t v vs ** bytes a vs q ** vbytes a vs q.
 
     Local Instance addr_encodes_fractional {σ} ty a v vs :
       CFractional (λ q, addr_encodes σ ty q a v vs) := _.
@@ -733,21 +738,30 @@ Module SimpleCPP.
       CFracValid3 (oaddr_encodes σ t).
     Proof. constructor. intros ? oa ??. destruct oa; apply _. Qed.
 
+    Definition code_type (f : Func + Method + Ctor + Dtor) : type :=
+      type_of_value
+        match f with
+        | inr d => Odestructor d
+        | inl (inr c) => Oconstructor c
+        | inl (inl (inr m)) => Omethod m
+        | inl (inl (inl f)) => Ofunction f
+        end.
+
     (** the pointer points to the code
 
       note that in the presence of code-loading, function calls will
       require an extra side-condition that the code is loaded.
      *)
-    Definition code_own (p : ptr) (f : Func + Method + Ctor + Dtor) : mpred :=
-      strict_valid_ptr p ** _code_own p f.
+    Definition code_own (p : ptr) (f : _) : mpred :=
+      strict_valid_ptr (code_type f) p ** _code_own p f.
     Instance code_own_persistent f p : Persistent (code_own p f) := _.
     Instance code_own_affine f p : Affine (code_own p f) := _.
     Instance code_own_timeless f p : Timeless (code_own p f) := _.
 
-    Lemma code_own_strict_valid f p : code_own p f ⊢ strict_valid_ptr p.
+    Lemma code_own_strict_valid f p : code_own p f ⊢ strict_valid_ptr (code_type f) p.
     Proof. iIntros "[$ _]". Qed.
 
-    Lemma code_own_valid f p : code_own p f ⊢ valid_ptr p.
+    Lemma code_own_valid f p : code_own p f ⊢ valid_ptr (code_type f) p.
     Proof. by rewrite code_own_strict_valid strict_valid_valid. Qed.
     Typeclasses Opaque code_own.
 
@@ -788,13 +802,13 @@ Module SimpleCPP.
       Local Notation ctor_at := (ctor_at σ) (only parsing).
       Local Notation dtor_at := (dtor_at σ) (only parsing).
 
-      Lemma code_at_strict_valid tu f p :   code_at tu f p |-- strict_valid_ptr p.
+      Lemma code_at_strict_valid tu f p :   code_at tu f p |-- strict_valid_ptr (type_of_value $ Ofunction f) p.
       Proof. exact: code_own_strict_valid. Qed.
-      Lemma method_at_strict_valid tu f p :   method_at tu f p |-- strict_valid_ptr p.
+      Lemma method_at_strict_valid tu f p :   method_at tu f p |-- strict_valid_ptr (type_of_value $ Omethod f) p.
       Proof. exact: code_own_strict_valid. Qed.
-      Lemma ctor_at_strict_valid tu f p :   ctor_at tu f p |-- strict_valid_ptr p.
+      Lemma ctor_at_strict_valid tu f p :   ctor_at tu f p |-- strict_valid_ptr (type_of_value $ Oconstructor f )p.
       Proof. exact: code_own_strict_valid. Qed.
-      Lemma dtor_at_strict_valid tu f p :   dtor_at tu f p |-- strict_valid_ptr p.
+      Lemma dtor_at_strict_valid tu f p :   dtor_at tu f p |-- strict_valid_ptr (type_of_value $ Odestructor f) p.
       Proof. exact: code_own_strict_valid. Qed.
     End with_genv.
 
@@ -802,29 +816,29 @@ Module SimpleCPP.
     OLD, not exposed any more.
      *)
     Local Definition pinned_ptr (va : N) (p : ptr) : mpred :=
-      valid_ptr p **
+      (Exists ty, valid_ptr ty p) **
       ([| p = nullptr /\ va = 0%N |] \\//
       ([| p <> nullptr /\ ptr_vaddr p = Some va |] ** mem_inj_own p (Some va))).
 
     Lemma pinned_ptr_null : |-- pinned_ptr 0 nullptr.
-    Proof. iSplit; by [iApply valid_ptr_nullptr | iLeft]. Qed.
+    Proof. iSplit; by [iExists Tint ; iApply valid_ptr_nullptr | iLeft]. Qed.
 
     (* Not provable in the current model without tying to a concrete model of pointers. *)
-    Lemma offset_pinned_ptr_pure σ o n va p :
+    Lemma offset_pinned_ptr_pure σ o n va ty p :
       eval_offset σ o = Some n ->
       pinned_ptr_pure va p ->
-      valid_ptr (p ,, o) |--
+      valid_ptr ty (p ,, o) |--
       [| pinned_ptr_pure (Z.to_N (Z.of_N va + n)) (p ,, o) |].
     Proof.
       rewrite pinned_ptr_pure_eq. intros E P.
     Abort.
 
+    (* In this model, this definition is effectively just [_ptr] *)
     Definition type_ptr {resolve : genv} (ty : type) (p : ptr) : mpred :=
       [| p <> nullptr |] **
-      [| aligned_ptr_ty ty p |] **
-      [| is_Some (size_of resolve ty) |] **
-
-      strict_valid_ptr p ** valid_ptr (p ,, o_sub resolve ty 1).
+      [| aligned_ptr_ty ty p |] ** (* this could move into valid_ptr *)
+      [| is_Some (size_of resolve ty) |] ** (* this could move into valid_ptr *)
+      strict_valid_ptr ty p ** valid_ptr ty (p ,, o_sub resolve ty 1).
       (* TODO: inline valid_ptr, and assert validity of the range, like we should do in tptsto!
       For 0-byte objects, should we assert ownership of one byte, to get character pointers? *)
       (* [alloc_own (alloc_id p) (l, h) **
@@ -1316,3 +1330,4 @@ Module VALID_PTR : VALID_PTR_AXIOMS PTRS_IMPL VALUES_DEFS_IMPL L L.
       [| directly_derives σ derived base |].
   End with_cpp.
 End VALID_PTR.
+*)
