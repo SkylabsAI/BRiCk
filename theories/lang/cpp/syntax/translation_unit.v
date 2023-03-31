@@ -88,6 +88,7 @@ Record Method' {type Expr : Set} : Set := Build_Method
 { m_return  : type
 ; m_class   : globname
 ; m_this_qual : type_qualifiers
+; m_req_qual : ref_qualifier.t
 ; m_params  : list (ident * type)
 ; m_cc      : calling_conv
 ; m_arity   : function_arity

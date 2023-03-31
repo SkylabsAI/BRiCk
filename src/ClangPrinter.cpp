@@ -539,3 +539,18 @@ ClangPrinter::printCallingConv(clang::CallingConv cc, CoqPrinter &print) const {
         logging::die();
     }
 }
+
+void
+ClangPrinter::printRefQualifier(RefQualifierKind rq, CoqPrinter &print) const {
+    switch (rq) {
+    case RefQualifierKind::RQ_None:
+        print.output() << "ref_qualifier.None";
+        break;
+    case RefQualifierKind::RQ_LValue:
+        print.output() << "ref_qualifier.Lvalue";
+        break;
+    case RefQualifierKind::RQ_RValue:
+        print.output() << "ref_qualifier.Rvalue";
+        break;
+    }
+}

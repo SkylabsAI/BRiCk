@@ -165,6 +165,8 @@ printMethod(const CXXMethodDecl *decl, CoqPrinter &print,
     print.output() << fmt::line;
     cprint.printQualifier(decl->isConst(), decl->isVolatile(), print);
     print.output() << fmt::nbsp;
+    cprint.printRefQualifier(decl->getRefQualifier(), print);
+    print.output() << fmt::nbsp;
 
     print.list(decl->parameters(), [&cprint](auto print, auto i) {
         parameter(i, print, cprint);

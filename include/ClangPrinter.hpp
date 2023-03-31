@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  */
 #pragma once
+#include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <llvm/ADT/Optional.h>
 
@@ -63,6 +64,8 @@ public:
 
     void printQualifier(bool is_const, bool is_volatile,
                         CoqPrinter& print) const;
+
+    void printRefQualifier(clang::RefQualifierKind rq, CoqPrinter& print) const;
 
     void printField(const clang::ValueDecl*, CoqPrinter&);
 

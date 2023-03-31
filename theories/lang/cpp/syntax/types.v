@@ -210,6 +210,28 @@ Module float_type.
 
 End float_type.
 
+(* Qualifiers on member function pointers *)
+Module ref_qualifier.
+  Variant t : Set := None | Lvalue | Rvalue.
+  #[global] Instance t_eq_dec : EqDecision t.
+  Proof. solve_decision. Defined.
+  #[global] Instance t_countable : Countable t.
+  Proof.
+    apply (inj_countable'
+      (λ rq,
+        match rq with
+        | None => 0 | Lvalue => 1 | Rvalue => 2
+        end)
+      (λ n,
+        match n with
+        | 0 => None | 1 => Lvalue | 2 => Rvalue
+        | _ => None	(** dummy *)
+        end)).
+    abstract (by intros []).
+  Defined.
+
+End ref_qualifier.
+
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
@@ -233,12 +255,16 @@ Inductive type : Set :=
 | Tbool
 | Tmember_pointer (_ : globname) (_ : type)
 | Tfloat_ (_ : float_type.t)
+
+| Tmember_function (_ : globname) (_ : ref_qualifier.t) (cv : type_qualifiers)
+    {cc : calling_conv} {ar : function_arity} (_ : type) (_ : list type)
+
 | Tqualified (_ : type_qualifiers) (_ : type)
 | Tnullptr
 (* architecture-specific types; currently unused.
    some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option size]. *)
-| Tarch (_ : option bitsize) (name : bs)
-.
+| Tarch (_ : option bitsize) (name : bs).
+(* TODO: lift out the common entries for [function_type] *)
 
 #[only(inhabited)] derive type.
 

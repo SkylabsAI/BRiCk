@@ -332,6 +332,9 @@ public:
         print.output() << fmt::nbsp;
         print.list(type->param_types(),
                    [&](auto print, auto i) { cprint.printQualType(i, print); });
+        assert(type->getRefQualifier() == RefQualifierKind::RQ_None);
+        assert(type->isConst() == false);
+        assert(type->isVolatile() == false);
         print.end_ctor();
     }
 
@@ -435,19 +438,55 @@ public:
 
     void VisitMemberPointerType(const MemberPointerType* type,
                                 CoqPrinter& print, ClangPrinter& cprint) {
-        print.ctor("Tmember_pointer");
+        auto print_type = [this, &print, &cprint](auto class_type) {
+            if (!print.templates()) {
+                cprint.printTypeName(class_type->getAsCXXRecordDecl(), print);
+            } else {
+                /*
+                  `class_type` may not be a concrete class (e.g., it could
+                  be a template parameter).
+                */
+                this->Visit(class_type, print, cprint);
+            }
+        };
+
         auto class_type = type->getClass();
-        if (!print.templates()) {
-            cprint.printTypeName(class_type->getAsCXXRecordDecl(), print);
+        if (type->isMemberDataPointer()) {
+          print.ctor("Tmember_pointer");
+          print_type(class_type);
+          print.output() << fmt::nbsp;
+          cprint.printQualType(type->getPointeeType(), print);
         } else {
-            /*
-            `class_type` may not be a concrete class (e.g., it could
-            be a template parameter).
-            */
-            this->Visit(class_type, print, cprint);
+            print.ctor("@Tmember_function");
+            print_type(class_type);
+            print.output() << fmt::nbsp;
+            if (auto ft = dyn_cast<FunctionProtoType>(
+                    type->getPointeeType()
+                        .getTypePtr()
+                        ->getUnqualifiedDesugaredType())) {
+                cprint.printRefQualifier(ft->getRefQualifier(), print);
+                print.output() << fmt::nbsp;
+                cprint.printQualifier(ft->isConst(), ft->isVolatile(), print);
+                print.output() << fmt::nbsp;
+                cprint.printCallingConv(ft->getCallConv(), print);
+                print.output() << fmt::nbsp;
+                cprint.printVariadic(ft->isVariadic(), print);
+                print.output() << fmt::nbsp;
+                cprint.printQualType(ft->getReturnType(), print);
+                print.output() << fmt::nbsp;
+                print.list(ft->param_types(), [&](auto print, auto i) {
+                    cprint.printQualType(i, print);
+                });
+            } else {
+                logging::fatal()
+                    << "While printing a pointer to a member function, got "
+                    << type->getPointeeType().getTypePtr()->getTypeClassName()
+                    << " while expecting a FunctionProtoType.\n"
+                    << "The full type is:\n";
+                type->dump();
+                logging::die();
+            }
         }
-        print.output() << fmt::nbsp;
-        cprint.printQualType(type->getPointeeType(), print);
         print.end_ctor();
     }
 
