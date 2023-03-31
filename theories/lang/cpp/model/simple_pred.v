@@ -412,15 +412,8 @@ Module SimpleCPP.
           | _ => False
           end
         | Tchar_ ct => False (* TODO *)
-        | Tmember_pointer _ _ =>
-          match v with
-          | Vint v =>
-            (* note: this is really an offset *)
-            in_Z_to_bytes_bounds POINTER_BITSZ Unsigned v /\
-            vs = Z_to_bytes POINTER_BITSZ Unsigned v
-          | Vundef => pure_encodes_undef POINTER_BITSZ vs
-          | _ => False
-          end
+        | Tmember_pointer _ _ => False
+        | Tmember_function _ _ _ _ _ => False
         | Tbool =>
           if decide (v = Vint 0) then vs = [Rval 0%N]
           else if decide (v = Vint 1) then vs = [Rval 1%N]

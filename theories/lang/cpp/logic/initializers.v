@@ -96,6 +96,7 @@ Fixpoint default_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   | Tvoid => ERROR "default initialization of void"
   | Tfunction _ _ => ERROR "default initialization of functions"
   | Tmember_pointer _ _ => ERROR "default initialization of member pointers"
+  | Tmember_function _ _ _ _ _=> ERROR "default initialization of member pointers (to functions)"
   | Tnamed _ => False (* default initialization of aggregates is done at elaboration time. *)
 
   | Tarch _ _ => UNSUPPORTED "default initialization of architecture type"
@@ -190,7 +191,6 @@ Section wp_initialize.
   #[local] Notation wp_init := (wp_init tu ρ).
   #[local] Notation interp := (interp tu).
   #[local] Notation wp_fptr := (@wp_fptr _ Σ tu.(types)).
-  #[local] Notation mspec := (@mspec _ Σ tu.(types)).
 
   (* error used when using [e] to initialize a value of type [ty]. *)
   Variant initializing_type (ty : type) (e : Expr) : Prop := ANY.
@@ -234,6 +234,7 @@ Section wp_initialize.
 
     | Tpointer _
     | Tmember_pointer _ _
+    | Tmember_function _ _ _ _ _
     | Tbool
     | Tnum _ _
     | Tchar_ _

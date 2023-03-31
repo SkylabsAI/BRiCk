@@ -48,6 +48,7 @@ Section defs.
       | Tnullptr
       | Tenum _
       | Tmember_pointer _ _
+      | Tmember_function _ _ _ _ _
       | Tfloat_ _
       | Tvoid =>
         let rty := erase_qualifiers rty in

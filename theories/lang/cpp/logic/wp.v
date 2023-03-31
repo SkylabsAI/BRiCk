@@ -1031,7 +1031,8 @@ Section with_cpp.
   Axiom wp_fptr_complete_type : forall te ft a ls Q,
       wp_fptr te ft a ls Q
       |-- wp_fptr te ft a ls Q **
-          [| exists cc ar tret targs, ft = Tfunction (cc:=cc) (ar:=ar) tret targs |].
+          [| (exists cc ar tret targs, ft = Tfunction (cc:=cc) (ar:=ar) tret targs)
+            \/ (exists cls cc ar cv rq tret targs, ft = Tmember_function cls rq cv (cc:=cc) (ar:=ar) tret targs )|].
 
   (* A type is callable against a type table if all of its arguments and return
      type are [complete_type]s.
@@ -1041,7 +1042,9 @@ Section with_cpp.
    *)
   Definition callable_type (tt : type_table) (t : type) : Prop :=
     match t with
-    | Tfunction ret args => complete_type tt ret /\ List.Forall (complete_type tt) args
+    | Tfunction ret args
+    | Tmember_function _ _ _ ret args =>
+        complete_type tt ret /\ List.Forall (complete_type tt) args
     | _ => False
     end.
 
@@ -1114,43 +1117,6 @@ Section with_cpp.
     Qed.
   End wp_fptr.
 
-  (** [mspec tt this_ty fty ..] is the analogue of [wp_fptr] for member functions.
-
-      NOTE this includes constructors and destructors.
-
-      NOTE the current implementation desugars this to [wp_fptr] but this is not
-           accurate according to the standard because a member function can not
-           be cast to a regular function that takes an extra parameter.
-           We could fix this by splitting [wp_fptr] more, but we are deferring that
-           for now.
-
-           In practice we assume that the AST is well-typed, so the only way to
-           exploit this is to use [reinterpret_cast< >] to cast a function pointer
-           to an member pointer or vice versa.
-   *)
-  Definition mspec (tt : type_table) (this_type : type) (fun_type : type)
-    : ptr -> list ptr -> (ptr -> epred) -> mpred :=
-    wp_fptr tt (Tmember_func this_type fun_type).
-
-  Lemma mspec_frame_fupd_strong tt1 tt2 t t0 v l Q1 Q2 :
-    type_table_le tt1 tt2 ->
-    (Forall v, Q1 v -* |={top}=> Q2 v)
-    |-- mspec tt1 t t0 v l Q1 -* mspec tt2 t t0 v l Q2.
-  Proof. apply wp_fptr_frame_fupd. Qed.
-
-  Lemma mspec_shift tt t t0 v l Q :
-    (|={top}=> mspec tt t t0 v l (λ v, |={top}=> Q v)) |-- mspec tt t t0 v l Q.
-  Proof. apply wp_fptr_shift. Qed.
-
-  Lemma mspec_frame:
-    ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
-      Forall v, Q v -* Q' v |-- mspec t1 t t0 v l Q -* mspec t1 t t0 v l Q'.
-  Proof. intros; apply wp_fptr_frame. Qed.
-
-  Lemma mspec_frame_fupd :
-    ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
-      (Forall v, Q v -* |={top}=> Q' v) |-- mspec t1 t t0 v l Q -* mspec t1 t t0 v l Q'.
-  Proof. intros; apply wp_fptr_frame_fupd; reflexivity. Qed.
 End with_cpp.
 End WPE.
 
