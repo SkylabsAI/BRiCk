@@ -73,6 +73,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tfunction _ _ => None
   | Tbool => Some 1
   | Tmember_pointer _ _ => None (* TODO these are not well supported right now *)
+  | Tmember_function _ _ _ _ _ => None
   | Tqualified _ t => size_of resolve t
   | Tnullptr => Some (pointer_size resolve)
   | Tfloat_ sz => Some (float_type.bytesN sz)

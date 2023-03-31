@@ -88,7 +88,7 @@ Record Method' {type Expr : Set} : Set := Build_Method
 { m_return  : type
 ; m_class   : globname
 ; m_this_qual : type_qualifiers
-; m_req_qual : ref_qualifier.t
+; m_ref_qual : ref_qualifier.t
 ; m_params  : list (ident * type)
 ; m_cc      : calling_conv
 ; m_arity   : function_arity
@@ -238,20 +238,6 @@ Notation ObjValue := (ObjValue' type Expr).
 TODO: [Tmember_func], [type_of_value] seem misplaced
 *)
 
-(* [Tmember_func ty fty] constructs the function type for a
-     member function that takes a [this] parameter of [ty]
-
-   TODO technically the [this] parameter is [const], but we are not
-        treating [const] correctly right now, so we make it non-const
-        in the type. The C++ typesystem prevents us from attempting to
-        modify the value of [this] since it is not an Lvalue.
- *)
-Definition Tmember_func (ty : type) (fty : type) : type :=
-  match fty with
-  | @Tfunction cc ar ret args => Tfunction (cc:=cc) (ar:=ar) ret (Tptr ty :: args)
-  | _ => fty
-  end.
-
 (** [type_of_value o] returns the type of the given [ObjValue] *)
 Definition type_of_value (o : ObjValue) : type :=
   normalize_type
@@ -259,11 +245,11 @@ Definition type_of_value (o : ObjValue) : type :=
   | Ovar t _ => t
   | Ofunction f => Tfunction (cc:=f.(f_cc)) (ar:=f.(f_arity)) f.(f_return) $ snd <$> f.(f_params)
   | Omethod m =>
-    Tmember_func (Tqualified m.(m_this_qual) (Tnamed m.(m_class))) $ Tfunction (cc:=m.(m_cc)) (ar:=m.(m_arity)) m.(m_return) $ snd <$> m.(m_params)
+      Tmember_function m.(m_class) m.(m_ref_qual) m.(m_this_qual) (cc:=m.(m_cc)) (ar:=m.(m_arity)) m.(m_return) $ snd <$> m.(m_params)
   | Oconstructor c =>
-    Tmember_func (Tnamed c.(c_class)) $ Tfunction (cc:=c.(c_cc)) (ar:=c.(c_arity)) Tvoid $ snd <$> c.(c_params)
+      Tmember_function c.(c_class) ref_qualifier.None QM (cc:=c.(c_cc)) (ar:=c.(c_arity)) Tvoid $ snd <$> c.(c_params)
   | Odestructor d =>
-    Tmember_func (Tnamed d.(d_class)) $ Tfunction (cc:=d.(d_cc)) Tvoid nil
+    Tmember_function d.(d_class) ref_qualifier.None QM (cc:=d.(d_cc)) Tvoid nil
   end.
 
 Variant GlobDecl' {type Expr : Set} : Set :=

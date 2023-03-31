@@ -167,6 +167,7 @@ Definition promote_integral {σ : genv} (tu : translation_unit) (ty : type) : op
   | Tnamed _
   | Tfunction _ _
   | Tmember_pointer _ _
+  | Tmember_function _ _ _ _ _
   | Tfloat_ _
   | Tnullptr
   | Tarch _ _ => None

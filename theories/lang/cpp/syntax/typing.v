@@ -60,8 +60,8 @@ Fixpoint type_of (e : Expr) : type :=
 
 (** [erase_qualifiers t] erases *all* qualifiers that occur everywhere in the type.
 
-    NOTE we currently use this because we do not track [const]ness in the logic, this
-    is somewhat reasonable because we often opt to express this in separation logic.
+    NOTE we currently use this because BRiCk tracks [const]ness semantics rather than
+    syntactically in order to be compatible with features such as `const_cast`.
     And the type system also enforces some of the other criteria.
  *)
 Fixpoint erase_qualifiers (t : type) : type :=
@@ -78,6 +78,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tenum _ => t
   | Tarray t sz => Tarray (erase_qualifiers t) sz
   | @Tfunction cc ar t ts => Tfunction (cc:=cc) (ar:=ar) (erase_qualifiers t) (List.map erase_qualifiers ts)
+  | @Tmember_function nm rq cv cc ar t ts => @Tmember_function nm rq QM cc ar (erase_qualifiers t) (List.map erase_qualifiers ts)
   | Tmember_pointer cls t => Tmember_pointer cls (erase_qualifiers t)
   | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr

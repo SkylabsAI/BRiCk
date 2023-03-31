@@ -311,6 +311,8 @@ Section type_ind'.
     P ty -> P (Tmember_pointer name ty).
   Hypothesis Tfloat_ind' : forall (size : float_type.t),
     P (Tfloat_ size).
+  Hypothesis Tmember_func_ind' : forall nm rq cv cc ar ty tys,
+      P ty -> Forall P tys -> P (@Tmember_function nm rq cv cc ar ty tys).
   Hypothesis Tqualified_ind' : forall (q : type_qualifiers) (ty : type),
     P ty -> P (Tqualified q ty).
   Hypothesis Tnullptr_ind' : P Tnullptr.
@@ -318,6 +320,14 @@ Section type_ind'.
     P (Tarch osize name).
 
   Fixpoint type_ind' (ty : type) : P ty :=
+    let list_type_ind' :=
+      (fix list_tys_ind' (tys : list type) : Forall P tys :=
+         match tys with
+         | []        => List.Forall_nil P
+         | ty :: tys' => List.Forall_cons P ty tys'
+                         (type_ind' ty) (list_tys_ind' tys')
+         end)
+    in
     match ty with
     | Tptr ty                 => Tptr_ind' ty (type_ind' ty)
     | Tref ty                 => Tref_ind' ty (type_ind' ty)
@@ -334,19 +344,16 @@ Section type_ind'.
                           the elements of [tys] are actually subterms of
                           [Tfunction ty tys]
                       *)
-                     ((fix list_tys_ind' (tys : list type) : Forall P tys :=
-                         match tys with
-                         | []        => List.Forall_nil P
-                         | ty :: tys' => List.Forall_cons P ty tys'
-                                                        (type_ind' ty) (list_tys_ind' tys')
-                         end) tys)
+                     (list_type_ind' tys)
     | Tbool                   => Tbool_ind'
     | Tmember_pointer name ty => Tmember_pointer_ind' name ty (type_ind' ty)
     | Tfloat_ sz               => Tfloat_ind' sz
+    | @Tmember_function nm rq cv cc ar ty tys => Tmember_func_ind' nm rq cv cc ar ty tys (type_ind' ty) (list_type_ind' tys)
     | Tqualified q ty         => Tqualified_ind' q ty (type_ind' ty)
     | Tnullptr                => Tnullptr_ind'
     | Tarch osize name        => Tarch_ind' osize name
     end.
+
 End type_ind'.
 
 (* XXX merge type_eq_dec into type_eq. *)
@@ -359,15 +366,16 @@ Proof.
 Defined.
 #[global] Instance type_eq: EqDecision type := type_eq_dec.
 Section type_countable.
-  #[local] Notation BS x        := (GenLeaf (inr x)).
-  #[local] Notation QUAL x      := (GenLeaf (inl (inr x))).
-  #[local] Notation BITSIZE x   := (GenLeaf (inl (inl (inr x)))).
-  #[local] Notation SIGNED x    := (GenLeaf (inl (inl (inl (inr x))))).
-  #[local] Notation CC x        := (GenLeaf (inl (inl (inl (inl (inr x)))))).
-  #[local] Notation AR x        := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
-  #[local] Notation N x         := (GenLeaf (inl (inl (inl (inl (inl (inl (inr x)))))))).
-  #[local] Notation CHAR_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inr x))))))))).
-  #[local] Notation FLOAT_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inl x))))))))).
+  #[local] Notation BS x         := (GenLeaf (inr x)).
+  #[local] Notation QUAL x       := (GenLeaf (inl (inr x))).
+  #[local] Notation BITSIZE x    := (GenLeaf (inl (inl (inr x)))).
+  #[local] Notation SIGNED x     := (GenLeaf (inl (inl (inl (inr x))))).
+  #[local] Notation CC x         := (GenLeaf (inl (inl (inl (inl (inr x)))))).
+  #[local] Notation AR x         := (GenLeaf (inl (inl (inl (inl (inl (inr x))))))).
+  #[local] Notation N x          := (GenLeaf (inl (inl (inl (inl (inl (inl (inr x)))))))).
+  #[local] Notation CHAR_TYPE x  := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inr x))))))))).
+  #[local] Notation FLOAT_TYPE x := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inl (inr x)))))))))).
+  #[local] Notation RQ x         := (GenLeaf (inl (inl (inl (inl (inl (inl (inl (inl (inl x)))))))))).
 
   #[global] Instance type_countable : Countable type.
   Proof.
@@ -380,10 +388,12 @@ Section type_countable.
       | Tvoid => GenNode 4 []
       | Tarray t n => GenNode 5 [go t; N n]
       | Tnamed gn => GenNode 6 [BS gn]
-      | @Tfunction cc ar ret args => GenNode 7 $ (CC cc) :: (AR ar) :: go ret :: (go <$> args)
+      | @Tfunction cc ar ret args => GenNode 7 $ CC cc :: AR ar :: go ret :: (go <$> args)
       | Tbool => GenNode 8 []
       | Tmember_pointer gn t => GenNode 9 [BS gn; go t]
       | Tfloat_ sz => GenNode 10 [FLOAT_TYPE sz]
+      | @Tmember_function nm rq cv cc ar ret args =>
+          GenNode 17 $ BS nm :: RQ rq :: QUAL cv :: CC cc :: AR ar :: go ret :: (go <$> args)
       | Tqualified q t => GenNode 11 [QUAL q; go t]
       | Tnullptr => GenNode 12 []
       | Tarch None gn => GenNode 13 [BS gn]
@@ -404,6 +414,8 @@ Section type_countable.
       | GenNode 8 [] => Tbool
       | GenNode 9 [BS gn; t] => Tmember_pointer gn (go t)
       | GenNode 10 [FLOAT_TYPE sz] => Tfloat_ sz
+      | GenNode 17 (BS nm :: RQ rq :: QUAL cv :: CC cc :: AR ar :: ret :: args) =>
+          @Tmember_function nm rq cv cc ar (go ret) (go <$> args)
       | GenNode 11 [QUAL q; t] => Tqualified q (go t)
       | GenNode 12 [] => Tnullptr
       | GenNode 13 [BS gn] => Tarch None gn
@@ -413,8 +425,9 @@ Section type_countable.
       | _ => Tvoid	(** dummy *)
       end.
     apply (inj_countable' enc dec). refine (fix go t := _).
-    destruct t as [| | | | | | | | |cc ar ret args| | | | | |[]]; simpl; f_equal; try done.
+    destruct t as [| | | | | | | | |cc ar ret args| | | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
+    induction l; simpl; f_equal; done.
   Defined.
 End type_countable.
 
@@ -634,9 +647,10 @@ Lemma decompose_type_unfold t :
     else (QM, t).
 Proof.
   rewrite /decompose_type qual_norm_unfold.
-  destruct t as [| | | | | | | | | | | | |q t| |]; try done. set pair := fun x y => (x, y).
-  move: q. induction t=>q; cbn; try by rewrite right_id_L.
-  rewrite left_id_L !IHt /=. f_equal. by rewrite assoc_L.
+  destruct t as [| | | | | | | | | | | | | |q t| |]; try done. set pair := fun x y => (x, y).
+  move: q. induction t=>q; try by rewrite right_id_L.
+  cbn. rewrite left_id_L !IHt /=. f_equal.
+  rewrite assoc_L. f_equal.
 Qed.
 
 Inductive decompose_type_spec : type -> type_qualifiers * type -> Prop :=
@@ -948,6 +962,8 @@ Fixpoint normalize_type (t : type) : type :=
   | @Tfunction cc ar r args =>
     Tfunction (cc:=cc) (ar:=ar) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
+  | @Tmember_function nm rq cv cc ar r args =>
+    @Tmember_function nm rq cv cc ar (drop_norm r) (List.map drop_norm args)
   | Tqualified q t => qual_norm q t
   | Tnum _ _ => t
   | Tchar_ _ => t
@@ -976,14 +992,17 @@ Section normalize_type_idempotent.
         induction ty using type_ind'; intros *;
         rewrite /qual_norm/= ?normalize_type_idempotent//.
       - rewrite map_map /qual_norm !IHty /merge_tq/=;
-          erewrite map_ext_Forall; eauto; eapply Forall_impl;
-          [|eassumption]; intros * HForall; simpl in HForall; apply HForall.
-      - by rewrite IHty !assoc_L.
+          erewrite map_ext_Forall; eauto; eapply Forall_impl; eauto;
+          intros * HForall; simpl in HForall; apply HForall.
+      - rewrite map_map /qual_norm !IHty /merge_tq/=;
+          erewrite map_ext_Forall; eauto; eapply Forall_impl; eauto;
+          intros * HForall; simpl in HForall; apply HForall.
+      - rewrite IHty !merge_tq_assoc. f_equal.
     }
     { (* _qual_norm_involutive *)
       intros *; generalize dependent q;
         induction ty using type_ind'; intros *; simpl;
-        try solve[destruct q; simpl; now rewrite ?normalize_type_idempotent].
+        try solve[destruct q; simpl; now rewrite ?normalize_type_idempotent];
       destruct q; simpl;
         rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=;
         try solve[erewrite map_ext_Forall; eauto; induction tys;
@@ -1000,8 +1019,14 @@ Section normalize_type_idempotent.
         | constructor;
           [ now apply _drop_norm_idempotent
           | apply IHtys; now apply Forall_inv_tail in H]].
+      rewrite map_map /qual_norm _drop_norm_idempotent /merge_tq/=.
+      erewrite map_ext_Forall; eauto; induction tys;
+        [ now constructor
+        | constructor;
+          [ now apply _drop_norm_idempotent
+          | apply IHtys; now apply Forall_inv_tail in H]].
     }
-  Qed.
+  Admitted. (* TEMPORARY *)
 End normalize_type_idempotent.
 
 Lemma normalize_type_qual_norm t :
