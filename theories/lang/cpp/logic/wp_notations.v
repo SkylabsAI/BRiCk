@@ -83,10 +83,11 @@ Module Export Compact.
          ( at level 0
          , format "'[hv  ' ::wpS  '/' '[hv' ρ  '/' s ']' ']'"
          , only printing).
-  Notation "'::wpD' old_ρ decl new_ρ"
-      := (wp_decl _ old_ρ new_ρ decl _)
+
+  Notation "'::wpD' ρ decl"
+      := (wp_decl _ ρ decl _)
          ( at level 0
-         , format "'[hv  ' ::wpD  '/' '[hv' old_ρ  '/' decl  '/' new_ρ ']' ']'"
+         , format "'[hv  ' ::wpD  '/' '[hv' ρ '/' decl ']' ']'"
          , only printing).
 
   (* Special WPs*)
@@ -219,16 +220,16 @@ Module Export Compact.
            , format "'[hv  ' ::wpCond  '/' ρ  '/' '[' ( T ) ']' ']'"
            , only printing).
   (* TODO (JH): print something more useful *)
-  Notation "'::wpCall' ρ"
-        := (wp_call _ ρ _ _ _ _)
+  Notation "'::wpCall' f ( es )"
+        := (wp_call _ _ _ f es _)
            ( at level 0
-           , format "'[hv  ' ::wpCall  '/' ρ ']'"
+           , format "'[hv  ' ::wpCall  '/'  f ( es ) ']'"
            , only printing).
   (* TODO (JH): print something more useful *)
-  Notation "'::wpMCall' ρ"
-        := (wp_mcall _ ρ _ _ _ _ _ _)
+  Notation "'::wpMCall' obj . f ( es )"
+        := (wp_mcall _ _ f obj _ es _)
            ( at level 0
-           , format "'[hv  ' ::wpMCall  '/' ρ ']'"
+           , format "'[hv  ' ::wpMCall  '/'  obj . f ( es ) ']'"
            , only printing).
 End Compact.
 
@@ -239,10 +240,10 @@ Module Verbose.
          ( at level 0
          , format "'[hv  ' ::wpS  '/' '[hv' ρ  '/' s ']'  '/' K ']'"
          , only printing).
-  Notation "'::wpD' old_ρ decl new_ρ Q"
-      := (wp_decl _ old_ρ new_ρ decl Q)
+  Notation "'::wpD' ρ decl Q"
+      := (wp_decl _ ρ decl Q)
          ( at level 0
-         , format "'[hv  ' ::wpD  '/' '[hv' old_ρ  '/' decl  '/' new_ρ ']'  '/' Q ']'"
+         , format "'[hv  ' ::wpD  '/' '[hv' ρ  '/' decl ']' '/' Q ']'"
          , only printing).
 
   (* Special WPs*)
@@ -372,15 +373,16 @@ Module Verbose.
            , format "'[hv  ' ::wpCond  '/' ρ  '/' '[' ( T ) ']'  '/' Q ']'"
            , only printing).
   (* TODO (JH): print something more useful *)
-  Notation "'::wpCall' ρ Q"
-        := (wp_call _ ρ _ _ _ Q)
+  Notation "'::wpCall' f ( es ) Q"
+        := (wp_call _ _ _ f es Q)
            ( at level 0
-           , format "'[hv  ' ::wpCall  '/' ρ  '/' Q ']'"
+           , format "'[hv  ' ::wpCall  '/' f ( es ) '/'  Q ']'"
            , only printing).
   (* TODO (JH): print something more useful *)
-  Notation "'::wpMCall' ρ Q"
-        := (wp_mcall _ ρ _ _ _ _ _ Q)
+  Notation "'::wpMCall' obj . f ( es ) Q"
+        := (wp_mcall _ _ f obj _ es Q)
            ( at level 0
-           , format "'[hv  ' ::wpMCall  '/' ρ  '/' Q ']'"
+           , format "'[hv  ' ::wpMCall  '/' obj . f ( es ) '/'  Q ']'"
            , only printing).
+
 End Verbose.

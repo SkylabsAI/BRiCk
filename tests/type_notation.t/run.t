@@ -84,7 +84,8 @@
        : type
   Notation_Tbool = {t: bool}
        : type
-  Notation_Tmember_pointer_1 = {t: ptr["foobarbaz"]<int8>}
+  Notation_Tmember_pointer_1 =
+  {t: ptr["foobarbaz"]<{?: Mdata ({t: int8})}>}
        : type
   Notation_mut_1 = {t: mut bool}
        : type

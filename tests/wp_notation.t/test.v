@@ -32,8 +32,7 @@ Module WpTestDefns.
       wp tu (Rbind "qux" p''' (Rbind "baz"%bs p'' (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))))) (Sseq [s; s; s; s]) K.
     Definition NOTATION_wp_decl_nowrap (decl : VarDecl) Q :=
       wp_decl tu (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty)))
-                 decl (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty)))
-                  Q.
+                 decl Q.
   End Statements.
 
   Section Special.
@@ -136,11 +135,10 @@ Module WpTestDefns.
       wp_call tu (Rbind "foo" p (Remp (Some this) None ty)) ty Vundef ls Q.
     Definition NOTATION_wp_call_wrap ls Q :=
       wp_call tu (Rbind "qux"%bs p''' (Rbind "baz"%bs p'' (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))))) ty Vundef ls Q.
-
-    Definition NOTATION_wp_mcall_nowrap ls Q :=
-      wp_mcall tu (Rbind "foo" p (Remp (Some this) None ty)) Vundef p ty ty ls Q.
-    Definition NOTATION_wp_mcall_wrap ls Q :=
-      wp_mcall tu (Rbind "qux"%bs p''' (Rbind "baz"%bs p'' (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))))) Vundef p ty ty ls Q.
+    Definition NOTATION_wp_mcall_nowrap obj f ls Q :=
+      wp_mcall tu (Rbind "foo" p (Remp (Some this) None ty)) f obj ty ls Q.
+    Definition NOTATION_wp_mcall_wrap obj ls Q :=
+      wp_mcall tu (Rbind "qux"%bs p''' (Rbind "baz"%bs p'' (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))))) Vundef obj ty ls Q.
   End Expressions.
 End WpTestDefns.
 

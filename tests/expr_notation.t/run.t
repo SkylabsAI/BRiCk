@@ -219,11 +219,11 @@
        : Expr
   
   Ederef_Enull uses section variable ty.
-  Eaddrof_Evar_lname = {e: &$"Qux"}
+  Eaddrof_Evar_lname = ({e: &$"Qux"}) ({t: ptr<int32>})
        : Expr
   
   Eaddrof_Evar_lname uses section variable ty.
-  Eaddrof_Evar_gname = {e: &$::"Qux"}
+  Eaddrof_Evar_gname = ({e: &$::"Qux"}) ({t: ptr<int32>})
        : Expr
   
   Eaddrof_Evar_gname uses section variable ty.

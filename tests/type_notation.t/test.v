@@ -65,7 +65,7 @@ Section TestTypeNotations.
   #[local] Definition Notation_Tbool : type := Tbool.
   Print Notation_Tbool.
 
-  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer "foobarbaz" Ti8.
+  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer "foobarbaz" (Mdata Ti8).
   Print Notation_Tmember_pointer_1.
 
   Section Qualifiers.

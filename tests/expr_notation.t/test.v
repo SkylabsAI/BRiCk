@@ -160,8 +160,8 @@ Section TestExprNotations.
   #[local] Definition Ederef_Enull : Expr := Ederef Enull ty.
   Print Ederef_Evar. Print Ederef_Enull.
 
-  #[local] Definition Eaddrof_Evar_lname : Expr := Eaddrof (Evar (Lname "Qux") ty).
-  #[local] Definition Eaddrof_Evar_gname : Expr := Eaddrof (Evar (Gname "Qux") ty).
+  #[local] Definition Eaddrof_Evar_lname : Expr := Eaddrof (Evar (Lname "Qux") ty) (Tptr Tint).
+  #[local] Definition Eaddrof_Evar_gname : Expr := Eaddrof (Evar (Gname "Qux") ty) (Tptr Tint).
   Print Eaddrof_Evar_lname. Print Eaddrof_Evar_gname.
 
   #[local] Definition Eassign_1 : Expr := Eassign (Evar (Lname "pi") ty) (Eint 314 ty) ty.

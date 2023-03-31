@@ -4,7 +4,7 @@
        : Stmt' ?type Expr
   where
   ?type : [ty : type  e : Expr  s : Stmt |- Set]
-  {e: (*&$"hello" + #3)}
+  {e: (*(&$"hello") ({t: {?: void}}) + #3)}
        : Expr
   {s: $"hello";
       continue; 

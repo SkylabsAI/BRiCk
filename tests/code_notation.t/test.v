@@ -14,7 +14,7 @@ Section TestCodeNotations.
 
   Check (Sexpr (Eassign (Evar (Lname "foo") Tvoid) (Eunop Unot (Evar (Lname "bar") Tvoid) Tvoid) Tvoid)).
 
-  Check (Ebinop Badd (Ederef (Eaddrof (Evar (Lname "hello") Tvoid)) Tvoid)
+  Check (Ebinop Badd (Ederef (Eaddrof (Evar (Lname "hello") Tvoid) Tvoid) Tvoid)
                 (Eint 3%Z Tvoid) Tvoid).
 
 
