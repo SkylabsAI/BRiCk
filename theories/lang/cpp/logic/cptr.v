@@ -19,33 +19,44 @@ Section defs.
   postcondition.
    *)
   Record function_spec : Type :=
-    { fs_cc : calling_conv
-    ; fs_arity : function_arity
-    ; fs_return : type
+    { fs_cc        : calling_conv
+    ; fs_this      : option (globname * ref_qualifier.t * type_qualifiers)
+    ; fs_arity     : function_arity
+    ; fs_return    : type
     ; fs_arguments : list type
     ; fs_spec : list ptr -d> (ptr -> mpred) -d> mpredO
     }.
 
   #[global] Instance function_spec_inhabited : Inhabited function_spec :=
-    populate (Build_function_spec inhabitant inhabitant inhabitant inhabitant inhabitant).
+    @populate function_spec ltac:(constructor; exact inhabitant).
 
   Definition type_of_spec (fs : function_spec) : type :=
-    normalize_type (Tfunction (cc:=fs.(fs_cc)) (ar:=fs.(fs_arity)) fs.(fs_return) fs.(fs_arguments)).
+    match fs.(fs_this) with
+    | None =>
+        normalize_type (Tfunction (cc:=fs.(fs_cc)) (ar:=fs.(fs_arity)) fs.(fs_return) fs.(fs_arguments))
+    | Some (cls, rq, cv) =>
+        normalize_type (Tmember_function cls rq cv (cc:=fs.(fs_cc)) (ar:=fs.(fs_arity)) fs.(fs_return) fs.(fs_arguments))
+    end.
+
 
   Lemma cc_type_of_spec fs1 fs2 :
     type_of_spec fs1 = type_of_spec fs2 →
     fs1.(fs_cc) = fs2.(fs_cc).
   Proof.
-    destruct fs1, fs2. intros [=]. by simplify_eq/=.
+    destruct fs1, fs2; rewrite /type_of_spec; repeat case_match; subst; simpl; try congruence.
   Qed.
+
+  #[local]
+  Lemma with_length {T} (xs ys : list T) : xs = ys -> length xs = length ys.
+  Proof. intros; subst; done. Qed.
 
   Lemma length_type_of_spec fs1 fs2 :
     type_of_spec fs1 = type_of_spec fs2 →
     length (fs_arguments fs1) = length (fs_arguments fs2).
   Proof.
-    destruct fs1, fs2; rewrite /type_of_spec/=; intros [= _ _ _ Hmap].
-    erewrite <-map_length, Hmap.
-    by rewrite map_length.
+    destruct fs1, fs2; rewrite /type_of_spec; repeat case_match; subst; simpl; inversion 1.
+    apply with_length in H9; revert H9; by repeat rewrite map_length.
+    apply with_length in H6; revert H6; by repeat rewrite map_length.
   Qed.
 
   Section ofe.
@@ -92,6 +103,7 @@ Section defs.
 
   #[global,program] Instance function_spec_cofe : Cofe function_specO := {|
     compl c := {|
+      fs_this := (c 0).(fs_this);
       fs_cc := (c 0).(fs_cc);
       fs_arity := (c 0).(fs_arity);
       fs_return := (c 0).(fs_return);
@@ -225,16 +237,16 @@ Section defs.
     { intros [H1 H2]. iDestruct H1 as "$". iDestruct H2 as "$". }
   Qed.
 
-
   (* this is the core definition that the program logic will be based on.
      it is really an assertion about assembly.
    *)
   Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
     as_Rep (fun p =>
          strict_valid_ptr p **
+         Exists tu, [| tu ⊧ resolve /\ callable_type tu.(globals) (type_of_spec fs)|] **
          □ (Forall vs Q,
-         fs.(fs_spec) vs Q -*
-         wp_fptr resolve.(genv_tu).(types) (type_of_spec fs) p vs Q)).
+            fs.(fs_spec) vs Q -*
+            wp_fptr tu.(types) (type_of_spec fs) p vs Q)).
   Definition cptrR_aux : seal (@cptrR_def). Proof. by eexists. Qed.
   Definition cptrR := cptrR_aux.(unseal).
   Definition cptrR_eq : @cptrR = _ := cptrR_aux.(seal_eq).
@@ -281,7 +293,10 @@ Section with_cpp.
     rewrite cptrR_eq/cptrR_def /pureR /as_Rep.
     constructor => p; rewrite Rep_wand_force; iIntros "#(%ty & fs_impl)" => /=.
     iIntros "(val & #rest)"; iFrame.
-    rewrite ty. iModIntro. iIntros (vs Q) "fs_g".
+    rewrite ty.
+    iDestruct "rest" as (tu) "[% #rest]".
+    iExists tu. iSplit; eauto.
+    iModIntro. iIntros (vs Q) "fs_g".
     iApply "rest".
     by iApply "fs_impl".
   Qed.
@@ -292,7 +307,10 @@ Section with_cpp.
     rewrite cptrR_eq/cptrR_def /pureR /as_Rep.
     constructor => p; rewrite Rep_wand_force; iIntros "#(%ty & fs_impl)" => /=.
     iIntros "(val & #rest)"; iFrame.
-    rewrite ty. iModIntro. iIntros (vs Q) "fs_g".
+    rewrite ty.
+    iDestruct "rest" as (tu) "[% #rest]".
+    iExists tu. iSplit; eauto.
+    iModIntro. iIntros (vs Q) "fs_g".
     iApply wp_fptr_fupd. iApply fupd_spec.
     iApply "rest".
     by iApply "fs_impl".
@@ -302,8 +320,8 @@ Section with_cpp.
   #[global] Instance cptrR_ne : NonExpansive cptrR.
   Proof.
     intros n P Q HPQ. rewrite cptrR_eq/cptrR_def.
-    apply as_Rep_ne=>p. (do 2!f_equiv). do 5 f_equiv. by apply fs_spec_ne.
-    f_equiv. apply HPQ.
+    apply as_Rep_ne=>p. destruct HPQ as [-> HPQ].
+    do 10 f_equiv. apply HPQ.
   Qed.
   #[global] Instance cptrR_proper : Proper (equiv ==> equiv) cptrR.
   Proof. exact: ne_proper. Qed.
