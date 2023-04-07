@@ -113,7 +113,7 @@ Section with_cpp.
 
   Definition denoteModule_def (tu : translation_unit) : mpred :=
     ([∗list] sv ∈ map_to_list tu.(symbols), denoteSymbol tu sv.1 sv.2) **
-    [| module_le tu resolve.(genv_tu) |].
+    [| tu ⊧ resolve |].
   Definition denoteModule_aux : seal (@denoteModule_def). Proof. by eexists. Qed.
   Definition denoteModule := denoteModule_aux.(unseal).
   Definition denoteModule_eq : @denoteModule = _ := denoteModule_aux.(seal_eq).
@@ -174,13 +174,10 @@ Section with_cpp.
 
   #[global] Instance denoteModule_models_observe tu : Observe [| tu ⊧ resolve |] (denoteModule tu).
   Proof.
-    apply observe_intro_only_provable.
-    rewrite denoteModule_eq/denoteModule_def.
-    iIntros "[_ %]". iPureIntro. constructor.
-    destruct (module_le_spec tu (genv_tu resolve)); eauto.
-    destruct H.
+    rewrite denoteModule_eq/denoteModule_def. refine _.
   Qed.
 
 End with_cpp.
 
+#[global] Hint Opaque denoteModule : typeclass_instances.
 Arguments denoteModule _ : simpl never.
