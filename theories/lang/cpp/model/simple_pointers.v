@@ -126,23 +126,39 @@ Module SIMPLE_PTRS_IMPL <: PTRS_INTF.
 
   Definition o_field σ f : offset := o_field_off σ f.
   Definition o_sub σ ty z : offset := o_sub_off σ ty z.
-  Definition o_base σ derived base := o_base_off σ derived base.
-  Definition o_derived σ base derived := o_derived_off σ base derived.
+  Definition o_base σ derived base : offset := o_base_off σ derived base.
+  Definition o_derived σ base derived : offset := o_derived_off σ base derived.
+
+  (* TODO expose *)
+  Lemma o_base_derived' σ base derived :
+    directly_derives σ derived base ->
+    o_base σ derived base ,, o_derived σ base derived = o_id.
+  Proof.
+    UNFOLD_dot; rewrite /o_base /o_base_off /o_derived /o_derived_off parent_offset.unlock.
+    case: parent_offset_tu => [o /= Hval |[? //]]. apply: (f_equal Some). lia.
+  Qed.
+
+  (* TODO expose *)
+  Lemma o_derived_base' σ base derived :
+    directly_derives σ derived base ->
+    o_derived σ base derived ,, o_base σ derived base = o_id.
+  Proof.
+    UNFOLD_dot; rewrite /o_base /o_base_off /o_derived /o_derived_off parent_offset.unlock.
+    case: parent_offset_tu => [o /= Hval|[? //]]. apply: (f_equal Some). lia.
+  Qed.
 
   Lemma o_base_derived σ p base derived :
     directly_derives σ derived base ->
     p ,, o_base σ derived base ,, o_derived σ base derived = p.
   Proof.
-    UNFOLD_dot; rewrite /o_base /o_base_off /o_derived /o_derived_off parent_offset.unlock.
-    case: parent_offset_tu => [o /= Hval |[? //]]. apply offset_ptr_raw_cancel0. lia.
+    intros. by rewrite -offset_ptr_dot o_base_derived' // offset_ptr_id.
   Qed.
 
   Lemma o_derived_base σ p base derived :
     directly_derives σ derived base ->
     p ,, o_derived σ base derived ,, o_base σ derived base = p.
   Proof.
-    UNFOLD_dot; rewrite /o_base /o_base_off /o_derived /o_derived_off parent_offset.unlock.
-    case: parent_offset_tu => [o /= Hval|[? //]]. apply: offset_ptr_raw_cancel0. lia.
+    intros. by rewrite -offset_ptr_dot o_derived_base' // offset_ptr_id.
   Qed.
 
   Lemma parent_offset_some_o_base σ p derived base :
