@@ -24,8 +24,12 @@ Implicit Types (σ : genv) (z : Z).
 #[local] Close Scope nat_scope.
 #[local] Open Scope Z_scope.
 
-Module PTRS_IMPL <: PTRS_INTF.
-  Import canonical_tu address_sums merge_elems.
+Import canonical_tu address_sums merge_elems.
+
+(* This is probably not generally applicable. *)
+#[local] Arguments liftM2 {_ _ _ _ _ _} _ !_ !_ / : simpl nomatch.
+
+Module Import PTRS_AUX.
 
   Inductive raw_offset_seg : Set :=
   | o_field_ (* type-name: *) (f : field)
@@ -33,13 +37,13 @@ Module PTRS_IMPL <: PTRS_INTF.
   | o_base_ (derived base : globname)
   | o_derived_ (base derived : globname)
   | o_invalid_.
-  #[local] Instance raw_offset_seg_eq_dec : EqDecision raw_offset_seg.
+  #[export] Instance raw_offset_seg_eq_dec : EqDecision raw_offset_seg.
   Proof. solve_decision. Defined.
   #[global] Declare Instance raw_offset_seg_countable : Countable raw_offset_seg.
 
   Definition offset_seg : Set := raw_offset_seg * Z.
-  #[local] Instance offset_seg_eq_dec : EqDecision offset_seg := _.
-  #[local] Instance offset_seg_countable : Countable offset_seg := _.
+  #[export] Instance offset_seg_eq_dec : EqDecision offset_seg := _.
+  #[export] Instance offset_seg_countable : Countable offset_seg := _.
 
   Definition eval_raw_offset_seg σ (ro : raw_offset_seg) : option Z :=
     match ro with
@@ -59,12 +63,49 @@ Module PTRS_IMPL <: PTRS_INTF.
   The list of offsets in [[p; o_1; ...; o_n]] is represented as [[o_n; ... o_1]].
   This way, we can cons new offsets to the head, and consume them at the tail. *)
   Definition raw_offset := list offset_seg.
-  #[local] Instance raw_offset_eq_dec : EqDecision raw_offset := _.
-  #[local] Instance raw_offset_countable : Countable raw_offset := _.
+  #[export] Instance raw_offset_eq_dec : EqDecision raw_offset := _.
+  #[export] Instance raw_offset_countable : Countable raw_offset := _.
+
+  (* This is probably sound, since it allows temporary underflows. *)
+  Definition eval_offset_seg (os : offset_seg) : option Z :=
+    match os with
+    | (o_invalid_, _) => None
+    | (_, z) => Some z
+    end.
+  Definition eval_raw_offset (o : raw_offset) : option Z :=
+    foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg o).
 
   Notation isnt o pattern :=
     (match o with | pattern => False | _ => True end).
 
+  Inductive root_ptr : Set :=
+  | nullptr_
+  | global_ptr_ (tu : translation_unit_canon) (o : obj_name)
+  | alloc_ptr_ (a : alloc_id) (va : vaddr).
+
+  #[export] Instance root_ptr_eq_dec : EqDecision root_ptr.
+  Proof. solve_decision. Defined.
+  #[global] Declare Instance root_ptr_countable : Countable root_ptr.
+  #[global] Instance global_ptr__inj : Inj2 (=) (=) (=) global_ptr_.
+  Proof. by intros ???? [=]. Qed.
+
+  Definition root_ptr_alloc_id (rp : root_ptr) : option alloc_id :=
+    match rp with
+    | nullptr_ => Some null_alloc_id
+    | global_ptr_ tu o => Some (global_ptr_encode_aid o)
+    | alloc_ptr_ aid _ => Some aid
+    end.
+
+  Definition root_ptr_vaddr (rp : root_ptr) : option vaddr :=
+    match rp with
+    | nullptr_ => Some 0%N
+    | global_ptr_ tu o => Some (global_ptr_encode_vaddr o)
+    | alloc_ptr_ aid va => Some va
+    end.
+
+End PTRS_AUX.
+
+Module PTRS_IMPL <: PTRS_INTF.
   Section roff_canon.
     (* Context {σ : genv}. *)
 
@@ -297,18 +338,8 @@ Module PTRS_IMPL <: PTRS_INTF.
     Proof. start. step_false. step_true. step_false. Qed. *)
   End tests.
 
-  (* This is probably sound, since it allows temporary underflows. *)
-  Definition eval_offset_seg (os : offset_seg) : option Z :=
-    match os with
-    | (o_invalid_, _) => None
-    | (_, z) => Some z
-    end.
-  Definition eval_raw_offset (o : raw_offset) : option Z :=
-    foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg o).
   Definition eval_offset (_ : genv) (o : offset) : option Z :=
     eval_raw_offset (`o).
-  (* This is probably not generally applicable. *)
-  Local Arguments liftM2 {_ _ _ _ _ _} _ !_ !_ / : simpl nomatch.
 
   Lemma eval_offset_nil :
     forall {σ : genv} (wf : raw_offset_wf []),
@@ -377,31 +408,6 @@ Module PTRS_IMPL <: PTRS_INTF.
       rewrite wf_o; intros wf_o'.
       by erewrite (proof_irrel wf_o).
   Qed.
-
-  Inductive root_ptr : Set :=
-  | nullptr_
-  | global_ptr_ (tu : translation_unit_canon) (o : obj_name)
-  | alloc_ptr_ (a : alloc_id) (va : vaddr).
-
-  #[local] Instance root_ptr_eq_dec : EqDecision root_ptr.
-  Proof. solve_decision. Defined.
-  #[global] Declare Instance root_ptr_countable : Countable root_ptr.
-  #[global] Instance global_ptr__inj : Inj2 (=) (=) (=) global_ptr_.
-  Proof. by intros ???? [=]. Qed.
-
-  Definition root_ptr_alloc_id (rp : root_ptr) : option alloc_id :=
-    match rp with
-    | nullptr_ => Some null_alloc_id
-    | global_ptr_ tu o => Some (global_ptr_encode_aid o)
-    | alloc_ptr_ aid _ => Some aid
-    end.
-
-  Definition root_ptr_vaddr (rp : root_ptr) : option vaddr :=
-    match rp with
-    | nullptr_ => Some 0%N
-    | global_ptr_ tu o => Some (global_ptr_encode_vaddr o)
-    | alloc_ptr_ aid va => Some va
-    end.
 
   Inductive ptr_ : Set :=
   | invalid_ptr_
