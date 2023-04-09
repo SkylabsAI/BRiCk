@@ -58,6 +58,7 @@ Module Import PTRS_AUX.
     | None => (o_invalid_, 0%Z)
     | Some off => (ro, off)
     end.
+  #[global] Arguments mk_offset_seg _ !_ /.
 
   (* This list is reversed.
   The list of offsets in [[p; o_1; ...; o_n]] is represented as [[o_n; ... o_1]].
@@ -587,7 +588,6 @@ Module PTRS_IMPL <: PTRS_INTF.
     same_property ptr_vaddr (p ,, o_sub _ ty n1) (p ,, o_sub _ ty n2) ->
     n1 = n2.
 
-  Arguments mk_offset_seg _ !_ /.
   Lemma o_dot_sub σ (z1 z2 : Z) ty :
     o_sub σ ty z1 ,, o_sub σ ty z2 = o_sub σ ty (z1 + z2).
   Proof.
@@ -989,7 +989,7 @@ Module PTRS_CLASSIC_IMPL <: PTRS_INTF.
   Proof.
     intros [n H].
     apply cquot.sound.
-    rewrite /o_sub /mk_offset_seg/= /o_sub_off/= H /=.
+    rewrite /o_sub /= /o_sub_off/= H /=.
     exact: roff_equiv.o_sub_0_equiv1.
   Qed.
 
@@ -1012,7 +1012,6 @@ Module PTRS_CLASSIC_IMPL <: PTRS_INTF.
     intros HA%offset_vaddr_inv HB%offset_vaddr_inv; nia.
   Qed.
 
-  Arguments mk_offset_seg _ !_ /.
   #[local] Instance: RewriteRelation roff_equiv := {}.
 
   Lemma o_dot_sub σ (z1 z2 : Z) ty :
