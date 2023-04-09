@@ -13,6 +13,7 @@ In this model, all valid pointers have an address pinned, but this is not meant
 to be guaranteed.
 *)
 
+From Coq.Logic Require Import IndefiniteDescription PropExtensionality.
 From stdpp Require Import gmap.
 From bedrock.prelude Require Import base addr avl bytestring option numbers finite.
 Require Import bedrock.prelude.elpi.derive.
@@ -100,7 +101,7 @@ Module Import PTRS_AUX.
 
 End PTRS_AUX.
 
-(* Classical quotients *)
+(* Classical quotients. Inspired by Lean 3's library. TODO license. *)
 Parameter quotient : ∀ (A : Set) (R : relation A), Set.
 Infix "/" := quotient.
 Module cquot.
@@ -114,20 +115,8 @@ Module cquot.
 
     Axiom sound : ∀ x y : A, R x y -> mk x = mk y.
 
-    Axiom lift_eq : ∀ {B} {f : A -> B} {Heq x},
+    Axiom lift_beta : ∀ {B} {f : A -> B} {Heq x},
       lift f Heq (mk x) = f x.
-
-    (* Lemma sound_surj : ∀ q : A / R,
-      { a : A | q = mk a }.
-    Proof.
-
-    Definition choose (q : A / R) : A := proj1_sig (sound_surj q).
-    Lemma choose_eq q :
-      q = mk (choose q).
-    Proof. rewrite /choose. by case: sound_surj. Qed.
-    Lemma choose_snd a :
-      R (choose (mk a)) a.
-    Proof. rewrite /choose/=. case: sound_surj =>/=. *)
 
     #[program] Definition lift2 `{!Reflexive R} {B} (f : A -> A -> B)
         (Heq : ∀ a11 a12 a21 a22,
@@ -135,16 +124,68 @@ Module cquot.
         (q1 q2 : A / R) : B :=
       cquot.lift (λ ro1, cquot.lift (f ro1) _ q2) _ q1.
     Next Obligation. intros. exact: Heq. Qed.
-    (* Next Obligation. intros. rewrite /= (choose_eq q2) !lift_eq. exact: Heq. Qed. *)
-    Next Obligation. simpl. intros. induction q2 as [z] using ind. rewrite !lift_eq. exact: Heq. Qed.
+    (* Next Obligation. intros. rewrite /= (choose_eq q2) !lift_beta. exact: Heq. Qed. *)
+    Next Obligation. simpl. intros. induction q2 as [z] using ind. rewrite !lift_beta. exact: Heq. Qed.
 
-    Lemma lift2_eq `{!Reflexive R} {B} (f : A -> A -> B) Heq a1 a2 :
+    Lemma lift2_beta `{!Reflexive R} {B} (f : A -> A -> B) Heq a1 a2 :
       cquot.lift2 f Heq (mk a1) (mk a2) = f a1 a2.
-    Proof. by rewrite /lift2 !lift_eq. Qed.
+    Proof. by rewrite /lift2 !lift_beta. Qed.
 
     (* Not very computational; don't care. *)
     #[global] Declare Instance quot_eq_dec : EqDecision A -> EqDecision (A / R).
-    #[global] Declare Instance quot_countable `{Countable A} : Countable (A / R).
+
+    Lemma sound_surj_prop : ∀ q : A / R,
+      ∃ a : A, q = mk a.
+    Proof. by induction q as [x] using ind; exists x. Qed.
+
+    Lemma sound_surj : ∀ q : A / R,
+      { a : A | q = mk a }.
+    Proof. intros. apply constructive_indefinite_description, sound_surj_prop. Qed.
+
+    Definition choose (q : A / R) : A := proj1_sig (sound_surj q).
+    Lemma choose_eq q :
+      q = mk (choose q).
+    Proof. rewrite /choose. by case: sound_surj. Qed.
+
+    #[global, program] Instance quot_countable `{Countable A} : Countable (A / R) := {|
+      encode x := encode (choose x);
+      decode n := mk <$> decode n;
+    |}.
+    Next Obligation. by intros ?? x; rewrite /= decode_encode /= -choose_eq. Qed.
+
+    #[program] Definition quot_rel `{!Equivalence R} : relation (A / R) :=
+      λ x y, lift2 R _ x y.
+    Next Obligation.
+      intros ??? * H1 H2.
+      apply propositional_extensionality.
+      by rewrite H1 H2.
+    Qed.
+    Lemma rel_beta x y `{!Equivalence R} : quot_rel (mk x) (mk y) <-> R x y.
+    Proof. by rewrite /quot_rel lift2_beta. Qed.
+
+    Lemma rel_eq x y `{!Equivalence R} : quot_rel x y <-> x = y.
+    Proof.
+      induction x as [x] using ind; induction y as [y] using ind.
+      split; last (intros <-); rewrite !rel_beta //.
+      apply sound.
+    Qed.
+
+    #[global] Instance rel_equiv `{!Equivalence R} : Equivalence quot_rel.
+    Proof.
+      split; move; induction x as [x] using ind;
+        try induction y as [y] using ind;
+        try induction z as [z] using ind.
+      all: rewrite !rel_beta //. by etrans.
+    Qed.
+
+    Lemma choose_sound a `{!Equivalence R} :
+      R (choose (mk a)) a.
+    Proof.
+      rewrite /choose/=.
+      case: sound_surj =>/= x H.
+      by rewrite -rel_beta H.
+    Qed.
+    #[local] Instance : RewriteRelation R := {}.
   End cquot.
 End cquot.
 
@@ -238,7 +279,7 @@ Module PTRS_IMPL <: PTRS_INTF.
     cquot.lift eval_raw_offset eval_raw_offset_proper.
   Lemma eval_offset'_eq ro :
     eval_offset' (cquot.mk ro) = eval_raw_offset ro.
-  Proof. apply cquot.lift_eq. Qed.
+  Proof. apply cquot.lift_beta. Qed.
 
   Definition o_id : offset := cquot.mk [].
   Program Definition mkOffset σ (ro : raw_offset_seg) : offset :=
@@ -402,7 +443,7 @@ Module PTRS_IMPL <: PTRS_INTF.
   Next Obligation. intros; exact /cquot.sound /roff_equiv_app. Qed.
   Lemma __o_dot_eq (ro1 ro2 : raw_offset) :
     __o_dot (cquot.mk ro1) (cquot.mk ro2) = cquot.mk (ro2 ++ ro1).
-  Proof. by rewrite /__o_dot cquot.lift2_eq/=. Qed.
+  Proof. by rewrite /__o_dot cquot.lift2_beta /=. Qed.
 
   Definition __offset_ptr (p : ptr) (o : offset) : ptr :=
     (fst p, __o_dot (snd p) o).
