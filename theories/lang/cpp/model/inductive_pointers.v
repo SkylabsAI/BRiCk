@@ -14,7 +14,8 @@ to be guaranteed.
 *)
 
 From stdpp Require Import gmap.
-From bedrock.prelude Require Import base addr avl bytestring option numbers.
+From bedrock.prelude Require Import base addr avl bytestring option numbers finite.
+Require Import bedrock.prelude.elpi.derive.
 
 From bedrock.lang.cpp Require Import ast.
 From bedrock.lang.cpp.semantics Require Import sub_module values.
@@ -82,20 +83,13 @@ Module Import PTRS_AUX.
   Inductive root_ptr : Set :=
   | nullptr_
   | global_ptr_ (tu : translation_unit_canon) (o : obj_name)
-  | alloc_ptr_ (a : alloc_id) (va : vaddr).
+  | alloc_ptr_ (aid_base : N) (va : vaddr).
 
   #[export] Instance root_ptr_eq_dec : EqDecision root_ptr.
   Proof. solve_decision. Defined.
   #[global] Declare Instance root_ptr_countable : Countable root_ptr.
   #[global] Instance global_ptr__inj : Inj2 (=) (=) (=) global_ptr_.
   Proof. by intros ???? [=]. Qed.
-
-  Definition root_ptr_alloc_id (rp : root_ptr) : option alloc_id :=
-    match rp with
-    | nullptr_ => Some null_alloc_id
-    | global_ptr_ tu o => Some (global_ptr_encode_aid o)
-    | alloc_ptr_ aid _ => Some aid
-    end.
 
   Definition root_ptr_vaddr (rp : root_ptr) : option vaddr :=
     match rp with
@@ -277,12 +271,55 @@ Module PTRS_IMPL <: PTRS_INTF.
   #[global] Instance offset_ptr_inj : Inj2 (=) (=) (=) offset_ptr.
   Proof. by intros ???? [=]. Qed.
 
-  Definition ptr_alloc_id (p : ptr) : option alloc_id :=
+  Variant alloc_id_aux :=
+  | null_alloc_id_
+  | global_id_ (va : vaddr)
+  | alloc_id_ (id : N).
+  #[global] Instance global_id__inj : Inj (=) (=) global_id_.
+  Proof. by intros ??[=]. Qed.
+  #[only(eq_dec)] derive alloc_id_aux.
+  #[global] Instance : Countable alloc_id_aux.
+  Proof.
+    set (g := λ a : alloc_id_aux,
+      match a with
+      | null_alloc_id_ => inl (inl tt)
+      | global_id_ va => inl (inr va)
+      | alloc_id_ aid => inr aid
+      end).
+    set (f := λ s : unit + N + N,
+      match s with
+      | inl (inl tt) => null_alloc_id_
+      | inl (inr va) => global_id_ va
+      | inr aid => alloc_id_ aid
+      end).
+    apply (inj_countable' (A := unit + N + N) g f).
+    abstract (by case).
+  Defined.
+
+  Definition root_ptr_alloc_id_aux (rp : root_ptr) : alloc_id_aux :=
+      match rp with
+      | nullptr_ => null_alloc_id_
+      | global_ptr_ tu o => global_id_ (global_ptr_encode_vaddr o)
+      | alloc_ptr_ aid _ => alloc_id_ aid
+      end.
+  (* The above definition ensures alloc_ids are disjoint between different
+  classes.
+  XXX: we ignore TUs? They don't really help anyway, we should store the genv in there...
+  *)
+  (* Shadowing: *)
+
+  Definition ptr_alloc_id_aux (p : ptr) : option alloc_id_aux :=
     match fst p with
     | invalid_ptr_ => None
-    | fun_ptr_ tu o => Some (global_ptr_encode_aid o)
-    | root p => root_ptr_alloc_id p
+    | fun_ptr_ tu o => Some (global_id_ (global_ptr_encode_vaddr o))
+    | root p => Some (root_ptr_alloc_id_aux p)
     end.
+  Definition alloc_id_aux2alloc_id (a : alloc_id_aux) : alloc_id :=
+    MkAllocId (encode_N a).
+  #[global] Instance alloc_id_aux2alloc_id_inj : Inj (=) (=) alloc_id_aux2alloc_id := _.
+
+  Definition ptr_alloc_id (p : ptr) : option alloc_id :=
+    alloc_id_aux2alloc_id <$> ptr_alloc_id_aux p.
 
   Definition base_ptr_vaddr (p : base_ptr) : option vaddr :=
     match p with
@@ -312,7 +349,6 @@ Module PTRS_IMPL <: PTRS_INTF.
   Definition invalid_ptr : ptr := (invalid_ptr_, o_id).
   Definition fun_ptr tu o : ptr := (fun_ptr_ (canonical_tu.tu_to_canon tu) o, o_id).
 
-  Definition null_alloc_id : alloc_id := null_alloc_id.
   Definition nullptr : ptr := lift_root_ptr nullptr_.
   Definition global_ptr (tu : translation_unit) o :=
     lift_root_ptr (global_ptr_ (canonical_tu.tu_to_canon tu) o).
@@ -332,6 +368,14 @@ Module PTRS_IMPL <: PTRS_INTF.
   Lemma ptr_vaddr_global_ptr tu o :
     ptr_vaddr (global_ptr tu o) = Some (global_ptr_encode_vaddr o).
   Proof. apply ptr_vaddr_root_ptr. Qed.
+
+  Definition null_alloc_id : alloc_id := alloc_id_aux2alloc_id null_alloc_id_.
+  Lemma ptr_alloc_id_nullptr : ptr_alloc_id nullptr = Some null_alloc_id.
+  Proof. done. Qed.
+  Definition global_ptr_encode_aid o :=
+    alloc_id_aux2alloc_id (global_id_ (global_ptr_encode_vaddr o)).
+  #[global] Instance global_ptr_encode_aid_inj : Inj (=) (=) global_ptr_encode_aid := _.
+
   Lemma ptr_alloc_id_global_ptr tu o :
     ptr_alloc_id (global_ptr tu o) = Some (global_ptr_encode_aid o).
   Proof. done. Qed.
@@ -339,7 +383,10 @@ Module PTRS_IMPL <: PTRS_INTF.
   Lemma global_ptr_nonnull_addr tu o : ptr_vaddr (global_ptr tu o) <> Some 0%N.
   Proof. rewrite ptr_vaddr_global_ptr. done. Qed.
   Lemma global_ptr_nonnull_aid tu o : ptr_alloc_id (global_ptr tu o) <> Some null_alloc_id.
-  Proof. rewrite ptr_alloc_id_global_ptr. done. Qed.
+  Proof.
+    rewrite ptr_alloc_id_global_ptr /null_alloc_id /global_ptr_encode_aid.
+    by intros ?%(inj _)%(inj _).
+  Qed.
 
   #[global] Instance global_ptr_addr_inj tu : Inj (=) (=) (λ o, ptr_vaddr (global_ptr tu o)).
   Proof. intros ??. rewrite !ptr_vaddr_global_ptr. by intros ?%(inj _)%(inj _). Qed.
@@ -349,8 +396,6 @@ Module PTRS_IMPL <: PTRS_INTF.
   Lemma ptr_vaddr_nullptr : ptr_vaddr nullptr = Some 0%N.
   Proof. apply ptr_vaddr_root_ptr. Qed.
 
-  Lemma ptr_alloc_id_nullptr : ptr_alloc_id nullptr = Some null_alloc_id.
-  Proof. done. Qed.
 
   #[program] Definition __o_dot (o1 o2 : offset) : offset :=
     cquot.lift2 (λ ro1 ro2, cquot.mk (ro2 ++ ro1)) _ o1 o2.
