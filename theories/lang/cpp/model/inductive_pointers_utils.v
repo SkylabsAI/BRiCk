@@ -9,6 +9,9 @@
 From bedrock.prelude Require Import base addr numbers.
 From bedrock.lang.cpp.semantics Require Import values.
 
+#[local] Close Scope nat_scope.
+#[local] Open Scope Z_scope.
+
 Module address_sums.
   Definition offset_vaddr : Z -> vaddr -> option vaddr := λ z pa,
     let sum : Z := (Z.of_N pa + z)%Z in
@@ -36,6 +39,16 @@ Module address_sums.
     rewrite /offset_vaddr => Hval.
     by case_option_guard; rewrite /= Z.add_assoc ?Z2N.id.
   Qed.
+
+  Lemma offset_vaddr_inv' {z pa n} :
+    offset_vaddr z pa = Some n ->
+    0 <= (Z.of_N pa + z) /\ Z.of_N n = (Z.of_N pa + z).
+  Proof. rewrite /offset_vaddr/= => Hle. simplify_option_eq. lia. Qed.
+  Lemma offset_vaddr_inv {z pa n} :
+    offset_vaddr z pa = Some n ->
+    Z.of_N n = (Z.of_N pa + z).
+  Proof. move=>/offset_vaddr_inv'. intuition. Qed.
+
 End address_sums.
 
 Module merge_elems.
