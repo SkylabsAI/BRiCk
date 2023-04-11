@@ -449,6 +449,13 @@ Module Type CPP_LOGIC
       Section conservative.
         Axiom type_ptr_obj_repr_byte :
           forall (σ : genv) (ty : type) (p : ptr) (i sz : N),
+            size_of σ ty = Some sz ->
+            (i < sz)%N ->
+            type_ptr ty p |-- type_ptr Tu8 (p ,, .[ Tu8 ! i ]).
+      End conservative.
+(*
+        Axiom type_ptr_obj_repr_byte :
+          forall (σ : genv) (ty : type) (p : ptr) (i sz : N),
             size_of σ ty = Some sz -> (* 1) [ty] has some byte-size [sz] *)
             (i < sz)%N ->             (* 2) by (1), [sz] is nonzero and [i] is a
                                             byte-offset into the object rooted at [p ,, o]
@@ -466,7 +473,7 @@ Module Type CPP_LOGIC
                |  facts - where [i] is a byte-offset within the [ty] ([0 <= i < sizeof(ty)]).
                v *)
             type_ptr ty p |-- type_ptr Tu8 (p ,, .[ Tu8 ! i ]).
-      End conservative.
+      *)
 
       (* NOTE: This might be reasonable to axiomatize directly; cf. the [NOTE] above
          [Section conservative].
@@ -539,6 +546,10 @@ Module Type CPP_LOGIC
        non-raw values into their constituent raw pieces - to enable deriving
        [tptsto_ptr_congP_transport] from [tptsto_raw_ptr_congP_transport].
      *)
+    Axiom tptsto_ptr_congP_transport : forall {σ} q p1 p2 v,
+      [| ptr_cong σ p1 p2 |] ** type_ptr Tu8 p2
+      |-- @tptsto σ Tu8 q p1 v -* @tptsto σ Tu8 q p2 v.
+
     Axiom tptsto_ptr_congP_transport : forall {σ} q p1 p2 v,
       ptr_congP σ p1 p2 |-- @tptsto σ Tu8 q p1 v -* @tptsto σ Tu8 q p2 v.
 
@@ -717,8 +728,25 @@ Section valid_ptr_code.
   Proof. intros. rewrite dtor_at_strict_valid; apply strict_valid_valid. Qed.
 End valid_ptr_code.
 
+(* From elpi.apps Require Import locker.
+mlock Definition _exposed_ptr `{Σ : cpp_logic} p : mpred :=
+  ∃ aid, [| ptr_alloc_id p = Some aid |] ** exposed_aid aid. *)
+
 Section pinned_ptr_def.
   Context `{Σ : cpp_logic}.
+(*
+  Lemma _offset_exposed_ptr p o :
+    _exposed_ptr p ⊣⊢ _exposed_ptr (p ,, o).
+  Proof.
+    rewrite _exposed_ptr.unlock; f_equiv => aid.
+    f_equiv.
+    f_equiv.
+    split.
+    { intros H. rewrite ptr_alloc_id_offset //. admit. }
+    intros H.
+    move: (H).
+    by rewrite ptr_alloc_id_offset.
+  Qed. *)
 
   Definition exposed_ptr_def p : mpred :=
     valid_ptr p ** ∃ aid, [| ptr_alloc_id p = Some aid |] ** exposed_aid aid.
