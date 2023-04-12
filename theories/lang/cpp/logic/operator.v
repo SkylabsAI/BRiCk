@@ -60,13 +60,36 @@ Section with_Σ.
   Lemma ptr_ord_comparable_off_off o1 o2 base p1 p2 f res :
     p1 = base ,, o1 ->
     p2 = base ,, o2 ->
-    (forall va1 va2, ptr_vaddr p1 = Some va1 -> ptr_vaddr p2 = Some va2 -> f va1 va2 = res) ->
+    [| forall va1 va2, ptr_vaddr p1 = Some va1 -> ptr_vaddr p2 = Some va2 -> f va1 va2 = res |] ∗
     valid_ptr p1 ∗ valid_ptr p2 ⊢ ptr_ord_comparable p1 p2 f res.
   Proof.
-    intros -> -> Hres.
-    iIntros "#[V1 V2]". iFrame (Hres) "V1 V2" => {Hres}; rewrite !valid_ptr_alloc_id.
+    iIntros (-> ->) "#(%Hres & V1 & V2)". iFrame (Hres) "V1 V2" => {Hres}; rewrite !valid_ptr_alloc_id.
     iRevert "V1 V2"; iIntros "!%".
     exact: same_alloc_offset_2.
+  Qed.
+
+  Lemma ptr_ord_comparable_off_off' o1 o2 base p1 p2 f res n1 n2 :
+    p1 = base ,, o1 ->
+    p2 = base ,, o2 ->
+    eval_offset _ o1 = Some n1 ->
+    eval_offset _ o2 = Some n2 ->
+    (forall va : vaddr, (0 <= va + n1)%Z -> (0 <= va + n2)%Z -> f (Z.to_N (va + n1)) (Z.to_N (va + n2)) = res) ->
+    valid_ptr p1 ∗ valid_ptr p2 ⊢ ptr_ord_comparable p1 p2 f res.
+  Proof.
+    iIntros (-> -> Ho1 Ho2 Hf) "#[V1 V2]".
+    iApply (ptr_ord_comparable_off_off with "") => //. iFrame "#".
+    iIntros (va1 va2 Hp1 Hp2).
+    Search eval_offset ptr_vaddr.
+    iDestruct (offset_inv_pinned_ptr_pure with "V1") as %[Hdiff1 Hpbase1] => //.
+    iDestruct (offset_inv_pinned_ptr_pure with "V2") as %[Hdiff2 Hpbase2] => //.
+    move: Hdiff1 Hpbase1.
+    set vaZ := (Z.of_N va1 - n1)%Z; set va := Z.to_N vaZ => Hdiff Hpbase.
+    iDestruct (offset_pinned_ptr_pure with "V1") as %Hp1' => //.
+    iDestruct (offset_pinned_ptr_pure with "V2") as %Hp2' => //.
+    iIntros "!%".
+    rewrite -(Hf va); [ |  simplify_eq; lia ..].
+    (* rewrite -(Hf (Z.to_N (Z.of_N va1 - n1)%Z)); [ |  simplify_eq; lia ..]. *)
+    by simplify_eq; f_equiv; lia.
   Qed.
 
   Lemma ptr_ord_comparable_off o1 base p1 f res :
