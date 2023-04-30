@@ -409,18 +409,22 @@ Section with_type_table.
     (_ : (n <> 0)%N) (* Needed? from Krebbers*)
     (_ : complete_type t) :
     complete_type (Tarray t n)
-  | complete_member_pointer {n t} (_ : not_ref_type t)
+  | complete_member_data_pointer {n t} (_ : not_ref_type t)
       (_ : complete_pointee_type (Tnamed n))
       (_ : complete_pointee_type t)
-    : complete_type (Tmember_pointer n t)
-  | complete_function {cc ret args} :
+    : complete_type (Tmember_pointer n $ Mdata t)
+  | complete_member_func_pointer {n t rq cv cc ar ret args} (_ : not_ref_type t)
+      (_ : complete_pointee_type (Tnamed n))
+      (_ : complete_pointee_type (Tfunction (cc:=cc) (ar:=ar) ret args))
+    : complete_type (Tmember_pointer n $ @Mfunc _ rq cv cc ar ret args)
+  | complete_function {cc ar ret args} :
     (*
     We could probably omit this constructor, and consider function types as not
     complete; "complete function types" do not exist in the standard, and
     [complete_symbol_table] does not use the concept.
      *)
-    complete_pointee_type (Tfunction (cc:=cc) ret args) ->
-    complete_type (Tfunction (cc:=cc) ret args)
+    complete_pointee_type (Tfunction (ar:=ar) (cc:=cc) ret args) ->
+    complete_type (Tfunction (ar:=ar) (cc:=cc) ret args)
   | complete_basic t :
     complete_basic_type t ->
     complete_type t

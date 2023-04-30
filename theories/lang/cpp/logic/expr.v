@@ -1111,7 +1111,7 @@ Module Type Expr.
 
     Lemma zero_init_val_erase_drop ty :
       zero_init_val (erase_qualifiers ty) = zero_init_val (drop_qualifiers ty).
-    Proof. by induction ty. Qed.
+    Proof. induction ty; try done. Qed.
 
     Axiom wp_operand_implicit_init : forall ty v Q,
           zero_init_val ty = Some v ->

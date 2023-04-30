@@ -79,7 +79,9 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tarray t sz => Tarray (erase_qualifiers t) sz
   | @Tfunction cc ar t ts => Tfunction (cc:=cc) (ar:=ar) (erase_qualifiers t) (List.map erase_qualifiers ts)
   | @Tmember_function nm rq cv cc ar t ts => @Tmember_function nm rq QM cc ar (erase_qualifiers t) (List.map erase_qualifiers ts)
-  | Tmember_pointer cls t => Tmember_pointer cls (erase_qualifiers t)
+  | Tmember_pointer cls (Mdata t) => Tmember_pointer cls (Mdata $ erase_qualifiers t)
+  | Tmember_pointer cls (@Mfunc _ rq cv cc ar ret args) =>
+      Tmember_pointer cls (@Mfunc _ rq cv cc ar (erase_qualifiers ret) (erase_qualifiers <$> args))
   | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr
   | Tarch sz nm => Tarch sz nm
@@ -128,9 +130,11 @@ Proof. destruct t; cbn; auto. by move/unqualified_qual. Qed.
 Lemma erase_qualifiers_idemp t : erase_qualifiers (erase_qualifiers t) = erase_qualifiers t.
 Proof.
   move: t. fix IHt 1=>t.
-  destruct t as [| | | | | | | | |cc ar ret args| | | |nm rq cv cc ar ret args| | |]; cbn; auto with f_equal.
+  destruct t as [| | | | | | | | |cc ar ret args| |name [|rq cv cc ar ret args]| |nm rq cv cc ar ret args| | |]; cbn; auto with f_equal.
   (* functions and member functions *)
-  all: rewrite IHt; f_equal; induction args; cbn; auto with f_equal.
+  all: try by rewrite IHt; f_equal; induction args; cbn; auto with f_equal.
+  (* member function pointers *)
+  rewrite IHt. do 2!f_equal. induction args; cbn; auto with f_equal.
 Qed.
 Lemma drop_qualifiers_idemp t : drop_qualifiers (drop_qualifiers t) = drop_qualifiers t.
 Proof. by rewrite drop_qualifiers_unqual. Qed.
@@ -218,10 +222,12 @@ Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 Lemma drop_qualifiers_Tbool : forall [ty],
     drop_qualifiers ty = Tbool -> erase_qualifiers ty = Tbool.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+(*
 Lemma drop_qualifiers_Tmember_pointer : forall [ty cls ty'],
     drop_qualifiers ty = Tmember_pointer cls ty' ->
     erase_qualifiers ty = Tmember_pointer cls (erase_qualifiers ty').
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
+*)
 Lemma drop_qualifiers_Tfloat : forall [ty sz],
     drop_qualifiers ty = Tfloat_ sz -> erase_qualifiers ty = Tfloat_ sz.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
@@ -246,7 +252,7 @@ Ltac simpl_drop_qualifiers :=
           | rewrite (drop_qualifiers_Tenum H)
           | rewrite (drop_qualifiers_Tfunction H)
           | rewrite (drop_qualifiers_Tbool H)
-          | rewrite (drop_qualifiers_Tmember_pointer H)
+(*        | rewrite (drop_qualifiers_Tmember_pointer H) *)
           | rewrite (drop_qualifiers_Tfloat H)
           | rewrite (drop_qualifiers_Tnullptr H)
           ]
@@ -444,9 +450,11 @@ Fixpoint valcat_of (e : Expr) : ValCat :=
   | Emember e _ _ => valcat_of e
   | Emember_call f _ _ _ =>
     match f with
-    | inl (_, _, t)
-    | inr (Ecast Cl2r _  _ (Tmember_pointer _ t)) => valcat_from_function_type t
-    | _ => UNEXPECTED_valcat e
+    | inl (_, _, t) => valcat_from_function_type t
+    | inr e' => match type_of e' with
+               | Tmember_pointer _ (Mfunc _ _ ret _) => valcat_from_type ret
+               | _ => UNEXPECTED_valcat e
+               end
     end
   | Esubscript e1 e2 _ =>
     (**

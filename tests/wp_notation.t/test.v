@@ -30,11 +30,10 @@ Module WpTestDefns.
       wp tu (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))) s K.
     Definition NOTATION_wp_wrap :=
       wp tu (Rbind "qux" p''' (Rbind "baz"%bs p'' (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty))))) (Sseq [s; s; s; s]) K.
-
     Definition NOTATION_wp_decl_nowrap (decl : VarDecl) Q :=
       wp_decl tu (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty)))
-                  (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty)))
-                  decl Q.
+                 decl (Rbind "bar"%bs p' (Rbind "foo" p (Remp (Some this) None ty)))
+                  Q.
   End Statements.
 
   Section Special.

@@ -115,6 +115,9 @@ Notation Tdecay_type original adjusted := (adjusted) (only parsing).
 Notation Tincomplete_array ty := (Qconst (Tptr ty)) (only parsing).
 Notation Tvariable_array ty e := (Qconst (Tptr ty)) (only parsing).
 
+Notation Tmember_pointer_data cls ty := (Tmember_pointer cls (Mdata ty)) (only parsing).
+Notation Tmember_pointer_func cls rq cv cc ar rt args := (Tmember_pointer cls (Mfunc rq cv (cc:=cc) (ar:=ar) rt args)) (only parsing).
+
 (** ** Expressions *)
 
 Definition Eenum_const_at (e : globname) (ety ty : type) : Expr :=
