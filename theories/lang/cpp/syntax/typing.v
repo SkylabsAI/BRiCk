@@ -10,7 +10,7 @@ From bedrock.lang.cpp.syntax Require Import names expr types.
 Fixpoint type_of (e : Expr) : type :=
   match e with
   | Econst_ref _ t
-  | Evar _ t
+  | Evar _ t => t
   | Echar _ t => t
   | Estring vs t => Tarray (Qconst t) (1 + lengthN vs)
   | Eint _ t => t
@@ -19,7 +19,8 @@ Fixpoint type_of (e : Expr) : type :=
   | Ebinop _ _ _ t => t
   | Eread_ref e => type_of e
   | Ederef _ t => t
-  | Eaddrof e => Tptr (type_of e)
+  | Eaddrof e t => t
+  | Emember_data_ptr cls _ ty => Tmember_pointer cls $ Mdata ty
   | Eassign _ _ t
   | Eassign_op _ _ _ t
   | Epreinc _ t
@@ -431,7 +432,8 @@ Fixpoint valcat_of (e : Expr) : ValCat :=
     *)
     Lvalue
   | Ederef _ _ => Lvalue
-  | Eaddrof _ => Prvalue
+  | Eaddrof _ _ => Prvalue
+  | Emember_data_ptr _ _ _ => Prvalue
   | Eassign _ _ _ => Lvalue
   | Eassign_op _ _ _ _ => Lvalue
   | Epreinc _ _ => Lvalue

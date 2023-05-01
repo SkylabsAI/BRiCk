@@ -371,11 +371,28 @@ public:
                             ClangPrinter& cprint, const ASTContext&,
                             OpaqueNames& li) {
         switch (expr->getOpcode()) {
-        case UnaryOperatorKind::UO_AddrOf:
+        case UnaryOperatorKind::UO_AddrOf: {
+            if (auto dr = dyn_cast<DeclRefExpr>(expr->getSubExpr())) {
+                if (auto fd = dyn_cast<FieldDecl>(dr->getDecl())) {
+                    print.ctor("Emember_data_ptr");
+                    if (!print.templates()) {
+                        cprint.printTypeName(fd->getParent(), print);
+                    } else {
+                        cprint.printType(fd->getParent()->getTypeForDecl(),
+                                         print);
+                    }
+                    print.output() << fmt::nbsp;
+                    print.str(fd->getName());
+                    print.output() << fmt::nbsp;
+                    cprint.printQualType(fd->getType(), print);
+
+                    print.end_ctor();
+                    return;
+                }
+            }
             print.ctor("Eaddrof");
-            cprint.printExpr(expr->getSubExpr(), print, li);
-            print.end_ctor(); // elide type
-            return;
+            break;
+        }
         case UnaryOperatorKind::UO_Deref:
             print.ctor("Ederef");
             break;
@@ -403,6 +420,13 @@ public:
     void VisitDeclRefExpr(const DeclRefExpr* expr, CoqPrinter& print,
                           ClangPrinter& cprint, const ASTContext& ctxt,
                           OpaqueNames& on) {
+        auto non_static_method = [&](auto expr) -> const CXXMethodDecl* {
+            auto meth = dyn_cast<CXXMethodDecl>(expr);
+            if (meth && !meth->isStatic())
+                return meth;
+            return nullptr;
+        };
+
         auto d = expr->getDecl();
         if (auto ecd = dyn_cast<EnumConstantDecl>(d)) {
             // References to `enum` constants are special because
@@ -430,6 +454,20 @@ public:
                 cprint.printQualType(ecd->getType(), print);
                 done(expr, print, cprint);
             }
+        } else if (auto fd = dyn_cast<FieldDecl>(d)) {
+            assert(false && "illegal field expression");
+            // Fields are special because they are not
+            print.ctor("Emember");
+            if (!print.templates()) {
+                cprint.printTypeName(fd->getParent(), print);
+            } else {
+                cprint.printType(fd->getParent()->getTypeForDecl(), print);
+            }
+            print.output() << fmt::nbsp;
+            print.str(fd->getName());
+            print.output() << fmt::nbsp;
+            cprint.printQualType(fd->getType(), print);
+            print.end_ctor();
         } else {
             // We add `Eread_ref` nodes when the type of the
             // variable is a reference.
@@ -439,7 +477,32 @@ public:
 
             print.ctor("Evar", false);
             printVarRef(d, print, cprint, on);
-            done(expr, print, cprint);
+            print.output() << fmt::nbsp;
+            if (auto meth = non_static_method(d)) {
+                print.ctor("Tmember_function");
+                cprint.printTypeName(meth->getParent(), print);
+                print.output() << fmt::nbsp;
+                cprint.printRefQualifier(meth->getRefQualifier(), print);
+                print.output() << fmt::nbsp;
+                cprint.printQualifier(meth->isConst(), meth->isVolatile(),
+                                      print);
+                print.output() << fmt::nbsp;
+                auto ft = dyn_cast<FunctionType>(meth->getType().getTypePtr());
+                assert(ft && "type of method must be a function");
+                cprint.printCallingConv(ft->getCallConv(), print);
+                print.output() << fmt::nbsp;
+                cprint.printVariadic(meth->isVariadic(), print);
+                print.output() << fmt::nbsp;
+                cprint.printQualType(meth->getReturnType(), print);
+                print.output() << fmt::nbsp;
+                print.list(meth->parameters(), [&](auto print, auto i) {
+                    cprint.printType(i->getType().getTypePtr(), print);
+                });
+                print.end_ctor();
+                print.end_ctor();
+            } else {
+                done(expr, print, cprint);
+            }
 
             if (d->getType()->isReferenceType()) {
                 print.end_ctor();

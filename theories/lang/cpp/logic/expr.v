@@ -262,9 +262,9 @@ Module Type Expr.
 
         https://eel.is/c++draft/expr.unary.op#3
      *)
-    Axiom wp_operand_addrof : forall e Q,
-            wp_lval e (fun p free => Q (Vptr p) free)
-        |-- wp_operand (Eaddrof e) Q.
+    Axiom wp_operand_addrof : forall ty e Q,
+        wp_lval e (fun p free => Q (Vptr p) free)
+        |-- wp_operand (Eaddrof e (Tptr ty)) Q.
 
     (** "pure" unary operators on primmitives, e.g. `-`, `!`, etc.
 

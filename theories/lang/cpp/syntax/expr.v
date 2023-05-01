@@ -289,6 +289,11 @@ Inductive Expr : Set :=
   (* ^ these are different because they do not have addresses *)
 | Evar     (_ : VarRef) (_ : type)
   (* ^ local and global variable reference *)
+| Emember_data_ptr (cls : globname) (_ : ident) (ty : type) (* type = Tmember_pointer cls $ Mdata ty *)
+  (* ^^ [&C::fld] when [f] is a non-static member of [C].
+     We fuse the [&] with the field because there is no type directly
+     corresponding to a field (which makes sense because, on its own, a field
+     has no value) *)
 
 | Echar    (value : N) (_ : type)
   (* ^ [value] is the unsigned character value *)
@@ -307,7 +312,7 @@ Inductive Expr : Set :=
   *)
 | Eread_ref (e : Expr) (* type = type_of e *)
 | Ederef (e : Expr) (_ : type) (* XXX type = strip [Tptr] from [type_of e] *)
-| Eaddrof (e : Expr) (* type = Tptr (type_of e) *)
+| Eaddrof (e : Expr) (t : type)
 | Eassign (e _ : Expr) (_ : type) (* XXX type = type_of e *)
 | Eassign_op (_ : BinOp) (e _ : Expr) (_ : type) (* XXX = type_of e *)
   (* ^ these are specialized because they are common *)
