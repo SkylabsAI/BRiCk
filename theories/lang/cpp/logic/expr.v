@@ -973,6 +973,77 @@ Module Type Expr.
            init_receive addr res $ Q (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
 
+    (** * Operator Calls
+        These are calls or member calls that are written as operators and
+        therefore have (potentially) different order-of-evaluation than
+        regular function or member calls.
+     *)
+    Fixpoint seqs {T} (ls : list (wp.WPE.M T)) : wp.WPE.M (list T) :=
+      match ls with
+      | nil => wp.WPE.Mret []
+      | l :: ls => wp.WPE.Mmap (fun '(a,b) => a :: b) (wp.WPE.seq l (seqs ls))
+      end.
+
+    Definition eval (eo : evaluation_order.t) {T} (ls : list (wp.WPE.M T)) : wp.WPE.M (list T) :=
+      match eo with
+      | evaluation_order.nd => nd_seqs ls
+      | evaluation_order.l_nd =>
+          match ls with
+          | e :: es => wp.WPE.Mmap (fun '(a,b) => a :: b) (wp.WPE.seq e (nd_seqs es))
+          | [] => wp.WPE.Mret []
+          end
+      | evaluation_order.rl =>
+          wp.WPE.Mmap (@rev _) (seqs (rev ls))
+      end.
+
+    (** TODO: most of the logic here is duplicated from above
+        (which itself is duplicated across value categories)
+        Proposals:
+        1. Unify [virtual] and non-virtual call semantics by moving [resolve_virtual] to
+           occur after argument evaluation (more as part of the function)
+        2. Re-package the handling of arguments so that [zipTypes] would be hidden
+           - To support pre-pending a call with a different evaluation scheme, we could
+             have [wp_args] take a [list (M ptr)] that it would fuse into the evaluation.
+        3. Consider the relationship between what is happening here and the template semantics
+           - [operand_receive], [lval_recieve], [xval_receive], [init_receive] might share some
+             core logic.
+           - [wp_initialize] and [wp_expr] are quite similar, perhaps they can be completey unified.
+     *)
+    (*
+    Axiom wp_operand_operator_call : forall oo oi es ty Q,
+        match oi with
+        | operator_impl.Func fn fty =>
+            False (* evaluate arguments using the scheme *)
+        | operator_impl.MFunc fn ct fty =>
+            match es , arg_types fty with
+            | eobj :: es , Some targs =>
+                match zipTypes tu ρ targs.1 targs.2 es with
+                | Some (args, va_info) =>
+                    match evaluation_order.ooe oo with
+                    | Some oe =>
+                        eval oe (wp_glval eobj :: args) (λ (ps : list ptr) (fs : FreeTemps),
+                            match va_info with
+                            | Some (non_va, types) =>
+                                let real := take non_va ps in
+                                let vargs := drop non_va ps in
+                                let va_info0 := zip types vargs in
+                                Forall p1 : ptr, p1 |-> varargsR va_info0 -* Q (real ++ [p1]) (FreeTemps.delete_va va_info0 p1 >*> fs)
+                            | None =>
+                                |> mspec this_type fty fp (this :: vs) (fun v => Q v free)
+
+                                Q _ _
+                            end)
+                    | _ => False
+                    end
+                | _ => False
+                end
+            | _ , _ => False
+            end
+        end
+      |-- wp_operand (Eoperator_call oo oi es ty) Q.
+     *)
+
+
     (* null *)
     Axiom wp_null : forall Q,
       Q (Vptr nullptr) FreeTemps.id

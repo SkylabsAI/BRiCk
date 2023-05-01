@@ -117,19 +117,6 @@ Notation Tvariable_array ty e := (Qconst (Tptr ty)) (only parsing).
 
 (** ** Expressions *)
 
-(** NOTE: this should move when we make [Eoperator_call] and [Eoperator_member_call] into constructors. *)
-Variant OverloadableOperator : Set :=
-  | OONew (array : bool) | OODelete (array : bool)
-  | OOPlus | OOMinus | OOStar | OOSlash | OOPercent
-  | OOCaret | OOAmp | OOPipe | OOTilde | OOExclaim | OOEqual
-  | OOLess | OOGreater | OOPlusEqual | OOMinusEqual | OOStarEqual
-  | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
-  | OOPipeEqual | OOLessLess | OOGreaterGreater | OOLessLessEqual
-  | OOGreaterGreaterEqual | OOEqualEqual | OOExclaimEqual | OOLessEqual
-  | OOGreaterEqual | OOSpaceship | OOAmpAmp | OOPipePipe | OOPlusPlus
-  | OOMinusMinus | OOComma | OOArrowStar | OOArrow | OOCall | OOSubscript | OOConditional | OOCoawait
-.
-
 Definition Eoperator_member_call (oo : OverloadableOperator) (nm : obj_name) (ct : call_type) (ft : type) (obj : Expr) (es : list Expr) (ty : type) : Expr :=
   Emember_call (inl (nm, ct, ft)) obj es ty.
 

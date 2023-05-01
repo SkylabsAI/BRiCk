@@ -8,6 +8,77 @@ From bedrock.lang.cpp.syntax Require Import names types.
 
 Set Primitive Projections.
 
+(** Overloadable operators *)
+Variant OverloadableOperator : Set :=
+  (* Unary operators *)
+  | OOPlus | OOMinus | OOTilde | OOExclaim
+  | OOPlusPlus | OOMinusMinus
+  (* Unary & Binary operators *)
+  | OOStar
+  (* Binary operators *)
+  | OOSlash | OOPercent
+  | OOCaret | OOAmp | OOPipe | OOEqual (* = *)
+  | OOLessLess | OOGreaterGreater
+  | OOPlusEqual | OOMinusEqual | OOStarEqual
+  | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
+  | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual
+  | OOEqualEqual | OOExclaimEqual
+  | OOLess | OOGreater
+  | OOLessEqual | OOGreaterEqual | OOSpaceship
+  | OOComma
+  | OOArrowStar | OOArrow
+  | OOSubscript
+  (* short-circuiting *)
+  | OOAmpAmp | OOPipePipe
+  (* n-ary *)
+  | OONew (array : bool) | OODelete (array : bool) | OOCall
+  | OOCoawait (* | Conditional *)
+.
+#[global] Instance: EqDecision OverloadableOperator := ltac:(solve_decision).
+
+Module evaluation_order.
+  Variant t : Set :=
+  | nd (* fully non-deterministic *)
+  | l_nd (* left then non-deterministic *)
+  | rl (* right-to-left, binary operators *).
+
+  (* The order of evaluation for each operator *)
+  Definition ooe (oo : OverloadableOperator) : option t :=
+    match oo with
+    | OOPlus | OOMinus | OOTilde | OOExclaim => Some nd
+    | OOPlusPlus | OOMinusMinus =>
+      (* The evaluation order only matters for operator calls. For those, these
+         are unary operators with a possible [Eint 0] as a second argument (to
+         distinguish post-fix). The implicit argument is *always* a constant
+         integer, so nothing is needed *)
+      Some l_nd
+    | OOStar => Some nd
+    (* binary operators *)
+    | OOSlash | OOPercent
+    | OOCaret | OOAmp | OOPipe
+    | OOLessLess | OOGreaterGreater => Some nd
+    (* Assignment operators -- ordered right-to-left*)
+    | OOEqual
+    | OOPlusEqual | OOMinusEqual | OOStarEqual
+    | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
+    | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual => Some rl
+    (* Comparison operators -- non-deterministic *)
+    | OOEqualEqual | OOExclaimEqual
+    | OOLess | OOGreater
+    | OOLessEqual | OOGreaterEqual
+    | OOSpaceship => Some nd
+    | OOComma => Some l_nd
+    (* TODO Check these *)
+    | OOArrowStar | OOArrow
+    | OOSubscript => Some nd
+
+    (* Short circuiting *)
+    | OOAmpAmp | OOPipePipe => None
+    | OOCall | OONew _ | OODelete _ | OOCoawait => Some nd
+    end.
+End evaluation_order.
+
+
 Variant UnOp : Set :=
 | Uminus	(* - *)
 | Uplus	(* + *)
@@ -284,6 +355,14 @@ Variant OffsetInfo : Set :=
 #[global] Instance: EqDecision OffsetInfo.
 Proof. solve_decision. Defined.
 
+Module operator_impl.
+  Variant t : Set :=
+    | Func (_ : obj_name) (_ : type)
+    | MFunc (_ : obj_name) (_ : call_type) (_ : type).
+
+  #[global] Instance: EqDecision t := ltac:(solve_decision).
+End operator_impl.
+
 Inductive Expr : Set :=
 | Econst_ref (_ : VarRef) (_ : type)
   (* ^ these are different because they do not have addresses *)
@@ -329,6 +408,8 @@ Inductive Expr : Set :=
 | Emember  (obj : Expr) (_ : field) (_ : type)
   (* TODO: maybe replace the left branch use [Expr] here? *)
 | Emember_call (method : (obj_name * call_type * type) + Expr) (obj : Expr) (_ : list Expr) (_ : type)
+
+| Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t) (ls : list Expr) (_ : type)
 
 | Esubscript (_ : Expr) (_ : Expr) (_ : type)
 | Esize_of (_ : type + Expr) (_ : type)
