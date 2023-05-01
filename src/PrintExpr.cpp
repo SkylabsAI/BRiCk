@@ -522,7 +522,6 @@ public:
             print.ctor("Eoperator_member_call");
             printOverloadableOperator(expr->getOperator(), print) << fmt::nbsp;
 
-            // TODO Handle virtual dispatch.
             cprint.printObjName(method, print);
             print.output() << fmt::nbsp
                            << (method->isVirtual() ? "Virtual" : "Direct")
@@ -535,7 +534,7 @@ public:
             print.output() << fmt::nbsp;
             // note skip the first parameter because it is the object.
             print.list_range(
-                ++expr->arg_begin(), expr->arg_end(),
+                expr->arg_begin() + 1, expr->arg_end(),
                 [&](auto print, auto i) { cprint.printExpr(i, print, li); });
 
         } else if (auto function = dyn_cast<FunctionDecl>(callee)) {
@@ -546,7 +545,6 @@ public:
             print.output() << fmt::nbsp;
             cprint.printQualType(function->getType(), print);
             print.output() << fmt::nbsp;
-            // note skip the first parameter because it is the object.
             print.list(expr->arguments(), [&](auto print, auto i) {
                 cprint.printExpr(i, print, li);
             });
