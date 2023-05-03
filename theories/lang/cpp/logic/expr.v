@@ -899,11 +899,24 @@ Module Type Expr.
           | (tq, Tnamed cls) =>
               letI* fimpl_addr, impl_class, thisp := resolve_virtual obj cls fn in
               let this_type := tqualified tq (Tnamed impl_class) in
-              |> mspec this_type fty fimpl_addr (obj :: args) Q
+              |> mspec this_type fty fimpl_addr (thisp :: args) Q
           | _ => False
           end
       | Direct => |> mspec this_type fty (_global fn) (obj :: args) Q
       end.
+
+    Lemma dispatch_frame ct fty fn this_type obj args Q Q' :
+      (Forall p, Q p -* Q' p)
+      |-- dispatch ct fty fn this_type obj args Q -*
+          dispatch ct fty fn this_type obj args Q'.
+    Proof.
+      rewrite /dispatch.
+      iIntros "Q".
+      repeat case_match; try iIntros "[]".
+      { iApply resolve_virtual_frame.
+        iIntros (???). iIntros "X"; iNext; iRevert "X"; iApply mspec_frame. eauto. }
+      { iIntros "X"; iNext; iRevert "X"; iApply mspec_frame. eauto. }
+    Qed.
 
     (** [wp_mcall f this this_type fty es Q] calls member function pointed to by
         [f] (of type [fty], after stripping the member pointer) on [this] (of
@@ -915,8 +928,7 @@ Module Type Expr.
              int]). the issue with type-level qualifiers is addressed through
              the use of [normalize_type] below. *)
 
-    Definition wp_mcall
-      (invoke : ptr -> list ptr -> (ptr -> epred) -> mpred)
+    Definition wp_mcall (invoke : ptr -> list ptr -> (ptr -> epred) -> mpred)
       ooe (obj : Expr) (fty : type) (es : list Expr)
       (Q : ptr -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
@@ -930,20 +942,22 @@ Module Type Expr.
       | _ => False
       end.
 
-    (*
     Lemma wp_mcall_frame f this this_type fty es Q Q' :
-      Forall p free, Q p free -* Q' p free |-- wp_mcall f this this_type fty es Q -* wp_mcall f this this_type fty es Q'.
+      Forall p free, Q p free -* Q' p free
+      |-- (Forall p ps Q Q', (Forall p, Q p -* Q' p) -* f p ps Q -* f p ps Q') -*
+          wp_mcall f this this_type fty es Q -* wp_mcall f this this_type fty es Q'.
     Proof.
       rewrite /wp_mcall.
-      case_match; eauto. (*
-      iIntros "K X"; iDestruct "X" as (y) "X"; iExists y; iDestruct "X" as "[$ X]".
-      iRevert "X"; iApply wp_args_frame.
-      iIntros (??).
-      iIntros "X"; iNext; iRevert "X".
-      iApply wp_fptr_frame.
-      iIntros (?); iApply "K".
-    Qed. *) Admitted.
-     *)
+      case_match; eauto.
+      iIntros "Q f".
+      iApply wp_args_frame.
+      { simpl. iSplitL; eauto. rewrite /wp.WPE.Mframe.
+        iIntros (??) "X". iApply wp_glval_frame. reflexivity. eauto. }
+      iIntros (???).
+      case_match; try iIntros "[]".
+      case_match; try iIntros "[]".
+      iApply "f". iIntros (?); iApply "Q".
+    Qed.
 
     Axiom wp_lval_member_call : forall ct ty fty f obj es Q,
         wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
