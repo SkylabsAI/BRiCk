@@ -449,7 +449,7 @@ Fixpoint valcat_of (e : Expr) : ValCat :=
     end
   | Eoperator_call _ f _ _ =>
     match f with
-    | operator_impl.Func _ ft
+    | operator_impl.Func _ t => valcat_from_function_type t
     | operator_impl.MFunc _ _ ft => valcat_from_function_type ft
     end
 

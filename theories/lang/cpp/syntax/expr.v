@@ -43,38 +43,39 @@ Module evaluation_order.
   | rl (* right-to-left, binary operators *).
 
   (* The order of evaluation for each operator *)
-  Definition ooe (oo : OverloadableOperator) : option t :=
+  Definition ooe (oo : OverloadableOperator) : t :=
     match oo with
-    | OOPlus | OOMinus | OOTilde | OOExclaim => Some nd
+    | OOPlus | OOMinus | OOTilde | OOExclaim => nd
     | OOPlusPlus | OOMinusMinus =>
       (* The evaluation order only matters for operator calls. For those, these
          are unary operators with a possible [Eint 0] as a second argument (to
          distinguish post-fix). The implicit argument is *always* a constant
          integer, so nothing is needed *)
-      Some l_nd
-    | OOStar => Some nd
+      l_nd
+    | OOStar => nd
     (* binary operators *)
     | OOSlash | OOPercent
     | OOCaret | OOAmp | OOPipe
-    | OOLessLess | OOGreaterGreater => Some nd
+    | OOLessLess | OOGreaterGreater => nd
     (* Assignment operators -- ordered right-to-left*)
     | OOEqual
     | OOPlusEqual | OOMinusEqual | OOStarEqual
     | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
-    | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual => Some rl
+    | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual => rl
     (* Comparison operators -- non-deterministic *)
     | OOEqualEqual | OOExclaimEqual
     | OOLess | OOGreater
     | OOLessEqual | OOGreaterEqual
-    | OOSpaceship => Some nd
-    | OOComma => Some l_nd
+    | OOSpaceship => nd
+    | OOComma => l_nd
     (* TODO Check these *)
     | OOArrowStar | OOArrow
-    | OOSubscript => Some nd
+    | OOSubscript => nd
 
     (* Short circuiting *)
-    | OOAmpAmp | OOPipePipe => None
-    | OOCall | OONew _ | OODelete _ | OOCoawait => Some nd
+    | OOAmpAmp | OOPipePipe => nd
+    | OOCall => l_nd (* the [l] is the function or object *)
+    | OONew _ | OODelete _ | OOCoawait => nd
     end.
 End evaluation_order.
 
@@ -410,6 +411,7 @@ Inductive Expr : Set :=
 | Emember_call (method : (obj_name * call_type * type) + Expr) (obj : Expr) (_ : list Expr) (_ : type)
 
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t) (ls : list Expr) (_ : type)
+  (* ^^ in the case of a [Mfunc], [ls] is non-empty and the first expression is the object *)
 
 | Esubscript (_ : Expr) (_ : Expr) (_ : type)
 | Esize_of (_ : type + Expr) (_ : type)
