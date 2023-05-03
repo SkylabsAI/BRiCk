@@ -118,10 +118,10 @@ Notation Tvariable_array ty e := (Qconst (Tptr ty)) (only parsing).
 (** ** Expressions *)
 
 Definition Eoperator_member_call (oo : OverloadableOperator) (nm : obj_name) (ct : call_type) (ft : type) (obj : Expr) (es : list Expr) (ty : type) : Expr :=
-  Emember_call (inl (nm, ct, ft)) obj es ty.
+  Eoperator_call oo (operator_impl.MFunc nm ct ft) (obj :: es) ty.
 
-Definition Eoperator_call (oo : OverloadableOperator) (nm : obj_name) (ft : type) (es : list Expr) (ty : type) : Expr :=
-  Ecall (Ecast Cfun2ptr (Evar (Gname nm) ft) Prvalue (Tptr ft)) es ty.
+Definition Eoperator_call (oo : OverloadableOperator) (f : obj_name) (ft : type) (es : list Expr) (ty : type) : Expr :=
+  Eoperator_call oo (operator_impl.Func f ft) es ty.
 
 Definition Eenum_const_at (e : globname) (ety ty : type) : Expr :=
   Ecast Cintegral (Econst_ref (Gname e) ety) Prvalue ty.

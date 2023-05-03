@@ -778,19 +778,25 @@ Module Type Expr.
              qualifiers is addressed through the use of [normalize_type]
              below.
      *)
-    Definition wp_call (pfty : type) (f : val) (es : list Expr) (Q : ptr -> FreeTemps -> epred) : mpred :=
+    Definition wp_call (ooe : evaluation_order.t) (pfty : type) (f : Expr) (es : list Expr)
+      (Q : ptr -> FreeTemps -> epred) : mpred :=
       match unptr pfty with
       | Some fty =>
         let fty := normalize_type fty in
-        Exists fp, [| f = Vptr fp |] **
         match arg_types fty with
         | Some targs =>
-          wp_args targs es $ fun vs free => |> fspec fty fp vs (fun v => Q v free)
+            let eval_f Q := wp_operand f (fun v fr => Exists fp, [| v = Vptr fp |] ** Q fp fr) in
+            letI* fps, vs, free := wp_args ooe [eval_f] targs es in
+            match fps with
+            | [fp] => |> fspec fty fp vs (fun v => Q v free)
+            | _ => False
+            end
         | _ => False
         end
       | None => False
       end.
 
+    (*
     Lemma wp_call_frame pfty f es Q Q' :
       Forall p free, Q p free -* Q' p free |-- wp_call pfty f es Q -* wp_call pfty f es Q'.
     Proof.
@@ -804,26 +810,26 @@ Module Type Expr.
       iApply fspec_frame.
       iIntros (?); iApply "K".
     Qed.
+    *)
 
     Axiom wp_lval_call : forall f (es : list Expr) Q (ty : type),
-        wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (lval_receive ty res $ fun v => Q v (free_args >*> free_f)))
+        wp_call (evaluation_order.ooe OOCall) (type_of f) f es (fun res free =>
+           Reduce (lval_receive ty res $ fun v => Q v free))
         |-- wp_lval (Ecall f es ty) Q.
 
     Axiom wp_xval_call : forall f (es : list Expr) Q (ty : type),
-        wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (xval_receive ty res $ fun v => Q v (free_args >*> free_f)))
+        wp_call (evaluation_order.ooe OOCall) (type_of f) f es (fun res free =>
+           Reduce (xval_receive ty res $ fun v => Q v free))
         |-- wp_xval (Ecall f es ty) Q.
 
     Axiom wp_operand_call : forall ty f es Q,
-        wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-           Reduce (operand_receive ty res $ fun v => Q v (free_args >*> free_f)))
+        wp_call (evaluation_order.ooe OOCall) (type_of f) f es (fun res free =>
+           Reduce (operand_receive ty res $ fun v => Q v free))
        |-- wp_operand (Ecall f es ty) Q.
 
     Axiom wp_init_call : forall f es Q (addr : ptr) ty ty',
-          (* ^ give the memory back to the C++ abstract machine *)
-          wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
-             Reduce (init_receive ty addr res $ fun free => Q ty (free_args >*> free_f)))
+        wp_call (evaluation_order.ooe OOCall) (type_of f) f es (fun res free =>
+             Reduce (init_receive ty addr res $ fun free => Q ty free))
       |-- wp_init ty addr (Ecall f es ty') Q.
 
     (** * Member calls *)
@@ -831,6 +837,22 @@ Module Type Expr.
       match fty with
       | Tfunction _ (_ :: args) => Some args
       | _ => None
+      end.
+
+    (** [dispatch ct] performs dispatch on the function with the call type. *)
+    Definition dispatch (ct : call_type) (fty : type) (fn : obj_name) (this_type : type)
+      (obj : ptr) (args : list ptr) (Q : ptr -> epred) : mpred :=
+      let fty := normalize_type fty in
+      match ct with
+      | Virtual =>
+          match decompose_type this_type with
+          | (tq, Tnamed cls) =>
+              letI* fimpl_addr, impl_class, thisp := resolve_virtual obj cls fn in
+              let this_type := tqualified tq (Tnamed impl_class) in
+              |> mspec this_type fty fimpl_addr (obj :: args) Q
+          | _ => False
+          end
+      | Direct => |> mspec this_type fty (_global fn) (obj :: args) Q
       end.
 
     (** [wp_mcall f this this_type fty es Q] calls member function pointed to by
@@ -842,47 +864,55 @@ Module Type Expr.
              [foo(const int)] will be passed a value of type [int] (not [const
              int]). the issue with type-level qualifiers is addressed through
              the use of [normalize_type] below. *)
-    Definition wp_mcall (f : val) (this : ptr) (this_type : type) (fty : type) (es : list Expr)
-               (Q : ptr -> FreeTemps -> epred) : mpred :=
+
+    Definition wp_mcall
+      (invoke : ptr -> list ptr -> (ptr -> epred) -> mpred)
+      ooe (obj : Expr) (fty : type) (es : list Expr)
+      (Q : ptr -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
-      Exists fp, [| f = Vptr fp|] **
       match arg_types fty with
       | Some targs =>
-        wp_args targs es $ fun vs free => |> mspec this_type fty fp (this :: vs) (fun v => Q v free)
+        letI* this, args, free := wp_args ooe [wp_glval obj] targs es in
+        match this with
+        | [this] => invoke this args (fun v => Q v free)
+        | _ => False
+        end
       | _ => False
       end.
 
+    (*
     Lemma wp_mcall_frame f this this_type fty es Q Q' :
       Forall p free, Q p free -* Q' p free |-- wp_mcall f this this_type fty es Q -* wp_mcall f this this_type fty es Q'.
     Proof.
       rewrite /wp_mcall.
-      case_match; eauto.
+      case_match; eauto. (*
       iIntros "K X"; iDestruct "X" as (y) "X"; iExists y; iDestruct "X" as "[$ X]".
       iRevert "X"; iApply wp_args_frame.
       iIntros (??).
       iIntros "X"; iNext; iRevert "X".
       iApply fspec_frame.
       iIntros (?); iApply "K".
-    Qed.
+    Qed. *) Admitted.
+     *)
 
-    Axiom wp_lval_member_call : forall ty fty f obj es Q,
-        wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
-           lval_receive ty res $ fun v => Q v (free_args >*> free_this))
-        |-- wp_lval (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
+    Axiom wp_lval_member_call : forall ct ty fty f obj es Q,
+        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
+           lval_receive ty res $ fun v => Q v free)
+        |-- wp_lval (Emember_call (inl (f, ct, fty)) obj es ty) Q.
 
-    Axiom wp_xval_member_call : forall ty fty f obj es Q,
-        wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
-           xval_receive ty res $ fun v => Q v (free_args >*> free_this))
-        |-- wp_xval (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
+    Axiom wp_xval_member_call : forall ct ty fty f obj es Q,
+        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
+           xval_receive ty res $ fun v => Q v free)
+        |-- wp_xval (Emember_call (inl (f, ct, fty)) obj es ty) Q.
 
-    Axiom wp_operand_member_call : forall ty fty f obj es Q,
-        wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
-           operand_receive ty res $ fun v => Q v (free_args >*> free_this))
-        |-- wp_operand (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
+    Axiom wp_operand_member_call : forall ct ty fty f obj es Q,
+        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
+           operand_receive ty res $ fun v => Q v free)
+        |-- wp_operand (Emember_call (inl (f, ct, fty)) obj es ty) Q.
 
-    Axiom wp_init_member_call : forall f fty es (addr : ptr) ty obj Q,
-        wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
-           init_receive ty addr res $ fun free => Q ty (free_args >*> free_this))
+    Axiom wp_init_member_call : forall ct f fty es (addr : ptr) ty obj Q,
+        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
+           init_receive ty addr res $ fun free => Q ty free)
         |-- wp_init ty addr (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
 
     (** virtual functions
@@ -895,6 +925,8 @@ Module Type Expr.
         [tq] is passed on to [wp_mcall] because that contains the information whether or not
         the called method is a [const] method. This matches the construction of [SMethod].
      *)
+
+(*
     Definition wp_virtual_call (f : obj_name) (this : ptr) (this_type : type) (fty : type) (es : list Expr)
                (Q : ptr -> FreeTemps -> epred) : mpred :=
       match decompose_type this_type with
@@ -923,29 +955,13 @@ Module Type Expr.
         wp_glval obj (fun this free_this => wp_virtual_call f this (type_of obj) fty es $ fun res free_args =>
            init_receive ty addr res $ fun free => Q ty (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
+ *)
 
     (** * Operator Calls
         These are calls or member calls that are written as operators and
         therefore have (potentially) different order-of-evaluation than
         regular function or member calls.
      *)
-    Fixpoint seqs {T} (ls : list (wp.WPE.M T)) : wp.WPE.M (list T) :=
-      match ls with
-      | nil => wp.WPE.Mret []
-      | l :: ls => wp.WPE.Mmap (fun '(a,b) => a :: b) (wp.WPE.seq l (seqs ls))
-      end.
-
-    Definition eval (eo : evaluation_order.t) {T} (ls : list (wp.WPE.M T)) : wp.WPE.M (list T) :=
-      match eo with
-      | evaluation_order.nd => nd_seqs ls
-      | evaluation_order.l_nd =>
-          match ls with
-          | e :: es => wp.WPE.Mmap (fun '(a,b) => a :: b) (wp.WPE.seq e (nd_seqs es))
-          | [] => wp.WPE.Mret []
-          end
-      | evaluation_order.rl =>
-          wp.WPE.Mmap (@rev _) (seqs (rev ls))
-      end.
 
     (** TODO: most of the logic here is duplicated from above
         (which itself is duplicated across value categories)
@@ -960,40 +976,40 @@ Module Type Expr.
              core logic.
            - [wp_initialize] and [wp_expr] are quite similar, perhaps they can be completey unified.
      *)
-    (*
+    Definition wp_operator_call oo oi es Q :=
+      match oi with
+      | operator_impl.Func f fty =>
+          let fty := normalize_type fty in
+          match arg_types fty with
+          | Some targs =>
+            letI* fps, vs, free := wp_args (evaluation_order.ooe oo) [] targs es in
+            |> fspec fty (_global f) vs (fun v => Q v free)
+          | None => False
+          end
+       | operator_impl.MFunc fn ct fty =>
+           match es with
+           | eobj :: es =>
+               wp_mcall (dispatch ct (type_of eobj) fn fty) (evaluation_order.ooe oo) eobj fty es Q
+           | _ => False
+           end
+      end%I.
+
     Axiom wp_operand_operator_call : forall oo oi es ty Q,
-        match oi with
-        | operator_impl.Func fn fty =>
-            False (* evaluate arguments using the scheme *)
-        | operator_impl.MFunc fn ct fty =>
-            match es , arg_types fty with
-            | eobj :: es , Some targs =>
-                match zipTypes tu ρ targs.1 targs.2 es with
-                | Some (args, va_info) =>
-                    match evaluation_order.ooe oo with
-                    | Some oe =>
-                        eval oe (wp_glval eobj :: args) (λ (ps : list ptr) (fs : FreeTemps),
-                            match va_info with
-                            | Some (non_va, types) =>
-                                let real := take non_va ps in
-                                let vargs := drop non_va ps in
-                                let va_info0 := zip types vargs in
-                                Forall p1 : ptr, p1 |-> varargsR va_info0 -* Q (real ++ [p1]) (FreeTemps.delete_va va_info0 p1 >*> fs)
-                            | None =>
-                                |> mspec this_type fty fp (this :: vs) (fun v => Q v free)
-
-                                Q _ _
-                            end)
-                    | _ => False
-                    end
-                | _ => False
-                end
-            | _ , _ => False
-            end
-        end
-      |-- wp_operand (Eoperator_call oo oi es ty) Q.
-     *)
-
+        (letI* res, free := wp_operator_call oo oi es in
+         operand_receive ty res $ fun v => Q v free)
+     |-- wp_operand (Eoperator_call oo oi es ty) Q.
+    Axiom wp_lval_operator_call : forall oo oi es ty Q,
+        (letI* res, free := wp_operator_call oo oi es in
+         lval_receive ty res $ fun v => Q v free)
+     |-- wp_lval (Eoperator_call oo oi es ty) Q.
+    Axiom wp_xval_operator_call : forall oo oi es ty Q,
+        (letI* res, free := wp_operator_call oo oi es in
+         xval_receive ty res $ fun v => Q v free)
+     |-- wp_xval (Eoperator_call oo oi es ty) Q.
+    Axiom wp_init_operator_call : forall addr oo oi es ty Q,
+        (letI* res, free := wp_operator_call oo oi es in
+         init_receive ty addr res $ fun free => Q ty free)
+     |-- wp_init ty addr (Eoperator_call oo oi es ty) Q.
 
     (* null *)
     Axiom wp_null : forall Q,
@@ -1144,14 +1160,17 @@ Module Type Expr.
         (* NOTE because the AST does not include the types of the arguments of
            the constructor, we have to look up the type in the environment.
          *)
-           match tu !! cnd with
-           | Some cv =>
+           match tu.(symbols) !! cnd with
+           | Some (Oconstructor ctor) =>
              addr |-> tblockR (Tnamed cls) (cQp.mut 1) -*
+             let arg_types := (drop_qualifiers ∘ snd) <$> ctor.(c_params) in
+             let ctor_type := Tfunction (cc:=ctor.(c_cc)) (ar:=ctor.(c_arity)) Tvoid arg_types in
              (* ^^ The semantics currently has constructors take ownership of a [tblockR] *)
-             wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es (fun p free =>
-               (* in the semantics, constructors return [void] *)
-               p |-> primR Tvoid (cQp.mut 1) Vvoid ** Q (Tnamed cls) free)
-           | _ => False
+             letI* _, argps, free := wp_args evaluation_order.nd nil (arg_types, ctor.(c_arity)) es in
+               |> mspec (Tnamed cls) ctor_type (_global cnd) (addr :: argps) (fun resultp =>
+             (* in the semantics, constructors return [void] *)
+             resultp |-> primR Tvoid (cQp.mut 1) Vvoid ** Q (Tnamed cls) free)
+           | _ => False%I
            end
       |-- wp_init (Tnamed cls) addr (Econstructor cnd es (Tnamed cls)) Q.
 
