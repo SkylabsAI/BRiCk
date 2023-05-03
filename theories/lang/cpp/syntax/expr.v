@@ -20,7 +20,7 @@ Variant OverloadableOperator : Set :=
   | OOCaret | OOAmp | OOPipe | OOEqual (* = *)
   | OOLessLess | OOGreaterGreater
   | OOPlusEqual | OOMinusEqual | OOStarEqual
-  | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
+  | OOSlashEqual | OOPercentEqual | OOCaretEqual | OOAmpEqual
   | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual
   | OOEqualEqual | OOExclaimEqual
   | OOLess | OOGreater
@@ -39,8 +39,8 @@ Variant OverloadableOperator : Set :=
 Module evaluation_order.
   Variant t : Set :=
   | nd (* fully non-deterministic *)
-  | l_nd (* left then non-deterministic *)
-  | rl (* right-to-left, binary operators *).
+  | l_nd (* left then non-deterministic, calls *)
+  | rl (* right-to-left, assignment operators (post C++17) *).
 
   (* The order of evaluation for each operator *)
   Definition ooe (oo : OverloadableOperator) : t :=
@@ -60,7 +60,7 @@ Module evaluation_order.
     (* Assignment operators -- ordered right-to-left*)
     | OOEqual
     | OOPlusEqual | OOMinusEqual | OOStarEqual
-    | OOslashequal | OOPercentEqual | OOCaretEqual | OOAmpEqual
+    | OOSlashEqual | OOPercentEqual | OOCaretEqual | OOAmpEqual
     | OOPipeEqual  | OOLessLessEqual | OOGreaterGreaterEqual => rl
     (* Comparison operators -- non-deterministic *)
     | OOEqualEqual | OOExclaimEqual
