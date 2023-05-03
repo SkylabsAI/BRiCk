@@ -1012,20 +1012,6 @@ Module Type Expr.
         therefore have (potentially) different order-of-evaluation than
         regular function or member calls.
      *)
-
-    (** TODO: most of the logic here is duplicated from above
-        (which itself is duplicated across value categories)
-        Proposals:
-        1. Unify [virtual] and non-virtual call semantics by moving [resolve_virtual] to
-           occur after argument evaluation (more as part of the function)
-        2. Re-package the handling of arguments so that [zipTypes] would be hidden
-           - To support pre-pending a call with a different evaluation scheme, we could
-             have [wp_args] take a [list (M ptr)] that it would fuse into the evaluation.
-        3. Consider the relationship between what is happening here and the template semantics
-           - [operand_receive], [lval_recieve], [xval_receive], [init_receive] might share some
-             core logic.
-           - [wp_initialize] and [wp_expr] are quite similar, perhaps they can be completey unified.
-     *)
     Definition wp_operator_call oo oi es Q :=
       match oi with
       | operator_impl.Func f fty =>
