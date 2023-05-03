@@ -909,26 +909,37 @@ Module Type Expr.
       iApply "f". iIntros (?); iApply "Q".
     Qed.
 
-    Axiom wp_lval_member_call : forall ct ty fty f obj es Q,
-        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
-           lval_receive ty res $ fun v => Q v free)
-        |-- wp_lval (Emember_call (inl (f, ct, fty)) obj es ty) Q.
+    Definition do_deref (is_arrow : bool) (e : Expr) (Q : Expr -> mpred) : mpred :=
+      if is_arrow then
+        match unptr (type_of e) with
+        | Some ty => Q (Ederef e ty)
+        | _ => False
+        end%I
+      else Q e.
 
-    Axiom wp_xval_member_call : forall ct ty fty f obj es Q,
+    Axiom wp_lval_member_call : forall is_arrow ct ty fty f obj es Q,
+        (letI* obj := do_deref is_arrow obj in
         wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
-           xval_receive ty res $ fun v => Q v free)
-        |-- wp_xval (Emember_call (inl (f, ct, fty)) obj es ty) Q.
+           lval_receive ty res $ fun v => Q v free))
+        |-- wp_lval (Emember_call is_arrow ct f fty obj es ty) Q.
 
-    Axiom wp_operand_member_call : forall ct ty fty f obj es Q,
+    Axiom wp_xval_member_call : forall is_arrow ct ty fty f obj es Q,
+        (letI* obj := do_deref is_arrow obj in
         wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
-           operand_receive ty res $ fun v => Q v free)
-        |-- wp_operand (Emember_call (inl (f, ct, fty)) obj es ty) Q.
+           xval_receive ty res $ fun v => Q v free))
+        |-- wp_xval (Emember_call is_arrow ct f fty obj es ty) Q.
 
-    Axiom wp_init_member_call : forall ct f fty es (addr : ptr) ty obj Q,
+    Axiom wp_operand_member_call : forall is_arrow ct ty fty f obj es Q,
+        (letI* obj := do_deref is_arrow obj in
         wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
-           init_receive ty addr res $ fun free => Q ty free)
-        |-- wp_init ty addr (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
+           operand_receive ty res $ fun v => Q v free))
+        |-- wp_operand (Emember_call is_arrow ct f fty obj es ty) Q.
 
+    Axiom wp_init_member_call : forall is_arrow ct f fty es (addr : ptr) ty obj Q,
+        (letI* obj := do_deref is_arrow obj in
+        wp_mcall (dispatch ct fty f (type_of obj)) evaluation_order.l_nd obj fty es (fun res free =>
+           init_receive ty addr res $ fun free => Q ty free))
+        |-- wp_init ty addr (Emember_call is_arrow ct f fty obj es ty) Q.
 
 
     (** * Operator Calls

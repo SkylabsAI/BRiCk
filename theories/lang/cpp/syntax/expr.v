@@ -127,8 +127,8 @@ Variant BinOp : Set :=
 | Bshr	(* >> *)
 | Bsub	(* - *)
 | Bxor	(* ^ *)
-| Bdotp	(* .* *)
-| Bdotip	(* ->* *)
+| Bdotp	(* .* *)     (* << no longer used *)
+| Bdotip	(* ->* *)  (* << no longer used *)
 | Bunsupported (_ : bs).
 #[global] Instance: EqDecision BinOp.
 Proof. solve_decision. Defined.
@@ -407,8 +407,12 @@ Inductive Expr : Set :=
 | Ecast    (_ : Cast) (e : Expr) (_ : ValCat) (_ : type)
 
 | Emember  (obj : Expr) (_ : field) (_ : type)
-  (* TODO: maybe replace the left branch use [Expr] here? *)
-| Emember_call (method : (obj_name * call_type * type) + Expr) (obj : Expr) (_ : list Expr) (_ : type)
+| Edot_data (is_arrow : bool) (obj _ : Expr) (_ : type) (** TODO: maybe better to do with [Ebinop]? *)
+  (* ^ represents [(e.*f)] or [(e->*f)] *)
+
+| Emember_call (is_arrow : bool) (virtual : call_type) (method : obj_name) (ft : type) (obj : Expr) (_ : list Expr) (_ : type)
+| Edot_call (is_arrow : bool) (e f : Expr) (args : list Expr) (_ : type)
+  (* ^ represents [(e.*f)(..)] or [(e->*f)(..)] *)
 
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t) (ls : list Expr) (_ : type)
   (* ^^ in the case of a [Mfunc], [ls] is non-empty and the first expression is the object *)

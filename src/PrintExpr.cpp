@@ -250,8 +250,6 @@ public:
             CASE(Shr, "Bshr")
             CASE(Sub, "Bsub")
             CASE(Xor, "Bxor")
-            CASE(PtrMemD, "Bdotp")
-            CASE(PtrMemI, "Bdotip")
 #undef CASE
         default:
             logging::unsupported()
@@ -316,6 +314,12 @@ public:
             ACASE(Shr, Bshr)
             ACASE(Sub, Bsub)
             ACASE(Xor, Bxor)
+        case BinaryOperatorKind::BO_PtrMemD:
+            print.ctor("Edot_data false");
+            break;
+        case BinaryOperatorKind::BO_PtrMemI:
+            print.ctor("Edot_data true");
+            break;
         default:
             print.ctor("Ebinop");
             printBinaryOperator(expr, print, cprint, ctxt);
@@ -867,20 +871,21 @@ public:
     void VisitCXXMemberCallExpr(const CXXMemberCallExpr* expr,
                                 CoqPrinter& print, ClangPrinter& cprint,
                                 const ASTContext&, OpaqueNames& li) {
-        print.ctor("Emember_call");
         auto callee = expr->getCallee()->IgnoreParens();
         auto method = expr->getMethodDecl();
         if (auto me = dyn_cast<MemberExpr>(callee)) {
-            print.ctor("inl") << fmt::lparen;
-            cprint.printObjName(method, print);
-            print.output() << "," << fmt::nbsp;
+            print.ctor("Emember_call");
+            print.boolean(me->isArrow());
+            print.output() << fmt::nbsp;
             if (me->hasQualifier() or not method->isVirtual()) {
                 // not virtual call
                 print.output() << "Direct";
             } else {
                 print.output() << "Virtual";
             }
-            print.output() << "," << fmt::nbsp;
+            print.output() << fmt::nbsp;
+            cprint.printObjName(method, print);
+            print.output() << fmt::nbsp;
 
             if (const CXXMethodDecl* const md =
                     dyn_cast<CXXMethodDecl>(me->getMemberDecl())) {
@@ -889,66 +894,34 @@ public:
                 assert(false &&
                        "MemberDecl in MemberCall must be a MethodDecl");
             }
-            print.output() << fmt::rparen;
-            print.end_ctor();
-
             print.output() << fmt::nbsp;
-            if (me->isArrow()) {
-                // NOTE: the C++ standard states that a `*` is always an `lvalue`.
-                print.ctor("Ederef");
-                cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-                print.output() << fmt::nbsp;
-                cprint.printQualType(expr->getImplicitObjectArgument()
-                                         ->getType()
-                                         ->getPointeeType(),
-                                     print);
-                print.end_ctor();
-            } else {
-                cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-            }
+            cprint.printExpr(callee, print, li);
         } else if (auto bo = dyn_cast<BinaryOperator>(callee)) {
             assert(bo != nullptr && "expecting a binary operator");
             logging::unsupported()
                 << "member pointers are currently not "
                    "supported in the logic."
                 << " (at " << cprint.sourceRange(bo->getSourceRange()) << ")\n";
-            print.ctor("inr");
-            cprint.printExpr(bo->getRHS(), print, li);
-            print.end_ctor() << fmt::nbsp;
-
+            print.ctor("Edot_call");
             switch (bo->getOpcode()) {
             case BinaryOperatorKind::BO_PtrMemI:
-                print.output() << "Lvalue";
-                print.ctor("Ederef");
-                cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-                print.output() << fmt::nbsp;
-                cprint.printQualType(expr->getImplicitObjectArgument()
-                                         ->getType()
-                                         ->getPointeeType(),
-                                     print);
-                print.end_ctor();
+                print.boolean(true) << fmt::nbsp;
                 break;
             case BinaryOperatorKind::BO_PtrMemD:
-                cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
+                print.boolean(false) << fmt::nbsp;
                 break;
             default:
-                assert(false &&
-                       "pointer to member function should be a pointer");
+                assert(false && "pointer to member function should be a pointer");
             }
+            cprint.printExpr(bo->getLHS(), print, li);
+            print.output() << fmt::nbsp;
+            cprint.printExpr(bo->getRHS(), print, li);
         } else {
             assert(false && "no method and not a binary operator");
         }
         print.output() << fmt::nbsp;
         print.list(expr->arguments(),
                    [&](auto print, auto i) { cprint.printExpr(i, print, li); });
-#if 0
-        print.output() << fmt::nbsp << fmt::lparen;
-        for (auto i : expr->arguments()) {
-            cprint.printExpr(i, print, li);
-            print.cons();
-        }
-        print.end_list();
-#endif
         done(expr, print, cprint);
     }
 

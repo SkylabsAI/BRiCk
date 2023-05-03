@@ -32,7 +32,9 @@ Fixpoint type_of (e : Expr) : type :=
   | Ecall _ _ t
   | Ecast _ _ _ t
   | Emember _ _ t
-  | Emember_call _ _ _ t
+  | Edot_data _ _ _ t
+  | Emember_call _ _ _ _ _ _ t
+  | Edot_call _ _ _ _ t
   | Eoperator_call _ _ _ t
   | Esubscript _ _ t
   | Esize_of _ t
@@ -356,12 +358,14 @@ Fixpoint valcat_of (e : Expr) : ValCat :=
     | _ => UNEXPECTED_valcat e
     end
   | Emember e _ _ => valcat_of e
-  | Emember_call f _ _ _ =>
-    match f with
-    | inl (_, _, t)
-    | inr (Ecast Cl2r _  _ (Tmember_pointer _ t)) => valcat_from_function_type t
-    | _ => UNEXPECTED_valcat e
-    end
+  | Edot_data true e _ _ => Lvalue
+  | Edot_data false e _ _ => valcat_of e
+  | Emember_call _ f _ t _ _ _ => valcat_from_function_type t
+  | Edot_call _ _ f _ t =>
+      match type_of f with
+      | Tmember_pointer _ t => valcat_from_function_type t
+      | _ => UNEXPECTED_valcat e
+      end
   | Eoperator_call _ f _ _ =>
     match f with
     | operator_impl.Func _ t => valcat_from_function_type t
