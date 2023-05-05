@@ -839,28 +839,31 @@ Module Type Expr.
             letI* fps, vs, free := wp_args ooe [eval_f] targs es in
             match fps with
             | [fp] => |> wp_fptr fty fp vs (fun v => Q v free)
-            | _ => False
+            | _ => UNREACHABLE ("wp_args did not return a singleton list for pre", fps)
             end
         | _ => False
         end
       | None => False
       end.
 
-    (*
-    Lemma wp_call_frame pfty f es Q Q' :
-      Forall p free, Q p free -* Q' p free |-- wp_call pfty f es Q -* wp_call pfty f es Q'.
+    Lemma wp_call_frame eo pfty f es Q Q' :
+      Forall ps free, Q ps free -* Q' ps free |-- wp_call eo pfty f es Q -* wp_call eo pfty f es Q'.
     Proof.
       rewrite /wp_call.
       case_match; eauto.
       case_match; eauto.
-      iIntros "K X"; iDestruct "X" as (y) "X"; iExists y; iDestruct "X" as "[$ X]".
-      iRevert "X"; iApply wp_args_frame.
-      iIntros (??).
-      iIntros "X"; iNext; iRevert "X".
-      iApply wp_fptr_frame.
-      iIntros (?); iApply "K".
+      iIntros "K".
+      iApply wp_args_frame.
+      { simpl. iSplit; eauto.
+        iIntros (??) "K". iApply wp_operand_frame. reflexivity.
+        iIntros (??) "X". iDestruct "X" as (?) "[A B]".
+        iExists _; iFrame "A". iApply "K"; eauto. }
+      { iIntros (???).
+        repeat case_match; eauto.
+        iIntros "X"; iNext.
+        iRevert "X". iApply wp_fptr_frame.
+        iIntros (?). iApply "K". }
     Qed.
-    *)
 
     Axiom wp_lval_call : forall f (es : list Expr) Q (ty : type),
         wp_call (evaluation_order.ooe OOCall) (type_of f) f es (fun res free =>
@@ -889,7 +892,16 @@ Module Type Expr.
       | _ => None
       end.
 
-    (** [dispatch ct] performs dispatch on the function with the call type. *)
+    (** [dispatch ct] performs dispatch on the function with the call type.
+
+        Note that BRiCk considers [dispatch] to be something that occurs inside
+        the "function" (i.e. after function entry <https://eel.is/c++draft/expr.call#note-7>).
+        This aligns with the semantics of calling a [virtual] function through
+        a member pointer, e.g. [(obj.*foo)(a,b,c)] when [foo] is a pointer to
+        a [virtual] member function. The standard implementation of this pattern
+        is to have the representation of member function pointers be closures
+        that perform [virtual] resolution if necessary.
+     *)
     Definition dispatch (ct : call_type) (fty : type) (fn : obj_name) (this_type : type)
       (obj : ptr) (args : list ptr) (Q : ptr -> epred) : mpred :=
       let fty := normalize_type fty in
@@ -1001,6 +1013,8 @@ Module Type Expr.
            | _ => False
            end
       end%I.
+
+    (* TODO: prove [wp_operator_call_frame] *)
 
     Axiom wp_operand_operator_call : forall oo oi es ty Q,
         (letI* res, free := wp_operator_call oo oi es in
