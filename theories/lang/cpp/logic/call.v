@@ -142,18 +142,16 @@ Section with_resolve.
     match zipTypes ts_ar.1 ts_ar.2 es with
     | Some (args, va_info) =>
         letI* ps, fs := eval eo (pre ++ args) in
+        let pre := firstn (length pre) ps in
+        let ps := skipn (length pre) ps in
         match va_info with
         | Some (non_va, types) =>
-            let pre := firstn (length pre) ps in
-            let ps := skipn (length pre) ps in
             let real := firstn non_va ps in
             let vargs := skipn non_va ps in
             let va_info := zip types vargs in
             Forall p, p |-> varargsR va_info -*
                         Q pre (real ++ [p]) (FreeTemps.delete_va va_info p >*> fs)%free
         | None =>
-            let pre := firstn (length pre) ps in
-            let ps := skipn (length pre) ps in
             Q pre ps fs
         end
     | _ => False
