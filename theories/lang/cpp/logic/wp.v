@@ -535,7 +535,7 @@ Section with_cpp.
     | evaluation_order.nd => nd_seqs es
     | evaluation_order.l_nd =>
         match es with
-        | e :: es => Mbind e (fun v => Mbind (nd_seqs es) (fun vs => Mret (v :: vs)))
+        | e :: es => Mbind e (fun v => Mmap (fun vs => v :: vs) (nd_seqs es))
         | [] => Mret []
         end
     | evaluation_order.rl => Mmap (@rev _) (seqs (rev es))
