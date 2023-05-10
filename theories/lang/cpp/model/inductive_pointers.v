@@ -33,21 +33,22 @@ Import canonical_tu address_sums merge_elems.
 
 Module Import PTRS_AUX.
 
-  Inductive raw_offset_seg : Set :=
+  Inductive offset_seg : Set :=
   | o_field_ (* type-name: *) (f : field)
   | o_sub_ (ty : type) (z : Z)
   | o_base_ (derived base : globname)
   | o_derived_ (base derived : globname)
   | o_invalid_.
-  #[export] Instance raw_offset_seg_eq_dec : EqDecision raw_offset_seg.
+  #[export] Instance raw_offset_seg_eq_dec : EqDecision offset_seg.
   Proof. solve_decision. Defined.
-  #[global] Declare Instance raw_offset_seg_countable : Countable raw_offset_seg.
+  #[global] Declare Instance raw_offset_seg_countable : Countable offset_seg.
+  Notation raw_offset_seg := offset_seg (only parsing).
 
-  Definition offset_seg : Set := raw_offset_seg * Z.
+  (* Definition offset_seg : Set := raw_offset_seg * Z.
   #[export] Instance offset_seg_eq_dec : EqDecision offset_seg := _.
-  #[export] Instance offset_seg_countable : Countable offset_seg := _.
+  #[export] Instance offset_seg_countable : Countable offset_seg := _. *)
 
-  Definition eval_raw_offset_seg σ (ro : raw_offset_seg) : option Z :=
+  Definition eval_offset_seg σ (ro : offset_seg) : option Z :=
     match ro with
     | o_field_ f => o_field_off σ f
     | o_sub_ ty z => o_sub_off σ ty z
@@ -55,12 +56,14 @@ Module Import PTRS_AUX.
     | o_derived_ base derived => o_derived_off σ base derived
     | o_invalid_ => None
     end.
-  Definition mk_offset_seg σ (ro : raw_offset_seg) : offset_seg :=
+  Definition off_wf {σ} ro :=
+    is_Some (eval_offset_seg σ ro).
+  (* Definition mk_offset_seg σ (ro : raw_offset_seg) : offset_seg :=
     match eval_raw_offset_seg σ ro with
-    | None => (o_invalid_, 0%Z)
+    | None => o_invalid_, 0%Z)
     | Some off => (ro, off)
     end.
-  #[global] Arguments mk_offset_seg _ !_ /.
+  #[global] Arguments mk_offset_seg _ !_ /. *)
 
   (* This list is reversed.
   The list of offsets in [[p; o_1; ...; o_n]] is represented as [[o_n; ... o_1]].
@@ -68,15 +71,6 @@ Module Import PTRS_AUX.
   Definition raw_offset := list offset_seg.
   #[export] Instance raw_offset_eq_dec : EqDecision raw_offset := _.
   #[export] Instance raw_offset_countable : Countable raw_offset := _.
-
-  (* This is probably sound, since it allows temporary underflows. *)
-  Definition eval_offset_seg (os : offset_seg) : option Z :=
-    match os with
-    | (o_invalid_, _) => None
-    | (_, z) => Some z
-    end.
-  Definition eval_raw_offset (o : raw_offset) : option Z :=
-    foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg o).
 
   Notation isnt o pattern :=
     (match o with | pattern => False | _ => True end).
@@ -737,69 +731,123 @@ End cquot.
 Module PTRS_IMPL <: PTRS_INTF.
   (* WIP: alternative, simpler model, using an equivalence relation and classical quotients. *)
   Module roff_equiv.
-    Inductive roff_equiv : raw_offset -> raw_offset -> Prop :=
-    | o_nil :
-      roff_equiv [] []
-    | o_cons r os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv (r :: os1) (r :: os2)
-    | o_base_derived1 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_base_ derived base, o) :: (o_derived_ base derived, -o) :: os1) os2
-    | o_base_derived2 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_base_ derived base, o) :: (o_derived_ base derived, -o) :: os2)
-    | o_derived_base1 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_derived_ base derived, o) :: (o_base_ derived base, -o) :: os1) os2
-    | o_derived_base2 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_derived_ base derived, o) :: (o_base_ derived base, -o) :: os2)
-    | o_sub_0_equiv1 os1 os2 ty :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty 0, 0) :: os1) os2
-    | o_sub_0_equiv2 os1 os2 ty :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_sub_ ty 0, 0) :: os2)
-    | o_sub_sub1 os1 os2 ty z1 z2 o1 o2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty z1, o1) :: (o_sub_ ty z2, o2) :: os1) ((o_sub_ ty (z1 + z2), o1 + o2) :: os2)
-    | o_sub_sub2 os1 os2 ty z1 z2 o1 o2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty (z1 + z2), o1 + o2) :: os1) ((o_sub_ ty z1, o1) :: (o_sub_ ty z2, o2) :: os2)
-    | o_invalid1 os z1 z2 :
-      roff_equiv ((o_invalid_, z1) :: os) [(o_invalid_, z2)]
-    | o_invalid2 os z1 z2 :
-      roff_equiv [(o_invalid_, z1)] ((o_invalid_, z2) :: os)
-    | o_trans os1 os2 os3 :
-      roff_equiv os1 os2 ->
-      roff_equiv os2 os3 ->
-      roff_equiv os1 os3
-    .
+    Section with_sigma.
+      Context {σ}.
 
-    #[local] Hint Constructors roff_equiv : core.
-    #[local] Remove Hints o_trans : core.
+      Inductive roff_equiv : raw_offset -> raw_offset -> Prop :=
+      | o_nil :
+        roff_equiv [] []
+      | o_cons r os1 os2 :
+        roff_equiv os1 os2 ->
+        off_wf r ->
+        roff_equiv (r :: os1) (r :: os2)
+      | o_base_derived1 derived base os1 os2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_base_ derived base) ->
+        roff_equiv (o_base_ derived base :: o_derived_ base derived :: os1) os2
+      | o_base_derived2 derived base os1 os2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_base_ derived base) ->
+        roff_equiv os1 (o_base_ derived base :: o_derived_ base derived :: os2)
+      | o_derived_base1 derived base os1 os2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_base_ derived base) ->
+        roff_equiv (o_derived_ base derived :: o_base_ derived base :: os1) os2
+      | o_derived_base2 derived base os1 os2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_base_ derived base) ->
+        roff_equiv os1 (o_derived_ base derived :: o_base_ derived base :: os2)
+      | o_sub_0_equiv1 os1 os2 ty :
+        roff_equiv os1 os2 ->
+        off_wf (o_sub_ ty 0) ->
+        roff_equiv (o_sub_ ty 0 :: os1) os2
+      | o_sub_0_equiv2 os1 os2 ty :
+        roff_equiv os1 os2 ->
+        off_wf (o_sub_ ty 0) ->
+        roff_equiv os1 (o_sub_ ty 0 :: os2)
+      | o_sub_sub1 os1 os2 ty z1 z2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_sub_ ty z1) ->
+        roff_equiv (o_sub_ ty z1 :: o_sub_ ty z2 :: os1) (o_sub_ ty (z1 + z2) :: os2)
+      | o_sub_sub2 os1 os2 ty z1 z2 :
+        roff_equiv os1 os2 ->
+        off_wf (o_sub_ ty z1) ->
+        roff_equiv (o_sub_ ty (z1 + z2) :: os1) (o_sub_ ty z1 :: o_sub_ ty z2 :: os2)
+      | o_invalid1 os :
+        roff_equiv (o_invalid_ :: os) [o_invalid_]
+      | o_invalid2 os :
+        roff_equiv [o_invalid_] (o_invalid_ :: os)
+      | o_trans os1 os2 os3 :
+        roff_equiv os1 os2 ->
+        roff_equiv os2 os3 ->
+        roff_equiv os1 os3
+      .
+      Inductive roff_nf : raw_offset -> Prop :=
+      | nf_nil :
+        roff_nf []
+      | nf_cons r os :
+        roff_nf os ->
+        off_wf r ->
+        roff_nf (r :: os)
+      | nf_invalid os :
+        roff_nf os ->
+        roff_nf (o_invalid_ :: os).
 
-    #[local] Instance: Reflexive roff_equiv.
-    Proof. intros ro; induction ro; auto. Qed.
-    #[local] Instance: Transitive roff_equiv.
-    Proof. apply: o_trans. Qed.
-    #[local] Instance: Symmetric roff_equiv.
-    Proof. induction 1; try by constructor. by etrans. Qed.
-    #[export] Instance: Equivalence roff_equiv.
-    Proof. split; apply _. Qed.
+      #[local] Hint Constructors roff_equiv : core.
+      #[local] Remove Hints o_trans : core.
+      #[local] Instance: Transitive roff_equiv.
+      Proof. apply: o_trans. Qed.
+      #[local] Instance: Symmetric roff_equiv.
+      Proof. induction 1; try by constructor. by etrans. Qed.
 
-    Definition eval_raw_offset (os : raw_offset) : option Z :=
-      foldr (liftM2 Z.add) (Some 0) (eval_offset_seg <$> os).
+      Lemma roff_equiv_partial_refl ro :
+        roff_nf ro -> roff_equiv ro ro.
+      Proof.
+        intros Hnf.
+        induction ro; inversion Hnf; subst; auto.
+        by trans [o_invalid_].
+      Qed.
+
+      (* #[export] Instance: Equivalence roff_equiv.
+      Proof. split; apply _. Qed.
+
+      #[local] Instance: Reflexive roff_equiv.
+      Proof. intros ro; induction ro; auto. Qed. *)
+    End with_sigma.
+
+    Definition eval_raw_offset σ (o : raw_offset) : option Z :=
+      foldr (liftM2 Z.add) (Some 0) (map (eval_offset_seg σ) o).
+    Section liftM2.
+      Context `{MRet M, MBind M} `(f : A → B → C).
+      Lemma liftM2_any_None a :
+        liftM2 f a None = None.
+      Proof. by case: a. Qed.
+      (* Lemma liftM2_any_Some a :
+        liftM2 f (Some a) None = None.
+      Proof. done. Qed. *)
+    End liftM2.
 
       (* foldr (Z.add) 0%Z (snd <$> os). *)
     #[global] Arguments eval_raw_offset !_ /.
-    Lemma eval_raw_offset_proper (x y : raw_offset) :
-      roff_equiv x y → eval_raw_offset x = eval_raw_offset y.
+
+    Lemma o_derived_base_off σ base derived :
+      o_derived_off σ base derived = Z.opp <$> o_base_off σ derived base.
+    Proof. done. Qed.
+    Lemma o_sub_off_0 σ ty off :
+      o_sub_off σ ty 0 = Some off -> off = 0.
+    Proof. rewrite /o_sub_off . case: size_of => //= sz [<-]; lia. Qed.
+
+    Lemma eval_raw_offset_proper σ (x y : raw_offset) :
+      roff_equiv x y → eval_raw_offset σ x = eval_raw_offset σ y.
     Proof.
-      elim => > // _; try lia.
-      all: rewrite /eval_raw_offset ?fmap_cons /= => -> //.
-      all: case: (foldr _ _ _) => //= a; apply (f_equal Some); lia.
+      elim => > //; try lia.
+(* #[local] Arguments liftM2 {_ _ _ _ _ _} _ _ _ / : simpl nomatch. *)
+      all: rewrite /eval_raw_offset ?fmap_cons /= => ? -> // [off /= Hoff].
+      all: case: (foldr _ _ _) => //= [a|] /=.
+      all: rewrite ?liftM2_any_None //= ?o_derived_base_off !Hoff /=.
+      all: try (apply (f_equal Some); lia).
+      done.
+      all: case: (foldr _ _ _) => //= a. apply (f_equal Some); lia.
     Qed.
 
     Lemma roff_equiv_app a11 a12 a21 a22 :
