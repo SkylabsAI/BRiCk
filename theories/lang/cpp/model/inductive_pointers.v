@@ -739,39 +739,39 @@ Module PTRS_IMPL <: PTRS_INTF.
         roff_equiv [] []
       | o_cons r os1 os2 :
         roff_equiv os1 os2 ->
-        (* off_wf r -> *)
+        off_wf r ->
         roff_equiv (r :: os1) (r :: os2)
       | o_base_derived1 derived base os1 os2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_base_ derived base) -> *)
+        off_wf (o_base_ derived base) ->
         roff_equiv (o_base_ derived base :: o_derived_ base derived :: os1) os2
       | o_base_derived2 derived base os1 os2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_base_ derived base) -> *)
+        off_wf (o_base_ derived base) ->
         roff_equiv os1 (o_base_ derived base :: o_derived_ base derived :: os2)
       | o_derived_base1 derived base os1 os2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_base_ derived base) -> *)
+        off_wf (o_base_ derived base) ->
         roff_equiv (o_derived_ base derived :: o_base_ derived base :: os1) os2
       | o_derived_base2 derived base os1 os2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_base_ derived base) -> *)
+        off_wf (o_base_ derived base) ->
         roff_equiv os1 (o_derived_ base derived :: o_base_ derived base :: os2)
       | o_sub_0_equiv1 os1 os2 ty :
         roff_equiv os1 os2 ->
-        (* off_wf (o_sub_ ty 0) -> *)
+        off_wf (o_sub_ ty 0) ->
         roff_equiv (o_sub_ ty 0 :: os1) os2
       | o_sub_0_equiv2 os1 os2 ty :
         roff_equiv os1 os2 ->
-        (* off_wf (o_sub_ ty 0) -> *)
+        off_wf (o_sub_ ty 0) ->
         roff_equiv os1 (o_sub_ ty 0 :: os2)
       | o_sub_sub1 os1 os2 ty z1 z2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_sub_ ty z1) -> *)
+        off_wf (o_sub_ ty z1) ->
         roff_equiv (o_sub_ ty z1 :: o_sub_ ty z2 :: os1) (o_sub_ ty (z1 + z2) :: os2)
       | o_sub_sub2 os1 os2 ty z1 z2 :
         roff_equiv os1 os2 ->
-        (* off_wf (o_sub_ ty z1) -> *)
+        off_wf (o_sub_ ty z1) ->
         roff_equiv (o_sub_ ty (z1 + z2) :: os1) (o_sub_ ty z1 :: o_sub_ ty z2 :: os2)
       | o_invalid1 os :
         roff_equiv (o_invalid_ :: os) [o_invalid_]
@@ -800,20 +800,18 @@ Module PTRS_IMPL <: PTRS_INTF.
       #[local] Instance: Symmetric roff_equiv.
       Proof. induction 1; try by constructor. by etrans. Qed.
 
-      (* Lemma roff_equiv_partial_refl ro :
+      Lemma roff_equiv_partial_refl ro :
         roff_nf ro -> roff_equiv ro ro.
       Proof.
         intros Hnf.
         induction ro; inversion Hnf; subst; auto.
         by trans [o_invalid_].
-      Qed. *)
+      Qed.
 
-      #[local] Instance: Reflexive roff_equiv.
-      Proof. intros ro; induction ro; auto. Qed.
-      #[export] Instance: Equivalence roff_equiv.
+      (* #[export] Instance: Equivalence roff_equiv.
       Proof. split; apply _. Qed.
 
-      (* #[local] Instance: Reflexive roff_equiv.
+      #[local] Instance: Reflexive roff_equiv.
       Proof. intros ro; induction ro; auto. Qed. *)
     End with_sigma.
 
@@ -838,25 +836,6 @@ Module PTRS_IMPL <: PTRS_INTF.
     Lemma o_sub_off_0 σ ty off :
       o_sub_off σ ty 0 = Some off -> off = 0.
     Proof. rewrite /o_sub_off . case: size_of => //= sz [<-]; lia. Qed.
-
-    Lemma eval_raw_offset_proper σ (x y : raw_offset) :
-      roff_equiv x y → roff_nf x → roff_nf y →
-      eval_raw_offset σ x = eval_raw_offset σ y.
-    Proof.
-      elim => > // ? + Nx Ny; try inversion Nx; try inversion Ny; subst.
-      all: rewrite /eval_raw_offset ?fmap_cons /= => -> //.
-      rewrite IH.
-      all: case: (foldr _ _ _) => //= [a|]. apply (f_equal Some); lia.
-
-      elim => > //; try lia.
-      all: rewrite /eval_raw_offset ?fmap_cons /= => ? -> // [off /= Hoff].
-      all: case: (foldr _ _ _) => //= [a|] /=.
-      all: rewrite ?liftM2_any_None //= ?o_derived_base_off !Hoff /=.
-      all: try (apply (f_equal Some); lia).
-      done.
-      all: case: (foldr _ _ _) => //= a. apply (f_equal Some); lia.
-    Qed.
-
 
     Lemma eval_raw_offset_proper σ (x y : raw_offset) :
       roff_equiv x y → eval_raw_offset σ x = eval_raw_offset σ y.
