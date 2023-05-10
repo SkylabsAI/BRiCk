@@ -795,9 +795,9 @@ Module PTRS_IMPL <: PTRS_INTF.
 
       #[local] Hint Constructors roff_equiv : core.
       #[local] Remove Hints o_trans : core.
-      #[local] Instance: Transitive roff_equiv.
+      #[global] Instance: Transitive roff_equiv.
       Proof. apply: o_trans. Qed.
-      #[local] Instance: Symmetric roff_equiv.
+      #[global] Instance: Symmetric roff_equiv.
       Proof. induction 1; try by constructor. by etrans. Qed.
 
       Lemma roff_equiv_partial_refl ro :
@@ -837,6 +837,20 @@ Module PTRS_IMPL <: PTRS_INTF.
       o_sub_off σ ty 0 = Some off -> off = 0.
     Proof. rewrite /o_sub_off . case: size_of => //= sz [<-]; lia. Qed.
 
+    Lemma is_Some_None_alt {A} :
+      is_Some (A := A) None <-> False.
+    Proof. split; last tauto. exact: is_Some_None. Qed.
+
+    Lemma o_sub_off_i σ ty i :
+      is_Some (o_sub_off σ ty i) <-> is_Some (size_of σ ty).
+    Proof.
+      rewrite /o_sub_off; case: size_of => //=.
+      by rewrite !is_Some_None_alt.
+    Qed.
+    Lemma o_sub_off_i_1 σ ty i off :
+      o_sub_off σ ty i = Some off -> is_Some (size_of σ ty).
+    Proof. by rewrite -o_sub_off_i. Qed.
+
     Lemma eval_raw_offset_proper σ (x y : raw_offset) :
       roff_equiv x y → eval_raw_offset σ x = eval_raw_offset σ y.
     Proof.
@@ -845,12 +859,14 @@ Module PTRS_IMPL <: PTRS_INTF.
       all: rewrite /eval_raw_offset ?fmap_cons /= => ? -> // [off /= Hoff].
       all: case: (foldr _ _ _) => //= [a|] /=.
       all: rewrite ?liftM2_any_None //= ?o_derived_base_off !Hoff /=.
+      all: try (apply o_sub_off_0 in Hoff; subst).
       all: try (apply (f_equal Some); lia).
-      done.
-      all: case: (foldr _ _ _) => //= a. apply (f_equal Some); lia.
+      all: rewrite /o_sub_off in Hoff |- *.
+      all: move: Hoff (Hoff) => /o_sub_off_i_1 [sz ->] /= [<-].
+      all: apply (f_equal Some); lia.
     Qed.
 
-    Lemma roff_equiv_app a11 a12 a21 a22 :
+    Lemma roff_equiv_app σ a11 a12 a21 a22 :
       roff_equiv a11 a12 ->
       roff_equiv a21 a22 ->
       roff_equiv (a21 ++ a11) (a22 ++ a12).
