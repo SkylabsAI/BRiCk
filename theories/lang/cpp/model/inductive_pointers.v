@@ -737,55 +737,33 @@ End cquot.
 Module PTRS_IMPL <: PTRS_INTF.
   (* WIP: alternative, simpler model, using an equivalence relation and classical quotients. *)
   Module roff_equiv.
-    Inductive roff_equiv : raw_offset -> raw_offset -> Prop :=
+    Inductive raw_roff_equiv : raw_offset -> raw_offset -> Prop :=
     | o_nil :
-      roff_equiv [] []
+      raw_roff_equiv [] []
     | o_cons r os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv (r :: os1) (r :: os2)
+      raw_roff_equiv os1 os2 ->
+      raw_roff_equiv (r :: os1) (r :: os2)
     | o_base_derived1 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_base_ derived base, o) :: (o_derived_ base derived, -o) :: os1) os2
-    | o_base_derived2 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_base_ derived base, o) :: (o_derived_ base derived, -o) :: os2)
+      raw_roff_equiv os1 os2 ->
+      raw_roff_equiv ((o_base_ derived base, o) :: (o_derived_ base derived, -o) :: os1) os2
     | o_derived_base1 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_derived_ base derived, o) :: (o_base_ derived base, -o) :: os1) os2
-    | o_derived_base2 derived base o os1 os2 :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_derived_ base derived, o) :: (o_base_ derived base, -o) :: os2)
+      raw_roff_equiv os1 os2 ->
+      raw_roff_equiv ((o_derived_ base derived, o) :: (o_base_ derived base, -o) :: os1) os2
     | o_sub_0_equiv1 os1 os2 ty :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty 0, 0) :: os1) os2
-    | o_sub_0_equiv2 os1 os2 ty :
-      roff_equiv os1 os2 ->
-      roff_equiv os1 ((o_sub_ ty 0, 0) :: os2)
+      raw_roff_equiv os1 os2 ->
+      raw_roff_equiv ((o_sub_ ty 0, 0) :: os1) os2
     | o_sub_sub1 os1 os2 ty z1 z2 o1 o2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty z1, o1) :: (o_sub_ ty z2, o2) :: os1) ((o_sub_ ty (z1 + z2), o1 + o2) :: os2)
-    | o_sub_sub2 os1 os2 ty z1 z2 o1 o2 :
-      roff_equiv os1 os2 ->
-      roff_equiv ((o_sub_ ty (z1 + z2), o1 + o2) :: os1) ((o_sub_ ty z1, o1) :: (o_sub_ ty z2, o2) :: os2)
+      raw_roff_equiv os1 os2 ->
+      raw_roff_equiv ((o_sub_ ty z1, o1) :: (o_sub_ ty z2, o2) :: os1) ((o_sub_ ty (z1 + z2), o1 + o2) :: os2)
     | o_invalid1 os z1 z2 :
-      roff_equiv ((o_invalid_, z1) :: os) [(o_invalid_, z2)]
-    | o_invalid2 os z1 z2 :
-      roff_equiv [(o_invalid_, z1)] ((o_invalid_, z2) :: os)
-    | o_trans os1 os2 os3 :
-      roff_equiv os1 os2 ->
-      roff_equiv os2 os3 ->
-      roff_equiv os1 os3
-    .
+      raw_roff_equiv ((o_invalid_, z1) :: os) [(o_invalid_, z2)].
 
-    #[local] Hint Constructors roff_equiv : core.
-    #[local] Remove Hints o_trans : core.
+    #[local] Hint Constructors raw_roff_equiv : core.
 
-    #[local] Instance: Reflexive roff_equiv.
+    #[local] Instance: Reflexive raw_roff_equiv.
     Proof. intros ro; induction ro; auto. Qed.
-    #[local] Instance: Transitive roff_equiv.
-    Proof. apply: o_trans. Qed.
-    #[local] Instance: Symmetric roff_equiv.
-    Proof. induction 1; try by constructor. by etrans. Qed.
+    Definition roff_equiv := tc (sc raw_roff_equiv).
+
     #[export] Instance: Equivalence roff_equiv.
     Proof. split; apply _. Qed.
 
@@ -794,13 +772,40 @@ Module PTRS_IMPL <: PTRS_INTF.
 
       (* foldr (Z.add) 0%Z (snd <$> os). *)
     #[global] Arguments eval_raw_offset !_ /.
-    Lemma eval_raw_offset_proper (x y : raw_offset) :
-      roff_equiv x y → eval_raw_offset x = eval_raw_offset y.
+    Lemma raw_roff_equiv_eval_raw_offset (x y : raw_offset) :
+      raw_roff_equiv x y → eval_raw_offset x = eval_raw_offset y.
     Proof.
       elim => > // _; try lia.
       all: rewrite /eval_raw_offset ?fmap_cons /= => -> //.
       all: case: (foldr _ _ _) => //= a; apply (f_equal Some); lia.
     Qed.
+
+    Lemma sc_raw_roff_equiv_eval_raw_offset (x y : raw_offset) :
+      sc raw_roff_equiv x y → eval_raw_offset x = eval_raw_offset y.
+    Proof.
+      induction 1.
+      exact: raw_roff_equiv_eval_raw_offset.
+      symmetry. exact: raw_roff_equiv_eval_raw_offset.
+    Qed.
+
+    Lemma eval_raw_offset_proper (x y : raw_offset) :
+      roff_equiv x y → eval_raw_offset x = eval_raw_offset y.
+    Proof.
+      induction 1.
+      exact: sc_raw_roff_equiv_eval_raw_offset.
+      trans (eval_raw_offset y) => //.
+      exact: sc_raw_roff_equiv_eval_raw_offset.
+    Qed.
+(*
+    Lemma raw_roff_equiv_app a11 a12 a21 a22 :
+      raw_roff_equiv a11 a12 ->
+      raw_roff_equiv a21 a22 ->
+      raw_roff_equiv (a21 ++ a11) (a22 ++ a12).
+    Proof.
+      move=> + H. move: a11 a12.
+      induction H => //=; eauto.
+      intros. etrans. apply o_invalid1. apply (o_invalid2 _ 0).
+    Qed. *)
 
     Lemma roff_equiv_app a11 a12 a21 a22 :
       roff_equiv a11 a12 ->
@@ -808,8 +813,9 @@ Module PTRS_IMPL <: PTRS_INTF.
       roff_equiv (a21 ++ a11) (a22 ++ a12).
     Proof.
       move=> + H. move: a11 a12.
-      induction H => //=; eauto.
-      3: { etrans; first eauto. exact: IHroff_equiv2. }
+      induction H => //=.
+      1: {
+      2: { etrans. 2: exact: IHtc. unfold roff_equiv. }
       intros. etrans. apply o_invalid1. apply (o_invalid2 _ 0).
       intros. etrans. apply o_invalid1. apply (o_invalid2 _ 0).
     Qed.
