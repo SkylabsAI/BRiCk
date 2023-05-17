@@ -23,7 +23,7 @@ Section defs.
     ; fs_arity : function_arity
     ; fs_return : type
     ; fs_arguments : list type
-    ; fs_spec : list ptr -d> (ptr -> mpred) -d> mpredO
+    ; fs_spec : list ptr -d> (EReturn ptr -> mpred) -d> mpredO
     }.
 
   #[global] Instance function_spec_inhabited : Inhabited function_spec :=

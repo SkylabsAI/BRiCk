@@ -18,18 +18,23 @@ Section destroy.
   (* [wp_destructor ty dtor this Q] is the weakest pre-condition of invoking the destructor
      [dtor] (which is the destructor for [ty] on [this].
    *)
-  #[local] Definition wp_destructor (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
+  #[local] Definition wp_destructor (ty : type) (dtor : ptr) (this : ptr) (Q : mpred) : mpred :=
     (* NOTE using [Tfunction Tvoid nil] implicitly requires all destructors
        to have C calling convention. *)
     mspec tu.(globals) ty (Tfunction Tvoid nil)
           dtor (this :: nil) (* NOTE this is the correct calling convention for member functions *)
-          (fun p => Exists v, p |-> primR Tvoid (cQp.mut 1) v ** this |-> tblockR ty (cQp.mut 1) ** Q).
+          (fun p => match p with
+                 | Exceptional ty p => False (* Per the C++ standard, throwing exceptions from destructors is illegal. *)
+                 | ENormal p => Exists v, p |-> primR Tvoid (cQp.mut 1) v ** this |-> tblockR ty (cQp.mut 1) ** Q
+                 end)%I.
               (* ^ this is inlining [operand_receive] which is not accessible due to cirularity *)
 
   Lemma wp_destructor_frame ty dtor this Q Q' :
     Q -* Q' |-- wp_destructor ty dtor this Q -* wp_destructor ty dtor this Q'.
   Proof.
-    rewrite /wp_destructor. iIntros "X"; iApply mspec_frame; iIntros (?) "Y".
+    rewrite /wp_destructor. iIntros "X"; iApply mspec_frame; iIntros (?).
+    case_match; eauto.
+    iIntros "Y".
     iDestruct "Y" as (vv) "Y".
     iExists vv. iDestruct "Y" as "[$ [$ ?]]". by iApply "X".
   Qed.
@@ -44,13 +49,13 @@ Section destroy.
       have destructors according to the standard have no-op destructors. Thus,
       we can model the "not having a destructor" as an optimization. This
       choice makes the semantics more uniform. *)
-  Parameter destroy_val : forall {σ : genv}, translation_unit -> type -> ptr -> epred -> mpred.
+  Parameter destroy_val : forall {σ : genv}, translation_unit -> type -> ptr -> mpred -> mpred.
   Axiom destroy_val_frame : forall tu' ty p Q Q',
       sub_module tu tu' ->
       Q -* Q' |-- destroy_val tu ty p Q -* destroy_val tu' ty p Q'.
 
-  Definition destroy_val_body (destroy_val : type -> ptr -> epred -> mpred)
-    (ty : type) (this : ptr) (Q : epred) : mpred :=
+  Definition destroy_val_body (destroy_val : type -> ptr -> mpred -> mpred)
+    (ty : type) (this : ptr) (Q : mpred) : mpred :=
     let UNSUPPORTED Q := destroy_val ty this Q in
     (*  ^^ we eta-expand this to avoid cbv reduction looping *)
     let '(cv, rty) := decompose_type ty in
@@ -110,7 +115,7 @@ Section destroy.
   Axiom destroy_val_intro : forall ty p Q,
       destroy_val_body (destroy_val tu) ty p Q |-- destroy_val tu ty p Q.
 
-  Lemma destroy_val_body_frame : forall ty q_c this (Q Q' : epred),
+  Lemma destroy_val_body_frame : forall ty q_c this (Q Q' : mpred),
       Q -* Q' |-- destroy_val q_c ty this Q -* destroy_val q_c ty this Q'.
   Proof.
     (* TODO: Prove this
@@ -132,7 +137,7 @@ Section destroy.
            but in practice it is always going to occur at the end of a [wp] which
            means it will already have access to a fancy update.
    *)
-  Fixpoint interp (free : FreeTemps) (Q : epred) : mpred :=
+  Fixpoint interp (free : FreeTemps) (Q : mpred) : mpred :=
     match free with
     | FreeTemps.id => Q
     | FreeTemps.seq f g => interp f $ interp g Q

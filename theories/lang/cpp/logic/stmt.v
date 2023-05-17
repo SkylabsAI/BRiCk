@@ -39,23 +39,19 @@ Module Type Stmt.
     Qed.
 
     (** * Expression Evaluation *)
-
     Axiom wp_expr : forall ρ e Q,
-        |> wp_discard tu ρ e (fun free => interp free (Q Normal))
+        |> wp_discard tu ρ e (fun exc free => match exc with
+                                           | ENormal _ => interp free (Q Normal)
+                                           | Exceptional ty p => Q (Throw ty p)
+                                           end)
         |-- wp ρ (Sexpr e) Q.
 
     (** * Declarations *)
 
     (* This definition performs allocation of local variables.
-     *
-     * note that references do not allocate anything in the semantics, they are
-     * just aliases.
-     *
-     * TODO there is a lot of overlap between this and [wp_initialize] (which does initialization
-     * of aggregate fields).
      *)
     Definition wp_decl_var (ρ ρ_init : region) (x : ident) (ty : type) (init : option Expr)
-               (k : region -> FreeTemp -> epred)
+               (k : region -> FreeTemp -> mpred)
       : mpred :=
       Forall (addr : ptr),
         let destroy frees :=
