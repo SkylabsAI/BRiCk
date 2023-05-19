@@ -360,7 +360,7 @@ Section with_genv.
   Axiom Proper_align_of : Proper (genv_leq ==> eq ==> Roption_leq eq) (@align_of).
   #[global] Existing Instance Proper_align_of.
 
-  Lemma align_of_genv_compat tu gn st
+  Lemma align_of_genv_compat_struct tu gn st
         (Hσ : tu ⊧ σ)
         (Hl : tu !! gn = Some (Gstruct st)) :
     align_of (Tnamed gn) = GlobDecl_align_of (Gstruct st).
