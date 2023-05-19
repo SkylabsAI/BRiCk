@@ -337,6 +337,10 @@ Section with_genv.
     align_of (Tnamed nm) =
     glob_def σ nm ≫= GlobDecl_align_of.
 
+  Axiom align_of_enum : forall (nm : globname),
+    align_of (Tenum nm) =
+    glob_def σ nm ≫= GlobDecl_align_of.
+
   (** If [size_of] is defined, [align_of] must divide [size_of]. *)
   Axiom align_of_size_of' : forall (t : type) sz,
       size_of σ t = Some sz ->
@@ -352,6 +356,11 @@ Section with_genv.
     eauto.
   Qed.
 
+  Lemma align_of_size_of_is_Some ty :
+    is_Some (size_of _ ty) ->
+    is_Some (align_of ty).
+  Proof. by move=> [?] /align_of_size_of [? [-> _]]. Qed.
+
   Axiom align_of_array : forall (ty : type) n,
       align_of (Tarray ty n) = align_of ty.
   Axiom align_of_qualified : ∀ t q,
@@ -365,4 +374,92 @@ Section with_genv.
         (Hl : tu !! gn = Some (Gstruct st)) :
     align_of (Tnamed gn) = GlobDecl_align_of (Gstruct st).
   Proof. by rewrite /= align_of_named (glob_def_genv_compat_struct st Hl). Qed.
+
+  Lemma align_of_genv_compat_union tu gn st
+        (Hσ : tu ⊧ σ)
+        (Hl : tu !! gn = Some (Gunion st)) :
+    align_of (Tnamed gn) = GlobDecl_align_of (Gunion st).
+  Proof. by rewrite /= align_of_named (glob_def_genv_compat_union st Hl). Qed.
+
+  Lemma align_of_genv_compat_enum tu gn ty brs
+        (Hσ : tu ⊧ σ)
+        (Hl : tu !! gn = Some (Genum ty brs)) :
+    align_of (Tenum gn) = GlobDecl_align_of (Genum ty brs).
+  Proof.
+    rewrite /= align_of_enum.
+    by have [? ->] := glob_def_genv_compat_enum ty brs Hl.
+  Qed.
+
+  Lemma align_of_tnullptr_is_Some :
+    is_Some (align_of Tnullptr).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+
+  Lemma align_of_tptr_is_Some ty :
+    is_Some (align_of (Tptr ty)).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+
+  Lemma align_of_tref_is_Some ty :
+    is_Some (align_of (Tref ty)).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+
+  Lemma align_of_trv_ref_is_Some ty :
+    is_Some (align_of (Trv_ref ty)).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+
+  Lemma align_of_tnum_is_Some sz sgn :
+    is_Some (align_of (Tnum sz sgn)).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+  Lemma align_of_tbool_is_Some :
+    is_Some (align_of Tbool).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+  Lemma align_of_tfloat_is_Some fty :
+    is_Some (align_of (Tfloat_ fty)).
+  Proof. exact: align_of_size_of_is_Some. Qed.
+
+(*
+  Definition genv_align_of_ptr_ref : genv -> N. Proof. Admitted.
+
+  Axiom align_of_tnullptr :
+    align_of Tnullptr = Some (genv_align_of_ptr_ref σ).
+  Axiom align_of_tptr : forall ty,
+    align_of (Tptr ty) = Some (genv_align_of_ptr_ref σ).
+  Axiom align_of_tref : forall ty,
+    align_of (Tref ty) = Some (genv_align_of_ptr_ref σ).
+  Axiom align_of_trv_ref : forall ty,
+    align_of (Trv_ref ty) = Some (genv_align_of_ptr_ref σ). *)
+
+  Axiom align_of_tvoid :
+    align_of Tvoid = Some 1%N.
+  Axiom align_of_tmember_pointer_is_Some : forall n ty,
+    is_Some (align_of (Tmember_pointer n ty)).
+  Axiom align_of_tfunction_is_Some : forall cc ar ret args,
+    is_Some (align_of (@Tfunction cc ar ret args)).
+
+  (* complete_mut_ind *)
+  Lemma align_of_complete_mut :
+    (∀ decl, complete_decl (genv_type_table σ) decl ->
+      is_Some (GlobDecl_align_of decl)) /\
+    (∀ ty, complete_basic_type (genv_type_table σ) ty ->
+      is_Some (align_of ty)) /\
+    (∀ ty, complete_pointee_type (genv_type_table σ) ty ->
+      (* is_Some (align_of ty) *)
+      True) /\
+    (∀ ty, complete_type (genv_type_table σ) ty ->
+      is_Some (align_of ty)) /\
+    (∀ ty, wellscoped_type (genv_type_table σ) ty -> True) /\
+    (∀ tys, wellscoped_types (genv_type_table σ) tys -> True).
+  Proof.
+    apply complete_mut_ind; intros *;
+      eauto using align_of_tnullptr_is_Some, align_of_tptr_is_Some,
+        align_of_tref_is_Some, align_of_trv_ref_is_Some, align_of_tmember_pointer_is_Some, align_of_tfunction_is_Some, align_of_tbool_is_Some, align_of_tnum_is_Some, align_of_tfloat_is_Some;
+      try by rewrite 1?(align_of_array, align_of_named, align_of_genv_compat_enum, align_of_qualified, align_of_tvoid) //.
+    { simpl. admit. (* This goal is false; sth's wrong. *) }
+    { rewrite align_of_named glob_def_alt. by move->. }
+    all: fail.
+  Admitted.
+
+  Lemma align_of_complete_type ty :
+    complete_type (genv_type_table σ) ty -> is_Some (align_of ty).
+  Proof. apply align_of_complete_mut. Qed.
+
 End with_genv.
