@@ -14,7 +14,7 @@
 From elpi.apps Require Import locker.
 Require Export bedrock.prelude.addr.
 
-From bedrock.lang.bi Require Export prelude observe.
+From bedrock.lang.bi Require Export prelude observe spec.knowledge.
 From bedrock.lang.cpp.logic Require Export mpred rep.
 (** ^^ Delicate; export types and canonical structures (CS) for [monPred], [mpred] and [Rep].
 Export order can affect CS inference. *)
@@ -110,6 +110,26 @@ Module Type CPP_LOGIC
     Axiom not_strictly_valid_ptr_nullptr : strict_valid_ptr nullptr |-- False.
     Axiom strict_valid_valid : forall p,
       strict_valid_ptr p |-- valid_ptr p.
+
+    Parameter has_type : ∀ {σ : genv}, val -> type -> mpred.
+    Section with_genv.
+      Context {σ : genv}.
+
+      #[global] Declare Instance has_type_knowledge : Knowledge2 has_type.
+      Axiom has_type_has_type_prop : ∀ v ty, has_type v ty |-- [| has_type_prop v ty |].
+
+      Axiom has_type_prop_has_type_noptr : ∀ v ty,
+        match ty with | Tpointer _ | Tref _ => false | _ => true end ->
+        [| has_type_prop v ty |] |--  has_type v ty.
+
+      (* Internal statements: *)
+      Axiom has_type_ptr' : ∀ p ty,
+        has_type (Vptr p) (Tpointer ty) -|-
+        valid_ptr p ** [| aligned_ptr_ty ty p |].
+      Axiom has_type_ref' : ∀ p ty,
+        has_type (Vref p) (Tref ty) -|-
+        strict_valid_ptr p ** [| aligned_ptr_ty ty p |].
+    End with_genv.
 
     (** Formalizes the notion of "provides storage",
     http://eel.is/c++draft/intro.object#def:provides_storage *)

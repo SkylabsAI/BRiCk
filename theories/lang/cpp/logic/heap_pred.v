@@ -411,6 +411,26 @@ Section with_cpp.
     type_ptr ty p |-- p |-> aligned_ofR ty.
   Proof. by rewrite -type_ptrR_aligned_ofR _at_type_ptrR. Qed.
 
+  Lemma has_type_ptr p ty :
+    has_type (Vptr p) (Tpointer ty) -|- p |-> (validR ** aligned_ofR ty).
+  Proof.
+    by rewrite has_type_ptr' _at_sep _at_validR aligned_ofR_aligned_ptr_ty.
+  Qed.
+  Lemma has_type_ref p ty :
+    has_type (Vref p) (Tref ty) |-- p |-> (svalidR ** aligned_ofR ty).
+  Proof.
+    by rewrite has_type_ref' _at_sep _at_svalidR aligned_ofR_aligned_ptr_ty.
+  Qed.
+
+  Lemma has_type_noptr v ty :
+    match ty with | Tpointer _ | Tref _ => false | _ => true end ->
+    has_type v ty -|- [| has_type_prop v ty |].
+  Proof.
+    intros; iSplit.
+    iApply has_type_has_type_prop.
+    by iApply has_type_prop_has_type_noptr.
+  Qed.
+
   Lemma null_nonnull (R : Rep) : nullR |-- nonnullR -* R.
   Proof.
     rewrite nullR_eq /nullR_def nonnullR_eq /nonnullR_def.
