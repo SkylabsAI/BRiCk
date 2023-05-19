@@ -1052,14 +1052,41 @@ Module Type Expr.
     Proof.
       rewrite /zero_init_val/scalar_type/representation_type /=. destruct (drop_qualifiers ty) eqn:Hdrop => //; eauto.
     Qed.
+      Lemma complete_type_drop_qualifiers te ty :
+        complete_type te ty <->
+        complete_type te (drop_qualifiers ty).
+      Proof.
+        induction ty => //=.
+        rewrite -IHty.
+        split; last apply complete_qualified.
+        inversion 1; first done.
+        revert select (complete_basic_type te (Tqualified _ _)); inversion 1.
+      Qed.
 
-    Lemma well_typed_zero_init_val (MOD : tu ⊧ resolve) : forall ty v,
+
+    Lemma well_typed_zero_init_val (MOD : tu ⊧ resolve) ty v :
+        complete_type (genv_type_table resolve) ty ->
         zero_init_val ty = Some v -> has_type_prop v ty.
     Proof.
-      rewrite /zero_init_val/representation_type. intros.
-      eapply has_type_prop_drop_qualifiers; revert H.
+      rewrite /zero_init_val/representation_type.
+
+      (* Lemma complete_basic_type_drop_qualifiers te ty :
+        complete_basic_type te ty <->
+        complete_basic_type te (drop_qualifiers ty).
+      Proof.
+        induction ty => //=.
+        rewrite -IHty.
+        split; last apply complete_basic_qualified.
+        inversion 1 => //. *)
+
+      intros * Hcompl%complete_type_drop_qualifiers Hin.
+      eapply has_type_prop_drop_qualifiers; revert Hin.
       destruct (drop_qualifiers ty) eqn:Heq; simpl; try inversion 1; subst.
-      - apply has_nullptr_type.
+      -
+        apply has_nullptr_type.
+        (* align_of_complete_mut. (* align_of_complete_type. *) *)
+        inversion Hcompl; subst.
+        revert select (complete_basic_type _ _); inversion 1; subst.
       - apply has_int_type. rewrite /bound. destruct size, signed; compute; intuition congruence.
       - apply has_type_prop_char_0.
       - eapply has_type_prop_enum.
