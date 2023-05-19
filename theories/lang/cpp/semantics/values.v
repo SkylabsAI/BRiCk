@@ -357,6 +357,14 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
   Section with_genv.
     Context {σ : genv}.
 
+    Axiom has_type_prop_align_of : ∀ v ty, has_type_prop v ty -> is_Some (align_of ty).
+    Axiom has_type_prop_size_of : ∀ v ty, ty <> Tvoid -> has_type_prop v ty -> is_Some (size_of _ ty).
+
+    Axiom has_type_prop_ptr_align_of : ∀ v ty, has_type_prop v (Tpointer ty) -> is_Some (align_of ty).
+    Axiom has_type_prop_ref_align_of : ∀ v ty, has_type_prop v (Tref ty) -> is_Some (align_of ty).
+    Axiom has_type_prop_ptr_size_of : ∀ v ty, ty <> Tvoid -> has_type_prop v (Tpointer ty) -> is_Some (size_of _ ty).
+    Axiom has_type_prop_ref_size_of : ∀ v ty, has_type_prop v (Tref ty) -> is_Some (align_of ty).
+
     Axiom has_type_prop_pointer : forall v ty,
         has_type_prop v (Tpointer ty) <-> exists p, v = Vptr p.
     Axiom has_type_prop_nullptr : forall v,
