@@ -421,9 +421,14 @@ Section with_cpp.
   Proof.
     by rewrite has_type_ref' _at_sep _at_svalidR aligned_ofR_aligned_ptr_ty.
   Qed.
+  Lemma has_type_rv_ref p ty :
+    has_type (Vref p) (Trv_ref ty) -|- p |-> (svalidR ** aligned_ofR ty).
+  Proof.
+    by rewrite has_type_rv_ref' _at_sep _at_svalidR aligned_ofR_aligned_ptr_ty.
+  Qed.
 
   Lemma has_type_noptr v ty :
-    match ty with | Tpointer _ | Tref _ => false | _ => true end ->
+    match drop_qualifiers ty with | Tpointer _ | Tref _ | Trv_ref _ => false | _ => true end ->
     has_type v ty -|- [| has_type_prop v ty |].
   Proof.
     intros; iSplit.

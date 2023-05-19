@@ -34,6 +34,7 @@ Export ChargeNotation.
 From bedrock.lang.cpp.syntax Require Import
      names
      types
+     typing
      translation_unit.
 From bedrock.lang.cpp.semantics Require Import values subtyping.
 
@@ -119,8 +120,11 @@ Module Type CPP_LOGIC
       Axiom has_type_has_type_prop : ∀ v ty, has_type v ty |-- [| has_type_prop v ty |].
 
       Axiom has_type_prop_has_type_noptr : ∀ v ty,
-        match ty with | Tpointer _ | Tref _ => false | _ => true end ->
+        match drop_qualifiers ty with | Tpointer _ | Tref _ | Trv_ref _ => false | _ => true end ->
         [| has_type_prop v ty |] |--  has_type v ty.
+
+      Axiom has_type_qual_iff : ∀ ty tq v,
+        has_type v ty -|- has_type v (Tqualified tq ty).
 
       (* Internal statements: *)
       Axiom has_type_ptr' : ∀ p ty,
@@ -128,6 +132,9 @@ Module Type CPP_LOGIC
         valid_ptr p ** [| aligned_ptr_ty ty p |].
       Axiom has_type_ref' : ∀ p ty,
         has_type (Vref p) (Tref ty) -|-
+        strict_valid_ptr p ** [| aligned_ptr_ty ty p |].
+      Axiom has_type_rv_ref' : ∀ p ty,
+        has_type (Vref p) (Trv_ref ty) -|-
         strict_valid_ptr p ** [| aligned_ptr_ty ty p |].
     End with_genv.
 
