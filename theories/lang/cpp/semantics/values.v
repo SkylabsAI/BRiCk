@@ -385,7 +385,8 @@ Module Type HAS_TYPE (Import P : PTRS) (Import R : RAW_BYTES) (Import V : VAL_MI
         has_type_prop v Tvoid -> v = Vundef.
 
     Axiom has_nullptr_type : forall ty,
-        has_type_prop (Vptr nullptr) (Tpointer ty).
+      is_Some (align_of ty) ->
+      has_type_prop (Vptr nullptr) (Tpointer ty).
 
     Axiom has_type_prop_bool : forall v,
         has_type_prop v Tbool <-> exists b, v = Vbool b.
