@@ -163,6 +163,136 @@ Module Type Expr__newdelete.
                                     Q (Vptr obj_ptr) (free' >*> free))))))))
         |-- wp_operand (Enew new_fn new_args aty None oinit) Q.
 
+        (** BEGIN NOMERGE *)
+        (** lib/vconnect/include/vconnect/guest_as.hpp:
+         *  [auto *as = new (nothrow) Model::SimpleAS(descr, false);]
+         *
+         *| Enew
+         *|   ("_ZnwmRK9nothrow_t", (* [operator new(unsigned long, nothrow_t const&)] *)
+         *|    (@Tfunction CC_C Ar_Definite (Tptr Tvoid)
+         *|      [Tulong; Tref (Qconst (Tnamed "_Z9nothrow_t"))]))
+         *|   [Evar (Gname "nothrow") (Qconst (Tnamed "_Z9nothrow_t"))]
+         *|   (Tnamed "_ZN5Model8SimpleASE") None
+         *|   (Some (Econstructor "_ZN5Model8SimpleASC1ERKN8Platform3Mem8MemDescrEbbb"
+         *|           [ Eread_ref (Evar (Lname "descr")
+         *|                         (Qconst (Tnamed "_ZN8Platform3Mem8MemDescrE")))
+         *|           ; Ebool false
+         *|           ; Eimplicit (Ebool true)
+         *|           ; Eimplicit (Ebool true)]
+         *|   (Tnamed "_ZN5Model8SimpleASE")))
+         *)
+
+        (** apps/vswitch/lib/vswitch_config/src/bson_config.cpp:
+         *  [new (&doc) Bson(ptr);]
+         *
+         *| Enew
+         *|  ("_ZnwmPv", (* [operator new(unsigned long, void* )] *)
+         *|   (@Tfunction CC_C Ar_Definite (Tptr Tvoid) [Tulong; Tptr Tvoid]))
+         *|  [Ecast Cbitcast
+         *|    (Eaddrof
+         *|      (Eread_ref (Evar (Lname "doc") (Tnamed "_Z4Bson"))))
+         *|    Prvalue (Tptr Tvoid)]
+         *|  (Tnamed "_Z4Bson") None
+         *|  (Some (Econstructor "_ZN4BsonC1EPKh"
+         *|          [Ecast Cl2r (Evar (Lname "ptr") (Tptr (Qconst Tuchar)))
+         *|             Prvalue (Tptr (Qconst Tuchar))]
+         *|          (Tnamed "_Z4Bson")))
+         *)
+        (** END NOMERGE *)
+
+        (** [wp_operand_placement_new] specializes [wp_operand_new] for invocations of
+         *  the form [new (p) C(...);] - where [p] is a pointer to some memory with
+         *  the appropriate size and alignment constraints.
+         *
+         *  Notes:
+         *  1) this rule /only/ covers uses of the library function placement new
+         *     [operator new[](std​::​size_t, void* )] - although other user-defined variants
+         *     are possible to construct (cf. <https://eel.is/c++draft/expr.new#20>)
+         *  2) cf. <https://eel.is/c++draft/expr.new#21>
+         *     | ...
+         *     |
+         *     | If the allocation function is a non-allocating form
+         *     | ([new.delete.placement]) that returns null, the behavior
+         *     | is undefined. ...
+         *)
+        Lemma wp_operand_placement_new :
+          forall (oinit : option Expr)
+            new_fn storage_expr aty Q sz
+            (nfty := normalize_type new_fn.2)
+            (_ : type_of storage_expr = Tptr Tvoid)
+            (_ : arg_types nfty = Some ([Tnum sz Unsigned; Tptr Tvoid], Ar_Definite)),
+            wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free =>
+                Exists sz al storage_ptr,
+                  [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
+                  [| size_of aty = Some sz |] ** [| has_type_prop sz Tsize_t |] **
+                  [| align_of aty = Some al |] **
+                Reduce (alloc_size_t sz (fun p FR =>
+                |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
+                      res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
+                      (* [blockR sz -|- tblockR aty] *)
+                      storage_ptr |-> (blockR sz (cQp.m 1) ** alignedR al) **
+                      (* TODO: ^ This misses an condition that [storage_ptr]
+                         is suitably aligned, accounting for
+                         __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
+                          (Forall obj_ptr : ptr,
+                             (* This also ensures these pointers share their
+                                address (see [provides_storage_same_address]) *)
+                             provides_storage storage_ptr obj_ptr aty -*
+                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
+                               (* Track the type we are allocating
+                                 so it can be checked at [delete].
+                                 It is important that this preseves
+                                 `const`ness of the type.
+                               *)
+                               obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
+                               Q (Vptr obj_ptr) (free' >*> free)))))))
+        |-- wp_operand (Enew new_fn [storage_expr] aty None oinit) Q.
+        Proof.
+          intros **; iIntros "args".
+          iApply wp_operand_new; eauto; cbn.
+          iIntros (pre post q) "%Hspec".
+          assert (pre = [] /\ post = []) as [Hpre Hpost]. 1: {
+            destruct pre; first (intuition; rewrite app_nil_l in Hspec). 2: {
+              exfalso; inversion Hspec; by eapply app_cons_not_nil.
+            }
+            destruct post; first done.
+            exfalso; inversion Hspec; by eapply app_cons_not_nil.
+          }
+          iApply Mbind_frame; last by iApply "args"; by iPureIntro.
+          all: subst; cbn in *; inversion Hspec; subst; clear Hspec.
+          - iIntros (R S) "RS R"; iIntros (p); iSpecialize ("R" $! p).
+            (** TODO: find a better way of doing this part of the proof *)
+            set (R' := fun (v : val) (free : FreeTemps) =>
+                         p |-> primR (Tptr Tvoid) (cQp.mut 1) v -*
+                         R p (FreeTemps.delete (Tptr Tvoid) p >*> free)).
+            set (S' := fun (v : val) (free : FreeTemps) =>
+                         p |-> primR (Tptr Tvoid) (cQp.mut 1) v -*
+                         S p (FreeTemps.delete (Tptr Tvoid) p >*> free)).
+            iAssert ((Forall (p : ptr) (free : FreeTemps), R p free -* S p free) -*
+                     (Forall (v : val) (free : FreeTemps), R' v free -* S' v free))
+              as "HRS'". 1: {
+              subst R' S'; iIntros "RS"; iIntros (v free) "H void".
+              iDestruct ("H" with "void") as "R"; by iApply "RS".
+            }
+            iDestruct ("HRS'" with "RS") as "RS'".
+            iApply (wp_operand_frame with "RS'"); last by iApply "R".
+            reflexivity.
+          - iIntros (p); iApply Mmap_frame; iIntros (R S) "RS R"; by iApply "RS".
+          - iIntros (ps free) "H".
+            iDestruct "H"
+              as (alloc_sz alloc_al storage_ptr)
+                 "(-> & %Hstorage_ptr & %Halloc_sz & % & %Halloc_al & H)".
+            iExists alloc_sz, alloc_al; iFrame "%"; iIntros (p) "alloc_sz".
+            iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
+            iApply fspec_frame; last by iApply "spec".
+            iIntros (v) "($ & res & storage & Hinit)".
+            iExists storage_ptr; iFrame "res".
+            rewrite bool_decide_false; last assumption.
+            iFrame "storage".
+            iIntros (obj_ptr) "provides_storage".
+            by iApply "Hinit".
+        Qed.
+
         Axiom wp_operand_array_new :
           forall (array_size : Expr) (oinit : option Expr)
             new_fn new_args aty Q targs sz
@@ -238,6 +368,101 @@ Module Type Expr__newdelete.
                                                         (free'' >*> free' >*> free))
                                    end))))))
         |-- wp_operand (Enew new_fn new_args aty (Some array_size) oinit) Q.
+
+        (*
+        (** [wp_operand_array_placement_new] specializes [wp_operand_array_new] for
+         *  invocations of the form [new (p) C[...];] - where [p] is a pointer to
+         *  some memory with the appropriate size and alignment constraints.
+         *
+         *  Notes:
+         *  1) this rule /only/ covers uses of the library function placement new
+         *     [operator new[](std​::​size_t, void* )] - although other user-defined variants
+         *     are possible to construct (cf. <https://eel.is/c++draft/expr.new#20>)
+         *  2) cf. <https://eel.is/c++draft/expr.new#21>
+         *     | ...
+         *     |
+         *     | If the allocation function is a non-allocating form
+         *     | ([new.delete.placement]) that returns null, the behavior
+         *     | is undefined. ...
+         *)
+        Lemma wp_operand_placement_new :
+          forall (oinit : option Expr)
+            new_fn storage_expr aty Q sz
+            (nfty := normalize_type new_fn.2)
+            (_ : type_of storage_expr = Tptr Tvoid)
+            (_ : arg_types nfty = Some ([Tnum sz Unsigned; Tptr Tvoid], Ar_Definite)),
+            wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free =>
+                Exists sz al storage_ptr,
+                  [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
+                  [| size_of aty = Some sz |] ** [| has_type_prop sz Tsize_t |] **
+                  [| align_of aty = Some al |] **
+                Reduce (alloc_size_t sz (fun p FR =>
+                |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
+                      res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
+                      (* [blockR sz -|- tblockR aty] *)
+                      storage_ptr |-> (blockR sz (cQp.m 1) ** alignedR al) **
+                      (* TODO: ^ This misses an condition that [storage_ptr]
+                         is suitably aligned, accounting for
+                         __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
+                          (Forall obj_ptr : ptr,
+                             (* This also ensures these pointers share their
+                                address (see [provides_storage_same_address]) *)
+                             provides_storage storage_ptr obj_ptr aty -*
+                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
+                               (* Track the type we are allocating
+                                 so it can be checked at [delete].
+                                 It is important that this preseves
+                                 `const`ness of the type.
+                               *)
+                               obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
+                               Q (Vptr obj_ptr) (free' >*> free)))))))
+        |-- wp_operand (Enew new_fn [storage_expr] aty None oinit) Q.
+        Proof.
+          intros **; iIntros "args".
+          iApply wp_operand_new; eauto; cbn.
+          iIntros (pre post q) "%Hspec".
+          assert (pre = [] /\ post = []) as [Hpre Hpost]. 1: {
+            destruct pre; first (intuition; rewrite app_nil_l in Hspec). 2: {
+              exfalso; inversion Hspec; by eapply app_cons_not_nil.
+            }
+            destruct post; first done.
+            exfalso; inversion Hspec; by eapply app_cons_not_nil.
+          }
+          iApply Mbind_frame; last by iApply "args"; by iPureIntro.
+          all: subst; cbn in *; inversion Hspec; subst; clear Hspec.
+          - iIntros (R S) "RS R"; iIntros (p); iSpecialize ("R" $! p).
+            (** TODO: find a better way of doing this part of the proof *)
+            set (R' := fun (v : val) (free : FreeTemps) =>
+                         p |-> primR (Tptr Tvoid) (cQp.mut 1) v -*
+                         R p (FreeTemps.delete (Tptr Tvoid) p >*> free)).
+            set (S' := fun (v : val) (free : FreeTemps) =>
+                         p |-> primR (Tptr Tvoid) (cQp.mut 1) v -*
+                         S p (FreeTemps.delete (Tptr Tvoid) p >*> free)).
+            iAssert ((Forall (p : ptr) (free : FreeTemps), R p free -* S p free) -*
+                     (Forall (v : val) (free : FreeTemps), R' v free -* S' v free))
+              as "HRS'". 1: {
+              subst R' S'; iIntros "RS"; iIntros (v free) "H void".
+              iDestruct ("H" with "void") as "R"; by iApply "RS".
+            }
+            iDestruct ("HRS'" with "RS") as "RS'".
+            iApply (wp_operand_frame with "RS'"); last by iApply "R".
+            reflexivity.
+          - iIntros (p); iApply Mmap_frame; iIntros (R S) "RS R"; by iApply "RS".
+          - iIntros (ps free) "H".
+            iDestruct "H"
+              as (alloc_sz alloc_al storage_ptr)
+                 "(-> & %Hstorage_ptr & %Halloc_sz & % & %Halloc_al & H)".
+            iExists alloc_sz, alloc_al; iFrame "%"; iIntros (p) "alloc_sz".
+            iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
+            iApply fspec_frame; last by iApply "spec".
+            iIntros (v) "($ & res & storage & Hinit)".
+            iExists storage_ptr; iFrame "res".
+            rewrite bool_decide_false; last assumption.
+            iFrame "storage".
+            iIntros (obj_ptr) "provides_storage".
+            by iApply "Hinit".
+        Qed.
+         *)
       End new.
 
       Section delete.
