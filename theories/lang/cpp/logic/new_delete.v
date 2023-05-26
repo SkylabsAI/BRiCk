@@ -133,72 +133,38 @@ Module Type Expr__newdelete.
 
         Axiom wp_operand_new :
           forall (oinit : option Expr)
-            new_fn new_args aty Q targs sz
+            new_fn new_args aty Q targs
             (nfty := normalize_type new_fn.2)
-            (_ : arg_types nfty = Some (Tnum sz Unsigned :: targs, Ar_Definite)),
+            (_ : arg_types nfty = Some (Tsize_t :: targs, Ar_Definite)),
             wp_args (targs, Ar_Definite) new_args (fun vs free =>
-                Exists sz al, [| size_of aty = Some sz |] ** [| has_type_prop sz Tsize_t |] ** [| align_of aty = Some al |] **
-                Reduce (alloc_size_t sz (fun p FR =>
-                |> wp_fptr tu.(types) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
-                      Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
+                Exists alloc_sz alloc_al,
+                  [| size_of aty = Some alloc_sz |] ** [| has_type_prop alloc_sz Tsize_t |] **
+                  [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
+                  Reduce (alloc_size_t alloc_sz (fun p FR =>
+                  |> wp_fptr tu.(types) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
+                      Exists (storage_ptr : ptr),
+                        res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                         if bool_decide (storage_ptr = nullptr) then
                           [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                         else
                           (* [blockR sz -|- tblockR aty] *)
-                          (storage_ptr |-> (blockR sz (cQp.m 1) ** alignedR al) **
-                           (* TODO: ^ This misses an condition that [storage_ptr]
+                          storage_ptr |-> (blockR alloc_sz (cQp.m 1) ** alignedR alloc_al) **
+                          (** TODO: ^ This misses an condition that [storage_ptr]
                               is suitably aligned, accounting for
-                              __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
-                               (Forall obj_ptr : ptr,
-                                  (* This also ensures these pointers share their
-                                     address (see [provides_storage_same_address]) *)
-                                  provides_storage storage_ptr obj_ptr aty -*
-                                  wp_opt_initialize oinit aty obj_ptr (fun free' =>
-                                    (* Track the type we are allocating
-                                      so it can be checked at [delete].
-                                      It is important that this preseves
-                                      `const`ness of the type.
-                                    *)
-                                    obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
-                                    Q (Vptr obj_ptr) (free' >*> free))))))))
+                              __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149; FM-975) *)
+                          (Forall (obj_ptr : ptr),
+                             (* This also ensures these pointers share their
+                                address (see [provides_storage_same_address]) *)
+                             provides_storage storage_ptr obj_ptr aty -*
+                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
+                               (* Track the type we are allocating
+                                 so it can be checked at [delete].
+                                 It is important that this preseves
+                                 `const`ness of the type.
+                               *)
+                               obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
+                               Q (Vptr obj_ptr) (free' >*> free)))))))
         |-- wp_operand (Enew new_fn new_args aty None oinit) Q.
-
-        (** BEGIN NOMERGE *)
-        (** lib/vconnect/include/vconnect/guest_as.hpp:
-         *  [auto *as = new (nothrow) Model::SimpleAS(descr, false);]
-         *
-         *| Enew
-         *|   ("_ZnwmRK9nothrow_t", (* [operator new(unsigned long, nothrow_t const&)] *)
-         *|    (@Tfunction CC_C Ar_Definite (Tptr Tvoid)
-         *|      [Tulong; Tref (Qconst (Tnamed "_Z9nothrow_t"))]))
-         *|   [Evar (Gname "nothrow") (Qconst (Tnamed "_Z9nothrow_t"))]
-         *|   (Tnamed "_ZN5Model8SimpleASE") None
-         *|   (Some (Econstructor "_ZN5Model8SimpleASC1ERKN8Platform3Mem8MemDescrEbbb"
-         *|           [ Eread_ref (Evar (Lname "descr")
-         *|                         (Qconst (Tnamed "_ZN8Platform3Mem8MemDescrE")))
-         *|           ; Ebool false
-         *|           ; Eimplicit (Ebool true)
-         *|           ; Eimplicit (Ebool true)]
-         *|   (Tnamed "_ZN5Model8SimpleASE")))
-         *)
-
-        (** apps/vswitch/lib/vswitch_config/src/bson_config.cpp:
-         *  [new (&doc) Bson(ptr);]
-         *
-         *| Enew
-         *|  ("_ZnwmPv", (* [operator new(unsigned long, void* )] *)
-         *|   (@Tfunction CC_C Ar_Definite (Tptr Tvoid) [Tulong; Tptr Tvoid]))
-         *|  [Ecast Cbitcast
-         *|    (Eaddrof
-         *|      (Eread_ref (Evar (Lname "doc") (Tnamed "_Z4Bson"))))
-         *|    Prvalue (Tptr Tvoid)]
-         *|  (Tnamed "_Z4Bson") None
-         *|  (Some (Econstructor "_ZN4BsonC1EPKh"
-         *|          [Ecast Cl2r (Evar (Lname "ptr") (Tptr (Qconst Tuchar)))
-         *|             Prvalue (Tptr (Qconst Tuchar))]
-         *|          (Tnamed "_Z4Bson")))
-         *)
-        (** END NOMERGE *)
 
         (** [wp_operand_placement_new] specializes [wp_operand_new] for invocations of
          *  the form [new (p) C(...);] - where [p] is a pointer to some memory with
@@ -217,35 +183,35 @@ Module Type Expr__newdelete.
          *)
         Lemma wp_operand_placement_new :
           forall (oinit : option Expr)
-            new_fn storage_expr aty Q sz
+            new_fn storage_expr aty Q
             (nfty := normalize_type new_fn.2)
             (_ : type_of storage_expr = Tptr Tvoid)
-            (_ : arg_types nfty = Some ([Tnum sz Unsigned; Tptr Tvoid], Ar_Definite)),
+            (_ : arg_types nfty = Some ([Tsize_t; Tptr Tvoid], Ar_Definite)),
             wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free =>
-                Exists sz al storage_ptr,
+                Exists alloc_sz alloc_al storage_ptr,
                   [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
-                  [| size_of aty = Some sz |] ** [| has_type_prop sz Tsize_t |] **
-                  [| align_of aty = Some al |] **
-                Reduce (alloc_size_t sz (fun p FR =>
+                  [| size_of aty = Some alloc_sz |] ** [| has_type_prop alloc_sz Tsize_t |] **
+                  [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
+                Reduce (alloc_size_t alloc_sz (fun p FR =>
                 |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
                       res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                       (* [blockR sz -|- tblockR aty] *)
-                      storage_ptr |-> (blockR sz (cQp.m 1) ** alignedR al) **
-                      (* TODO: ^ This misses an condition that [storage_ptr]
-                         is suitably aligned, accounting for
-                         __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
-                          (Forall obj_ptr : ptr,
-                             (* This also ensures these pointers share their
-                                address (see [provides_storage_same_address]) *)
-                             provides_storage storage_ptr obj_ptr aty -*
-                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
-                               (* Track the type we are allocating
-                                 so it can be checked at [delete].
-                                 It is important that this preseves
-                                 `const`ness of the type.
-                               *)
-                               obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
-                               Q (Vptr obj_ptr) (free' >*> free)))))))
+                      storage_ptr |-> (blockR alloc_sz (cQp.m 1) ** alignedR alloc_al) **
+                      (** TODO: ^ This misses an condition that [storage_ptr]
+                          is suitably aligned, accounting for
+                          __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
+                      (Forall (obj_ptr : ptr),
+                         (* This also ensures these pointers share their
+                            address (see [provides_storage_same_address]) *)
+                         provides_storage storage_ptr obj_ptr aty -*
+                         wp_opt_initialize oinit aty obj_ptr (fun free' =>
+                           (* Track the type we are allocating
+                             so it can be checked at [delete].
+                             It is important that this preseves
+                             `const`ness of the type.
+                           *)
+                           obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
+                           Q (Vptr obj_ptr) (free' >*> free)))))))
         |-- wp_operand (Enew new_fn [storage_expr] aty None oinit) Q.
         Proof.
           intros **; iIntros "args".
@@ -295,9 +261,9 @@ Module Type Expr__newdelete.
 
         Axiom wp_operand_array_new :
           forall (array_size : Expr) (oinit : option Expr)
-            new_fn new_args aty Q targs sz
+            new_fn new_args aty Q targs
             (nfty := normalize_type new_fn.2)
-            (_ : arg_types nfty = Some (Tnum sz Unsigned :: targs, Ar_Definite)),
+            (_ : arg_types nfty = Some (Tsize_t :: targs, Ar_Definite)),
             (* <https://eel.is/c++draft/expr.new#7>
                | (7) Every constant-expression in a noptr-new-declarator shall be a
                |     converted constant expression ([expr.const]) of type std​::​size_t
@@ -317,59 +283,48 @@ Module Type Expr__newdelete.
                 (* The size must be greater than zero (see the quote from [expr.new#7] above). *)
                 [| 0 < array_sizeN |]%N **
                 wp_args (targs, Ar_Definite) new_args (fun vs free' =>
-                  Exists sz al,
+                  Exists alloc_sz alloc_al,
                     let array_ty := Tarray aty array_sizeN in
-                    [| size_of array_ty = Some sz |] **
-                    [| has_type_prop (2 * sz)%N Tu64 |] **
-                    (* ^^ the overhead, [sz'] below, is less than or equal the
+                    [| size_of array_ty = Some alloc_sz |] **
+                    [| has_type_prop (2 * alloc_sz)%N Tsize_t |] **
+                    (* ^^ the overhead, [overhead_sz] below, is less than or equal the
                     size of the object, and the sum of the overhead and the
                     allocation size must fit in a `size_t`. See
                      https://eel.is/c++draft/expr.new#16 for more information *)
-                    [| align_of aty = Some al |] **
+                    [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
                     (* NOTE: This is [Forall sz'] because the C++ Abstract Machine can choose
                              however many bytes it wants to use for metadata when handling
                              dynamically allocated arrays.
                      *)
-                    Forall sz',
-                      Reduce (alloc_size_t (sz' + sz) (fun psz FR =>
+                    Forall overhead_sz, [| (overhead_sz <= alloc_sz)%N |] **
+                      Reduce (alloc_size_t (overhead_sz + alloc_sz) (fun psz FR =>
                       |> wp_fptr tu.(types) nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
-                        Exists storage_ptr : ptr, res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
+                        Exists (storage_ptr : ptr),
+                          res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                           if bool_decide (storage_ptr = nullptr) then
                             [| new_args <> nil |] ** Q (Vptr storage_ptr) free
                           else
-                            (* [blockR sz -|- tblockR (Tarray aty array_size)] *)
-                            (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) **
-                             storage_ptr .[Tu8 ! sz'] |-> alignedR al) **
-                             (* todo: ^ This misses an condition that [storage_ptr]
-                              is suitably aligned, accounting for
-                              __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
-                                (Forall obj_ptr : ptr,
-                                   (* This also ensures these pointers share their
-                                   address (see [provides_storage_same_address]) *)
-                                   provides_storage (storage_ptr .[Tu8 ! sz']) obj_ptr array_ty -*
-                                   match oinit with
-                                   | None => (* default_initialize the memory *)
-                                     default_initialize array_ty obj_ptr
-                                                        (fun free'' =>
-                                                           (* Track the type we are allocating
-                                                              so it can be checked at [delete]
-                                                            *)
-                                                           obj_ptr |-> new_tokenR (cQp.mut 1) array_ty -*
-                                                           Q (Vptr obj_ptr)
-                                                             (free'' >*> free' >*> free))
-                                   | Some init => (* Use [init] to initialize the memory *)
-                                     wp_initialize array_ty obj_ptr init
-                                                   (fun free'' =>
-                                                      (* Track the type we are allocating
-                                                         so it can be checked at [delete]
-                                                       *)
-                                                      obj_ptr |-> new_tokenR (cQp.mut 1) array_ty -*
-                                                      Q (Vptr obj_ptr)
-                                                        (free'' >*> free' >*> free))
-                                   end))))))
+                            (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
+                            storage_ptr |-> blockR (overhead_sz + alloc_sz) (cQp.m 1) **
+                            storage_ptr .[Tu8 ! overhead_sz] |-> alignedR alloc_al **
+                            (** TODO: ^ This misses an condition that [storage_ptr]
+                                is suitably aligned, accounting for
+                                __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
+                             (Forall (obj_ptr : ptr),
+                                (* This also ensures these pointers share their
+                                address (see [provides_storage_same_address]) *)
+                                provides_storage
+                                  (storage_ptr .[Tu8 ! overhead_sz])
+                                  obj_ptr array_ty -*
+                                wp_opt_initialize oinit array_ty obj_ptr
+                                  (fun free'' =>
+                                     (* Track the type we are allocating
+                                        so it can be checked at [delete]
+                                      *)
+                                     obj_ptr |-> new_tokenR (cQp.mut 1) array_ty -*
+                                     Q (Vptr obj_ptr) (free'' >*> free' >*> free))))))))
         |-- wp_operand (Enew new_fn new_args aty (Some array_size) oinit) Q.
 
-        (*
         (** [wp_operand_array_placement_new] specializes [wp_operand_array_new] for
          *  invocations of the form [new (p) C[...];] - where [p] is a pointer to
          *  some memory with the appropriate size and alignment constraints.
@@ -385,41 +340,71 @@ Module Type Expr__newdelete.
          *     | ([new.delete.placement]) that returns null, the behavior
          *     | is undefined. ...
          *)
-        Lemma wp_operand_placement_new :
-          forall (oinit : option Expr)
-            new_fn storage_expr aty Q sz
+        Lemma wp_operand_array_placement_new :
+          forall (array_size : Expr) (oinit : option Expr)
+            new_fn storage_expr aty Q
             (nfty := normalize_type new_fn.2)
             (_ : type_of storage_expr = Tptr Tvoid)
-            (_ : arg_types nfty = Some ([Tnum sz Unsigned; Tptr Tvoid], Ar_Definite)),
-            wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free =>
-                Exists sz al storage_ptr,
-                  [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
-                  [| size_of aty = Some sz |] ** [| has_type_prop sz Tsize_t |] **
-                  [| align_of aty = Some al |] **
-                Reduce (alloc_size_t sz (fun p FR =>
-                |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
-                      res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
-                      (* [blockR sz -|- tblockR aty] *)
-                      storage_ptr |-> (blockR sz (cQp.m 1) ** alignedR al) **
-                      (* TODO: ^ This misses an condition that [storage_ptr]
-                         is suitably aligned, accounting for
-                         __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149) *)
-                          (Forall obj_ptr : ptr,
-                             (* This also ensures these pointers share their
-                                address (see [provides_storage_same_address]) *)
-                             provides_storage storage_ptr obj_ptr aty -*
-                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
-                               (* Track the type we are allocating
-                                 so it can be checked at [delete].
-                                 It is important that this preseves
-                                 `const`ness of the type.
-                               *)
-                               obj_ptr |-> new_tokenR (cQp.mut 1) aty -*
-                               Q (Vptr obj_ptr) (free' >*> free)))))))
-        |-- wp_operand (Enew new_fn [storage_expr] aty None oinit) Q.
+            (_ : arg_types nfty = Some ([Tsize_t; Tptr Tvoid], Ar_Definite)),
+            (* <https://eel.is/c++draft/expr.new#7>
+               | (7) Every constant-expression in a noptr-new-declarator shall be a
+               |     converted constant expression ([expr.const]) of type std​::​size_t
+               |     and its value shall be greater than zero.
+               |     [Example 4: Given the definition int n = 42, new float[n][5] is
+               |      well-formed (because n is the expression of a noptr-new-declarator),
+               |      but new float[5][n] is ill-formed (because n is not a constant
+               |      expression). — end example]
+               If we're allocating a new array, we know that the expression must reduce
+               to a constant value of type [size_t] /and/ that it must be sequenced
+               before we call the [new_fn].
+             *)
+            wp_operand array_size (fun v free =>
+              (* Valid C++ programs require this value to be a [Vint] (see the quote from
+                 [expr.new#7] above). *)
+              Exists array_sizeN, [| v = Vn array_sizeN |] **
+                (* The size must be greater than zero (see the quote from [expr.new#7] above). *)
+                [| 0 < array_sizeN |]%N **
+                wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free' =>
+                  Exists alloc_sz alloc_al storage_ptr,
+                    [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
+                    let array_ty := Tarray aty array_sizeN in
+                    [| size_of array_ty = Some alloc_sz |] **
+                    [| has_type_prop (2 * alloc_sz)%N Tsize_t |] **
+                    (* ^^ the overhead, [overhead_sz] below, is less than or equal the
+                    size of the object, and the sum of the overhead and the
+                    allocation size must fit in a `size_t`. See
+                     https://eel.is/c++draft/expr.new#16 for more information *)
+                    [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
+                    Forall overhead_sz, [| (overhead_sz <= alloc_sz)%N |] **
+                      Reduce (alloc_size_t (overhead_sz + alloc_sz) (fun psz FR =>
+                      |> fspec tu.(globals) nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
+                          res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
+                          (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
+                          storage_ptr |-> blockR (overhead_sz + alloc_sz) (cQp.m 1) **
+                          storage_ptr .[Tu8 ! overhead_sz] |-> alignedR alloc_al **
+                          (** TODO: ^ This misses an condition that [storage_ptr]
+                              is suitably aligned, accounting for
+                              __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
+                           (Forall (obj_ptr : ptr),
+                              (* This also ensures these pointers share their
+                              address (see [provides_storage_same_address]) *)
+                              provides_storage
+                                (storage_ptr .[Tu8 ! overhead_sz])
+                                obj_ptr array_ty -*
+                              wp_opt_initialize oinit array_ty obj_ptr
+                                (fun free'' =>
+                                   (* Track the type we are allocating
+                                      so it can be checked at [delete]
+                                    *)
+                                   obj_ptr |-> new_tokenR (cQp.mut 1) array_ty -*
+                                   Q (Vptr obj_ptr) (free'' >*> free' >*> free))))))))
+        |-- wp_operand (Enew new_fn [storage_expr] aty (Some array_size) oinit) Q.
         Proof.
-          intros **; iIntros "args".
-          iApply wp_operand_new; eauto; cbn.
+          intros **; iIntros "array_sz".
+          iApply wp_operand_array_new; eauto; cbn.
+          iApply (wp_operand_frame _ tu tu); [reflexivity | .. | by iFrame].
+          iIntros (v free) "H"; iDestruct "H" as (array_sizeN) "(%&%&args)".
+          iExists array_sizeN; iFrame "%".
           iIntros (pre post q) "%Hspec".
           assert (pre = [] /\ post = []) as [Hpre Hpost]. 1: {
             destruct pre; first (intuition; rewrite app_nil_l in Hspec). 2: {
@@ -441,28 +426,28 @@ Module Type Expr__newdelete.
             iAssert ((Forall (p : ptr) (free : FreeTemps), R p free -* S p free) -*
                      (Forall (v : val) (free : FreeTemps), R' v free -* S' v free))
               as "HRS'". 1: {
-              subst R' S'; iIntros "RS"; iIntros (v free) "H void".
+              subst R' S'; iIntros "RS"; iIntros (v free') "H void".
               iDestruct ("H" with "void") as "R"; by iApply "RS".
             }
             iDestruct ("HRS'" with "RS") as "RS'".
             iApply (wp_operand_frame with "RS'"); last by iApply "R".
             reflexivity.
           - iIntros (p); iApply Mmap_frame; iIntros (R S) "RS R"; by iApply "RS".
-          - iIntros (ps free) "H".
+          - iIntros (ps free') "H".
             iDestruct "H"
               as (alloc_sz alloc_al storage_ptr)
                  "(-> & %Hstorage_ptr & %Halloc_sz & % & %Halloc_al & H)".
-            iExists alloc_sz, alloc_al; iFrame "%"; iIntros (p) "alloc_sz".
-            iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
+            iExists alloc_sz, alloc_al; iFrame "%".
+            iIntros (overhead_size); iDestruct ("H" $! overhead_size) as "($ & H)".
+            iIntros (p) "alloc_sz"; iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
             iApply fspec_frame; last by iApply "spec".
-            iIntros (v) "($ & res & storage & Hinit)".
+            iIntros (v) "($ & res & storage1 & storage2 & Hinit)".
             iExists storage_ptr; iFrame "res".
             rewrite bool_decide_false; last assumption.
-            iFrame "storage".
+            iFrame "storage1 storage2".
             iIntros (obj_ptr) "provides_storage".
             by iApply "Hinit".
         Qed.
-         *)
       End new.
 
       Section delete.
