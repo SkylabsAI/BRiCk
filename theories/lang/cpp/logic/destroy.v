@@ -205,19 +205,21 @@ Section prim.
   Proof. solve_shift_fupd wp_destroy_prim_shift. Qed.
 End prim.
 
-Definition Tdtor (cls : globname) : type :=
-  Tmember_function cls ref_qualifier.None QM Tvoid nil.
-Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr) (cls : globname) (this : ptr) :=
-  fspec tt (Tdtor cls) dtor (this :: nil).
-
 (** ** Invoking destructors *)
 (*
 [wp_destructor ty dtor this Q] is the weakest pre-condition of
 invoking the destructor [dtor] for type [ty] on [this].
 *)
+
+(** TODO: These are arguably misplaced *)
+Definition Tdtor (cls : globname) : type :=
+  Tmember_function cls ref_qualifier.None QM Tvoid nil.
+Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr) (cls : globname) (this : ptr) :=
+  wp_fptr tt (Tdtor cls) dtor (this :: nil).
+
 #[local] Definition wp_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  letI* p := wp_fptr tu.(types) (Tmember_function cls ref_qualifier.None QM Tvoid nil) dtor (this :: nil) in
+  letI* p := dtor_spec tu.(types) dtor cls this in
   (**
   We inline [operand_receive] (which could be hoisted and shared).
   *)
