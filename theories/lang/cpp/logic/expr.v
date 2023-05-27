@@ -1005,7 +1005,7 @@ Module Type Expr.
 
        NOTE: We follow C++'s AST rules for destroying temporaries appropriately
        so these nodes should effectively be no-ops, though there are certain
-       places in the AST that has odd evaluation semantics
+       places in the AST that have odd evaluation semantics.
      *)
     Axiom wp_lval_clean : forall e Q,
           wp_lval e (fun p frees => interp frees $ Q p FreeTemps.id)
