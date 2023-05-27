@@ -61,8 +61,8 @@ Fixpoint type_of (e : Expr) : type :=
 
 (** [erase_qualifiers t] erases *all* qualifiers that occur everywhere in the type.
 
-    NOTE we currently use this because BRiCk tracks [const]ness semantics rather than
-    syntactically in order to be compatible with features such as `const_cast`.
+    NOTE we currently use this because BRiCk tracks [const]ness in the semantics rather
+    than syntactically in order to be compatible with features such as [const_cast].
     And the type system also enforces some of the other criteria.
  *)
 Fixpoint erase_qualifiers (t : type) : type :=
