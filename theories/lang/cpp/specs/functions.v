@@ -59,7 +59,7 @@ Definition SFunction `{Σ : cpp_logic} {cc : calling_conv} {ar : function_arity}
    ; fs_arity := ar
    ; fs_return := Qmut Tvoid
    ; fs_arguments := targs
-   ; fs_spec := member_to_function_spec None PQ
+   ; fs_spec := member_to_function_spec base_to_derived PQ
    |}.
 Definition SMethodCast `{Σ : cpp_logic} {cc : calling_conv} {ar : function_arity}
     (class : globname) (base_to_derived : offset) (qual : type_qualifiers) (rq : ref_qualifier.t)
@@ -154,6 +154,89 @@ Section with_cpp.
     Proof. solve_proper. Qed.
   End SFunction.
 
+  Section SMember.
+    Import disable_proofmode_telescopes.
+    Context (cls : globname) (tq : type_qualifiers) (rq : ref_qualifier.t) (off : option offset).
+    Context {cc : calling_conv} {ar : function_arity}.
+    Context (ret : type) (targs : list type).
+    #[local] Notation mspec_entails wpp1 wpp2 := (forall this : ptr, wpspec_entails (wpp1 this) (wpp2 this)) (only parsing).
+
+    Lemma SMember_cast_mono wpp1 wpp2 :
+      mspec_entails wpp1 wpp2 ->
+      fs_entails
+        (SMember_cast cls off tq rq (cc:=cc) (ar:=ar) ret targs wpp1)
+        (SMember_cast cls off tq rq (cc:=cc) (ar:=ar) ret targs wpp2).
+    Proof.
+      intros Hwpp. iSplit; first by rewrite/type_of_spec. simpl.
+      iIntros "!>" (vs K) "wpp".
+      iStopProof. apply bi.exist_mono; intros.
+      rewrite 2!spec_internal_denote.
+      f_equiv. f_equiv; intro. f_equiv. apply Hwpp.
+    Qed.
+
+    Lemma SMember_cast_mono_fupd wpp1 wpp2 :
+      (forall this, wpspec_entails_fupd (wpp1 this) (wpp2 this)) ->
+      fs_entails_fupd
+        (SMember_cast cls off tq rq (cc:=cc) (ar:=ar) ret targs wpp1)
+        (SMember_cast cls off tq rq (cc:=cc) (ar:=ar) ret targs wpp2).
+    Proof.
+      intros Hwpp. iSplit; first by rewrite/type_of_spec. simpl.
+      iIntros "!>" (vs K) "wpp".
+      iDestruct "wpp" as (this) "wpp".
+      rewrite spec_internal_denote.
+      iDestruct "wpp" as "[? X]"; iDestruct "X" as (?) "[? B]".
+      iDestruct (Hwpp with "B") as ">B". iModIntro.
+      iExists this. rewrite spec_internal_denote.
+      unfold wpspec_relation_fupd in Hwpp.
+      iFrame. iExists _; iFrame.
+      iRevert "B"; iApply spec_internal_frame.
+      iIntros (?) "X Y". iMod "X". iModIntro. iApply "X". done.
+    Qed.
+
+    #[global] Instance: Params (@SMember_cast) 8 := {}.
+
+    #[global] Instance SMember_cast_mono' :
+      Proper (pointwise_relation _ wpspec_entails ==> fs_entails)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof. repeat intro. by apply SMember_cast_mono. Qed.
+
+    #[global] Instance SMember_cast_flip_mono' :
+      Proper (flip (pointwise_relation _ wpspec_entails) ==> flip fs_entails)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof. solve_proper. Qed.
+
+    #[global] Instance SMember_cast_mono_fupd' :
+      Proper (pointwise_relation _ wpspec_entails_fupd ==> fs_entails_fupd)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof. repeat intro. by apply SMember_cast_mono_fupd. Qed.
+
+    #[global] Instance SMember_cast_flip_mono_fupd' :
+      Proper (flip (pointwise_relation _ wpspec_entails_fupd) ==> flip fs_entails_fupd)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof. solve_proper. Qed.
+
+    #[global] Instance SMember_cast_ne n :
+      Proper (pointwise_relation _ (dist n) ==> dist n)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof.
+      intros ???. rewrite /SMember_cast. constructor => //. simpl.
+      constructor; intros. f_equiv. repeat f_equiv.
+      rewrite !spec_internal_denote.
+      repeat f_equiv. apply H.
+    Qed.
+    #[global] Instance SMember_cast_proper :
+      Proper (pointwise_relation _ equiv ==> equiv)
+        (SMember_cast cls off tq rq (cc:=cc) ret targs (ar:=ar)).
+    Proof.
+      intros ???. rewrite /SMember_cast. constructor => //. simpl.
+      constructor; intros. f_equiv. repeat f_equiv.
+      rewrite !spec_internal_denote.
+      repeat f_equiv. apply H.
+    Qed.
+
+  End SMember.
+
+
   Section SConstructor.
     Import disable_proofmode_telescopes.
     Context {cc : calling_conv} {ar : function_arity}.
@@ -166,17 +249,13 @@ Section with_cpp.
         (SConstructor (cc:=cc) class targs (ar:=ar) wpp1)
         (SConstructor (cc:=cc) class targs (ar:=ar) wpp2).
     Proof.
+      intros.
+      eapply SMember_cast_mono.
+      intros.
       rewrite /wpspec_entails/wp_specD/=.
       rewrite /fs_entails/fs_impl/SConstructor/fs_spec; intros.
-      iSplit; eauto.
-      iModIntro. iIntros (??) "X"; iDestruct "X" as (x) "X"; iExists x.
-      rewrite /exact_spec/=.
-      rewrite !pre_ok.
-      change [x] with ([] ++ [x]).
-      rewrite !arg_ok.
-      iDestruct "X" as "[$ X]".
-      iDestruct "X" as (?) "[? X]".
-      iExists _; iFrame. by iApply H.
+      rewrite !spec_internal_denote.
+      repeat f_equiv. apply H.
     Qed.
     #[global] Instance: Params (@SConstructor) 7 := {}.
 
@@ -188,14 +267,13 @@ Section with_cpp.
     Proof.
       (* (FM-2648) TODO duplicated from [SConstructor_mono] *)
       rewrite /wpspec_entails_fupd/wp_specD/=.
-      (*
-      intros Hwpp; apply SFunction_mono_fupd => /=.
-      iIntros (vs K) "[%this wpp] /="; iExists this.
-      rewrite /exact_spec 2!pre_ok -/([]++[this]) 2!arg_ok.
-      iDestruct "wpp" as "[$ (% & % & wpp)]".
-      iExists _; iFrame; iSplitR; [done|].
-      by iApply Hwpp.
-    Qed. *) Admitted.
+      intros Hwpp; apply SMember_cast_mono_fupd => /=. intro.
+      rewrite /wpspec_relation_fupd.
+      iIntros (vs K) "wpp /=".
+      rewrite !pre_ok.
+      iDestruct "wpp" as "[$ wpp]".
+      iDestruct (Hwpp with "wpp") as ">wpp". done.
+    Qed.
 
     #[global] Instance SConstructor_mono' :
       Proper (pointwise_relation _ wpspec_entails ==> fs_entails)
@@ -220,11 +298,11 @@ Section with_cpp.
     #[global] Instance SConstructor_ne n :
       Proper (pointwise_relation _ (dist n) ==> dist n)
         (SConstructor (cc:=cc) class targs (ar:=ar)).
-    Proof. intros ???. (* apply SFunction_ne. repeat f_equiv. Qed. *) Admitted.
+    Proof. intros ???. apply SMember_cast_ne. repeat f_equiv. Qed.
     #[global] Instance SConstructor_proper :
       Proper (pointwise_relation _ equiv ==> equiv)
         (SConstructor (cc:=cc) class targs (ar:=ar)).
-    Proof. intros ???. (* apply SFunction_proper. repeat f_equiv. Qed. *) Admitted.
+    Proof. intros ???. apply SMember_cast_proper. repeat f_equiv. Qed.
   End SConstructor.
 
   Section SDestructor.
@@ -238,15 +316,13 @@ Section with_cpp.
         (SDestructor (cc:=cc) class wpp1)
         (SDestructor (cc:=cc) class wpp2).
     Proof.
-      rewrite /wpspec_entails/wp_specD/=/SDestructor. (*
-      intros Hwpp; apply SFunction_mono.
-      iIntros (vs K) "[%this wpp] /="; iExists this.
-      rewrite -/([]++[λ _: ptr, _]) 2!post_ok.
-      rewrite -/([]++[this])%list 2!arg_ok.
-      iDestruct "wpp" as "(% & % & wpp)".
-      iExists _; iFrame; iSplit; [done|].
-      by iApply Hwpp.
-    Qed. *) Admitted.
+      rewrite /wpspec_entails/wp_specD/=/SDestructor.
+      intros Hwpp; apply SMember_cast_mono; intro.
+      iIntros (vs K) "wpp /=".
+      rewrite !spec_internal_denote.
+      iStopProof; repeat f_equiv.
+      rewrite Hwpp. f_equiv.
+    Qed.
     #[global] Instance: Params (@SDestructor) 5 := {}.
 
     Lemma SDestructor_mono_fupd wpp1 wpp2 :
@@ -256,18 +332,18 @@ Section with_cpp.
         (SDestructor (cc:=cc) class wpp2).
     Proof.
       (* (FM-2648) TODO duplicated from [SDestructor_mono] *)
-      rewrite /wpspec_entails_fupd/wp_specD/=/SDestructor. (*
-      intros Hwpp; apply SFunction_mono_fupd.
-      iIntros (vs K) "[%this wpp] /="; iExists this.
-      rewrite -/([]++[λ _: ptr, _]) 2!post_ok.
-      rewrite -/([]++[this])%list 2!arg_ok.
-      iDestruct "wpp" as "(% & % & wpp)".
-      iExists _; iFrame; iSplitR; [done|].
-      iMod (Hwpp with "wpp") as "H". iIntros "!>".
-      iApply (spec_internal_frame with "[] H").
-      iIntros (r) "H tb".
-      iMod "H". by iApply ("H" with "tb").
-    Qed. *) Admitted.
+      rewrite /wpspec_entails_fupd/wp_specD/=/SDestructor.
+      intros Hwpp; apply SMember_cast_mono_fupd; intros.
+      iIntros (vs K) "wpp /=".
+      rewrite !spec_internal_denote.
+      iDestruct "wpp" as "[$ wpp]".
+      iDestruct "wpp" as (?) "[X wpp]".
+      rewrite Hwpp.
+      iMod "wpp". iModIntro.
+      iExists _; iFrame.
+      iStopProof. iApply spec_internal_frame.
+      iIntros (?) ">X Y". iModIntro; iApply "X"; done.
+    Qed.
 
     #[global] Instance SDestructor_mono' :
       Proper (pointwise_relation _ wpspec_entails ==> fs_entails)
@@ -292,11 +368,11 @@ Section with_cpp.
     #[global] Instance SDestructor_ne n :
       Proper (pointwise_relation _ (dist n) ==> dist n)
         (SDestructor (cc:=cc) class).
-    Proof. intros ???. (* apply SFunction_ne. repeat f_equiv. Qed. *) Admitted.
+    Proof. intros ???. apply SMember_cast_ne. repeat f_equiv. Qed.
     #[global] Instance SDestructor_proper :
       Proper (pointwise_relation _ equiv ==> equiv)
         (SDestructor (cc:=cc) class).
-    Proof. intros ???. (* apply SFunction_proper. repeat f_equiv. Qed. *) Admitted.
+    Proof. intros ???. apply SMember_cast_proper. repeat f_equiv. Qed.
   End SDestructor.
 
   Section SMethod.
@@ -315,12 +391,9 @@ Section with_cpp.
         (SMethodCast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2).
     Proof.
       intros Hwpp.
-      (* apply SFunction_mono => vs K.
-      rewrite /= /exact_spec.
-      f_equiv => this.
-      rewrite -(app_nil_l [_]) !arg_ok.
-      repeat f_equiv. apply Hwpp.
-    Qed. *) Admitted.
+      apply SMember_cast_mono => this vs K.
+      apply Hwpp.
+    Qed.
 
     #[local] Lemma SMethodOptCast_None_Some_mono (off2 : offset) wpp1 wpp2 :
       (* NOTE (JH): contravariant use of casts *)
@@ -329,16 +402,18 @@ Section with_cpp.
         (SMember_cast class None qual rq ret targs wpp1)
         (SMember_cast class (Some off2) qual rq ret targs wpp2).
     Proof.
-      intros Hwpp. (*
-      apply SFunction_mono => argps K.
-      rewrite /exact_spec !add_with_equiv.
-      iIntros "H"; iDestruct "H" as (thisp) "wpp";
-        iExists (thisp ,, off2).
-      rewrite !add_arg_equiv.
-      destruct argps; first by done.
-      iDestruct "wpp" as "[$ wpp]".
-      by iApply Hwpp.
-    Qed. *) Admitted.
+      intros Hwpp.
+      rewrite /SMember_cast.
+      iSplit => /=//. iModIntro. iIntros (??) "X".
+      iDestruct "X" as (this) "X".
+      iExists (this ,, off2).
+      rewrite !spec_internal_denote.
+      iDestruct "X" as "[$ X]".
+      iDestruct "X" as (aa) "[% X]".
+      iExists aa.
+      iFrame "%".
+      iApply Hwpp. iApply "X".
+    Qed.
 
     #[local] Lemma SMethodOptCast_mono_fupd cast wpp1 wpp2 :
       (∀ this, wpspec_entails_fupd (wpp1 this) (wpp2 this)) ->
@@ -347,24 +422,18 @@ Section with_cpp.
         (SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2).
     Proof.
       (* (FM-2648) TODO duplicated from [SMethodOptCast_mono] *)
-      intros Hwpp. (*
-      apply SFunction_mono_fupd => vs K.
+      intros Hwpp.
+      apply SMember_cast_mono_fupd => this vs K.
       rewrite /= /exact_spec.
-      iDestruct 1 as (this) "wpp". iExists this.
-      move: Hwpp.
-      rewrite -(app_nil_l [_]) !arg_ok.
-      intros.
-      iDestruct "wpp" as "(% & % & wpp)".
-      iExists _; iFrame; iSplitR; [done|].
-      by iApply Hwpp.
-    Qed. *) Admitted.
+      iApply Hwpp.
+    Qed.
 
     Lemma SMethodCast_mono cast wpp1 wpp2 :
       (∀ this, wpspec_entails (wpp1 this) (wpp2 this)) ->
       fs_entails
         (SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp1)
         (SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2).
-    Proof. (* exact: SMethodOptCast_mono. Qed. *) Admitted.
+    Proof. intro. apply: SMember_cast_mono; eauto. Qed.
 
     Lemma SMethodCast_None_Some_mono (off2 : offset) wpp1 wpp2 :
       (* NOTE (JH): contravariant use of casts *)
@@ -372,14 +441,14 @@ Section with_cpp.
       fs_entails
         (SMember_cast class None qual rq ret targs wpp1)
         (SMember_cast class (Some off2) qual rq ret targs wpp2).
-    Proof. (* exact: SMethodOptCast_None_Some_mono. Qed. *) Admitted.
+    Proof. exact: SMethodOptCast_None_Some_mono. Qed.
 
     Lemma SMethod_mono wpp1 wpp2 :
       (∀ this, wpspec_entails (wpp1 this) (wpp2 this)) ->
       fs_entails
         (SMethod (cc:=cc) class qual rq ret targs (ar:=ar) wpp1)
         (SMethod (cc:=cc) class qual rq ret targs (ar:=ar) wpp2).
-    Proof. (* exact: SMethodOptCast_mono. Qed. *) Admitted.
+      Proof. intros. eapply SMember_cast_mono; eauto. Qed.
 
     Lemma SMethodCast_mono_fupd cast wpp1 wpp2 :
       (∀ this, wpspec_entails_fupd (wpp1 this) (wpp2 this)) ->
@@ -406,16 +475,6 @@ Section with_cpp.
       repeat f_equiv. apply Hwpp.
     Qed.
 
-    #[local] Lemma SMember_cast_ne cast wpp1 wpp2 n :
-      (∀ this, wpspec_dist n (wpp1 this) (wpp2 this)) ->
-      SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp1 ≡{n}≡
-      SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2.
-    Proof.
-      setoid_rewrite wpspec_dist_entailsN=>Hwpp.
-      rewrite/SMember_cast. (* f_equiv=>vs K /=. apply dist_entailsN.
-      split; apply SMember_cast_wpspec_monoN=>this; by destruct (Hwpp this).
-    Qed. *) Admitted.
-
     Lemma SMethodCast_ne cast wpp1 wpp2 n :
       (∀ this, wpspec_dist n (wpp1 this) (wpp2 this)) ->
       SMethodCast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp1 ≡{n}≡
@@ -428,15 +487,7 @@ Section with_cpp.
       SMethod (cc:=cc) class qual rq ret targs (ar:=ar) wpp2.
     Proof. exact: SMember_cast_ne. Qed.
 
-    #[local] Lemma SMember_cast_proper cast wpp1 wpp2 :
-      (∀ this, wpspec_equiv (wpp1 this) (wpp2 this)) ->
-      SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp1 ≡
-      SMember_cast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2.
-    Proof.
-      setoid_rewrite wpspec_equiv_spec=>Hwpp. apply function_spec_equiv_split.
-      split; apply SMethodCast_mono=>this; by destruct (Hwpp this).
-    Qed.
-    Lemma SMethodCast_proper cast wpp1 wpp2 :
+   Lemma SMethodCast_proper cast wpp1 wpp2 :
       (∀ this, wpspec_equiv (wpp1 this) (wpp2 this)) ->
       SMethodCast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp1 ≡
       SMethodCast (cc:=cc) class cast qual rq ret targs (ar:=ar) wpp2.
