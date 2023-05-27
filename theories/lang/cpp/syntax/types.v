@@ -264,6 +264,7 @@ Inductive type : Set :=
 | Tfunction {cc : calling_conv} {ar : function_arity} (_ : type) (_ : list type)
 | Tbool
 | Tmember_pointer (_ : globname) (_ : member_type type)
+  (* ^^ member pointers, both for data (using [Mdata]) and for functions (using [Mfunc]) *)
 | Tfloat_ (_ : float_type.t)
 
 | Tmember_function (_ : globname) (_ : ref_qualifier.t) (cv : type_qualifiers)
