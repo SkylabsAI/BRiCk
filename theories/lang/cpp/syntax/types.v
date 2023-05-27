@@ -1144,9 +1144,9 @@ Fixpoint normalize_type (t : type) : type :=
   | @Tfunction cc ar r args =>
     Tfunction (cc:=cc) (ar:=ar) (drop_norm r) (List.map drop_norm args)
   | Tmember_pointer gn (Mdata t) => Tmember_pointer gn (Mdata $ normalize_type t)
-  | Tmember_pointer gn (@Mfunc _ rq cv cc ar ret args) => Tmember_pointer gn (@Mfunc _ rq cv cc ar (drop_norm ret) (List.map drop_norm args))
+  | Tmember_pointer gn (@Mfunc _ rq cv cc ar ret args) => Tmember_pointer gn (@Mfunc _ rq cv cc ar (normalize_type ret) (List.map drop_norm args))
   | @Tmember_function nm rq cv cc ar r args =>
-    @Tmember_function nm rq cv cc ar (drop_norm r) (List.map drop_norm args)
+    @Tmember_function nm rq cv cc ar (normalize_type r) (List.map drop_norm args)
   | Tqualified q t => qual_norm q t
   | Tnum _ _ => t
   | Tchar_ _ => t
@@ -1177,12 +1177,15 @@ Section normalize_type_idempotent.
       - rewrite map_map /qual_norm !IHty /merge_tq/=;
           erewrite map_ext_Forall; eauto; eapply Forall_impl; last eassumption;
           intros * HForall; simpl in HForall; apply HForall.
-      - rewrite map_map /qual_norm !IHty /merge_tq/=;
+      - rewrite map_map /qual_norm. f_equal. f_equal.
           erewrite map_ext_Forall; eauto; eapply Forall_impl; last eassumption;
           intros * HForall; simpl in HForall; apply HForall.
-      - f_equal; first by apply IHty.
-        clear -H. induction H; first done. simpl. f_equal; eauto.
-      - by rewrite IHty !merge_tq_assoc.
+      - f_equal. rewrite map_map. erewrite map_ext_Forall.
+        reflexivity.
+        clear - H.
+        induction H; simpl; constructor.
+        apply H. apply IHForall.
+      - rewrite IHty !merge_tq_assoc. f_equal.
     }
     { (* _qual_norm_involutive *)
       intros *; generalize dependent q;
@@ -1194,12 +1197,12 @@ Section normalize_type_idempotent.
             [ eapply _drop_norm_idempotent
             | eapply IHtys; inversion H; subst; assumption ] ].
       - destruct q; simpl; rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=; f_equal; f_equal;
-        [ f_equal | f_equal | f_equal | ];
-        solve [ eapply map_ext_Forall; induction args; constructor;
+          [ f_equal | f_equal | f_equal | |  ]; try eapply normalize_type_idempotent;
+          try solve [ eapply map_ext_Forall; induction args; constructor;
             [ eapply _drop_norm_idempotent
             | eapply IHargs; inversion H; subst; assumption ] ].
       - destruct q; simpl; rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=; f_equal;
-        [ f_equal | f_equal | f_equal | ];
+        [ f_equal | f_equal | f_equal | | ]; try eapply normalize_type_idempotent;
         solve [ eapply map_ext_Forall; induction tys; constructor;
             [ eapply _drop_norm_idempotent
             | eapply IHtys; inversion H; subst; assumption ] ].
@@ -1210,12 +1213,12 @@ Section normalize_type_idempotent.
       - f_equal; solve [ eapply map_ext_Forall; induction tys; constructor;
             [ eapply _drop_norm_idempotent
             | eapply IHtys; inversion H; subst; assumption ] ].
-      - f_equal. f_equal. apply _drop_norm_idempotent.
+      - f_equal. f_equal.
         rewrite map_map;
         eapply map_ext_Forall; induction args; constructor;
             [ eapply _drop_norm_idempotent
             | eapply IHargs; inversion H; subst; assumption ].
-      - f_equal. apply _drop_norm_idempotent.
+      - f_equal.
         rewrite map_map;
           solve [ eapply map_ext_Forall; induction tys; constructor;
             [ eapply _drop_norm_idempotent
