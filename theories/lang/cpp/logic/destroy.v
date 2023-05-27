@@ -205,6 +205,11 @@ Section prim.
   Proof. solve_shift_fupd wp_destroy_prim_shift. Qed.
 End prim.
 
+Definition Tdtor (cls : globname) : type :=
+  Tmember_function cls ref_qualifier.None QM Tvoid nil.
+Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr) (cls : globname) (this : ptr) :=
+  fspec tt (Tdtor cls) dtor (this :: nil).
+
 (** ** Invoking destructors *)
 (*
 [wp_destructor ty dtor this Q] is the weakest pre-condition of

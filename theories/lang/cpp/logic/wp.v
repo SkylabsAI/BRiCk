@@ -1019,6 +1019,8 @@ Section with_cpp.
     Qed.
   End wp.
 
+  (** [fspec] & [mspec] *)
+
   (* this is the low-level specification of C++ code blocks.
    *
    * [addr] represents the address of the entry point of the code.
