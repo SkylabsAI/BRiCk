@@ -207,7 +207,7 @@ End prim.
 
 (** ** Invoking destructors *)
 (*
-[wp_destructor ty dtor this Q] is the weakest pre-condition of
+[wp_invoke_destructor ty dtor this Q] is the weakest pre-condition of
 invoking the destructor [dtor] for type [ty] on [this].
 *)
 
@@ -217,7 +217,7 @@ Definition Tdtor (cls : globname) : type :=
 Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr) (cls : globname) (this : ptr) :=
   wp_fptr tt (Tdtor cls) dtor (this :: nil).
 
-#[local] Definition wp_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
+#[local] Definition wp_invoke_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
   letI* p := dtor_spec tu.(types) dtor cls this in
   (**
@@ -227,10 +227,10 @@ Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr)
   this |-> tblockR (Tnamed cls) (cQp.mut 1) **
   Q.
 
-mlock Definition wp_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
+mlock Definition wp_invoke_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
     (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  wp_destructor_body tu cls dtor this Q.
-#[global] Arguments wp_destructor {_ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
+  wp_invoke_destructor_body tu cls dtor this Q.
+#[global] Arguments wp_invoke_destructor {_ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
 (** Note: All we need in this file is [type_table_le]. *)
 #[local] Notation TULE tu tu' := (sub_module tu tu') (only parsing).
@@ -240,75 +240,75 @@ Section unfold.
   Context `{Σ : cpp_logic thread_info, σ : genv}.
   Implicit Types (Q : epred).
 
-  Lemma wp_destructor_unfold ty tu :
-    wp_destructor tu ty = Reduce (wp_destructor_body tu ty).
-  Proof. by rewrite wp_destructor.unlock. Qed.
+  Lemma wp_invoke_destructor_unfold ty tu :
+    wp_invoke_destructor tu ty = Reduce (wp_invoke_destructor_body tu ty).
+  Proof. by rewrite wp_invoke_destructor.unlock. Qed.
 End unfold.
 
 (**
 Unfold for one type, failing if there's nothing to do.
 *)
-Ltac wp_destructor_unfold :=
+Ltac wp_invoke_destructor_unfold :=
   lazymatch goal with
-  | |- context [wp_destructor _ ?ty] => rewrite !(wp_destructor_unfold ty)
-  | _ => fail "[wp_destructor] not found"
+  | |- context [wp_invoke_destructor _ ?ty] => rewrite !(wp_invoke_destructor_unfold ty)
+  | _ => fail "[wp_invoke_destructor] not found"
   end.
 
 Section dtor.
   Context `{Σ : cpp_logic thread_info, σ : genv}.
   Implicit Types (Q : epred).
 
-  Lemma wp_destructor_intro tu ty dtor this Q :
-    Reduce (wp_destructor_body tu ty dtor this Q) |--
-    wp_destructor tu ty dtor this Q.
-  Proof. by wp_destructor_unfold. Qed.
+  Lemma wp_invoke_destructor_intro tu ty dtor this Q :
+    Reduce (wp_invoke_destructor_body tu ty dtor this Q) |--
+    wp_invoke_destructor tu ty dtor this Q.
+  Proof. by wp_invoke_destructor_unfold. Qed.
 
-  Lemma wp_destructor_elim tu ty dtor this Q :
-    wp_destructor tu ty dtor this Q |--
-    Reduce (wp_destructor_body tu ty dtor this Q).
-  Proof. by wp_destructor_unfold. Qed.
+  Lemma wp_invoke_destructor_elim tu ty dtor this Q :
+    wp_invoke_destructor tu ty dtor this Q |--
+    Reduce (wp_invoke_destructor_body tu ty dtor this Q).
+  Proof. by wp_invoke_destructor_unfold. Qed.
 
-  #[global] Instance: Params (@wp_destructor) 7 := {}.
+  #[global] Instance: Params (@wp_invoke_destructor) 7 := {}.
   #[local] Notation PROPER R := (
     ∀ tu ty dtor this,
-    Proper (R ==> R) (wp_destructor tu ty dtor this)
+    Proper (R ==> R) (wp_invoke_destructor tu ty dtor this)
   ) (only parsing).
-  #[global] Instance wp_destructor_mono : PROPER bi_entails.
-  Proof. rewrite wp_destructor.unlock. solve_proper. Qed.
-  #[global] Instance wp_destructor_flip_mono : PROPER (flip bi_entails).
-  Proof. repeat intro. by apply wp_destructor_mono. Qed.
-  #[global] Instance wp_destructor_proper : PROPER equiv.
-  Proof. intros * Q1 Q2 HQ. split'; by apply wp_destructor_mono; rewrite HQ. Qed.
+  #[global] Instance wp_invoke_destructor_mono : PROPER bi_entails.
+  Proof. rewrite wp_invoke_destructor.unlock. solve_proper. Qed.
+  #[global] Instance wp_invoke_destructor_flip_mono : PROPER (flip bi_entails).
+  Proof. repeat intro. by apply wp_invoke_destructor_mono. Qed.
+  #[global] Instance wp_invoke_destructor_proper : PROPER equiv.
+  Proof. intros * Q1 Q2 HQ. split'; by apply wp_invoke_destructor_mono; rewrite HQ. Qed.
 
-  Lemma wp_destructor_frame tu tu' ty dtor this Q Q' :
+  Lemma wp_invoke_destructor_frame tu tu' ty dtor this Q Q' :
     TULE tu tu' ->
-    Q -* Q' |-- wp_destructor tu ty dtor this Q -* wp_destructor tu' ty dtor this Q'.
+    Q -* Q' |-- wp_invoke_destructor tu ty dtor this Q -* wp_invoke_destructor tu' ty dtor this Q'.
   Proof.
-    intros. wp_destructor_unfold. iIntros "HQ".
+    intros. wp_invoke_destructor_unfold. iIntros "HQ".
     iApply wp_fptr_frame_fupd; first by auto.
     iIntros "%p (%v & V & B & Q)". iExists v. iFrame "V B". by iApply "HQ".
   Qed.
 
-  Lemma wp_destructor_shift tu ty dtor this Q :
-    (|={top}=> wp_destructor tu ty dtor this (|={top}=> Q))
-    |-- wp_destructor tu ty dtor this Q.
+  Lemma wp_invoke_destructor_shift tu ty dtor this Q :
+    (|={top}=> wp_invoke_destructor tu ty dtor this (|={top}=> Q))
+    |-- wp_invoke_destructor tu ty dtor this Q.
   Proof.
-    wp_destructor_unfold. iIntros "wp".
+    wp_invoke_destructor_unfold. iIntros "wp".
     iApply wp_fptr_shift. iMod "wp".
     iApply (wp_fptr_frame with "[] wp").
     iIntros (p). iIntros "(%v & V & B & >Q) !>".
     iExists v. iFrame "V B Q".
   Qed.
 
-  Lemma fupd_wp_destructor tu ty dtor this Q :
-    (|={top}=> wp_destructor tu ty dtor this Q)
-    |-- wp_destructor tu ty dtor this Q.
-  Proof. solve_fupd_shift wp_destructor_shift. Qed.
+  Lemma fupd_wp_invoke_destructor tu ty dtor this Q :
+    (|={top}=> wp_invoke_destructor tu ty dtor this Q)
+    |-- wp_invoke_destructor tu ty dtor this Q.
+  Proof. solve_fupd_shift wp_invoke_destructor_shift. Qed.
 
-  Lemma wp_destructor_fupd tu ty dtor this Q :
-    wp_destructor tu ty dtor this (|={top}=> Q)
-    |-- wp_destructor tu ty dtor this Q.
-  Proof. solve_shift_fupd wp_destructor_shift. Qed.
+  Lemma wp_invoke_destructor_fupd tu ty dtor this Q :
+    wp_invoke_destructor tu ty dtor this (|={top}=> Q)
+    |-- wp_invoke_destructor tu ty dtor this Q.
+  Proof. solve_shift_fupd wp_invoke_destructor_shift. Qed.
 End dtor.
 
 (** ** Destroying structures and unions *)
@@ -330,13 +330,13 @@ End dtor.
 
     TODO let's find some justification in the standard.
     *)
-    wp_destructor tu cls (_global s.(s_dtor)) this Q
+    wp_invoke_destructor tu cls (_global s.(s_dtor)) this Q
   | Some (Gunion u) =>
     (*
     Unions cannot have [virtual] destructors: we directly invoke the
     destructor.
     *)
-    wp_destructor tu cls (_global u.(u_dtor)) this Q
+    wp_invoke_destructor tu cls (_global u.(u_dtor)) this Q
   | _ => |={top}=> ERROR ("wp_destroy_named: cannot resolve", cls)
   end.
 
@@ -387,8 +387,8 @@ Section named.
   Let wp_destroy_named_intro_body (tu : translation_unit)
       (cls : globname) (this : ptr) (Q : epred) : mpred :=
     match types tu !! cls with
-    | Some (Gstruct s) => wp_destructor tu cls (_global s.(s_dtor)) this Q
-    | Some (Gunion u) => wp_destructor tu cls (_global u.(u_dtor)) this Q
+    | Some (Gstruct s) => wp_invoke_destructor tu cls (_global s.(s_dtor)) this Q
+    | Some (Gunion u) => wp_invoke_destructor tu cls (_global u.(u_dtor)) this Q
     | _ => False
     end.
 
@@ -399,13 +399,13 @@ Section named.
 
   Lemma wp_destroy_named_intro_struct tu cls s this Q :
     types tu !! cls = Some (Gstruct s) ->
-    wp_destructor tu cls (_global s.(s_dtor)) this Q
+    wp_invoke_destructor tu cls (_global s.(s_dtor)) this Q
     |-- wp_destroy_named tu cls this Q.
   Proof. by rewrite -wp_destroy_named_intro=>->. Qed.
 
   Lemma wp_destroy_named_intro_union tu cls u this Q :
     types tu !! cls = Some (Gunion u) ->
-    wp_destructor tu cls (_global u.(u_dtor)) this Q
+    wp_invoke_destructor tu cls (_global u.(u_dtor)) this Q
     |-- wp_destroy_named tu cls this Q.
   Proof. by rewrite -wp_destroy_named_intro=>->. Qed.
 
@@ -417,13 +417,13 @@ Section named.
   Lemma wp_destroy_named_elim_struct tu cls s this Q :
     tu.(types) !! cls = Some (Gstruct s) ->
     wp_destroy_named tu cls this Q
-    |-- wp_destructor tu cls (_global s.(s_dtor)) this Q.
+    |-- wp_invoke_destructor tu cls (_global s.(s_dtor)) this Q.
   Proof. by rewrite wp_destroy_named_elim=>->. Qed.
 
   Lemma wp_destroy_named_elim_union tu cls u this Q :
     tu.(types) !! cls = Some (Gunion u) ->
     wp_destroy_named tu cls this Q
-    |-- wp_destructor tu cls (_global u.(u_dtor)) this Q.
+    |-- wp_invoke_destructor tu cls (_global u.(u_dtor)) this Q.
   Proof. by rewrite wp_destroy_named_elim=>->. Qed.
 
   #[global] Instance: Params (@wp_destroy_named) 6 := {}.
@@ -444,11 +444,11 @@ Section named.
   Proof.
     intros Htu. move: (Htu)=>/types_compat Htt. wp_destroy_named_unfold.
     destruct (_ !! _) as [v1|] eqn:Hv1; last first.
-    { case_match; auto. case_match; eauto using fupd_wp_destructor. }
+    { case_match; auto. case_match; eauto using fupd_wp_invoke_destructor. }
     destruct (Htt cls _ Hv1) as (v2 & -> & Hle). destruct v1, v2; try done.
-    all: try solve [ eauto using fupd_wp_destructor ].
+    all: try solve [ eauto using fupd_wp_invoke_destructor ].
     all: cbn in Hle; case_bool_decide; [subst|done].
-    all: by apply wp_destructor_frame.
+    all: by apply wp_invoke_destructor_frame.
   Qed.
 
   Lemma wp_destroy_named_shift tu cls this Q :
@@ -456,7 +456,7 @@ Section named.
     |-- wp_destroy_named tu cls this Q.
   Proof.
     wp_destroy_named_unfold.
-    destruct (_ !! _) as [[] |]; auto using wp_destructor_shift.
+    destruct (_ !! _) as [[] |]; auto using wp_invoke_destructor_shift.
   Qed.
 
   Lemma fupd_wp_destroy_named tu cls this Q :
