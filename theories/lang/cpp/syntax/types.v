@@ -211,7 +211,15 @@ Module float_type.
 
 End float_type.
 
-(* Qualifiers on member function pointers *)
+(** Qualifiers on member function pointers. Needed for pointers to methods like
+<<
+struct C {
+  void none_this_meth();
+  void lvalue_this_meth() &;
+  void rvalue_this_meth() &&;
+};
+>>
+ *)
 Module ref_qualifier.
   Variant t : Set := None | Lvalue | Rvalue.
   #[global] Instance t_eq_dec : EqDecision t.
@@ -448,7 +456,7 @@ Section type_rec.
 
 End type_rec.
 Section type_rect.
-  Variable P : type -> Set.
+  Variable P : type -> Type.
 
   Hypothesis Tptr_rect : forall (ty : type),
     P ty -> P (Tptr ty).

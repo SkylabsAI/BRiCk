@@ -21,6 +21,7 @@ Section defs.
   Record function_spec : Type :=
     { fs_cc        : calling_conv
     ; fs_this      : option (globname * ref_qualifier.t * type_qualifiers)
+    (* ^^ Only defined for methods. Allows computing type of [this]: [globname] is the class name. *)
     ; fs_arity     : function_arity
     ; fs_return    : type
     ; fs_arguments : list type
@@ -55,8 +56,8 @@ Section defs.
     length (fs_arguments fs1) = length (fs_arguments fs2).
   Proof.
     destruct fs1, fs2; rewrite /type_of_spec; repeat case_match; subst; simpl; inversion 1.
-    apply with_length in H9; revert H9; by repeat rewrite map_length.
-    apply with_length in H6; revert H6; by repeat rewrite map_length.
+    apply f_equal in H9; revert H9; by repeat rewrite map_length.
+    apply f_equal in H6; revert H6; by repeat rewrite map_length.
   Qed.
 
   Section ofe.
