@@ -1119,6 +1119,20 @@ Section with_cpp.
     Qed.
   End wp_fptr.
 
+  (* derived wrappers for member functions, including constructors and destructors.
+     These are a bit verbose because we don't currently have a representation of
+     function types and there are a lot of arguments in function types.
+   *)
+  Definition method_spec (tt : type_table)
+    (cls : globname) (cv : type_qualifiers) (rq : ref_qualifier.t) {cc : calling_conv} {ar : function_arity} (ret : type) (ls : list type)
+    (mp : ptr) (this : ptr) (args : list ptr) : (ptr -> epred) -> mpred :=
+    wp_fptr tt (Tmember_function cls (cc:=cc) (ar:=ar) rq cv ret ls) mp (this :: args).
+  Definition ctor_spec (tt : type_table) (cls : globname) {cc : calling_conv} {ar : function_arity} (ls : list type)
+    (mp : ptr) (this : ptr) (args : list ptr) : (ptr -> epred) -> mpred :=
+    wp_fptr tt (Tctor cls (cc:=cc) (ar:=ar) ls) mp (this :: args).
+  Definition dtor_spec (tt : type_table) (cls : globname) (dtor : ptr) (this : ptr) : (ptr -> epred) -> mpred :=
+    wp_fptr tt (Tdtor cls) dtor (this :: nil).
+
 End with_cpp.
 End WPE.
 

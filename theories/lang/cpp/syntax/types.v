@@ -287,6 +287,12 @@ Inductive type : Set :=
 Set Elimination Schemes.
 #[only(inhabited)] derive type.
 
+(* the type of a destructor *)
+Definition Tdtor (cls : globname) {cc : calling_conv} : type :=
+  Tmember_function cls ref_qualifier.None QM (cc:=cc) Tvoid nil.
+Definition Tctor (cls : globname) {cc : calling_conv} {ar : function_arity} (ls : list type) : type :=
+  Tmember_function cls ref_qualifier.None QM (ar:=ar) (cc:=cc) Tvoid ls.
+
 (** Strengthened Induction Principle for [type]
 
     [type] is a `Nested Inductive Type` due to the use of [list type]
