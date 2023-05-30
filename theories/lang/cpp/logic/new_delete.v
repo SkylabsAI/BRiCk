@@ -149,7 +149,7 @@ Module Type Expr__newdelete.
                         else
                           (* [blockR sz -|- tblockR aty] *)
                           storage_ptr |-> (blockR alloc_sz (cQp.m 1) ** alignedR alloc_al) **
-                          (** TODO: ^ This misses an condition that [storage_ptr]
+                          (** TODO: ^ This misses a condition that [storage_ptr]
                               is suitably aligned, accounting for
                               __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149; FM-975) *)
                           (Forall (obj_ptr : ptr),
@@ -197,7 +197,7 @@ Module Type Expr__newdelete.
                       res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                       (* [blockR sz -|- tblockR aty] *)
                       storage_ptr |-> (blockR alloc_sz (cQp.m 1) ** alignedR alloc_al) **
-                      (** TODO: ^ This misses an condition that [storage_ptr]
+                      (** TODO: ^ This misses a condition that [storage_ptr]
                           is suitably aligned, accounting for
                           __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
                       (Forall (obj_ptr : ptr),
@@ -307,7 +307,7 @@ Module Type Expr__newdelete.
                             (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
                             storage_ptr |-> blockR (overhead_sz + alloc_sz) (cQp.m 1) **
                             storage_ptr .[Tu8 ! overhead_sz] |-> alignedR alloc_al **
-                            (** TODO: ^ This misses an condition that [storage_ptr]
+                            (** TODO: ^ This misses a condition that [storage_ptr]
                                 is suitably aligned, accounting for
                                 __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
                              (Forall (obj_ptr : ptr),
@@ -382,7 +382,7 @@ Module Type Expr__newdelete.
                           (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
                           storage_ptr |-> blockR (overhead_sz + alloc_sz) (cQp.m 1) **
                           storage_ptr .[Tu8 ! overhead_sz] |-> alignedR alloc_al **
-                          (** TODO: ^ This misses an condition that [storage_ptr]
+                          (** TODO: ^ This misses a condition that [storage_ptr]
                               is suitably aligned, accounting for
                               __STDCPP_DEFAULT_NEW_ALIGNMENT__ (issue #149, FM-975) *)
                            (Forall (obj_ptr : ptr),
