@@ -591,6 +591,47 @@ Module Type Expr__newdelete.
 
         |-- wp_operand (Edelete false delete_fn e destroyed_type) Q.
 
+        (** [wp_operand_delete_default] specializes [wp_operand_delete] for invocations of
+         *  the form [delete p;] - where [p] is a non-null pointer to an object whose
+         *  most-derived destructor is defined in the current translation unit.
+         *)
+        Lemma wp_operand_delete_default :
+          forall delete_fn e destroyed_type Q
+            (dfty := normalize_type delete_fn.2)
+            (_ : arg_types dfty = Some ([Tptr Tvoid], Ar_Definite)),
+          (* call the destructor on the object, and then call delete_fn *)
+          wp_operand e (fun v free =>
+             Exists obj_ptr, [| v = Vptr obj_ptr |] ** [| obj_ptr <> nullptr |] **
+             (* v---- Calling destructor with object pointer *)
+             resolve_dtor destroyed_type obj_ptr (fun this' mdc_ty =>
+                  Exists cv_mdc, this' |-> new_tokenR (cQp.mut 1) cv_mdc **
+                                 [| cv_compat cv_mdc mdc_ty |] **
+                  denoteModule tu ** destroy_val tu mdc_ty this' (
+                  Exists storage_ptr sz, [| size_of mdc_ty = Some sz |] **
+                    (* v---- Token for converting obj memory to storage memory *)
+                    provides_storage storage_ptr this' mdc_ty **
+                    (* Transfer memory to underlying storage pointer; unlike in
+                       [end_provides_storage], this memory was pre-destructed by
+                       [delete_val]. *)
+                    (storage_ptr |-> blockR sz (cQp.m 1) -*
+                     (* v---- Calling deallocator with storage pointer
+                              Like above, because the operation is on the MDC,
+                              we must use [tu'] *)
+                     delete_val tu delete_fn mdc_ty storage_ptr (Q Vvoid free)))))
+        |-- wp_operand (Edelete false delete_fn e destroyed_type) Q.
+        Proof.
+          intros **; iIntros "operand".
+          iApply wp_operand_delete; eauto; cbn.
+          iApply (wp_operand_frame _ tu); [by reflexivity | | by iFrame].
+          iIntros (v free) "H"; iDestruct "H" as (obj_ptr) "(-> & % & dtor_lookup)".
+          iExists obj_ptr; iSplitR; first done.
+          rewrite bool_decide_false; last assumption.
+          iApply resolve_dtor_frame; last by iFrame.
+          iIntros (p mdc_ty) "H"; iDestruct "H" as (cv_mdc) "(? & % & ? & destroy_val)".
+          iExists cv_mdc; iFrame "%∗".
+          by iExists tu; iFrame.
+        Qed.
+
         (* NOTE: [destroyed_type] will refer to the /element/ of the array *)
         Axiom wp_operand_array_delete :
           forall delete_fn e destroyed_type Q
@@ -631,6 +672,55 @@ Module Type Expr__newdelete.
                          wp_fptr tu.(types) delete_fn.2 (_global delete_fn.1)
                              (p :: nil) (fun p => operand_receive Tvoid p (fun _ => interp tu FR $ Q Vvoid free))))))))
         |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
+
+        (** [wp_operand_array_delete_default] specializes [wp_operand_delete] for invocations
+         *  of the form [delete[] p;] - where [p] is a non-null pointer to an array of objects
+         *  whose most-derived destructor is defined in the current translation unit.
+         *)
+        Lemma wp_operand_array_delete_default :
+          forall delete_fn e destroyed_type Q
+            (dfty := normalize_type delete_fn.2)
+            (_ : arg_types dfty = Some ([Tptr Tvoid], Ar_Definite)),
+          (* call the destructor on the object, and then call delete_fn *)
+          wp_operand e (fun v free =>
+             Exists obj_ptr, [| v = Vptr obj_ptr |] ** [| obj_ptr <> nullptr |] **
+             Exists array_size,
+             let array_ty := Tarray destroyed_type array_size in
+             (* /---- Token for distinguishing between array and
+                v     non-array allocations *)
+             obj_ptr |-> new_tokenR (cQp.mut 1) array_ty **
+             (* /---- Calling destructor with object pointer
+                v     Note: virtual dispatch is not allowed for [delete[]] *)
+             destroy_val tu array_ty obj_ptr (
+                  Exists storage_ptr (sz sz' : N),
+                    [| size_of array_ty = Some sz |] **
+                    (* v---- Token for converting obj memory to storage memory *)
+                    provides_storage
+                      (storage_ptr .[Tu8 ! sz'])
+                      obj_ptr array_ty **
+                    (* Transfer memory to underlying storage pointer; unlike in
+                       [end_provides_storage], this memory was pre-destructed by
+                       [delete_val]. *)
+                    (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) -*
+                     (* /---- Calling deallocator with storage pointer.
+                        |  Note: we rely on the AST to have correctly resolved
+                        v  this since the dispatch is statically known.
+                      *)
+                     Reduce (alloc_pointer storage_ptr (fun p FR =>
+                       fspec tu.(globals) delete_fn.2 (_global delete_fn.1)
+                           (p :: nil) (fun p => operand_receive Tvoid p
+                                              (fun _ => interp tu FR $ Q Vvoid free)))))))
+        |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
+        Proof.
+          intros **; iIntros "operand".
+          iApply wp_operand_array_delete; eauto; cbn.
+          iApply (wp_operand_frame _ tu); [by reflexivity | | by iFrame].
+          iIntros (v free) "H"; iDestruct "H" as (obj_ptr) "(-> & % & sz)".
+          iExists obj_ptr; iSplitR; first done.
+          rewrite bool_decide_false; last assumption.
+          iDestruct "sz" as (array_sz) "(? & destroy_val)".
+          by iExists array_sz; iFrame.
+        Qed.
 
         Section NOTE_potentially_relaxing_array_delete.
           (* While (we currently think) it is UB to delete [auto p = new int[5][6]]
