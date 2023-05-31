@@ -44,6 +44,10 @@ Record genv : Type :=
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
+Definition genv_default_new_alignment (g : genv) : N :=
+  g.(genv_tu).(default_new_alignment).
+Definition genv_default_new_alignment_wf (g : genv) : (2 | genv_default_new_alignment g)%N :=
+  g.(genv_tu).(default_new_alignment_wf).
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
 Definition genv_type_table (g : genv) : type_table :=
   g.(genv_tu).(types).
@@ -120,6 +124,14 @@ Proof. by intros ?? <-. Qed.
 Proof. intros ???. apply sub_module.byte_order_proper. solve_proper. Qed.
 #[global] Instance genv_byte_order_flip_proper : Proper (flip genv_leq ==> eq) genv_byte_order.
 Proof. by intros ?? <-. Qed.
+
+#[global] Instance genv_default_new_alignment_proper :
+  Proper (genv_leq ==> eq) genv_default_new_alignment.
+Proof. intros ???. apply sub_module.default_new_alignment_proper. solve_proper. Qed.
+#[global] Instance genv_default_new_alignment_flip_proper :
+  Proper (flip genv_leq ==> eq) genv_default_new_alignment.
+Proof. by intros ?? <-. Qed.
+
 (* this states that the [genv] is compatible with the given [translation_unit]
  * it essentially means that the [genv] records all the types from the
  * compilation unit and that the [genv] contains addresses for all globals
@@ -134,6 +146,11 @@ Theorem genv_byte_order_tu tu g :
     tu ⊧ g ->
     genv_byte_order g = translation_unit.byte_order tu.
 Proof. intros. apply byte_order_flip_proper, tu_compat. Qed.
+
+Theorem genv_default_new_alignment_tu tu g :
+    tu ⊧ g ->
+    genv_default_new_alignment g = translation_unit.default_new_alignment tu.
+Proof. intros. apply default_new_alignment_flip_proper, tu_compat. Qed.
 
 Theorem genv_compat_submodule : forall m σ, m ⊧ σ -> sub_module m σ.(genv_tu).
 Proof. by destruct 1. Qed.

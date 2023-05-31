@@ -83,6 +83,10 @@ public:
         return this->output_ << (b ? "true" : "false");
     }
 
+    fmt::Formatter& constantN(size_t n) {
+        return this->output_ << n << "%N";
+    }
+
     // List-printing functions
     template<typename I, typename CLOSURE>
     fmt::Formatter& list_range(I begin, I end, CLOSURE fn) {

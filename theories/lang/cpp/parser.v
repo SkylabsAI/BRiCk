@@ -199,11 +199,13 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) : translation_unit :=
+Definition decls ls (e : endian) (al : N) (Hal : (2 | al)%N) : translation_unit :=
   decls' ls ∅ ∅ $ fun a b =>
   {| symbols := avl.map_canon a
   ; types := avl.map_canon b
   ; initializer := nil (* FIXME *)
-  ; byte_order := e |}.
+  ; byte_order := e
+  ; default_new_alignment := al
+  ; default_new_alignment_wf := Hal |}.
 
 Declare Reduction reduce_translation_unit := vm_compute.

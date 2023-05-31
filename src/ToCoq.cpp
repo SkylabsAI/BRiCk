@@ -99,11 +99,15 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
         print.end_list();
         print.output() << fmt::nbsp;
         if (ctxt->getTargetInfo().isBigEndian()) {
-            print.output() << "Big";
+            print.output() << "Big" << fmt::nbsp;
         } else {
             assert(ctxt->getTargetInfo().isLittleEndian());
-            print.output() << "Little";
+            print.output() << "Little" << fmt::nbsp;
         }
+
+        print.constantN(__STDCPP_DEFAULT_NEW_ALIGNMENT__);
+        // v-- Evidence that [__STDPP_DEFAULT_NEW_ALIGNMENT__] is a power of two.
+        print.output() << fmt::nbsp << "ltac:(by apply N.divide_gcd_iff)";
 
         // TODO I still need to generate the initializer
 

@@ -603,7 +603,16 @@ Record translation_unit : Type :=
 { symbols    : symbol_table
 ; types    : type_table
 ; initializer : InitializerBlock
+(**  NOTE: The following two fields should probably live in the toplevel [genv]. *)
 ; byte_order : endian
+; default_new_alignment : N
+  (* ^ The default minimum alignment guaranteed by [new]/[new[]] invocations
+       (cf. [__STDCPP_DEFAULT_NEW_ALIGNMENT__] <https://eel.is/c++draft/cpp.predefined#1.7>)
+   *)
+; default_new_alignment_wf : (2 | default_new_alignment)%N
+  (* ^ "... Every alignment value shall be a non-negative integral power of two."
+       <https://eel.is/c++draft/basic.align#4>.
+   *)
 }.
 
 (** These [Lookup] instances come with no theory; use instead the unfolding lemmas below and the `fin_maps` theory. *)
