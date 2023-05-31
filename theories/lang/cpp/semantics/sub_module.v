@@ -452,7 +452,8 @@ Proof. intros. by eapply complete_respects_sub_table_mut. Qed.
 Record sub_module (a b : translation_unit) : Prop :=
 { types_compat : type_table_le a.(types) b.(types)
 ; syms_compat : sym_table_le a.(symbols) b.(symbols)
-; byte_order_compat : a.(byte_order) = b.(byte_order) }.
+; byte_order_compat : a.(byte_order) = b.(byte_order)
+; default_new_alignment_compat : a.(default_new_alignment) = b.(default_new_alignment) }.
 
 Section sub_module.
   #[local] Instance: Reflexive sub_module.
@@ -471,6 +472,7 @@ End sub_module.
  *)
 Definition module_le (a b : translation_unit) : bool :=
   Eval cbv beta iota zeta delta [ andb ] in
+  bool_decide (a.(default_new_alignment) = b.(default_new_alignment)) &&
   bool_decide (a.(byte_order) = b.(byte_order)) &&
   bool_decide (type_table_le a.(types) b.(types)) &&
   bool_decide (sym_table_le a.(symbols) b.(symbols)).
@@ -483,6 +485,7 @@ Proof.
   rewrite /module_le; intros.
   repeat case_bool_decide.
   { constructor; eauto. }
+  { intro C; inversion C; eauto. }
   { intro C; inversion C; eauto. }
   { intro C; inversion C; eauto. }
   { intro C; inversion C; eauto. }
@@ -573,6 +576,12 @@ Qed.
 #[global] Instance byte_order_proper : Proper (sub_module ==> eq) byte_order.
 Proof. by destruct 1. Qed.
 #[global] Instance byte_order_flip_proper : Proper (flip sub_module ==> eq) byte_order.
+Proof. by destruct 1. Qed.
+
+#[global] Instance default_new_alignment_proper : Proper (sub_module ==> eq) default_new_alignment.
+Proof. by destruct 1. Qed.
+#[global] Instance default_new_alignment_flip_proper :
+  Proper (flip sub_module ==> eq) default_new_alignment.
 Proof. by destruct 1. Qed.
 
 
