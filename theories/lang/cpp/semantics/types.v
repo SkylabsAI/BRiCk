@@ -85,7 +85,7 @@ Proof.
   intros ?? Hle ? t ->; induction t; simpl; (try constructor) => //.
   all: try exact: pointer_size_proper.
   - by destruct IHt; constructor; subst.
-  - move: Hle => [[ /(_ g) Hle _] _ _].
+  - move: Hle => [[ /(_ g) Hle _] _ _ _].
     unfold glob_def. rewrite -tu_lookup_globals in Hle.
     destruct ((genv_tu x) !! g) as [g1| ]; last constructor.
     move: Hle => /(_ _ eq_refl). rewrite -tu_lookup_globals.
@@ -95,7 +95,7 @@ Proof.
     unfold glob_def. rewrite -tu_lookup_globals in Hle.
     destruct ((genv_tu x) !! g) as [g1| ]; last constructor.
     move: Hle => /(_ _ eq_refl). rewrite -tu_lookup_globals.
-    move => [g2 [-> HH]] /=.
+    move => [g2 [-> HH] _] /=.
     exact: proper_GlobDecl_size_of.
   - by destruct o; constructor.
 Qed.
