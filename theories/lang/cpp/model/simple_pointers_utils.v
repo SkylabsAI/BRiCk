@@ -29,6 +29,15 @@ Module canonical_tu.
   { symbols    : symbol_table_canon
   ; globals    : type_table_canon
   ; byte_order : endian
+  ; default_new_alignment : N
+    (* ^ The default minimum alignment guaranteed by [new]/[new[]] invocations
+         (cf. [__STDCPP_DEFAULT_NEW_ALIGNMENT__] <https://eel.is/c++draft/cpp.predefined#1.7>)
+     *)
+  (** NOTE: no [EqDecision] for [Prop] *)
+  (* ; default_new_alignment_wf : {pow : N | (default_new_alignment = 2 ^ pow)%N} *)
+    (* ^ "... Every alignment value shall be a non-negative integral power of two."
+         <https://eel.is/c++draft/basic.align#4>.
+     *)
   }.
   #[global] Instance translation_unit_canon_eq_dec : EqDecision translation_unit_canon.
   Proof. solve_decision. Qed.
@@ -48,7 +57,8 @@ Module canonical_tu.
   Proof. solve_decision. Qed.
 
   Definition tu_to_canon (tu : translation_unit) : translation_unit_canon :=
-    let (s, g, init, bo) := tu in Build_translation_unit_canon (im_to_gmap s) (im_to_gmap g) bo.
+    let (s, g, init, bo, al, _) := tu in
+    Build_translation_unit_canon (im_to_gmap s) (im_to_gmap g) bo al.
   #[local] Definition genv_to_canon σ : genv_canon :=
     let (tu, sz, sgn, wsgn) := σ in Build_genv_canon (tu_to_canon tu) sz sgn wsgn.
 End canonical_tu.
