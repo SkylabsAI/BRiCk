@@ -199,7 +199,7 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) (al : N) (Hal : (2 | al)%N) : translation_unit :=
+Definition decls ls (e : endian) (al : N) (Hal : {pow : N | (al = 2 ^ pow)%N}) : translation_unit :=
   decls' ls ∅ ∅ $ fun a b =>
   {| symbols := avl.map_canon a
   ; types := avl.map_canon b

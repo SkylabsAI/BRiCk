@@ -46,8 +46,9 @@ Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
 Definition genv_default_new_alignment (g : genv) : N :=
   g.(genv_tu).(default_new_alignment).
-Definition genv_default_new_alignment_wf (g : genv) : (2 | genv_default_new_alignment g)%N :=
-  g.(genv_tu).(default_new_alignment_wf).
+Definition genv_default_new_alignment_wf (g : genv)
+  : {pow : N | (genv_default_new_alignment g = 2 ^ pow)%N}
+  := g.(genv_tu).(default_new_alignment_wf).
 Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
 Definition genv_type_table (g : genv) : type_table :=
   g.(genv_tu).(types).

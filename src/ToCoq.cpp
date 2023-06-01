@@ -116,9 +116,9 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
              << fmt::lparen
                 << "exist _" << fmt::nbsp
                 << fmt::lparen
-                   << "N.log2" << fmt::nbsp
-                   << print.constantN(default_new_alignment)
-                << fmt::rparen
+                   << "N.log2" << fmt::nbsp;
+                   print.constantN(default_new_alignment);
+                print.output() << fmt::rparen
              << fmt::rparen
           << fmt::rparen;
 
