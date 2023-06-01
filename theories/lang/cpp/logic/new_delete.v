@@ -77,44 +77,6 @@ Module Type Expr__newdelete.
       Definition alloc_size_t (sz : N) (Q : ptr -> (mpred -> mpred) -> mpred) : mpred :=
         Forall p : ptr, p |-> primR Tsize_t (cQp.mut 1) (Vn sz) -* Q p (fun Q => p |-> anyR Tsize_t (cQp.mut 1) ** Q).
 
-      (** TODO (JH): C++ WG Questions/Topics *)
-      (** 1) new-extension <https://eel.is/c++draft/expr.new#15>: do we need to axiomatize it?
-             (JH): Probably not - so long as our specifications for [new]/[new[]] talk about
-             the total remaining size left in the allocator and nothing more.
-          2) new-omission <https://eel.is/c++draft/expr.new#13>: do we need to axiomatize it?
-             (JH): Probably - given that our specifications will likely talk about the
-             remaining size.
-          3) richer [wp_operand_new]: [targs] must be inspected to determine which form is being
-             used; placement new forbids array overhead and the alignment argument needs to be
-             connected to the produced alignment. NOTE: Signatures changed in C++17
-          4) [nothrow] delete?
-          5) (JH needs a reminder) how does our [extern const nothrow_t nothrow;] get connected
-             to [std::nothrow]?
-       *)
-
-      (** [targs] cases
-          [[[
-          match targs with
-          | [] => False (** all [new] calls take the size; no class-specific [new] calls *)
-          | sz_ty :: targs' =>
-            if sz_ty <> Tsize_t then False else (** the size is a [size_t] *)
-            match targs'
-            | [] => True (** plain new *)
-            | ty :: targs'
-              match ty with
-              | Tnothrow => (** placement new *)
-              | Talign_t =>
-                match targs' with
-                | [] => False (** all placement new forms for us *)
-                | [Tnothrow] => True (** new-extended placement new; weird, maybe don't support *)
-                | _ => False (** no user-defined placement variants for now *)
-              | _ => False (** no user-defined placement variants for now *)
-              end
-            end
-          end
-          ]]]
-       *)
-
       Section new.
         (** [new (...) C(...)] <https://eel.is/c++draft/expr.new>
             - invokes a C++ new operator [new_fn], which returns a storage pointer [storage_ptr];
@@ -136,6 +98,18 @@ Module Type Expr__newdelete.
             We use [default_initialize] for default ininitialization as it is defined in the
             C++ Standard and we use [wp_init] for direct-initialization as defined
             by the C++ Standard.
+
+            ~~~ Limitations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            - new-extension <https://eel.is/c++draft/expr.new#15> and new-elision
+              <https://eel.is/c++draft/expr.new#13> are not modeled currently. This means
+              it is /possible/ to prove a too-strong specification for implementations
+              of [operator new]. However, we argue that:
+              1) clients who use [new] don't really whether new-extension/new-elision
+                 came into play
+              2) it is /possible/ to model these behaviors using [new_tokenR]
+              3) there are a small handful of [operator new] specifications in freestanding
+                 developments which makes it tractable to manually ensure that those specs
+                 are weak enough.
 
             ~~~ Implementation Details ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

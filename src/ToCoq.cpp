@@ -105,9 +105,22 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
             print.output() << "Little" << fmt::nbsp;
         }
 
-        print.constantN(__STDCPP_DEFAULT_NEW_ALIGNMENT__);
-        // v-- Evidence that [__STDPP_DEFAULT_NEW_ALIGNMENT__] is a power of two.
-        print.output() << fmt::nbsp << "ltac:(by apply N.divide_gcd_iff)";
+        // NOTE: don't use [__STDCPP_DEFAULT_NEW_ALIGNMENT__] directly since we care about
+        // the alignment constraints of the target rather than the host.
+        auto default_new_alignment = ctxt->getTargetInfo().getNewAlign();
+        print.constantN(default_new_alignment);
+        // v-- Evidence that [default_new_alignment] is a power of two.
+        print.output() << fmt::nbsp << "ltac:"
+          << fmt::lparen
+             << "by apply:" << fmt::nbsp
+             << fmt::lparen
+                << "exist _" << fmt::nbsp
+                << fmt::lparen
+                   << "N.log2" << fmt::nbsp
+                   << print.constantN(default_new_alignment)
+                << fmt::rparen
+             << fmt::rparen
+          << fmt::rparen;
 
         // TODO I still need to generate the initializer
 
