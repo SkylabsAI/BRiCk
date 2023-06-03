@@ -55,9 +55,9 @@ Definition SFunction `{Σ : cpp_logic} {cc : calling_conv} {ar : function_arity}
   let class_type := Tnamed class in
   let this_type := Tqualified qual class_type in
   {| fs_cc := cc
-   ; fs_this := Some (class, ref_qualifier.None, QM)
+   ; fs_this := Some (class, rq, qual)
    ; fs_arity := ar
-   ; fs_return := Qmut Tvoid
+   ; fs_return := ret
    ; fs_arguments := targs
    ; fs_spec := member_to_function_spec base_to_derived PQ
    |}.
