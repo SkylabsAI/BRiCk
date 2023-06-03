@@ -244,7 +244,7 @@ Section defs.
   Definition cptrR_def {resolve : genv} (fs : function_spec) : Rep :=
     as_Rep (fun p =>
          strict_valid_ptr p **
-         Exists tu, [| tu ⊧ resolve /\ callable_type tu.(globals) (type_of_spec fs)|] **
+         Exists tu, [| tu ⊧ resolve |] **
          □ (Forall vs Q,
             fs.(fs_spec) vs Q -*
             wp_fptr tu.(types) (type_of_spec fs) p vs Q)).
