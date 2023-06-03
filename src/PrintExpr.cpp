@@ -455,9 +455,12 @@ public:
                 done(expr, print, cprint);
             }
         } else if (auto fd = dyn_cast<FieldDecl>(d)) {
-            assert(false && "illegal field expression");
-            // Fields are special because they are not
-            print.ctor("Emember");
+            logging::unsupported() << "Unsupported field reference at " << cprint.sourceRange(expr->getSourceRange());
+            expr->dump(logging::unsupported(), ctxt);
+            logging::die();
+#if 0
+            // Fields are special because they do not name storage
+            print.ctor("Emember_ref");
             if (!print.templates()) {
                 cprint.printTypeName(fd->getParent(), print);
             } else {
@@ -468,6 +471,7 @@ public:
             print.output() << fmt::nbsp;
             cprint.printQualType(fd->getType(), print);
             print.end_ctor();
+#endif
         } else {
             // We add `Eread_ref` nodes when the type of the
             // variable is a reference.
@@ -1118,15 +1122,29 @@ public:
                                        CoqPrinter& print, ClangPrinter& cprint,
                                        const ASTContext& ctxt,
                                        OpaqueNames& li) {
-        auto do_arg = [&print, &cprint, &li, expr]() {
+        auto do_arg = [&print, &cprint, &li, &ctxt, expr]() {
             if (expr->isArgumentType()) {
-                print.ctor("inl", false);
+                print.ctor("trait_type", false);
                 cprint.printQualType(expr->getArgumentType(), print);
                 print.output() << fmt::rparen;
             } else if (expr->getArgumentExpr()) {
-                print.ctor("inr", false);
-                cprint.printExpr(expr->getArgumentExpr(), print, li);
-                print.output() << fmt::rparen;
+                auto ae = expr->getArgumentExpr();
+                auto dre = dyn_cast<DeclRefExpr>(ae->IgnoreParens());
+                if (dre && dyn_cast<FieldDecl>(dre->getDecl())) {
+                    // In a static method, you can reference a field without taking its
+                    // address, e.g. [static auto get() { return sizeof(_field_name); }]
+                    // We special case this an print the underlying type
+                    auto fd = dyn_cast<FieldDecl>(dre->getDecl()); 
+                    print.ctor("trait_field", false);
+                    cprint.printField(fd, print);
+                    print.output() << fmt::nbsp;
+                    cprint.printQualType(fd->getType(), print);
+                    print.output() << fmt::rparen;
+                } else {
+                    print.ctor("trait_expr", false);
+                    cprint.printExpr(ae, print, li);
+                    print.output() << fmt::rparen;
+                }
             } else {
                 assert(false);
                 //fatal("argument to sizeof/alignof is not a type or an expression.");

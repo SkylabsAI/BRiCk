@@ -123,6 +123,10 @@ Notation Tmember_pointer_func cls rq cv cc ar rt args := (Tmember_pointer cls (M
 Definition Eenum_const_at (e : globname) (ety ty : type) : Expr :=
   Ecast Cintegral (Econst_ref (Gname e) ety) Prvalue ty.
 
+Definition trait_type (t : type) : type + Expr := inl t.
+Definition trait_expr (e : Expr) : type + Expr := inr e.
+Definition trait_field (_ : field) (t : type) : type + Expr := inl t.
+
 (** ** Statements *)
 
 Section stmt.
