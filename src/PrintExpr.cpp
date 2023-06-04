@@ -575,8 +575,6 @@ public:
         // if the called function is a method.
         if (method and not method->isStatic()) {
             print.ctor("Emember_call");
-
-            // TODO Handle virtual dispatch.
             print.ctor("inl") << fmt::lparen;
             cprint.printObjName(method, print);
             print.output() << "," << fmt::nbsp
