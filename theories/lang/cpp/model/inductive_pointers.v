@@ -771,6 +771,14 @@ Module cquot.
 End cquot.
 
 Module PTRS_IMPL <: PTRS_INTF.
+  (* shadow PTRS_AUX. *)
+  Definition offset_seg : Set := raw_offset_seg * Z.
+  #[export] Instance offset_seg_eq_dec : EqDecision offset_seg := _.
+  #[export] Instance offset_seg_countable : Countable offset_seg := _.
+  Definition raw_offset := list offset_seg.
+  #[export] Instance raw_offset_eq_dec : EqDecision raw_offset := _.
+  #[export] Instance raw_offset_countable : Countable raw_offset := _.
+
   (* WIP: alternative, simpler model, using an equivalence relation and classical quotients. *)
   Module roff_equiv.
     Inductive roff_equiv : raw_offset -> raw_offset -> Prop :=
@@ -824,6 +832,18 @@ Module PTRS_IMPL <: PTRS_INTF.
     Proof. induction 1; try by constructor. by etrans. Qed.
     #[export] Instance: Equivalence roff_equiv.
     Proof. split; apply _. Qed.
+
+    Definition eval_offset_seg (os : offset_seg) : option Z :=
+      match os with
+      | (o_invalid_, _) => None
+      | (_, z) => Some z
+      end.
+    Definition mk_offset_seg σ (ro : raw_offset_seg) : offset_seg :=
+      match eval_raw_offset_seg σ ro with
+      | None => (o_invalid_, 0%Z)
+      | Some off => (ro, off)
+      end.
+    #[global] Arguments mk_offset_seg _ !_ /.
 
     Definition eval_raw_offset (os : raw_offset) : option Z :=
       foldr (liftM2 Z.add) (Some 0) (eval_offset_seg <$> os).
