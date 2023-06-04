@@ -161,9 +161,19 @@ Module PTRS_OLD_IMPL. (* <: PTRS_INTF *)
       roff_canon (o_derived_ base derived :: s) (o_derived_ base derived :: d) *)
     | o_derived_cancel_canon s d derived base :
       roff_canon s d ->
-      (* This premise is a hack, but without it, normalization might not be deterministic. Thankfully, paths can't contain o_derived step, so we're good! *)
+      (* This premise is a hack, but without it, normalization might not be deterministic. Thankfully, paths can't contain o_derived step, so we're good!
+       NOTE: That might be false! Paths here need not be valid and might contain
+       [o_field ,, o_derived]... we can't exclude it in a _total_ canonicalizer.
+       (Still, that cannot valid because [o_field] accesses an embedded
+       subobject; pointer dereference isn't a path operation).
+       *)
       (* roff_canon (o_base_ derived base :: s) (o_base_ derived base :: d) -> *)
       roff_canon (o_derived_ base derived :: o_base_ derived base :: s) d
+    (* NECESSARY, but probably fails transitivity elimination.
+    | o_base_cancel_canon s d derived base :
+      roff_canon s d ->
+      roff_canon (o_base_ derived base :: o_derived_ base derived :: s) d
+    *)
     | o_sub_0_canon s d ty :
       roff_canon s d ->
       roff_canon (o_sub_ ty 0 :: s) d
@@ -226,6 +236,12 @@ Module PTRS_OLD_IMPL. (* <: PTRS_INTF *)
       if decide (der1 = der2 /\ base1 = base2)
       then oss'
       else os :: oss
+    (* NECESSARY
+    | o_base_ der1 base1, o_derived_ base2 der2 :: oss' =>
+      if decide (der1 = der2 /\ base1 = base2)
+      then oss'
+      else os :: oss
+    *)
     (* | (o_invalid_, _), _ => [(o_invalid_, 0%Z)] *)
     | o_invalid_, _ => [o_invalid_]
     | _, _ => os :: oss
