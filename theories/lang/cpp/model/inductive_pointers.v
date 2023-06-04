@@ -99,6 +99,40 @@ Module Import PTRS_AUX.
     | alloc_ptr_ aid va => Some va
     end.
 
+  Variant alloc_id_aux :=
+  | null_alloc_id_
+  | global_id_ (va : vaddr)
+  | alloc_id_ (id : N).
+  #[global] Instance global_id__inj : Inj (=) (=) global_id_.
+  Proof. by intros ??[=]. Qed.
+  #[only(eq_dec)] derive alloc_id_aux.
+  #[global] Instance : Countable alloc_id_aux.
+  Proof.
+    set (g := λ a : alloc_id_aux,
+      match a with
+      | null_alloc_id_ => inl (inl tt)
+      | global_id_ va => inl (inr va)
+      | alloc_id_ aid => inr aid
+      end).
+    set (f := λ s : unit + N + N,
+      match s with
+      | inl (inl tt) => null_alloc_id_
+      | inl (inr va) => global_id_ va
+      | inr aid => alloc_id_ aid
+      end).
+    apply (inj_countable' (A := unit + N + N) g f).
+    abstract (by case).
+  Defined.
+
+  Definition root_ptr_alloc_id_aux (rp : root_ptr) : alloc_id_aux :=
+    match rp with
+    | nullptr_ => null_alloc_id_
+    | global_ptr_ tu o => global_id_ (global_ptr_encode_vaddr o)
+    | alloc_ptr_ aid _ => alloc_id_ aid
+    end.
+  Definition alloc_id_aux2alloc_id (a : alloc_id_aux) : alloc_id :=
+    MkAllocId (encode_N a).
+  #[global] Instance alloc_id_aux2alloc_id_inj : Inj (=) (=) alloc_id_aux2alloc_id := _.
 End PTRS_AUX.
 
 Module PTRS_OLD_IMPL <: PTRS_INTF.
@@ -859,37 +893,6 @@ Module PTRS_IMPL <: PTRS_INTF.
   #[global] Instance offset_ptr_inj : Inj2 (=) (=) (=) offset_ptr.
   Proof. by intros ???? [=]. Qed.
 
-  Variant alloc_id_aux :=
-  | null_alloc_id_
-  | global_id_ (va : vaddr)
-  | alloc_id_ (id : N).
-  #[global] Instance global_id__inj : Inj (=) (=) global_id_.
-  Proof. by intros ??[=]. Qed.
-  #[only(eq_dec)] derive alloc_id_aux.
-  #[global] Instance : Countable alloc_id_aux.
-  Proof.
-    set (g := λ a : alloc_id_aux,
-      match a with
-      | null_alloc_id_ => inl (inl tt)
-      | global_id_ va => inl (inr va)
-      | alloc_id_ aid => inr aid
-      end).
-    set (f := λ s : unit + N + N,
-      match s with
-      | inl (inl tt) => null_alloc_id_
-      | inl (inr va) => global_id_ va
-      | inr aid => alloc_id_ aid
-      end).
-    apply (inj_countable' (A := unit + N + N) g f).
-    abstract (by case).
-  Defined.
-
-  Definition root_ptr_alloc_id_aux (rp : root_ptr) : alloc_id_aux :=
-      match rp with
-      | nullptr_ => null_alloc_id_
-      | global_ptr_ tu o => global_id_ (global_ptr_encode_vaddr o)
-      | alloc_ptr_ aid _ => alloc_id_ aid
-      end.
   (* The above definition ensures alloc_ids are disjoint between different
   classes.
   XXX: we ignore TUs? They don't really help anyway, we should store the genv in there...
@@ -902,9 +905,6 @@ Module PTRS_IMPL <: PTRS_INTF.
     | fun_ptr_ tu o => Some (global_id_ (global_ptr_encode_vaddr o))
     | root p => Some (root_ptr_alloc_id_aux p)
     end.
-  Definition alloc_id_aux2alloc_id (a : alloc_id_aux) : alloc_id :=
-    MkAllocId (encode_N a).
-  #[global] Instance alloc_id_aux2alloc_id_inj : Inj (=) (=) alloc_id_aux2alloc_id := _.
 
   Definition ptr_alloc_id (p : ptr) : option alloc_id :=
     alloc_id_aux2alloc_id <$> ptr_alloc_id_aux p.
