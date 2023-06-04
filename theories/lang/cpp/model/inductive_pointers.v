@@ -43,7 +43,7 @@ Module Import PTRS_AUX.
   Proof. solve_decision. Defined.
   #[global] Declare Instance raw_offset_seg_countable : Countable raw_offset_seg.
 
-  Definition offset_seg : Set := raw_offset_seg * Z.
+  Definition offset_seg : Set := raw_offset_seg.
   #[export] Instance offset_seg_eq_dec : EqDecision offset_seg := _.
   #[export] Instance offset_seg_countable : Countable offset_seg := _.
 
@@ -57,8 +57,8 @@ Module Import PTRS_AUX.
     end.
   Definition mk_offset_seg σ (ro : raw_offset_seg) : offset_seg :=
     match eval_raw_offset_seg σ ro with
-    | None => (o_invalid_, 0%Z)
-    | Some off => (ro, off)
+    | None => o_invalid_
+    | Some off => ro
     end.
   #[global] Arguments mk_offset_seg _ !_ /.
 
@@ -70,13 +70,13 @@ Module Import PTRS_AUX.
   #[export] Instance raw_offset_countable : Countable raw_offset := _.
 
   (* This is probably sound, since it allows temporary underflows. *)
-  Definition eval_offset_seg (os : offset_seg) : option Z :=
+  Definition eval_offset_seg σ (os : offset_seg) : option Z :=
     match os with
-    | (o_invalid_, _) => None
-    | (_, z) => Some z
+    | o_invalid_ => None
+    | o => eval_raw_offset_seg σ o
     end.
-  Definition eval_raw_offset (o : raw_offset) : option Z :=
-    foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg o).
+  Definition eval_raw_offset σ (o : raw_offset) : option Z :=
+    foldr (liftM2 Z.add) (Some 0) (map (eval_offset_seg σ) o).
 
   Notation isnt o pattern :=
     (match o with | pattern => False | _ => True end).
@@ -103,21 +103,21 @@ End PTRS_AUX.
 
 Module PTRS_OLD_IMPL <: PTRS_INTF.
   Section roff_canon.
-    (* Context {σ : genv}. *)
+    Context {σ : genv}.
 
     (* We currently ensure the offsets in the destination are correct wrt the source, not that the ones in the source are consistent with each other. *)
     Inductive roff_canon : raw_offset -> raw_offset -> Prop :=
     | o_nil :
       roff_canon [] []
-    | o_field_canon s d f o :
+    | o_field_canon s d f :
       (* is_Some (o_field_off σ f) -> *) (* not canonicalization's problem? *)
       roff_canon s d ->
-      roff_canon ((o_field_ f, o) :: s) ((o_field_ f, o) :: d)
-    | o_base_canon s d base derived o :
+      roff_canon (o_field_ f :: s) (o_field_ f :: d)
+    | o_base_canon s d base derived :
       (* no, because (valid?) normal forms don't use [o_derived]? *)
       (* isnt d ((o_derived_ _ _ , _) :: _) -> *)
       roff_canon s d ->
-      roff_canon ((o_base_ derived base, o) :: s) ((o_base_ derived base, o) :: d)
+      roff_canon (o_base_ derived base :: s) (o_base_ derived base :: d)
     (* should paths start from the complete object? If
     yes, as done by Ramananandro [POPL 2012],
     o_derived should just cancel out o_base, and this should be omitted. *)
@@ -125,75 +125,75 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
       isnt d (o_base_ _ _ :: d) ->
       roff_canon s d ->
       roff_canon (o_derived_ base derived :: s) (o_derived_ base derived :: d) *)
-    | o_derived_cancel_canon s d derived base o1 o2 :
+    | o_derived_cancel_canon s d derived base :
       roff_canon s d ->
       (* This premise is a hack, but without it, normalization might not be deterministic. Thankfully, paths can't contain o_derived step, so we're good! *)
       (* roff_canon (o_base_ derived base :: s) (o_base_ derived base :: d) -> *)
-      roff_canon ((o_derived_ base derived, o1) :: (o_base_ derived base, o2) :: s) d
+      roff_canon (o_derived_ base derived :: o_base_ derived base :: s) d
     | o_sub_0_canon s d ty :
       roff_canon s d ->
-      roff_canon ((o_sub_ ty 0, 0) :: s) d
-    | o_sub_canon s d ty1 z o :
+      roff_canon (o_sub_ ty 0 :: s) d
+    | o_sub_canon s d ty1 z :
       match d with
-      | ((o_sub_ ty2 _, _) :: _) => ty1 <> ty2
+      | (o_sub_ ty2 _ :: _) => ty1 <> ty2
       | _ => True
       end ->
       (* In fact, we want [0 < z], but that's a matter of validity, not canonicalization. *)
       z <> 0 ->
       (* isnt o (o_sub_ _ _) *)
       roff_canon s d ->
-      roff_canon ((o_sub_ ty1 z, o) :: s) ((o_sub_ ty1 z, o) :: d)
-    | o_sub_merge_canon s d ty z1 z2 o1 o2 :
+      roff_canon (o_sub_ ty1 z :: s) (o_sub_ ty1 z :: d)
+    | o_sub_merge_canon s d ty z1 z2 :
       (* Again, validity would require [> 0]. *)
       z1 + z2 <> 0 ->
-      roff_canon s ((o_sub_ ty z1, o1) :: d) ->
-      roff_canon ((o_sub_ ty z2, o2) :: s) ((o_sub_ ty (z1 + z2), o1 + o2) :: d)
+      roff_canon s (o_sub_ ty z1 :: d) ->
+      roff_canon (o_sub_ ty z2 :: s) (o_sub_ ty (z1 + z2) :: d)
     .
   End roff_canon.
 
-  Lemma roff_canon_o_base_inv s d derived base o1 o2 :
-    roff_canon ((o_base_ derived base, o1) :: s) ((o_base_ derived base, o2) :: d) ->
+  Lemma roff_canon_o_base_inv s d derived base :
+    roff_canon (o_base_ derived base :: s) (o_base_ derived base :: d) ->
     roff_canon s d.
   Proof. inversion 1; auto. Qed.
 
-  Lemma roff_canon_o_sub_wf s d ty z o :
-    roff_canon s ((o_sub_ ty z, o) :: d) ->
+  Lemma roff_canon_o_sub_wf s d ty z :
+    roff_canon s (o_sub_ ty z :: d) ->
     z <> 0.
   Proof.
     move E: (_ :: _) => d' Hcn.
     elim: Hcn E; naive_solver eauto with lia.
   Qed.
 
-  Lemma roff_canon_o_sub_no_dup s d o ty1 z ro :
-    roff_canon s ((o_sub_ ty1 z, ro) :: o :: d) ->
+  Lemma roff_canon_o_sub_no_dup s d o ty1 z :
+    roff_canon s (o_sub_ ty1 z :: o :: d) ->
     match o with
-    | (o_sub_ ty2 _, _) => ty1 <> ty2
+    | o_sub_ ty2 _ => ty1 <> ty2
     | _ => True
     end.
   Proof.
-    move E: ((o_sub_ _ _, _) :: _) => d' Hcn.
-    elim: Hcn z ro E; naive_solver.
+    move E: (o_sub_ _ _ :: _) => d' Hcn.
+    elim: Hcn z E; naive_solver.
   Qed.
 
   Definition offset_seg_cons (os : offset_seg) (oss : list offset_seg) : list offset_seg :=
     match os, oss with
-    | (o_sub_ ty1 n1, off1), _ =>
-      if decide (n1 = 0 /\ off1 = 0)%Z then oss else
+    | o_sub_ ty1 n1, _ =>
+      if decide (n1 = 0)%Z then oss else
       match oss with
-        | (o_sub_ ty2 n2, off2) :: oss' =>
+        | o_sub_ ty2 n2 :: oss' =>
         if decide (ty1 <> ty2)
           then os :: oss
-          else if decide (n2 + n1 = 0 /\ off1 + off2 = 0)%Z
+          else if decide (n2 + n1 = 0)%Z
           then oss'
-          else (o_sub_ ty1 (n2 + n1), (off2 + off1)%Z) :: oss'
+          else o_sub_ ty1 (n2 + n1) :: oss'
         | _ => os :: oss
       end
-    | (o_derived_ base1 der1, off1), (o_base_ der2 base2, off2) :: oss' =>
+    | o_derived_ base1 der1, o_base_ der2 base2 :: oss' =>
       if decide (der1 = der2 /\ base1 = base2)
       then oss'
       else os :: oss
     (* | (o_invalid_, _), _ => [(o_invalid_, 0%Z)] *)
-    | (o_invalid_, z), _ => [(o_invalid_, z)]
+    | o_invalid_, _ => [o_invalid_]
     | _, _ => os :: oss
     end.
 
@@ -206,9 +206,9 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
   Arguments raw_offset_wf !_ /.
   #[global] Instance raw_offset_wf_pi ro : ProofIrrel (raw_offset_wf ro) := _.
   Lemma singleton_raw_offset_wf {os}
-    (Hn0 : isnt os (o_sub_ _ 0, _)) :
+    (Hn0 : isnt os (o_sub_ _ 0)) :
     raw_offset_wf [os].
-  Proof. destruct os as [[] ?] => //=; case_decide; naive_solver. Qed.
+  Proof. destruct os as [] => //=; case_decide; naive_solver. Qed.
 
   #[local] Hint Constructors roff_canon : core.
   Theorem canon_wf_0 src dst :
@@ -316,9 +316,9 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     Ltac res_false := start; repeat step_false.
 
     Goal test []. Proof. res_true. Qed.
-    Goal `{n1 <> 0 -> test [(o_sub_ ty n1, o1)] }.
+    Goal `{n1 <> 0 -> test [o_sub_ ty n1] }.
     Proof. res_false; naive_solver. Qed.
-    Goal `{n1 <> 0 -> n2 <> 0 -> n2 + n1 <> 0 -> test [(o_sub_ ty n1, o1); (o_sub_ ty n2, o2)] }.
+    Goal `{n1 <> 0 -> n2 <> 0 -> n2 + n1 <> 0 -> test [o_sub_ ty n1; o_sub_ ty n2] }.
     Proof. res_false; naive_solver. Qed.
 
     (* Goal `{test [(o_sub_ ty n1, o1); (o_sub_ ty n2, o2); (o_field_ f, o3)] }.
@@ -334,8 +334,8 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     Proof. start. step_false. step_true. step_false. Qed. *)
   End tests.
 
-  Definition eval_offset (_ : genv) (o : offset) : option Z :=
-    eval_raw_offset (`o).
+  Definition eval_offset (σ : genv) (o : offset) : option Z :=
+    eval_raw_offset σ (`o).
 
   Lemma eval_offset_nil :
     forall {σ : genv} (wf : raw_offset_wf []),
@@ -349,9 +349,9 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
   Proof.
     rewrite /o_sub/eval_offset/eval_raw_offset/=.
     rewrite /= /mkOffset /mk_offset_seg/=/o_sub_off/=.
-    case_decide; subst => //=;
-      case: size_of=> [sz|] //=.
+    case_decide; subst => //=; case Hsz : size_of=> [sz|] //=.
     by f_equiv; lia.
+    rewrite /o_sub_off/= Hsz /=; apply (f_equal Some).
     by rewrite (comm_L _ i) right_id_L.
   Qed.
 
@@ -363,7 +363,9 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
   Proof.
     move => -> _ _. cbn.
     rewrite/mk_offset_seg /eval_raw_offset_seg /o_field_off /=.
-    case: offset_of => [off|//] /=. by rewrite right_id_L.
+    case Hoff: offset_of => [off|//] /=.
+    rewrite /o_field_off Hoff /=; apply (f_equal Some).
+    by rewrite right_id_L.
   Qed.
 
   Class InvolApp {X} (f : list X → list X) :=
