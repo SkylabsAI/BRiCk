@@ -580,7 +580,7 @@ public:
             print.output() << "," << fmt::nbsp
                            << (method->isVirtual() ? "Virtual" : "Direct")
                            << "," << fmt::nbsp;
-            cprint.printQualType(method->getType(), print);
+            printMemberFunctionType(method, print, cprint);
             print.output() << fmt::rparen;
             print.end_ctor() << fmt::nbsp;
 
@@ -905,6 +905,29 @@ public:
         done(expr, print, cprint);
     }
 
+    void printMemberFunctionType(const CXXMethodDecl* meth, CoqPrinter& print, ClangPrinter& cprint) {
+        print.ctor("@Tmember_function");
+        cprint.printTypeName(meth->getParent(), print);
+        print.output() << fmt::nbsp;
+        cprint.printRefQualifier(meth->getRefQualifier(), print);
+        print.output() << fmt::nbsp;
+        cprint.printQualifier(meth->isConst(), meth->isVolatile(), print);
+        print.output() << fmt::nbsp;
+        print.output() << "CC_C";
+        // cprint.printCallingConv(meth->, print);
+        print.output() << fmt::nbsp;
+        cprint.printVariadic(meth->isVariadic(), print);
+        print.output() << fmt::nbsp;
+        cprint.printQualType(meth->getReturnType(), print);
+        print.output() << fmt::nbsp;
+        // parameters
+        print.list(meth->parameters(), [&cprint](auto print, auto i) {
+            cprint.printType(i->getType().getTypePtr(), print);
+        });
+
+        print.end_ctor();
+    }
+
     void VisitCXXMemberCallExpr(const CXXMemberCallExpr* expr,
                                 CoqPrinter& print, ClangPrinter& cprint,
                                 const ASTContext&, OpaqueNames& li) {
@@ -925,7 +948,7 @@ public:
 
             if (const CXXMethodDecl* const md =
                     dyn_cast<CXXMethodDecl>(me->getMemberDecl())) {
-                cprint.printQualType(md->getType(), print);
+                printMemberFunctionType(md, print, cprint);
             } else {
                 assert(false &&
                        "MemberDecl in MemberCall must be a MethodDecl");
