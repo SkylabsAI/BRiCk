@@ -135,7 +135,7 @@ Module Import PTRS_AUX.
   #[global] Instance alloc_id_aux2alloc_id_inj : Inj (=) (=) alloc_id_aux2alloc_id := _.
 End PTRS_AUX.
 
-Module PTRS_OLD_IMPL <: PTRS_INTF.
+Module PTRS_OLD_IMPL. (* <: PTRS_INTF *)
   Section roff_canon.
     Context {σ : genv}.
 
@@ -452,6 +452,13 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
   #[global] Instance offset_ptr_inj : Inj2 (=) (=) (=) offset_ptr.
   Proof. by intros ???? [=]. Qed.
 
+  Definition root_ptr_alloc_id (rp : root_ptr) : option alloc_id :=
+    match rp with
+    | nullptr_ => Some null_alloc_id
+    | global_ptr_ tu o => Some (global_ptr_encode_aid o)
+    | alloc_ptr_ aid _ => Some (MkAllocId aid)
+    end.
+
   Definition ptr_alloc_id (p : ptr) : option alloc_id :=
     match p with
     | invalid_ptr_ => None
@@ -459,15 +466,18 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     | offset_ptr p o => root_ptr_alloc_id p
     end.
 
-  Definition ptr_vaddr (p : ptr) : option vaddr :=
+  Definition ptr_vaddr {σ} (p : ptr) : option vaddr :=
     match p with
     | invalid_ptr_ => None
     | fun_ptr_ tu o => Some (global_ptr_encode_vaddr o)
     | offset_ptr p o =>
-      foldr
+      va ← root_ptr_vaddr p;
+      zo ← eval_offset σ o;
+      offset_vaddr zo va
+      (* mjoin (offset_vaddr <$> eval_offset _ o <*> root_ptr_vaddr p) *)
+      (* foldr
         (λ off ova, ova ≫= offset_vaddr off)
-        (root_ptr_vaddr p)
-        (snd <$> `o)
+        (root_ptr_vaddr p) *)
     end.
 
   Definition lift_root_ptr (rp : root_ptr) : ptr := offset_ptr rp o_id.
@@ -487,24 +497,24 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
 
   (* Some proofs using these helpers could be shortened, tactic-wise, but I find
   them clearer this way, and they work in both models. *)
-  Lemma ptr_vaddr_global_ptr tu o :
+  Lemma ptr_vaddr_global_ptr σ tu o :
     ptr_vaddr (global_ptr tu o) = Some (global_ptr_encode_vaddr o).
   Proof. done. Qed.
   Lemma ptr_alloc_id_global_ptr tu o :
     ptr_alloc_id (global_ptr tu o) = Some (global_ptr_encode_aid o).
   Proof. done. Qed.
 
-  Lemma global_ptr_nonnull_addr tu o : ptr_vaddr (global_ptr tu o) <> Some 0%N.
+  Lemma global_ptr_nonnull_addr σ tu o : ptr_vaddr (global_ptr tu o) <> Some 0%N.
   Proof. rewrite ptr_vaddr_global_ptr. done. Qed.
   Lemma global_ptr_nonnull_aid tu o : ptr_alloc_id (global_ptr tu o) <> Some null_alloc_id.
   Proof. rewrite ptr_alloc_id_global_ptr. done. Qed.
 
-  #[global] Instance global_ptr_addr_inj tu : Inj (=) (=) (λ o, ptr_vaddr (global_ptr tu o)).
+  #[global] Instance global_ptr_addr_inj σ tu : Inj (=) (=) (λ o, ptr_vaddr (global_ptr tu o)).
   Proof. intros ??. rewrite !ptr_vaddr_global_ptr. by intros ?%(inj _)%(inj _). Qed.
   #[global] Instance global_ptr_aid_inj tu : Inj (=) (=) (λ o, ptr_alloc_id (global_ptr tu o)).
   Proof. intros ??. rewrite !ptr_alloc_id_global_ptr. by intros ?%(inj _)%(inj _). Qed.
 
-  Lemma ptr_vaddr_nullptr : ptr_vaddr nullptr = Some 0%N.
+  Lemma ptr_vaddr_nullptr σ : ptr_vaddr nullptr = Some 0%N.
   Proof. done. Qed.
 
   Lemma ptr_alloc_id_nullptr : ptr_alloc_id nullptr = Some null_alloc_id.
@@ -551,19 +561,16 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
       unfold eval_offset, eval_raw_offset; simpl.
       unfold raw_offset_wf, raw_offset_collapse in r0; simpl in r0.
       rewrite r0/=.
-      destruct (eval_offset_seg o);
-        destruct (foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg l))=> //.
+      by destruct liftM2.
     - rewrite __o_dot_nil_r.
       unfold eval_offset, eval_raw_offset=> /=.
-      destruct (liftM2 Z.add (eval_offset_seg o)
-                       (foldr (liftM2 Z.add) (Some 0) (map eval_offset_seg l)))=> //.
-      unfold add_opt; simpl.
+      case: liftM2 => //= z.
       by rewrite Z.add_0_r.
     - unfold __o_dot, raw_offset_merge, raw_offset_collapse, eval_offset, eval_raw_offset.
       unfold proj1_sig; rewrite foldr_app.
       unfold raw_offset_wf, raw_offset_collapse in *.
       rewrite !foldr_fmap.
-      rewrite r0.
+      rewrite r0 /=.
       admit.
   Admitted.
 
@@ -638,7 +645,8 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     p ,, o_base σ derived base ,, o_derived σ base derived = p.
   Proof.
     rewrite -offset_ptr_dot; UNFOLD_dot.
-    intros Hsome. destruct p => //=.
+    intros Hsome; move: (Hsome) => [off Hoff]. destruct p => //=.
+    rewrite /o_base_off /o_derived_off Hoff /=.
     (* TODO: this model collapses invalid offsets on fun_ptr_ to invalid pointers too eagerly. *)
     admit.
     f_equiv.
@@ -648,7 +656,14 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     destruct parent_offset_tu => //= -[_] /=.
     rewrite /raw_offset_merge/=.
     rewrite /raw_offset_collapse /=.
-    rewrite foldr_app /=.
+    rewrite foldr_app. simpl.
+    destruct o as [os WF] => //=.
+    induction os => //=.
+    admit.
+    (* hnf in WF.
+    rewrite IHos.
+
+    simpl. *)
     (* TODO: here we should prove that cancellation works out, but the
     ill-behaved normalization makes this too complex. *)
   Admitted.
@@ -658,14 +673,10 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     p ,, o_derived σ base derived ,, o_base σ derived base = p.
   Proof.
     rewrite -offset_ptr_dot; UNFOLD_dot.
-    intros Hsome. destruct p => //=.
+    intros Hsome; move: (Hsome) => [off Hoff]. destruct p => //=.
     {
-      case_match => //.
-      exfalso.
-      Fail repeat case_match; naive_solver.
-      (* TODO: this model collapses invalid offsets on fun_ptr_ to invalid
-      pointers too eagerly. *)
-      admit.
+      case_match eqn:Heqn => //; move: Heqn.
+      by rewrite /o_base_off /o_derived_off Hoff /= decide_True.
     }
     f_equiv.
     case: o => o. rewrite /raw_offset_wf => Hwf.
@@ -675,11 +686,10 @@ Module PTRS_OLD_IMPL <: PTRS_INTF.
     destruct parent_offset_tu => //= -[_] /=.
     rewrite decide_True //=.
     rewrite /raw_offset_merge/= app_nil_r //.
-    all: done.
-  Admitted.
+  Qed.
 
-  Include PTRS_DERIVED_MIXIN.
-  Include PTRS_MIXIN.
+  (* Include PTRS_DERIVED_MIXIN.
+  Include PTRS_MIXIN. *)
 End PTRS_OLD_IMPL.
 
 (* Classical quotients. Inspired by Lean 3's library. TODO license. *)
