@@ -389,6 +389,7 @@ Definition valcat_from_type (t : type) : ValCat :=
 Definition valcat_from_function_type (t : type) : ValCat :=
   match t with
   | @Tfunction _ _ ret _ => valcat_from_type ret
+  | Tmember_function _ _ _ ret _ => valcat_from_type ret
   | _ => UNEXPECTED_valcat t
   end.
 
