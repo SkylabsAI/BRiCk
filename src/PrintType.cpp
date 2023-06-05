@@ -457,7 +457,7 @@ public:
             print.output() << fmt::nbsp;
             cprint.printQualType(type->getPointeeType(), print);
         } else {
-            print.ctor("Tmember_pointer_func");
+            print.ctor("@Tmember_pointer_func");
             print_type(class_type);
             print.output() << fmt::nbsp;
             if (auto ft = dyn_cast<FunctionProtoType>(
