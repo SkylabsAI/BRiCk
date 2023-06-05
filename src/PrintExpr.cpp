@@ -1128,7 +1128,25 @@ public:
                 cprint.printQualType(expr->getArgumentType(), print);
                 print.output() << fmt::rparen;
             } else if (expr->getArgumentExpr()) {
+                // We treat [sizeof(e)] as [sizeof(decltype(e))].
+                // Currently, we statically resolve [decltype].
+                // This is necessary to support coding patterns such
+                // as:
+                // struct C {
+                //   int x;
+                //   static auto f() { return sizeof(x); }
+                // };
+                // because the semantics of the [x] expression
+                // is not compositional, e.g., we need to reconcile
+                // [&x], [sizeof(x)], [sizeof(x[0])], etc. Specifically
+                // the type of [x] is [int] while the type of [&x] is
+                // [int C::*]. This is problematic because the semantics
+                // of [&] is syntax dependent, not type dependent.
                 auto ae = expr->getArgumentExpr();
+                print.ctor("trait_type", false);
+                cprint.printQualType(ae->getType(), print);
+                print.output() << fmt::rparen;
+#if 0
                 auto dre = dyn_cast<DeclRefExpr>(ae->IgnoreParens());
                 if (dre && dyn_cast<FieldDecl>(dre->getDecl())) {
                     // In a static method, you can reference a field without taking its
@@ -1145,6 +1163,7 @@ public:
                     cprint.printExpr(ae, print, li);
                     print.output() << fmt::rparen;
                 }
+#endif
             } else {
                 assert(false);
                 //fatal("argument to sizeof/alignof is not a type or an expression.");
