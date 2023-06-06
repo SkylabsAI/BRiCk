@@ -219,7 +219,7 @@ Definition dtor_spec `{Σ : cpp_logic, σ : genv} (tt : type_table) (dtor : ptr)
 
 #[local] Definition wp_invoke_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  letI* p := dtor_spec tu.(types) dtor cls this in
+  letI* p := dtor_spec tu.(types) cls dtor this in
   (**
   We inline [operand_receive] (which could be hoisted and shared).
   *)
