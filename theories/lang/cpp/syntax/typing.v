@@ -128,8 +128,9 @@ Proof. destruct t; cbn; auto. by move/unqualified_qual. Qed.
 Lemma erase_qualifiers_idemp t : erase_qualifiers (erase_qualifiers t) = erase_qualifiers t.
 Proof.
   move: t. fix IHt 1=>t.
-  destruct t as [| | | | | | | | |cc ar ret args| | | | | |]; cbn; auto with f_equal.
-  { (* functions *) rewrite IHt. f_equal. induction args; cbn; auto with f_equal. }
+  destruct t as [| | | | | | | | |cc ar ret args| | | |nm rq cv cc ar ret args| | |]; cbn; auto with f_equal.
+  (* functions and member functions *)
+  all: rewrite IHt; f_equal; induction args; cbn; auto with f_equal.
 Qed.
 Lemma drop_qualifiers_idemp t : drop_qualifiers (drop_qualifiers t) = drop_qualifiers t.
 Proof. by rewrite drop_qualifiers_unqual. Qed.
