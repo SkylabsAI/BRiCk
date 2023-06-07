@@ -76,11 +76,13 @@ Section wp_gen.
     FRAME WP WP' ->
     Q -* Q' |-- wp_gen WP n Q -* wp_gen WP' n Q'.
   Proof.
-    intros wp_frame. rewrite /wp_gen -!foldr_rev.
+    rewrite /wp_gen -!foldr_rev.
     induction n using N.peano_ind.
-    { rewrite !seqN_0/=. iIntros "HQ >Q !>". by iApply "HQ". }
-    rewrite {}IHn seqN_S_end_app left_id_L rev_app_distr /=.
-    by apply wp_frame.
+    { rewrite !seqN_0 /=.
+      intros. iIntros "X >Y"; iModIntro; iApply "X". done. }
+    rewrite seqN_S_end_app left_id_L rev_app_distr /=.
+    intros.
+    iIntros "X". iApply H0. iApply IHn; eauto.
   Qed.
 
   #[local] Notation SHIFT WP :=
@@ -209,23 +211,18 @@ End prim.
 invoking the destructor [dtor] for type [ty] on [this].
 *)
 #[local] Definition wp_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  (*
-  NOTE: Using [Tfunction Tvoid nil] implicitly requires all
-  destructors to have C calling convention. Arguments [this :: nil] is
-  correct for member functions taking no arguments.
-  *)
-  letI* p := mspec tu.(types) ty (Tfunction Tvoid nil) dtor (this :: nil) in
+  (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
+  letI* p := wp_fptr tu.(types) (Tmember_function cls ref_qualifier.None QM Tvoid nil) dtor (this :: nil) in
   (**
   We inline [operand_receive] (which could be hoisted and shared).
   *)
   Exists v, p |-> primR Tvoid (cQp.mut 1) v **
-  this |-> tblockR ty (cQp.mut 1) **
+  this |-> tblockR (Tnamed cls) (cQp.mut 1) **
   Q.
 
 mlock Definition wp_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  wp_destructor_body tu ty dtor this Q.
+    (cls : globname) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
+  wp_destructor_body tu cls dtor this Q.
 #[global] Arguments wp_destructor {_ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
 (** Note: All we need in this file is [type_table_le]. *)
@@ -281,7 +278,7 @@ Section dtor.
     Q -* Q' |-- wp_destructor tu ty dtor this Q -* wp_destructor tu' ty dtor this Q'.
   Proof.
     intros. wp_destructor_unfold. iIntros "HQ".
-    iApply mspec_frame_fupd_strong; first by auto.
+    iApply wp_fptr_frame_fupd; first by auto.
     iIntros "%p (%v & V & B & Q)". iExists v. iFrame "V B". by iApply "HQ".
   Qed.
 
@@ -290,8 +287,8 @@ Section dtor.
     |-- wp_destructor tu ty dtor this Q.
   Proof.
     wp_destructor_unfold. iIntros "wp".
-    iApply mspec_shift. iMod "wp".
-    iApply (mspec_frame with "[] wp").
+    iApply wp_fptr_shift. iMod "wp".
+    iApply (wp_fptr_frame with "[] wp").
     iIntros (p). iIntros "(%v & V & B & >Q) !>".
     iExists v. iFrame "V B Q".
   Qed.
@@ -326,13 +323,13 @@ End dtor.
 
     TODO let's find some justification in the standard.
     *)
-    wp_destructor tu (Tnamed cls) (_global s.(s_dtor)) this Q
+    wp_destructor tu cls (_global s.(s_dtor)) this Q
   | Some (Gunion u) =>
     (*
     Unions cannot have [virtual] destructors: we directly invoke the
     destructor.
     *)
-    wp_destructor tu (Tnamed cls) (_global u.(u_dtor)) this Q
+    wp_destructor tu cls (_global u.(u_dtor)) this Q
   | _ => |={top}=> ERROR ("wp_destroy_named: cannot resolve", cls)
   end.
 
@@ -382,9 +379,9 @@ Section named.
 
   Let wp_destroy_named_intro_body (tu : translation_unit)
       (cls : globname) (this : ptr) (Q : epred) : mpred :=
-    match tu.(types) !! cls with
-    | Some (Gstruct s) => wp_destructor tu (Tnamed cls) (_global s.(s_dtor)) this Q
-    | Some (Gunion u) => wp_destructor tu (Tnamed cls) (_global u.(u_dtor)) this Q
+    match types tu !! cls with
+    | Some (Gstruct s) => wp_destructor tu cls (_global s.(s_dtor)) this Q
+    | Some (Gunion u) => wp_destructor tu cls (_global u.(u_dtor)) this Q
     | _ => False
     end.
 
@@ -394,14 +391,14 @@ Section named.
   Proof. wp_destroy_named_unfold. destruct (_ !! _) as [[] |]; auto. Qed.
 
   Lemma wp_destroy_named_intro_struct tu cls s this Q :
-    tu.(types) !! cls = Some (Gstruct s) ->
-    wp_destructor tu (Tnamed cls) (_global s.(s_dtor)) this Q
+    types tu !! cls = Some (Gstruct s) ->
+    wp_destructor tu cls (_global s.(s_dtor)) this Q
     |-- wp_destroy_named tu cls this Q.
   Proof. by rewrite -wp_destroy_named_intro=>->. Qed.
 
   Lemma wp_destroy_named_intro_union tu cls u this Q :
-    tu.(types) !! cls = Some (Gunion u) ->
-    wp_destructor tu (Tnamed cls) (_global u.(u_dtor)) this Q
+    types tu !! cls = Some (Gunion u) ->
+    wp_destructor tu cls (_global u.(u_dtor)) this Q
     |-- wp_destroy_named tu cls this Q.
   Proof. by rewrite -wp_destroy_named_intro=>->. Qed.
 
@@ -413,13 +410,13 @@ Section named.
   Lemma wp_destroy_named_elim_struct tu cls s this Q :
     tu.(types) !! cls = Some (Gstruct s) ->
     wp_destroy_named tu cls this Q
-    |-- wp_destructor tu (Tnamed cls) (_global s.(s_dtor)) this Q.
+    |-- wp_destructor tu cls (_global s.(s_dtor)) this Q.
   Proof. by rewrite wp_destroy_named_elim=>->. Qed.
 
   Lemma wp_destroy_named_elim_union tu cls u this Q :
     tu.(types) !! cls = Some (Gunion u) ->
     wp_destroy_named tu cls this Q
-    |-- wp_destructor tu (Tnamed cls) (_global u.(u_dtor)) this Q.
+    |-- wp_destructor tu cls (_global u.(u_dtor)) this Q.
   Proof. by rewrite wp_destroy_named_elim=>->. Qed.
 
   #[global] Instance: Params (@wp_destroy_named) 6 := {}.
@@ -531,6 +528,7 @@ Section body.
     | Tnullptr
     | Tptr _
     | Tmember_pointer _ _
+    | Tmember_function _ _ _ _ _
     | Tvoid =>
       wp_destroy_prim tu cv rty this Q
 
@@ -660,10 +658,10 @@ Section val_array.
     TULE tu tu' ->
     Q -* Q' |-- wp_destroy_val tu cv ty this Q -* wp_destroy_val tu' cv ty this Q'.
   Proof.
-    move: tu tu' cv this Q Q'. induction ty=>tu tu' cv this Q Q' Htu.
+    move: tu tu' cv this Q Q'. induction ty=>tu tu' cv' this Q Q' Htu.
     all: wp_destroy_val_unfold; auto.
     all: iIntros "? >wp !> !>"; iRevert "wp"; iStopProof.
-    all: destruct (q_const cv); [rewrite -wp_const_frame|cbn]; auto.
+    all: destruct (q_const cv'); [rewrite -wp_const_frame|cbn]; auto.
     all: wp_destroy_array_unfold; rewrite !destroy_val_wp_destroy_val.
     all: apply wp_gen_frame; auto.
   Qed.
@@ -684,11 +682,11 @@ Section val_array.
     (|={top}=> wp_destroy_val tu cv ty this (|={top}=> Q))
     |-- wp_destroy_val tu cv ty this Q.
   Proof.
-    move: tu cv this Q. induction ty=>tu cv this Q.
+    move: tu cv this Q. induction ty=>tu cv' this Q.
     all: wp_destroy_val_unfold; auto using wp_destroy_prim_shift.
     (* Laters *)
     all: iIntros ">>wp !> !>".
-    all: destruct (q_const cv);
+    all: destruct (q_const cv');
       [ iApply wp_const_shift; iIntros "!>"; iApply (wp_const_frame with "[] wp"); first done; iIntros "wp !>"
       | cbn ].
     all: try by iApply wp_destroy_named_shift; auto.
@@ -812,6 +810,7 @@ Section val_array.
       | Tvoid =>
         wp_destroy_prim tu cv rty this Q
       | Tfunction _ _
+      | Tmember_function _ _ _ _ _
       | Tarch _ _ => False
       end.
 
