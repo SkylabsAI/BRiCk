@@ -480,6 +480,7 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
       rewrite has_type_prop_bool; naive_solver.
       admit.
       admit.
+      admit.
       { simpl in G. tauto. }
       rewrite has_type_prop_nullptr; naive_solver.
       admit.
