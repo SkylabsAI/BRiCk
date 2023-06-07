@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.prelude.base.
+Require Import bedrock.prelude.list.
 Require Export bedrock.lang.cpp.arith.types.
 Require Import bedrock.lang.cpp.syntax.names.
 
@@ -232,6 +233,15 @@ Module ref_qualifier.
 
 End ref_qualifier.
 
+Variant member_type {type : Set} : Set :=
+| Mdata (_ : type)
+| Mfunc (rq : ref_qualifier.t) (cv : type_qualifiers)
+    {cc : calling_conv} {ar : function_arity} (ret : type) (args : list type).
+Arguments member_type _ : clear implicits.
+#[global] Instance member_type_eq_dec' {type : Set} {_ : EqDecision type} : EqDecision (member_type type).
+Proof. solve_decision. Defined.
+
+Unset Elimination Schemes.
 (* types *)
 Inductive type : Set :=
 | Tptr (_ : type)
@@ -253,7 +263,7 @@ Inductive type : Set :=
 | Tenum (_ : globname) (* enumerations *)
 | Tfunction {cc : calling_conv} {ar : function_arity} (_ : type) (_ : list type)
 | Tbool
-| Tmember_pointer (_ : globname) (_ : type)
+| Tmember_pointer (_ : globname) (_ : member_type type)
 | Tfloat_ (_ : float_type.t)
 
 | Tmember_function (_ : globname) (_ : ref_qualifier.t) (cv : type_qualifiers)
@@ -265,7 +275,7 @@ Inductive type : Set :=
    some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option size]. *)
 | Tarch (_ : option bitsize) (name : bs).
 (* TODO: lift out the common entries for [function_type] *)
-
+Set Elimination Schemes.
 #[only(inhabited)] derive type.
 
 (** Strengthened Induction Principle for [type]
@@ -307,8 +317,10 @@ Section type_ind'.
   Hypothesis Tfunction_ind' : forall {cc : calling_conv} {ar : function_arity} (ty : type) (tys : list type),
     P ty -> Forall P tys -> P (Tfunction ty tys).
   Hypothesis Tbool_ind' : P Tbool.
-  Hypothesis Tmember_pointer_ind' : forall (name : globname) (ty : type),
-    P ty -> P (Tmember_pointer name ty).
+  Hypothesis Tmember_pointer_data_ind' : forall (name : globname) (ty : type),
+    P ty -> P (Tmember_pointer name (Mdata ty)).
+  Hypothesis Tmember_pointer_func_ind' : forall (name : globname) {rq cv ar cc ret args},
+    P ret -> Forall P args -> P (Tmember_pointer name (@Mfunc _ rq cv cc ar ret args)).
   Hypothesis Tfloat_ind' : forall (size : float_type.t),
     P (Tfloat_ size).
   Hypothesis Tmember_func_ind' : forall nm rq cv cc ar ty tys,
@@ -319,42 +331,193 @@ Section type_ind'.
   Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : bs),
     P (Tarch osize name).
 
-  Fixpoint type_ind' (ty : type) : P ty :=
+  Fixpoint type_ind (ty : type) : P ty :=
     let list_type_ind' :=
       (fix list_tys_ind' (tys : list type) : Forall P tys :=
          match tys with
          | []        => List.Forall_nil P
          | ty :: tys' => List.Forall_cons P ty tys'
-                         (type_ind' ty) (list_tys_ind' tys')
+                         (type_ind ty) (list_tys_ind' tys')
          end)
     in
     match ty with
-    | Tptr ty                 => Tptr_ind' ty (type_ind' ty)
-    | Tref ty                 => Tref_ind' ty (type_ind' ty)
-    | Trv_ref ty              => Trv_ref_ind' ty (type_ind' ty)
+    | Tptr ty                 => Tptr_ind' ty (type_ind ty)
+    | Tref ty                 => Tref_ind' ty (type_ind ty)
+    | Trv_ref ty              => Trv_ref_ind' ty (type_ind ty)
     | Tnum sz sgn             => Tnum_ind' sz sgn
     | Tchar_ sz               => Tchar__ind' sz
     | Tvoid                   => Tvoid_ind'
-    | Tarray ty sz            => Tarray_ind' ty sz (type_ind' ty)
+    | Tarray ty sz            => Tarray_ind' ty sz (type_ind ty)
     | Tnamed name             => Tnamed_ind' name
     | Tenum name              => Tenum_ind' name
     | Tfunction ty tys        =>
-      Tfunction_ind' ty tys (type_ind' ty)
+      Tfunction_ind' ty tys (type_ind ty)
                      (* NOTE: We must use a nested [fix] in order to convince Coq that
                           the elements of [tys] are actually subterms of
                           [Tfunction ty tys]
                       *)
                      (list_type_ind' tys)
     | Tbool                   => Tbool_ind'
-    | Tmember_pointer name ty => Tmember_pointer_ind' name ty (type_ind' ty)
+    | Tmember_pointer name (Mdata ty) => Tmember_pointer_data_ind' name ty (type_ind ty)
+    | Tmember_pointer name (Mfunc rq cv ret args) => Tmember_pointer_func_ind' name (type_ind ret) (list_type_ind' args)
     | Tfloat_ sz               => Tfloat_ind' sz
-    | @Tmember_function nm rq cv cc ar ty tys => Tmember_func_ind' nm rq cv cc ar ty tys (type_ind' ty) (list_type_ind' tys)
-    | Tqualified q ty         => Tqualified_ind' q ty (type_ind' ty)
+    | @Tmember_function nm rq cv cc ar ty tys => Tmember_func_ind' nm rq cv cc ar ty tys (type_ind ty) (list_type_ind' tys)
+    | Tqualified q ty         => Tqualified_ind' q ty (type_ind ty)
     | Tnullptr                => Tnullptr_ind'
     | Tarch osize name        => Tarch_ind' osize name
     end.
 
 End type_ind'.
+Section type_rec.
+  Variable P : type -> Set.
+
+  Fixpoint ForallS {T} (P : T -> Set) (ls : list T) : Set :=
+    match ls with
+    | nil => unit
+    | l :: ls => P l * ForallS P ls
+    end%type.
+
+  Hypothesis Tptr_rec : forall (ty : type),
+    P ty -> P (Tptr ty).
+  Hypothesis Tref_rec : forall (ty : type),
+    P ty -> P (Tref ty).
+  Hypothesis Trv_ref_rec : forall (ty : type),
+    P ty -> P (Trv_ref ty).
+  Hypothesis Tnum_rec : forall (size : bitsize) (sign : signed),
+    P (Tnum size sign).
+  Hypothesis Tchar__rec : forall ct, P (Tchar_ ct).
+  Hypothesis Tvoid_rec : P Tvoid.
+  Hypothesis Tarray_rec : forall (ty : type) (sz : N),
+    P ty -> P (Tarray ty sz).
+  Hypothesis Tnamed_rec : forall (name : globname),
+    P (Tnamed name).
+  Hypothesis Tenum_rec : forall (name : globname),
+    P (Tenum name).
+  Hypothesis Tfunction_rec : forall {cc : calling_conv} {ar : function_arity} (ty : type) (tys : list type),
+    P ty -> ForallS P tys -> P (Tfunction ty tys).
+  Hypothesis Tbool_rec : P Tbool.
+  Hypothesis Tmember_pointer_data_rec : forall (name : globname) (ty : type),
+    P ty -> P (Tmember_pointer name (Mdata ty)).
+  Hypothesis Tmember_pointer_func_rec : forall (name : globname) {rq cv ar cc ret args},
+    P ret -> ForallS P args -> P (Tmember_pointer name (@Mfunc _ rq cv cc ar ret args)).
+  Hypothesis Tfloat_rec : forall (size : float_type.t),
+    P (Tfloat_ size).
+  Hypothesis Tmember_func_rec : forall nm rq cv cc ar ty tys,
+      P ty -> ForallS P tys -> P (@Tmember_function nm rq cv cc ar ty tys).
+  Hypothesis Tqualified_rec : forall (q : type_qualifiers) (ty : type),
+    P ty -> P (Tqualified q ty).
+  Hypothesis Tnullptr_rec : P Tnullptr.
+  Hypothesis Tarch_rec : forall (osize : option bitsize) (name : bs),
+    P (Tarch osize name).
+
+  Fixpoint type_rec (ty : type) : P ty :=
+    let list_type_rec :=
+      (fix list_tys_rec (tys : list type) : ForallS P tys :=
+         match tys as tys return ForallS _ tys with
+         | []        => tt
+         | ty :: tys' => (type_rec ty, list_tys_rec tys')
+         end)
+    in
+    match ty with
+    | Tptr ty                 => Tptr_rec ty (type_rec ty)
+    | Tref ty                 => Tref_rec ty (type_rec ty)
+    | Trv_ref ty              => Trv_ref_rec ty (type_rec ty)
+    | Tnum sz sgn             => Tnum_rec sz sgn
+    | Tchar_ sz               => Tchar__rec sz
+    | Tvoid                   => Tvoid_rec
+    | Tarray ty sz            => Tarray_rec ty sz (type_rec ty)
+    | Tnamed name             => Tnamed_rec name
+    | Tenum name              => Tenum_rec name
+    | Tfunction ty tys        =>
+      Tfunction_rec ty tys (type_rec ty)
+                     (* NOTE: We must use a nested [fix] in order to convince Coq that
+                          the elements of [tys] are actually subterms of
+                          [Tfunction ty tys]
+                      *)
+                     (list_type_rec tys)
+    | Tbool                   => Tbool_rec
+    | Tmember_pointer name (Mdata ty) => Tmember_pointer_data_rec name ty (type_rec ty)
+    | Tmember_pointer name (Mfunc rq cv ret args) => Tmember_pointer_func_rec name (type_rec ret) (list_type_rec args)
+    | Tfloat_ sz               => Tfloat_rec sz
+    | @Tmember_function nm rq cv cc ar ty tys => Tmember_func_rec nm rq cv cc ar ty tys (type_rec ty) (list_type_rec tys)
+    | Tqualified q ty         => Tqualified_rec q ty (type_rec ty)
+    | Tnullptr                => Tnullptr_rec
+    | Tarch osize name        => Tarch_rec osize name
+    end.
+
+End type_rec.
+Section type_rect.
+  Variable P : type -> Set.
+
+  Hypothesis Tptr_rect : forall (ty : type),
+    P ty -> P (Tptr ty).
+  Hypothesis Tref_rect : forall (ty : type),
+    P ty -> P (Tref ty).
+  Hypothesis Trv_ref_rect : forall (ty : type),
+    P ty -> P (Trv_ref ty).
+  Hypothesis Tnum_rect : forall (size : bitsize) (sign : signed),
+    P (Tnum size sign).
+  Hypothesis Tchar__rect : forall ct, P (Tchar_ ct).
+  Hypothesis Tvoid_rect : P Tvoid.
+  Hypothesis Tarray_rect : forall (ty : type) (sz : N),
+    P ty -> P (Tarray ty sz).
+  Hypothesis Tnamed_rect : forall (name : globname),
+    P (Tnamed name).
+  Hypothesis Tenum_rect : forall (name : globname),
+    P (Tenum name).
+  Hypothesis Tfunction_rect : forall {cc : calling_conv} {ar : function_arity} (ty : type) (tys : list type),
+    P ty -> ForallT P tys -> P (Tfunction ty tys).
+  Hypothesis Tbool_rect : P Tbool.
+  Hypothesis Tmember_pointer_data_rect : forall (name : globname) (ty : type),
+    P ty -> P (Tmember_pointer name (Mdata ty)).
+  Hypothesis Tmember_pointer_func_rect : forall (name : globname) {rq cv ar cc ret args},
+    P ret -> ForallT P args -> P (Tmember_pointer name (@Mfunc _ rq cv cc ar ret args)).
+  Hypothesis Tfloat_rect : forall (size : float_type.t),
+    P (Tfloat_ size).
+  Hypothesis Tmember_func_rect : forall nm rq cv cc ar ty tys,
+      P ty -> ForallT P tys -> P (@Tmember_function nm rq cv cc ar ty tys).
+  Hypothesis Tqualified_rect : forall (q : type_qualifiers) (ty : type),
+    P ty -> P (Tqualified q ty).
+  Hypothesis Tnullptr_rect : P Tnullptr.
+  Hypothesis Tarch_rect : forall (osize : option bitsize) (name : bs),
+    P (Tarch osize name).
+
+  Fixpoint type_rect (ty : type) : P ty :=
+    let list_type_rect :=
+      (fix list_tys_rect (tys : list type) : ForallT P tys :=
+         match tys as tys return ForallT _ tys with
+         | []        => ForallT_nil _
+         | ty :: tys' => @ForallT_cons _ _ _ _ (type_rect ty) (list_tys_rect tys')
+         end)
+    in
+    match ty with
+    | Tptr ty                 => Tptr_rect ty (type_rect ty)
+    | Tref ty                 => Tref_rect ty (type_rect ty)
+    | Trv_ref ty              => Trv_ref_rect ty (type_rect ty)
+    | Tnum sz sgn             => Tnum_rect sz sgn
+    | Tchar_ sz               => Tchar__rect sz
+    | Tvoid                   => Tvoid_rect
+    | Tarray ty sz            => Tarray_rect ty sz (type_rect ty)
+    | Tnamed name             => Tnamed_rect name
+    | Tenum name              => Tenum_rect name
+    | Tfunction ty tys        =>
+      Tfunction_rect ty tys (type_rect ty)
+                     (* NOTE: We must use a nested [fix] in order to convince Coq that
+                          the elements of [tys] are actually subterms of
+                          [Tfunction ty tys]
+                      *)
+                     (list_type_rect tys)
+    | Tbool                   => Tbool_rect
+    | Tmember_pointer name (Mdata ty) => Tmember_pointer_data_rect name ty (type_rect ty)
+    | Tmember_pointer name (Mfunc rq cv ret args) => Tmember_pointer_func_rect name (type_rect ret) (list_type_rect args)
+    | Tfloat_ sz               => Tfloat_rect sz
+    | @Tmember_function nm rq cv cc ar ty tys => Tmember_func_rect nm rq cv cc ar ty tys (type_rect ty) (list_type_rect tys)
+    | Tqualified q ty         => Tqualified_rect q ty (type_rect ty)
+    | Tnullptr                => Tnullptr_rect
+    | Tarch osize name        => Tarch_rect osize name
+    end.
+End type_rect.
+
 
 (* XXX merge type_eq_dec into type_eq. *)
 Definition type_eq_dec : forall (ty1 ty2 : type), { ty1 = ty2 } + { ty1 <> ty2 }.
@@ -380,6 +543,13 @@ Section type_countable.
   #[global] Instance type_countable : Countable type.
   Proof.
     set enc := fix go (t : type) :=
+      let go_mp mp :=
+        match mp with
+        | Mdata t => [go t]
+        | @Mfunc _ rq cv cc ar ret args =>
+            RQ rq :: QUAL cv :: CC cc :: AR ar :: go ret :: (go <$> args)
+        end
+      in
       match t with
       | Tptr t => GenNode 0 [go t]
       | Tref t => GenNode 1 [go t]
@@ -390,7 +560,7 @@ Section type_countable.
       | Tnamed gn => GenNode 6 [BS gn]
       | @Tfunction cc ar ret args => GenNode 7 $ CC cc :: AR ar :: go ret :: (go <$> args)
       | Tbool => GenNode 8 []
-      | Tmember_pointer gn t => GenNode 9 [BS gn; go t]
+      | Tmember_pointer gn t => GenNode 9 (BS gn :: go_mp t)
       | Tfloat_ sz => GenNode 10 [FLOAT_TYPE sz]
       | @Tmember_function nm rq cv cc ar ret args =>
           GenNode 17 $ BS nm :: RQ rq :: QUAL cv :: CC cc :: AR ar :: go ret :: (go <$> args)
@@ -402,6 +572,14 @@ Section type_countable.
       | Tchar_ sz => GenNode 16 [CHAR_TYPE sz]
       end.
     set dec := fix go t :=
+      let go_mp es :=
+        match es with
+        | [t] => Mdata $ go t
+        | RQ rq :: QUAL cv :: CC cc :: AR ar :: ret :: args =>
+            @Mfunc type rq cv cc ar (go ret) (go <$> args)
+        | _ => Mdata Tvoid (* dummy *)
+        end
+      in
       match t with
       | GenNode 0 [t] => Tptr (go t)
       | GenNode 1 [t] => Tref (go t)
@@ -412,7 +590,7 @@ Section type_countable.
       | GenNode 6 [BS gn] => Tnamed gn
       | GenNode 7 (CC cc :: AR ar :: ret :: args) => @Tfunction cc ar (go ret) (go <$> args)
       | GenNode 8 [] => Tbool
-      | GenNode 9 [BS gn; t] => Tmember_pointer gn (go t)
+      | GenNode 9 (BS gn :: es) => Tmember_pointer gn (go_mp es)
       | GenNode 10 [FLOAT_TYPE sz] => Tfloat_ sz
       | GenNode 17 (BS nm :: RQ rq :: QUAL cv :: CC cc :: AR ar :: ret :: args) =>
           @Tmember_function nm rq cv cc ar (go ret) (go <$> args)
@@ -427,6 +605,9 @@ Section type_countable.
     apply (inj_countable' enc dec). refine (fix go t := _).
     destruct t as [| | | | | | | | |cc ar ret args| | | | | | |[]]; simpl; f_equal; try done.
     induction args; simpl; f_equal; done.
+    { destruct m. rewrite go. repeat case_match; done.
+      f_equal; first apply go.
+      clear -go. induction args => /=//. f_equal; [ apply go | apply IHargs ]. }
     induction l; simpl; f_equal; done.
   Defined.
 End type_countable.
@@ -570,7 +751,7 @@ Section qual_norm.
 
   Lemma qual_norm'_ok f q t : qual_norm_spec f q t (qual_norm' f q t).
   Proof.
-    move: q. induction t=>q.
+    move: q. induction t=>?.
     all: rewrite qual_norm'_unfold.
     all: auto with typeclass_instances.
   Qed.
@@ -648,7 +829,7 @@ Lemma decompose_type_unfold t :
 Proof.
   rewrite /decompose_type qual_norm_unfold.
   destruct t as [| | | | | | | | | | | | | |q t| |]; try done. set pair := fun x y => (x, y).
-  move: q. induction t=>q; try by rewrite right_id_L.
+  move: q. induction t=>?; try by rewrite right_id_L.
   cbn. rewrite left_id_L !IHt /=. f_equal.
   rewrite assoc_L. f_equal.
 Qed.
@@ -694,7 +875,7 @@ Lemma qual_norm'_decompose_type {A} (f : type_qualifiers -> type -> A) q t :
     let p := decompose_type t in
     f (merge_tq q p.1) p.2.
 Proof.
-  move: q. induction t=>q /=; try by rewrite right_id_L.
+  move: q. induction t=>? /=; try by rewrite right_id_L.
   rewrite decompose_type_unfold IHt /=. by rewrite assoc_L.
 Qed.
 
@@ -891,7 +1072,7 @@ Inductive tref_spec : type_qualifiers -> type -> type -> Prop :=
 #[local] Hint Constructors tref_spec : core.
 
 Lemma tref_ok q t : tref_spec q t (tref q t).
-Proof. move: q. induction t=>q; auto with typeclass_instances. Qed.
+Proof. move: q. induction t=>?; auto with typeclass_instances. Qed.
 
 Lemma tref_ind (P : type_qualifiers -> type -> type -> Prop) :
   (∀ q t (Hnonref : NonRef t) (Hunqual : Unqualified t), P q t (Tref $ tqualified q t)) ->
@@ -922,7 +1103,7 @@ Inductive trv_ref_spec : type_qualifiers -> type -> type -> Prop :=
 #[local] Hint Constructors trv_ref_spec : core.
 
 Lemma trv_ref_ok q t : trv_ref_spec q t (trv_ref q t).
-Proof. move: q; induction t=>q; auto with typeclass_instances. Qed.
+Proof. move: q; induction t=>?; auto with typeclass_instances. Qed.
 
 Lemma trv_ref_ind (P : type_qualifiers -> type -> type -> Prop) :
   (∀ q t (Hnonref : NonRef t) (Hunqual : Unqualified t), P q t (Trv_ref $ tqualified q t)) ->
@@ -961,7 +1142,8 @@ Fixpoint normalize_type (t : type) : type :=
   | Tarray t n => Tarray (normalize_type t) n
   | @Tfunction cc ar r args =>
     Tfunction (cc:=cc) (ar:=ar) (drop_norm r) (List.map drop_norm args)
-  | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
+  | Tmember_pointer gn (Mdata t) => Tmember_pointer gn (Mdata $ normalize_type t)
+  | Tmember_pointer gn (@Mfunc _ rq cv cc ar ret args) => Tmember_pointer gn (@Mfunc _ rq cv cc ar (drop_norm ret) (List.map drop_norm args))
   | @Tmember_function nm rq cv cc ar r args =>
     @Tmember_function nm rq cv cc ar (drop_norm r) (List.map drop_norm args)
   | Tqualified q t => qual_norm q t
@@ -989,7 +1171,7 @@ Section normalize_type_idempotent.
   Proof.
     { (* _drop_norm_involutive *)
       generalize dependent q; generalize dependent q';
-        induction ty using type_ind'; intros *;
+        induction ty; intros *;
         rewrite /qual_norm/= ?normalize_type_idempotent//.
       - rewrite map_map /qual_norm !IHty /merge_tq/=;
           erewrite map_ext_Forall; eauto; eapply Forall_impl; last eassumption;
@@ -997,41 +1179,53 @@ Section normalize_type_idempotent.
       - rewrite map_map /qual_norm !IHty /merge_tq/=;
           erewrite map_ext_Forall; eauto; eapply Forall_impl; last eassumption;
           intros * HForall; simpl in HForall; apply HForall.
-      - rewrite IHty !merge_tq_assoc. f_equal.
+      - f_equal; first by apply IHty.
+        clear -H. induction H; first done. simpl. f_equal; eauto.
+      - by rewrite IHty !merge_tq_assoc.
     }
     { (* _qual_norm_involutive *)
       intros *; generalize dependent q;
-        induction ty using type_ind'; intros *; simpl;
-        try solve[destruct q; simpl; now rewrite ?normalize_type_idempotent];
-      destruct q; simpl;
-        rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=;
-        try solve[erewrite map_ext_Forall; eauto; induction tys;
-                  [ now constructor
-                  | constructor;
-                    [ now apply _drop_norm_idempotent
-                    | apply IHtys; now apply Forall_inv_tail in H]]].
+        induction ty; intros *; simpl;
+        try solve[destruct q; simpl; now rewrite ?normalize_type_idempotent].
+      - destruct q; simpl; rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=; f_equal;
+        [ f_equal | f_equal | f_equal | ];
+        solve [ eapply map_ext_Forall; induction tys; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHtys; inversion H; subst; assumption ] ].
+      - destruct q; simpl; rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=; f_equal; f_equal;
+        [ f_equal | f_equal | f_equal | ];
+        solve [ eapply map_ext_Forall; induction args; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHargs; inversion H; subst; assumption ] ].
+      - destruct q; simpl; rewrite map_map /qual_norm ?_drop_norm_idempotent /merge_tq/=; f_equal;
+        [ f_equal | f_equal | f_equal | ];
+        solve [ eapply map_ext_Forall; induction tys; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHtys; inversion H; subst; assumption ] ].
     }
     { (* normalize_type_involutive *)
-      intros *; induction ty using type_ind'; simpl; rewrite ?IHty; eauto.
+      intros *; induction ty; simpl; rewrite ?IHty; eauto.
       rewrite map_map /qual_norm _drop_norm_idempotent /merge_tq/=.
-      erewrite map_ext_Forall; eauto; induction tys;
-        [ now constructor
-        | constructor;
-          [ now apply _drop_norm_idempotent
-          | apply IHtys; now apply Forall_inv_tail in H]].
-      rewrite map_map /qual_norm _drop_norm_idempotent /merge_tq/=.
-      erewrite map_ext_Forall; eauto; induction tys;
-        [ now constructor
-        | constructor;
-          [ now apply _drop_norm_idempotent
-          | apply IHtys; now apply Forall_inv_tail in H]].
+      - f_equal; solve [ eapply map_ext_Forall; induction tys; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHtys; inversion H; subst; assumption ] ].
+      - f_equal. f_equal. apply _drop_norm_idempotent.
+        rewrite map_map;
+        eapply map_ext_Forall; induction args; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHargs; inversion H; subst; assumption ].
+      - f_equal. apply _drop_norm_idempotent.
+        rewrite map_map;
+          solve [ eapply map_ext_Forall; induction tys; constructor;
+            [ eapply _drop_norm_idempotent
+            | eapply IHtys; inversion H; subst; assumption ] ].
     }
-  Admitted. (* TEMPORARY *)
+  Qed.
 End normalize_type_idempotent.
 
 Lemma normalize_type_qual_norm t :
   normalize_type t = qual_norm (fun q t' => tqualified q (normalize_type t')) t.
-Proof. rewrite qual_norm_unfold. by destruct t. Qed.
+Proof. rewrite qual_norm_unfold. destruct t; cbn; auto. by case_match. Qed.
 
 (** ** Notation for character types *)
 Coercion Tchar_ : char_type.t >-> type.
