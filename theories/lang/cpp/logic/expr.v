@@ -436,9 +436,10 @@ Module Type Expr.
         Clang states that these casts are only used for adding and removing [const].
      *)
 
-    (* Casts that occur in initialization expressions.
-       Since object has not truely been initialized yet, the [const]ness can change.
-     *)
+    (*
+    Casts that occur in initialization expressions.
+    Since object has not truly been initialized yet, the [const]ness can change.
+    *)
     Variant noop_cast_type : Set :=
     | AddConst    (_ : type)
     | RemoveConst (_ : type)
@@ -871,6 +872,9 @@ Module Type Expr.
        |-- wp_operand (Ecall f es ty) Q.
 
     Axiom wp_init_call : forall f es Q (addr : ptr) ty ty',
+(*
+PDS: FIXME
+*)
           (* ^ give the memory back to the C++ abstract machine *)
           wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
              Reduce (init_receive ty addr res $ fun free => Q (free_args >*> free_f)))
@@ -931,6 +935,9 @@ Module Type Expr.
         |-- wp_operand (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
 
     Axiom wp_init_member_call : forall f fty es (addr : ptr) ty obj Q,
+(*
+PDS: FIXME
+*)
         wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
            init_receive ty addr res $ fun free => Q (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
@@ -970,6 +977,9 @@ Module Type Expr.
         |-- wp_operand (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall f fty es (addr : ptr) ty obj Q,
+(*
+PDS: FIXME
+*)
         wp_glval obj (fun this free_this => wp_virtual_call f this (type_of obj) fty es $ fun res free_args =>
            init_receive ty addr res $ fun free => Q (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
@@ -1119,20 +1129,50 @@ Module Type Expr.
           Q v FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
-    Axiom wp_init_constructor : forall cls (addr : ptr) cnd es Q,
-        (* NOTE because the AST does not include the types of the arguments of
-           the constructor, we have to look up the type in the environment.
-         *)
-           match tu !! cnd with
-           | Some cv =>
-             addr |-> tblockR (Tnamed cls) (cQp.mut 1) -*
-             (* ^^ The semantics currently has constructors take ownership of a [tblockR] *)
-             wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es (fun p free =>
-               (* in the semantics, constructors return [void] *)
-               p |-> primR Tvoid (cQp.mut 1) Vvoid ** Q free)
-           | _ => False
-           end
-      |-- wp_init (Tnamed cls) addr (Econstructor cnd es (Tnamed cls)) Q.
+    Record init_constructor_bad_type (ty : type) : Set := {}.
+    Record unsupported_init_constructor_cast (from to : type) : Set := {}.
+
+    Axiom wp_init_constructor : forall ty ty' (addr : ptr) cnd es Q,
+      match drop_qualifiers ty with
+      | Tnamed cls =>
+        match classify_cast ty ty' with
+        | Some cst =>
+          (*
+          NOTE because the AST does not include the types of the
+          arguments of the constructor, we have to look up the type in
+          the environment.
+          *)
+          match tu.(symbols) !! cnd with
+          | Some cv =>
+            (*
+            The semantics currently has constructors take ownership of
+            a [tblockR].
+            *)
+            (
+              if true then
+                let c := qual_norm (fun cv _ => q_const cv) ty in
+                addr |-> tblockR ty (cQp.mk c 1)
+              else
+                addr |-> tblockR (Tnamed cls) (cQp.mut 1)
+            ) -*
+            letI* p, free := wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es in
+            letI* :=
+              match cst with
+              | AddConst ty => wp_make_const tu addr ty
+              | RemoveConst ty => wp_make_mutable tu addr ty
+              | Nothing => fun Q => Q
+              end
+            in
+            (* in the semantics, constructors return [void] *)
+            p |-> primR Tvoid (cQp.mut 1) Vvoid **
+            Q free
+          | _ => False
+          end
+        | None => UNSUPPORTED (unsupported_init_constructor_cast ty ty')
+        end
+      | _ => ERROR (init_constructor_bad_type ty)
+      end
+      |-- wp_init ty addr (Econstructor cnd es ty') Q.
 
     Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
       match es with
@@ -1219,6 +1259,9 @@ Module Type Expr.
         two types match, but we pull the size of the array from the dynamic type.
      *)
     Axiom wp_init_initlist_array :forall ls fill ty ety (sz : N) (base : ptr) Q, (* sz' <= sz *)
+(*
+PDS: FIXME
+*)
           is_array_of ty ety ->
           wp_array_init_fill ety base ls fill sz Q
       |-- wp_init (Tarray ety sz) base (Einitlist ls fill ty) Q.
@@ -1246,6 +1289,9 @@ Module Type Expr.
     simply defers to the rule for initialization with an empty initializer
     list. *)
     Axiom wp_init_default_array : forall ty ety sz base ctorname args Q,
+(*
+PDS: FIXME
+*)
           is_array_of ty ety ->
           wp_array_init_fill ety base [] (Some $ Econstructor ctorname args ety) sz Q
       |-- wp_init (Tarray ety sz) base (Econstructor ctorname args ty) Q.
@@ -1302,6 +1348,9 @@ Module Type Expr.
        named unions and the front-end desugars initializer lists accordingly.
      *)
     Axiom wp_init_initlist_agg : forall cls (base : ptr) es t Q,
+(*
+PDS: FIXME
+*)
         let mem_to_li m := (m.(mem_type), o_field _ {| f_type := cls ; f_name := m.(mem_name) |}) in
         let base_to_li '(base,_) := (Tnamed base, o_base _ cls base) in
         match tu !! cls with
@@ -1448,6 +1497,9 @@ Module Type Expr.
                                  rest (N.succ idx))) sz idx.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) src init ety ty Q,
+(*
+PDS: FIXME
+*)
           has_type_prop (Vn sz) Tu64 ->
           is_array_of ty ety ->
           wp_glval tu ρ src
@@ -1500,6 +1552,9 @@ Module Type Expr.
        constructing a temporary.
      *)
     Axiom wp_init_condition2 : forall tu ρ n ty common tst th el vc p Q,
+(*
+PDS: FIXME
+*)
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
            let ρ' := Rbind (opaque_val n) p ρ in
