@@ -1120,9 +1120,8 @@ Module Type Expr.
           Q v FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
-    Axiom wp_init_constructor : forall ty ty' cv cls (this : ptr) cnd es Q,
+    Axiom wp_init_constructor : forall ty cv cls (this : ptr) cnd es Q,
         decompose_type ty = (cv, Tnamed cls) ->
-        drop_qualifiers ty' = Tnamed cls ->
           (*
           NOTE because the AST does not include the types of the
           arguments of the constructor, we have to look up the type in
@@ -1146,7 +1145,7 @@ Module Type Expr.
             do_const (Q free)
           | _ => False
           end
-      |-- wp_init ty this (Econstructor cnd es ty') Q.
+      |-- wp_init ty this (Econstructor cnd es ty) Q.
 
     Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
       match es with
