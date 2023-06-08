@@ -40,7 +40,7 @@ void test() {
 
 struct DD {
   DD() {} // this forces the use of the constructor rather than initlist
-  DD(DD&) {}
+  DD(const DD&) {}
   DD& operator=(DD&);
 };
 
@@ -84,5 +84,7 @@ void test3() {
 }
 
 struct AA {
-  DD d[3];
+        DD d[3];
+  const DD dd[3];
+  AA(AA&) = default;
 };
