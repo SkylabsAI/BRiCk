@@ -1059,7 +1059,7 @@ Module Type Expr.
         wp_lval e (fun v free => v |-> anyR ty (cQp.mut 1) ** (v |-> tblockR ty (cQp.mut 1) -* Q Vvoid free))
         |-- wp_operand (Epseudo_destructor ty e) Q.
 
-    (* `Eimplicit_init` nodes reflect implicit /value initializations/ which are inserted
+    (* [Eimplicit_init] nodes reflect implicit /value initializations/ which are inserted
        into the AST by Clang [1]. The C++ standard states that value initializations [2]
        are equivalent to zero initializations for non-class and non-array types [3];
        zero initializations are documented here [4].
