@@ -871,14 +871,10 @@ Module Type Expr.
            Reduce (operand_receive ty res $ fun v => Q v (free_args >*> free_f)))
        |-- wp_operand (Ecall f es ty) Q.
 
-    Axiom wp_init_call : forall f es Q (addr : ptr) ty ty',
-(*
-PDS: FIXME
-*)
-          (* ^ give the memory back to the C++ abstract machine *)
+    Axiom wp_init_call : forall f es Q (addr : ptr) ty,
           wp_operand f (fun fn free_f => wp_call (type_of f) fn es $ fun res free_args =>
              Reduce (init_receive ty addr res $ fun free => Q (free_args >*> free_f)))
-      |-- wp_init ty addr (Ecall f es ty') Q.
+      |-- wp_init ty addr (Ecall f es ty) Q.
 
     (** * Member calls *)
     Definition member_arg_types (fty : type) : option (list type) :=
@@ -935,9 +931,6 @@ PDS: FIXME
         |-- wp_operand (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
 
     Axiom wp_init_member_call : forall f fty es (addr : ptr) ty obj Q,
-(*
-PDS: FIXME
-*)
         wp_glval obj (fun this free_this => wp_mcall (Vptr $ _global f) this (type_of obj) fty es $ fun res free_args =>
            init_receive ty addr res $ fun free => Q (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Direct, fty)) obj es ty) Q.
@@ -977,9 +970,6 @@ PDS: FIXME
         |-- wp_operand (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
 
     Axiom wp_init_virtual_call : forall f fty es (addr : ptr) ty obj Q,
-(*
-PDS: FIXME
-*)
         wp_glval obj (fun this free_this => wp_virtual_call f this (type_of obj) fty es $ fun res free_args =>
            init_receive ty addr res $ fun free => Q (free_args >*> free_this))
         |-- wp_init ty addr (Emember_call (inl (f, Virtual, fty)) obj es ty) Q.
