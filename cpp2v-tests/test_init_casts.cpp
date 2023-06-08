@@ -17,11 +17,24 @@ void test() {
   const C   x4  = mk_c(); // cast which adds const
         C   x5  = mk_cc(); // cast which removes const
   const C   x6  = mk_cc();
+  const C   x7[2]{};
+        C   x8[3];
+  const C   x9[3];
+  const C   x10[4]{mk_c(), // add-const
+                   mk_cc(), // nothing
+                   C{},     // 2 no-op casts (second is functional cast)
+                   {}};     // initlist const
+        C   x11[4]{mk_c(),  // nothing
+                   mk_cc(), // remove-const
+                   C{},     // no-op cast (functional cast expr)
+                   {}};     // nothing
+
+
 #if 0	// avoid scope extrusion error
-  const C&  x7  = mk_c();
-  const C&  x8  = mk_cc();
-  const C&& x9  = mk_c();
-  const C&& x10 = mk_cc();
+  const C&  y7  = mk_c();
+  const C&  y8  = mk_cc();
+  const C&& y9  = mk_c();
+  const C&& y10 = mk_cc();
 #endif
 }
 
