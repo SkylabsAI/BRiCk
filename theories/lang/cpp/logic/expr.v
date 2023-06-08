@@ -1468,9 +1468,6 @@ Module Type Expr.
                                  rest (N.succ idx))) sz idx.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) src init ety ty Q,
-(*
-PDS: FIXME
-*)
           has_type_prop (Vn sz) Tu64 ->
           is_array_of ty ety ->
           wp_glval tu ρ src
