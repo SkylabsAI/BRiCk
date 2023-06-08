@@ -1271,9 +1271,6 @@ PDS: FIXME
     simply defers to the rule for initialization with an empty initializer
     list. *)
     Axiom wp_init_default_array : forall ty ety sz base ctorname args Q,
-(*
-PDS: FIXME
-*)
           is_array_of ty ety ->
           wp_array_init_fill ety base [] (Some $ Econstructor ctorname args ety) sz Q
       |-- wp_init (Tarray ety sz) base (Econstructor ctorname args ty) Q.
