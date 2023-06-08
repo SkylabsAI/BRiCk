@@ -1132,11 +1132,13 @@ PDS: FIXME
     Record init_constructor_bad_type (ty : type) : Set := {}.
     Record unsupported_init_constructor_cast (from to : type) : Set := {}.
 
-    Axiom wp_init_constructor : forall ty ty' (addr : ptr) cnd es Q,
-      match drop_qualifiers ty with
-      | Tnamed cls =>
-        match classify_cast ty ty' with
-        | Some cst =>
+    Axiom wp_init_constructor : forall ty cv cls (p : ptr) cnd es Q,
+        decompose_type ty = (cv, Tnamed cls) ->
+          let do_const Q :=
+            if q_const cv
+            then wp_make_const tu p (Tnamed cls) Q
+            else Q
+          in
           (*
           NOTE because the AST does not include the types of the
           arguments of the constructor, we have to look up the type in
@@ -1148,31 +1150,14 @@ PDS: FIXME
             The semantics currently has constructors take ownership of
             a [tblockR].
             *)
-            (
-              if true then
-                let c := qual_norm (fun cv _ => q_const cv) ty in
-                addr |-> tblockR ty (cQp.mk c 1)
-              else
-                addr |-> tblockR (Tnamed cls) (cQp.mut 1)
-            ) -*
-            letI* p, free := wp_mcall (Vptr $ _global cnd) addr (Tnamed cls) (type_of_value cv) es in
-            letI* :=
-              match cst with
-              | AddConst ty => wp_make_const tu addr ty
-              | RemoveConst ty => wp_make_mutable tu addr ty
-              | Nothing => fun Q => Q
-              end
-            in
+            p |-> tblockR (Tnamed cls) (cQp.mut 1) -*
+            letI* p, free := wp_mcall (Vptr $ _global cnd) p (Tnamed cls) (type_of_value cv) es in
             (* in the semantics, constructors return [void] *)
             p |-> primR Tvoid (cQp.mut 1) Vvoid **
-            Q free
+            do_const (Q free)
           | _ => False
           end
-        | None => UNSUPPORTED (unsupported_init_constructor_cast ty ty')
-        end
-      | _ => ERROR (init_constructor_bad_type ty)
-      end
-      |-- wp_init ty addr (Econstructor cnd es ty') Q.
+      |-- wp_init ty p (Econstructor cnd es ty) Q.
 
     Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
       match es with
