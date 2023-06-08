@@ -586,52 +586,49 @@ Section with_cpp.
      represent this. This seems necessary to have a uniform representation of
      the various evoluations of initialization between different standards, e.g.
      C++14, C++17, etc.
-
-     NOTE: this is morally [M unit], but we inline the definition of [M] and
-     ellide the [unit] value. *)
+   *)
   Parameter wp_init
     : forall {resolve:genv}, translation_unit -> region ->
-                        type -> ptr -> Expr ->
-                        (FreeTemps -> epred) -> (* free -> post *)
-                        mpred. (* pre-condition *)
+                        type -> Expr ->
+                        M ptr. (* pre-condition *)
   (* END wp_init *)
 
-  Axiom wp_init_shift : forall {σ:genv} tu ρ ty p e Q,
-      (|={top}=> wp_init tu ρ ty p e (fun frees => |={top}=> Q frees))
-    ⊢ wp_init tu ρ ty p e Q.
+  Axiom wp_init_shift : forall {σ:genv} tu ρ ty e Q,
+      (|={top}=> wp_init tu ρ ty e (fun p frees => |={top}=> Q p frees))
+    ⊢ wp_init tu ρ ty e Q.
 
-  Axiom wp_init_models : forall {σ:genv} tu ty ρ p e Q,
-      denoteModule tu -* wp_init tu ρ ty p e Q
-    ⊢ wp_init tu ρ ty p e Q.
+  Axiom wp_init_models : forall {σ:genv} tu ty ρ e Q,
+      denoteModule tu -* wp_init tu ρ ty e Q
+    ⊢ wp_init tu ρ ty e Q.
 
-  Axiom wp_init_frame : forall σ tu1 tu2 ρ ty p e k1 k2,
+  Axiom wp_init_frame : forall σ tu1 tu2 ρ ty e k1 k2,
       sub_module tu1 tu2 ->
-      Forall fs, k1 fs -* k2 fs |-- @wp_init σ tu1 ρ ty p e k1 -* @wp_init σ tu2 ρ ty p e k2.
+      Forall p fs, k1 p fs -* k2 p fs |-- @wp_init σ tu1 ρ ty e k1 -* @wp_init σ tu2 ρ ty e k2.
 
   #[global] Instance Proper_wp_init σ :
-    Proper (sub_module ==> eq ==> eq ==> eq ==> eq ==>
-            pointwise_relation _ (⊢) ==> (⊢))
+    Proper (sub_module ==> eq ==> eq ==> eq ==>
+            pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))
            (@wp_init σ).
   Proof.
     repeat red; intros; subst.
     iIntros "X"; iRevert "X"; iApply wp_init_frame; eauto.
-    iIntros (?); iApply H4.
+    iIntros (??); iApply H3.
   Qed.
 
   Section wp_init.
-    Context {σ : genv} (tu : translation_unit) (ρ : region) (ty : type) (p : ptr) (e : Expr).
-    Local Notation WP := (wp_init tu ρ ty p e) (only parsing).
+    Context {σ : genv} (tu : translation_unit) (ρ : region) (ty : type) (e : Expr).
+    Local Notation WP := (wp_init tu ρ ty e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : FreeTemps → epred.
+    Implicit Types Q : ptr -> FreeTemps → epred.
 
-    Lemma wp_init_wand Q1 Q2 : WP Q1 |-- (∀ fs, Q1 fs -* Q2 fs) -* WP Q2.
+    Lemma wp_init_wand Q1 Q2 : WP Q1 |-- (∀ p fs, Q1 p fs -* Q2 p fs) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_init_frame with "HK Hwp"). Qed.
     Lemma fupd_wp_init Q : (|={top}=> WP Q) |-- WP Q.
     Proof.
       rewrite -{2}wp_init_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_init_wand with "Hwp"). auto.
     Qed.
-    Lemma wp_init_fupd Q : WP (λ fs, |={top}=> Q fs) |-- WP Q.
+    Lemma wp_init_fupd Q : WP (λ p fs, |={top}=> Q p fs) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_init_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -655,7 +652,7 @@ Section with_cpp.
   (* BEGIN wp_prval *)
   Definition wp_prval {resolve:genv} (tu : translation_unit) (ρ : region)
              (e : Expr) (Q : ptr -> FreeTemps -> epred) : mpred :=
-    ∀ p : ptr, wp_init tu ρ (type_of e) p e (Q p).
+    wp_init tu ρ (type_of e) e Q.
   (* END wp_prval *)
 
   (** TODO prove instances for [wp_prval] *)
@@ -687,10 +684,10 @@ Section with_cpp.
     |-- wp_operand tu ρ e Q.
 
   (* BEGIN wp_init <-> wp_operand *)
-  Axiom wp_operand_wp_init : forall {σ : genv} tu ρ ty addr e Q,
+  Axiom wp_operand_wp_init : forall {σ : genv} tu ρ ty e Q,
       is_value_type ty ->
-      wp_operand tu ρ e (fun v frees => _at addr (primR ty (cQp.mut 1) v) -* Q frees)
-    |-- wp_init tu ρ ty addr e Q.
+      wp_operand tu ρ e (fun v frees => Forall (p : ptr), _at p (primR ty (cQp.mut 1) v) -* Q p frees)
+    |-- wp_init tu ρ ty e Q.
 
   (** This is justified in the logic but technically not sactioned by the standard
 
@@ -919,7 +916,7 @@ Section with_cpp.
         if is_value_type ty then
           wp_operand tu ρ e (fun _ free => Q free)
         else
-          Forall p, wp_init tu ρ (type_of e) p e (fun frees => Q (FreeTemps.delete ty p >*> frees)%free)
+          wp_init tu ρ (type_of e) e (fun p frees => Q (FreeTemps.delete ty p >*> frees)%free)
       | Xvalue => wp_xval tu ρ e (fun _ => Q)
       end.
 
@@ -936,10 +933,9 @@ Section with_cpp.
     - intros. case_match.
       + iIntros "h"; iApply wp_operand_frame; eauto.
         iIntros (??); iApply "h".
-      + iIntros "a b" (p).
-        iSpecialize ("b" $! p).
+      + iIntros "a b".
         iRevert "b"; iApply wp_init_frame; eauto.
-        iIntros (?); iApply "a".
+        iIntros (??); iApply "a".
     - intros. rewrite -wp_xval_frame; eauto.
       iIntros "h" (v f) "x"; iApply "h"; iFrame.
   Qed.

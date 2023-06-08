@@ -212,18 +212,18 @@ Section with_resolve.
     rewrite /operand_receive. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
   Qed.
 
-  Definition init_receive (ty : type) (addr : ptr) (res : ptr) (Q : FreeTemp -> mpred) : mpred :=
-    ([| addr = res |] -* Q (FreeTemps.delete ty addr)).
+  Definition init_receive (ty : type) (res : ptr) (Q : ptr -> FreeTemp -> mpred) : mpred :=
+    Q res FreeTemps.id. (* (FreeTemps.delete ty res). *)
 
-  Lemma init_receive_frame ty addr res Q Q' :
-      Forall v, Q v -* Q' v |-- init_receive ty addr res Q -* init_receive ty addr res Q'.
+  Lemma init_receive_frame ty res Q Q' :
+      Forall p fr, Q p fr -* Q' p fr |-- init_receive ty res Q -* init_receive ty res Q'.
   Proof.
-    rewrite /init_receive. iIntros "X Y Z"; iApply "X"; iApply "Y"; done.
+    rewrite /init_receive. iIntros "X Y"; iApply "X"; iApply "Y"; done.
   Qed.
 
   #[global] Arguments xval_receive _ _ _ /.
   #[global] Arguments lval_receive _ _ _ /.
   #[global] Arguments operand_receive _ _ _ /.
-  #[global] Arguments init_receive _ _ _ _ /.
+  #[global] Arguments init_receive _ _ _ /.
 
 End with_resolve.

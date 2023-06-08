@@ -246,7 +246,7 @@ Section wp_initialize.
 
       (* non-primitives are handled via prvalue-initialization semantics *)
     | Tarray _ _
-    | Tnamed _ => wp_init (tqualified cv ty) addr init Q
+    | Tnamed _ => wp_init (tqualified cv ty) init (fun p free => [| addr = p |] -* Q free)
 
     | Tref ty =>
       let rty := Tref $ erase_qualifiers ty in
