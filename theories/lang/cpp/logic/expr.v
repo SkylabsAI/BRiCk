@@ -1119,9 +1119,6 @@ Module Type Expr.
           Q v FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
-    Record init_constructor_bad_type (ty : type) : Set := {}.
-    Record unsupported_init_constructor_cast (from to : type) : Set := {}.
-
     Axiom wp_init_constructor : forall ty cv cls (p : ptr) cnd es Q,
         decompose_type ty = (cv, Tnamed cls) ->
           let do_const Q :=
