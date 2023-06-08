@@ -1226,7 +1226,7 @@ PDS: FIXME
 
     (** [is_array_of aty ety] checks that [aty] is a type representing an
         array of [ety].
-        NOTE that cpp2v currently prints the type `int[]` as [int* const]
+        NOTE that cpp2v currently prints the type `int[]` as [int*]
              so we also permit that type.
      *)
     Definition is_array_of (aty ety : type) : Prop :=
@@ -1243,10 +1243,7 @@ PDS: FIXME
         is the static type. For santity, we require that the general shape of the
         two types match, but we pull the size of the array from the dynamic type.
      *)
-    Axiom wp_init_initlist_array :forall ls fill ty ety (sz : N) (base : ptr) Q, (* sz' <= sz *)
-(*
-PDS: FIXME
-*)
+    Axiom wp_init_initlist_array : forall ls fill ty ety (sz : N) (base : ptr) Q, (* sz' <= sz *)
           is_array_of ty ety ->
           wp_array_init_fill ety base ls fill sz Q
       |-- wp_init (Tarray ety sz) base (Einitlist ls fill ty) Q.
