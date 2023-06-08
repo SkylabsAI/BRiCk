@@ -40,6 +40,8 @@ void test() {
 
 struct DD {
   DD() {} // this forces the use of the constructor rather than initlist
+  DD(DD&) {}
+  DD& operator=(DD&);
 };
 
 void test_ctor() {
@@ -80,3 +82,7 @@ void test3() {
   C c;
   static_cast<void>(static_cast<D&>(c)); // base2derived cast
 }
+
+struct AA {
+  DD d[3];
+};
