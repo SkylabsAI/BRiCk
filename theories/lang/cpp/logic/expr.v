@@ -1347,23 +1347,25 @@ PDS: FIXME
        of anonymous unions, but cpp2v represents anonymous unions as regular
        named unions and the front-end desugars initializer lists accordingly.
      *)
-    Axiom wp_init_initlist_agg : forall cls (base : ptr) es t Q,
-(*
-PDS: FIXME
-*)
-        let mem_to_li m := (m.(mem_type), o_field _ {| f_type := cls ; f_name := m.(mem_name) |}) in
-        let base_to_li '(base,_) := (Tnamed base, o_base _ cls base) in
-        match tu !! cls with
+    Axiom wp_init_initlist_agg : forall cls (base : ptr) cv es ty Q,
+        decompose_type ty = (cv, Tnamed cls) ->
+        (let mem_to_li m := (m.(mem_type), o_field _ {| f_type := cls ; f_name := m.(mem_name) |}) in
+         let do_const Q :=
+           if q_const cv
+           then wp_make_const tu base (Tnamed cls) Q
+           else Q
+         in
+         let base_to_li '(base,_) := (Tnamed base, o_base _ cls base) in
+         match tu !! cls with
         | Some (Gstruct s) =>
             (* these constraints are enforced by clang, see note above *)
             [| length s.(s_bases) + length s.(s_fields) = length es |] **
             let fs :=
               map base_to_li s.(s_bases) ++ map mem_to_li s.(s_fields) in
             init_fields cls base fs es
-               (base |-> struct_paddingR (cQp.mut 1) cls **
+               (base |-> struct_paddingR (cQp.mut 1) cls -*
                 (if has_vtable s then base |-> derivationR cls [cls] (cQp.mut 1) else emp) -*
-                Q FreeTemps.id)
-
+                do_const (Q FreeTemps.id))
         | Some (Gunion u) =>
             (* The standard allows initializing unions in a variety of ways.
                See https://eel.is/c++draft/dcl.init.aggr#5. However, the cpp2v
@@ -1373,10 +1375,10 @@ PDS: FIXME
             let fs := map mem_to_li $ firstn 1 u.(u_fields) in
             init_fields cls base fs es
                (base |-> union_paddingR (cQp.mut 1) cls (Some 0) -*
-                Q FreeTemps.id)
+                do_const (Q FreeTemps.id))
         | _ => False
-        end
-      |-- wp_init (Tnamed cls) base (Einitlist es None t) Q.
+        end)
+      |-- wp_init ty base (Einitlist es None ty) Q.
 
   End with_resolve.
 
