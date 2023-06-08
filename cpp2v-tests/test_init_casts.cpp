@@ -54,6 +54,12 @@ void test_ctor() {
 
         DD   x6[3];
   const DD   x7[3];
+
+
+  int n = 3;
+        DD*  x8 = new DD[n]{};
+  const DD*  x9 = new DD[n]{};
+
 }
 
 extern void foo(const C c, C cc);
