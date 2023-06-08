@@ -1313,8 +1313,9 @@ Module Type Expr.
        of anonymous unions, but cpp2v represents anonymous unions as regular
        named unions and the front-end desugars initializer lists accordingly.
      *)
-    Axiom wp_init_initlist_agg : forall cls (base : ptr) cv es ty Q,
+    Axiom wp_init_initlist_agg : forall cls (base : ptr) cv es ty ty' Q,
         decompose_type ty = (cv, Tnamed cls) ->
+        drop_qualifiers ty' = Tnamed cls ->
         (let mem_to_li m := (m.(mem_type), o_field _ {| f_type := cls ; f_name := m.(mem_name) |}) in
          let do_const Q :=
            if q_const cv
@@ -1322,7 +1323,7 @@ Module Type Expr.
            else Q
          in
          let base_to_li '(base,_) := (Tnamed base, o_base _ cls base) in
-         match tu !! cls with
+         match tu.(types) !! cls with
         | Some (Gstruct s) =>
             (* these constraints are enforced by clang, see note above *)
             [| length s.(s_bases) + length s.(s_fields) = length es |] **
@@ -1344,7 +1345,7 @@ Module Type Expr.
                 do_const (Q FreeTemps.id))
         | _ => False
         end)
-      |-- wp_init ty base (Einitlist es None ty) Q.
+      |-- wp_init ty base (Einitlist es None ty') Q.
 
   End with_resolve.
 
