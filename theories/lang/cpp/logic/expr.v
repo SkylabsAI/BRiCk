@@ -1119,32 +1119,33 @@ Module Type Expr.
           Q v FreeTemps.id
       |-- wp_operand (Eimplicit_init ty) Q.
 
-    Axiom wp_init_constructor : forall ty cv cls (p : ptr) cnd es Q,
+    Axiom wp_init_constructor : forall ty ty' cv cls (this : ptr) cnd es Q,
         decompose_type ty = (cv, Tnamed cls) ->
-          let do_const Q :=
-            if q_const cv
-            then wp_make_const tu p (Tnamed cls) Q
-            else Q
-          in
+        drop_qualifiers ty' = Tnamed cls ->
           (*
           NOTE because the AST does not include the types of the
           arguments of the constructor, we have to look up the type in
           the environment.
           *)
           match tu.(symbols) !! cnd with
-          | Some cv =>
+          | Some ov =>
             (*
             The semantics currently has constructors take ownership of
             a [tblockR].
             *)
-            p |-> tblockR (Tnamed cls) (cQp.mut 1) -*
-            letI* p, free := wp_mcall (Vptr $ _global cnd) p (Tnamed cls) (type_of_value cv) es in
+            this |-> tblockR (Tnamed cls) (cQp.mut 1) -*
+            letI* p_ret, free := wp_mcall (Vptr $ _global cnd) this (Tnamed cls) (type_of_value ov) es in
             (* in the semantics, constructors return [void] *)
-            p |-> primR Tvoid (cQp.mut 1) Vvoid **
+            p_ret |-> primR Tvoid (cQp.mut 1) Vvoid **
+            let do_const Q :=
+              if q_const cv
+              then wp_make_const tu this (Tnamed cls) Q
+              else Q
+            in
             do_const (Q free)
           | _ => False
           end
-      |-- wp_init ty p (Econstructor cnd es ty) Q.
+      |-- wp_init ty this (Econstructor cnd es ty') Q.
 
     Fixpoint wp_array_init (ety : type) (base : ptr) (es : list Expr) (idx : Z) (Q : FreeTemps -> mpred) : mpred :=
       match es with
