@@ -38,6 +38,24 @@ void test() {
 #endif
 }
 
+struct DD {
+  DD() {} // this forces the use of the constructor rather than initlist
+};
+
+void test_ctor() {
+        DD   x0  = DD{};
+  const DD   x1  = DD{};
+
+        DD   x2{};
+  const DD   x3{};
+
+        DD   x4[2]{};
+  const DD   x5[2]{};
+
+        DD   x6[3];
+  const DD   x7[3];
+}
+
 extern void foo(const C c, C cc);
 
 void test2() {
