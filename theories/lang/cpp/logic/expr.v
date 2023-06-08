@@ -464,18 +464,19 @@ Module Type Expr.
 
     (* When [const]ness changes in an initialization expression, it changes the
        [const]ness of the object that is being initialized. *)
-    Axiom wp_init_cast_noop : forall ty ty' e p Q,
-        match classify_cast ty ty' with
+    Axiom wp_init_cast_noop : forall ty e p Q,
+        (let from := type_of e in
+        match classify_cast from ty with
         | Some cst =>
-            wp_init ty p e (fun fr =>
+            wp_init from p e (fun fr =>
               match cst with
               | AddConst ty => wp_make_const tu p ty (Q fr)
               | RemoveConst ty => wp_make_mutable tu p ty (Q fr)
               | Nothing => Q fr
               end)
-        | None => UNSUPPORTED (unsupported_init_noop_cast e ty ty')
-        end
-      |-- wp_init ty p (Ecast Cnoop e Prvalue ty') Q.
+        | None => UNSUPPORTED (unsupported_init_noop_cast e from ty)
+        end)
+      |-- wp_init ty p (Ecast Cnoop e Prvalue ty) Q.
     Axiom wp_operand_cast_noop : forall ty e Q,
         wp_operand e Q
         |-- wp_operand (Ecast Cnoop e Prvalue ty) Q.
