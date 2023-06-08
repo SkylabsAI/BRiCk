@@ -1533,9 +1533,6 @@ PDS: FIXME
        constructing a temporary.
      *)
     Axiom wp_init_condition2 : forall tu ρ n ty common tst th el vc p Q,
-(*
-PDS: FIXME
-*)
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
            let ρ' := Rbind (opaque_val n) p ρ in
