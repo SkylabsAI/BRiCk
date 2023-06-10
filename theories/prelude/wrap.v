@@ -45,10 +45,10 @@ Proof. solve_decision. Defined.
   populate (MkWrapN 0).
 
 #[global] Instance unwrapN_inj Phant : Inj eq eq (@unwrapN Phant).
-Proof. intros [] [] ?. by simplify_eq/=. Qed.
+Proof. exact: cancel_inj. Qed.
 
 #[global] Instance MkWrapN_inj Phant : Inj eq eq (@MkWrapN Phant).
-Proof. by intros ?? [=]. Qed.
+Proof. exact: cancel_inj. Qed.
 
 #[global] Declare Scope wrapN_scope.
 #[global] Delimit Scope wrapN_scope with wrapN.
@@ -129,7 +129,7 @@ Module Type wrapper.
   Lemma of_to_N x : of_N (to_N x) = x.
   Proof. apply cancel_unwrapN. Qed.
   Lemma to_of_N x : to_N (of_N x) = x.
-  Proof. apply (inj of_N). by rewrite of_to_N. Qed.
+  Proof. apply cancel_MkwrapN. Qed.
 
 End wrapper.
 
