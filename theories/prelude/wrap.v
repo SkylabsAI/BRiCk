@@ -126,8 +126,8 @@ Module Type wrapper.
   https://github.com/coq/coq/issues/14988 *)
   #[global] Bind Scope wrapN_scope with t.
 
-  Definition of_N : N -> t := MkWrapN.
-  Definition to_N : t -> N := unwrapN.
+  Notation of_N := (MkWrapN (Phant := Phant)).
+  Notation to_N := (unwrapN (Phant := Phant)).
   Lemma of_to_N x : of_N (to_N x) = x.
   Proof. apply cancel_unwrapN. Qed.
   Lemma to_of_N x : to_N (of_N x) = x.
