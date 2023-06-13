@@ -609,7 +609,8 @@ Record translation_unit : Type :=
   (* ^ The default minimum alignment guaranteed by [new]/[new[]] invocations
        (cf. [__STDCPP_DEFAULT_NEW_ALIGNMENT__] <https://eel.is/c++draft/cpp.predefined#1.7>)
    *)
-; default_new_alignment_wf : {pow : N | (default_new_alignment = 2 ^ pow)%N}
+; default_new_alignment_wf :
+  if bool_decide (N.pow 2 (N.log2 default_new_alignment) == default_new_alignment) then True else False
   (* ^ "... Every alignment value shall be a non-negative integral power of two."
        <https://eel.is/c++draft/basic.align#4>.
    *)

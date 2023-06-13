@@ -110,17 +110,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
         auto default_new_alignment = ctxt->getTargetInfo().getNewAlign();
         print.constantN(default_new_alignment);
         // v-- Evidence that [default_new_alignment] is a power of two.
-        print.output() << fmt::nbsp << "ltac:"
-          << fmt::lparen
-             << "by apply:" << fmt::nbsp
-             << fmt::lparen
-                << "exist _" << fmt::nbsp
-                << fmt::lparen
-                   << "N.log2" << fmt::nbsp;
-                   print.constantN(default_new_alignment);
-                print.output() << fmt::rparen
-             << fmt::rparen
-          << fmt::rparen;
+        print.output() << fmt::nbsp << "ltac:(solve_tu_default_new_alignment_constraint)";
 
         // TODO I still need to generate the initializer
 

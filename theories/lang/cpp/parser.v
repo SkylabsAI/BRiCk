@@ -199,13 +199,25 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) (al : N) (Hal : {pow : N | (al = 2 ^ pow)%N}) : translation_unit :=
+Ltac solve_tu_default_new_alignment_constraint :=
+  vm_compute; exact I.
+
+(** NOTE: all uses of [decls] should be of the form:
+    [[[
+    decls ls e al ltac:(solve_tu_default_new_alignment_constraint)
+    ]]]
+ *)
+Definition decls ls
+    (e : endian) (al : N)
+    (Hal : if bool_decide (N.pow 2 (N.log2 al) == al) then True else False)
+  : translation_unit :=
   decls' ls ∅ ∅ $ fun a b =>
   {| symbols := avl.map_canon a
-  ; types := avl.map_canon b
-  ; initializer := nil (* FIXME *)
-  ; byte_order := e
-  ; default_new_alignment := al
-  ; default_new_alignment_wf := Hal |}.
+   ; types := avl.map_canon b
+   ; initializer := nil (* FIXME *)
+   ; byte_order := e
+   ; default_new_alignment := al
+   ; default_new_alignment_wf := Hal
+   |}.
 
 Declare Reduction reduce_translation_unit := vm_compute.
