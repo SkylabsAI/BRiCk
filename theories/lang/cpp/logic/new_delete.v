@@ -193,7 +193,7 @@ Module Type Expr__newdelete.
                   [| size_of aty = Some alloc_sz |] ** [| has_type_prop alloc_sz Tsize_t |] **
                   [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
                 Reduce (alloc_size_t alloc_sz (fun p FR =>
-                |> fspec tu.(globals) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
+                |> wp_fptr tu.(types) nfty (_global new_fn.1) (p :: vs) (fun res => FR $
                       res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                       (* [blockR sz -|- tblockR aty] *)
                       storage_ptr |-> (blockR alloc_sz (cQp.m 1) ** alignedR alloc_al) **
@@ -250,7 +250,7 @@ Module Type Expr__newdelete.
                  "(-> & %Hstorage_ptr & %Halloc_sz & % & %Halloc_al & H)".
             iExists alloc_sz, alloc_al; iFrame "%"; iIntros (p) "alloc_sz".
             iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
-            iApply fspec_frame; last by iApply "spec".
+            iApply wp_fptr_frame; last by iApply "spec".
             iIntros (v) "($ & res & storage & Hinit)".
             iExists storage_ptr; iFrame "res".
             rewrite bool_decide_false; last assumption.
@@ -377,7 +377,7 @@ Module Type Expr__newdelete.
                     [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
                     Forall overhead_sz, [| (overhead_sz <= alloc_sz)%N |] **
                       Reduce (alloc_size_t (overhead_sz + alloc_sz) (fun psz FR =>
-                      |> fspec tu.(globals) nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
+                      |> wp_fptr tu.(types) nfty (_global new_fn.1) (psz :: vs) (fun res => FR $
                           res |-> primR (Tptr Tvoid) (cQp.mut 1) (Vptr storage_ptr) **
                           (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
                           storage_ptr |-> blockR (overhead_sz + alloc_sz) (cQp.m 1) **
@@ -440,7 +440,7 @@ Module Type Expr__newdelete.
             iExists alloc_sz, alloc_al; iFrame "%".
             iIntros (overhead_size); iDestruct ("H" $! overhead_size) as "($ & H)".
             iIntros (p) "alloc_sz"; iDestruct ("H" $! p with "alloc_sz") as "spec"; iModIntro.
-            iApply fspec_frame; last by iApply "spec".
+            iApply wp_fptr_frame; last by iApply "spec".
             iIntros (v) "($ & res & storage1 & storage2 & Hinit)".
             iExists storage_ptr; iFrame "res".
             rewrite bool_decide_false; last assumption.
@@ -705,7 +705,7 @@ Module Type Expr__newdelete.
                         v  this since the dispatch is statically known.
                       *)
                      Reduce (alloc_pointer storage_ptr (fun p FR =>
-                       fspec tu.(globals) delete_fn.2 (_global delete_fn.1)
+                       wp_fptr tu.(types) delete_fn.2 (_global delete_fn.1)
                            (p :: nil) (fun p => operand_receive Tvoid p
                                               (fun _ => interp tu FR $ Q Vvoid free)))))))
         |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
