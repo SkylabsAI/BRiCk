@@ -202,10 +202,8 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
 Ltac solve_tu_default_new_alignment_constraint :=
   vm_compute; exact I.
 
-(** NOTE: all uses of [decls] should be of the form:
-    [[[
-    decls ls e al ltac:(solve_tu_default_new_alignment_constraint)
-    ]]]
+(** NOTE: all uses of [decls] should be supply [ltac:(solve_tu_default_new_alignment_constraint)]
+    for [Hal].
  *)
 Definition decls ls
     (e : endian) (al : N)

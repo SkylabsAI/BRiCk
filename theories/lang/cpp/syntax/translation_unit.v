@@ -606,7 +606,7 @@ Record translation_unit : Type :=
 (**  NOTE: The following two fields should probably live in the toplevel [genv]. *)
 ; byte_order : endian
 ; default_new_alignment : N
-  (* ^ The default minimum alignment guaranteed by [new]/[new[]] invocations
+  (* ^ The default minimum alignment guaranteed by [operator new] invocations
        (cf. [__STDCPP_DEFAULT_NEW_ALIGNMENT__] <https://eel.is/c++draft/cpp.predefined#1.7>)
    *)
 ; default_new_alignment_wf :

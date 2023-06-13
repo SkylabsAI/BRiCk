@@ -30,7 +30,7 @@ Module canonical_tu.
   ; globals    : type_table_canon
   ; byte_order : endian
   ; default_new_alignment : N
-    (* ^ The default minimum alignment guaranteed by [new]/[new[]] invocations
+    (* ^ The default minimum alignment guaranteed by [operator new] invocations
          (cf. [__STDCPP_DEFAULT_NEW_ALIGNMENT__] <https://eel.is/c++draft/cpp.predefined#1.7>)
      *)
   (** NOTE: no [EqDecision] for [Prop] *)
