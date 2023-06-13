@@ -582,7 +582,7 @@ Module Type Expr__newdelete.
                       provides_storage storage_ptr this' mdc_ty **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
-                         [delete_val]. *)
+                         [destroy_val]. *)
                       (storage_ptr |-> blockR sz (cQp.m 1) -*
                        (* v---- Calling deallocator with storage pointer
                                 Like above, because the operation is on the MDC,
@@ -612,11 +612,9 @@ Module Type Expr__newdelete.
                     provides_storage storage_ptr this' mdc_ty **
                     (* Transfer memory to underlying storage pointer; unlike in
                        [end_provides_storage], this memory was pre-destructed by
-                       [delete_val]. *)
+                       [destroy_val]. *)
                     (storage_ptr |-> blockR sz (cQp.m 1) -*
-                     (* v---- Calling deallocator with storage pointer
-                              Like above, because the operation is on the MDC,
-                              we must use [tu'] *)
+                     (* v---- Calling deallocator with storage pointer *)
                      delete_val tu delete_fn mdc_ty storage_ptr (Q Vvoid free)))))
         |-- wp_operand (Edelete false delete_fn e destroyed_type) Q.
         Proof.
@@ -663,7 +661,7 @@ Module Type Expr__newdelete.
                         obj_ptr array_ty **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
-                         [delete_val]. *)
+                         [destroy_val]. *)
                       (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) -*
                        (* v---- Calling deallocator with storage pointer.
                           Note: we rely on the AST to have correctly resolved this since the dispatch is statically known.
@@ -700,7 +698,7 @@ Module Type Expr__newdelete.
                       obj_ptr array_ty **
                     (* Transfer memory to underlying storage pointer; unlike in
                        [end_provides_storage], this memory was pre-destructed by
-                       [delete_val]. *)
+                       [destroy_val]. *)
                     (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) -*
                      (* /---- Calling deallocator with storage pointer.
                         |  Note: we rely on the AST to have correctly resolved
