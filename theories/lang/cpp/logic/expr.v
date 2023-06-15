@@ -426,10 +426,13 @@ Module Type Expr.
     (** [Cl2r] represents reads of locations.
     This counts as an _access_, so it must happen at one of the types listed in
     https://eel.is/c++draft/basic.lval#11.
+
+    Question: should [tptstoR] include [has_type]?
+      [initR ty q v] ~ [tptstoR ty q v ** has_type ty v]
     *)
     Axiom wp_operand_cast_l2r : forall ty e Q,
         wp_glval e (fun a free => Exists v,
-           (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\ Q v free)
+           (Exists q, a |-> tptstoR (erase_qualifiers ty) q v ** has_type v ty ** True) //\\ Q v free)
         |-- wp_operand (Ecast Cl2r e Prvalue ty) Q.
 
     (** No-op casts [Cnoop] are casts that only affect the type and not the value.
