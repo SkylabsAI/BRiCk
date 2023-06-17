@@ -133,6 +133,13 @@ Module Type wrapper.
   Lemma to_of_N x : to_N (of_N x) = x.
   Proof. apply cancel_MkwrapN. Qed.
 
+  (** Lift instances. *)
+  #[global] Instance cancel_to_N_of_N : Cancel eq to_N of_N := _.
+  #[global] Instance cancel_of_N_to_N : Cancel eq of_N to_N := _.
+  #[global] Instance to_N_inj : Inj eq eq to_N := _.
+  #[global] Instance of_N_inj : Inj eq eq of_N := _.
+
+  #[global] Typeclasses Opaque of_N to_N.
 End wrapper.
 
 Module Type succ_wrapper (Import W : wrapper).
