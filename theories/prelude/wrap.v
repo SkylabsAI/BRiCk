@@ -21,6 +21,7 @@ Notation Build_WrapN := @MkWrapN (only parsing).
 
 (* Using the wrapper means we define these instances/lemmas only once. *)
 
+(** *** [MkWrapN] and [unwrapN] form an isomorphism. *)
 Lemma cancel_unwrapN {Phant} (x : WrapN Phant) : MkWrapN (unwrapN x) = x.
 Proof. done. Qed.
 
@@ -35,6 +36,13 @@ Proof. exact cancel_MkwrapN. Qed.
   Cancel eq (@MkWrapN Phant) unwrapN.
 Proof. exact cancel_unwrapN. Qed.
 
+#[global] Instance unwrapN_inj Phant : Inj eq eq (@unwrapN Phant).
+Proof. exact: cancel_inj. Qed.
+
+#[global] Instance MkWrapN_inj Phant : Inj eq eq (@MkWrapN Phant).
+Proof. exact: cancel_inj. Qed.
+
+(** *** [WrapN] instances. *)
 #[global] Instance wrapN_eq_decision {Phant} : EqDecision (WrapN Phant).
 Proof. solve_decision. Defined.
 
@@ -43,12 +51,6 @@ Proof. solve_decision. Defined.
 
 #[global] Instance wrapN_inhabited {Phant} : Inhabited (WrapN Phant) :=
   populate (MkWrapN 0).
-
-#[global] Instance unwrapN_inj Phant : Inj eq eq (@unwrapN Phant).
-Proof. exact: cancel_inj. Qed.
-
-#[global] Instance MkWrapN_inj Phant : Inj eq eq (@MkWrapN Phant).
-Proof. exact: cancel_inj. Qed.
 
 #[global] Declare Scope wrapN_scope.
 #[global] Delimit Scope wrapN_scope with wrapN.
