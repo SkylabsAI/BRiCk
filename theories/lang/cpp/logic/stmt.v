@@ -197,8 +197,32 @@ Module Type Stmt.
         iDestruct "X" as "[X _]". iApply "X".
     Qed.
 
-    Axiom wp_seq : forall ρ Q ss,
-        wp_block ρ ss Q |-- wp ρ (Sseq ss) Q.
+    Axiom wp_seq_nil : forall (Q : Kpred) ρ,
+      |> Q Normal
+      |-- wp ρ (Sseq []) Q.
+
+    Axiom wp_seq_cons : forall Q s ss ρ,
+      match s with
+      | Sdecl ds =>
+        wp_decls ρ ds (fun ρ free => |> wp ρ (Sseq ss) (Kfree free Q))
+      | _ => |> WPE.wp tu ρ s (Kseq (wp ρ (Sseq ss)) Q)
+      end
+      |-- wp ρ (Sseq (s :: ss)) Q.
+
+    Lemma wp_seq Q ss : forall ρ,
+      wp_block ρ ss Q |-- wp ρ (Sseq ss) Q.
+    Proof.
+      elim: ss Q => [|s ss IH] Q ρ; rewrite -(wp_seq_nil, wp_seq_cons) //=.
+      have HTail : ∀ s',
+        ▷ WPE.wp tu ρ s' (Kseq (wp_block ρ ss) Q) -∗ ▷ wp ρ s' (Kseq (wp ρ (Sseq ss)) Q). {
+        iIntros "% A !>". iApply (wp_frame with "[] A"); first done.
+        iIntros (?). iApply (Kseq_frame with "[] []"); last by auto.
+        iIntros (??). rewrite IH. by iApply wp_frame.
+      }
+      destruct s; try apply HTail.
+      iApply wp_decls_frame; iIntros.
+      by rewrite IH.
+    Qed.
 
     (** [if] *)
 
