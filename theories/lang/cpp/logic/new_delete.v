@@ -187,7 +187,7 @@ Module Type Expr__newdelete.
             (nfty := normalize_type new_fn.2)
             (_ : type_of storage_expr = Tptr Tvoid)
             (_ : arg_types nfty = Some ([Tsize_t; Tptr Tvoid], Ar_Definite)),
-            wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun vs free =>
+            wp_args evaluation_order.nd [] ([Tptr Tvoid], Ar_Definite) [storage_expr] (fun _ vs free =>
                 Exists alloc_sz alloc_al storage_ptr,
                   [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
                   [| size_of aty = Some alloc_sz |] ** [| has_type_prop alloc_sz Tsize_t |] **
@@ -227,9 +227,8 @@ Module Type Expr__newdelete.
           iApply Mbind_frame; last by iApply "args"; by iPureIntro.
           all: subst; cbn in *; inversion Hspec; subst; clear Hspec.
           - iIntros (R S) "RS R"; iIntros (p); iSpecialize ("R" $! p).
-            iRevert "R". iApply wp_operand_frame; try reflexivity.
-            iIntros (??) "X Y". iSpecialize ("X" with "Y").
-            by iApply "RS".
+            iRevert "R". iApply wp_initialize_frame => //.
+            iIntros (?). iApply "RS".
           - iIntros (p); iApply Mmap_frame; iIntros (R S) "RS R"; by iApply "RS".
           - iIntros (ps free) "H".
             iDestruct "H"
@@ -351,7 +350,7 @@ Module Type Expr__newdelete.
               Exists array_sizeN, [| v = Vn array_sizeN |] **
                 (* The size must be greater than zero (see the quote from [expr.new#7] above). *)
                 [| 0 < array_sizeN |]%N **
-                letI* vs, free' := wp_args ([Tptr Tvoid], Ar_Definite) [storage_expr] in
+                letI* _, vs, free' := wp_args evaluation_order.nd [] ([Tptr Tvoid], Ar_Definite) [storage_expr] in
                   Exists alloc_sz alloc_al storage_ptr,
                     [| vs = [storage_ptr] |] ** [| storage_ptr <> nullptr |] **
                     let array_ty := Tarray aty array_sizeN in
@@ -402,9 +401,8 @@ Module Type Expr__newdelete.
           iApply Mbind_frame; last by iApply "args"; by iPureIntro.
           all: subst; cbn in *; inversion Hspec; subst; clear Hspec.
           - iIntros (R S) "RS R"; iIntros (p); iSpecialize ("R" $! p).
-            iRevert "R". iApply wp_operand_frame; try reflexivity.
-            iIntros (??) "X Y". iSpecialize ("X" with "Y").
-            by iApply "RS".
+            iRevert "R"; iApply wp_initialize_frame => //.
+            iIntros (?); iApply "RS".
           - iIntros (p); iApply Mmap_frame; iIntros (R S) "RS R"; by iApply "RS".
           - iIntros (ps free') "H".
             iDestruct "H"
