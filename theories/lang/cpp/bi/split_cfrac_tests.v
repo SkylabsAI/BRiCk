@@ -72,7 +72,7 @@ Section split.
   Lemma scale_var q cq :
     let half := cQp.scale q (cQp.mk (cQp.is_const cq) (cQp.frac cq / 2)) in
     Split (cQp.scale q cq) half half.
-  Proof. cbn. apply _. Abort.
+  Proof. cbn zeta. apply _. Abort.
 
 End split.
 
@@ -143,6 +143,6 @@ Section combine.
   Lemma scale_var q cq :
     let half := cQp.scale q (cQp.mk (cQp.is_const cq) (cQp.frac cq / 2)) in
     Combine half half (cQp.scale q cq).
-  Proof. cbn. apply _. Abort.
+  Proof. cbn zeta. apply _. Abort.
 
 End combine.

@@ -56,6 +56,7 @@ Module cQp.
 
   Definition scale (q : Qp) (cq : t) : t :=
     mk cq.(is_const) (q * cq.(frac)).
+  #[global] Arguments scale _ !_ / : simpl nomatch.
   #[global] Hint Opaque scale : typeclass_instances.
 
   Module Import notation.
