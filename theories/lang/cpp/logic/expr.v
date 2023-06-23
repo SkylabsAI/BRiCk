@@ -1009,7 +1009,7 @@ Module Type Expr.
        | operator_impl.MFunc fn ct fty =>
            match es with
            | eobj :: es =>
-               wp_mcall (dispatch ct (type_of eobj) fn fty) (evaluation_order.ooe oo) eobj fty es Q
+               wp_mcall (dispatch ct fty fn (type_of eobj)) (evaluation_order.ooe oo) eobj fty es Q
            | _ => False
            end
       end%I.
