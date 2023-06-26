@@ -405,6 +405,9 @@ Section with_cpp.
         rewrite !app_length /=. lia. }
       iSplitL "a"; eauto. }
   Qed.
+  Lemma nd_seqs_frame : forall {T} (ms : list (_ T)),
+      ([∗list] m ∈ ms, Mframe m m) |-- Mframe (nd_seqs ms) (nd_seqs ms).
+  Proof. intros. by iApply nd_seqs'_frame. Qed.
 
   (* sanity check on [nd_seq] and [nd_seqs] *)
   Example nd_seq_example : forall {T} (a b : M T),
@@ -435,7 +438,6 @@ Section with_cpp.
       apply H1. rewrite FreeTemps.seq_id_unitL.
       f_equiv; eauto. }
   Qed.
-
 
   (** *** sequencing of monadic compuations *)
   Definition Mseq {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
