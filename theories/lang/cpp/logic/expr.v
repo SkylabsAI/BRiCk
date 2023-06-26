@@ -569,9 +569,10 @@ Module Type Expr.
            Exists v', [| conv_int tu (type_of e) t v v' |] ** Q v' free)
         |-- wp_operand (Ecast Cintegral e Prvalue t) Q.
 
-    Axiom wp_operand_cast_null : forall e t Q,
-        wp_operand e Q
-        |-- wp_operand (Ecast Cnull2ptr e Prvalue t) Q.
+    Axiom wp_operand_cast_null : forall e ty Q,
+        type_of e = Tnullptr ->
+            wp_operand e Q (* note: [has_type v Tnullptr |-- has_type v (Tptr ty)] *)
+        |-- wp_operand (Ecast Cnull2ptr e Prvalue (Tptr ty)) Q.
 
     (* note(gmm): in the clang AST, the subexpression is the call.
      * in essence, [Ecast (Cuser ..)] is a syntax annotation.
