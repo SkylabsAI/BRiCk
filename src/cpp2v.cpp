@@ -83,9 +83,9 @@ public:
             llvm::errs() << i << "\n";
         }
 #endif
-        auto result = new ToCoqConsumer(&Compiler, to_opt(VFileOutput),
-                                        to_opt(NamesFile), to_opt(Templates),
-                                        not Naked.getValue(), NoInclude);
+        auto result = new ToCoqConsumer(
+            &Compiler, to_opt(VFileOutput), to_opt(NamesFile),
+            to_opt(Templates), not Naked.getValue(), /* NoInclude */ true);
         return std::unique_ptr<clang::ASTConsumer>(result);
     }
 
