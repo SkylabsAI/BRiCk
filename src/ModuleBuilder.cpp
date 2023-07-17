@@ -41,6 +41,11 @@ private:
 private:
     Filter::What go(const NamedDecl *decl, Flags flags,
                     bool definition = true) {
+        if (isa<TypeDecl>(decl)) {
+            // type information is often needed so we preserve it.
+            module_.add_definition(decl, flags);
+            return Filter::What::DEFINITION;
+        }
         auto what = filter_.shouldInclude(decl);
         switch (what) {
         case Filter::What::DEFINITION:
