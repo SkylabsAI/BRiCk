@@ -47,7 +47,7 @@ static cl::opt<std::string> VFileOutput("o",
                                         cl::Optional, cl::cat(Cpp2V));
 
 static cl::opt<bool> NoInclude(
-    "s",
+    "prune",
     cl::desc(
         "only include definitions (for code) that are included in the file"),
     cl::Optional, cl::cat(Cpp2V));
