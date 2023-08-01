@@ -246,23 +246,23 @@ the value category that it is called with.
 We consolidate these definitions here because they are shared between
 all function calls.
 *)
-Definition xval_receive `{Σ : cpp_logic, σ : genv}
+mlock Definition xval_receive `{Σ : cpp_logic, σ : genv}
     (ty : type) (res : ptr) (Q : ptr -> epred) : mpred :=
   (**
   [primR] is enough because C++ code never uses the raw bytes
   underlying an inhabitant of a reference type.
   *)
   Exists p, res |-> primR (Tref (erase_qualifiers ty)) (cQp.mut 1) (Vref p) ** Q p.
-#[global] Arguments xval_receive {_ _ _} _ _ _ / : assert.
+#[global] Arguments xval_receive {_ _ _} _ _ _ : assert.	(* mlock bug *)
 
-Definition lval_receive `{Σ : cpp_logic, σ : genv}
+mlock Definition lval_receive `{Σ : cpp_logic, σ : genv}
     (ty : type) (res : ptr) (Q : ptr -> epred) : mpred :=
   (**
   [primR] is enough because C++ code never uses the raw bytes
   underlying an inhabitant of a reference type.
   *)
   Exists p, res |-> primR (Tref (erase_qualifiers ty)) (cQp.mut 1) (Vref p) ** Q p.
-#[global] Arguments lval_receive {_ _ _} _ _ _ / : assert.
+#[global] Arguments lval_receive {_ _ _} _ _ _ : assert.	(* mlock bug *)
 
 mlock Definition operand_receive `{Σ : cpp_logic, σ : genv}
     (ty : type) (res : ptr) (Q : val -> epred) : mpred :=
@@ -272,6 +272,7 @@ mlock Definition operand_receive `{Σ : cpp_logic, σ : genv}
   Q v.
 #[global] Arguments operand_receive {_ _ _} _ _ _ : assert.	(* mlock bug *)
 
+(** Meant to be unfolded *)
 Definition init_receive `{Σ : cpp_logic, σ : genv}
     (addr res : ptr) (Q : epred) : mpred :=
   [| addr = res |] -* Q.
@@ -283,13 +284,13 @@ Section receive.
   Lemma xval_receive_frame ty res (Q Q' : ptr -> epred) :
       Forall v, Q v -* Q' v |-- xval_receive ty res Q -* xval_receive ty res Q'.
   Proof.
-    rewrite /xval_receive. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
+    rewrite xval_receive.unlock. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
   Qed.
 
   Lemma lval_receive_frame ty res (Q Q' : ptr -> epred) :
       Forall v, Q v -* Q' v |-- lval_receive ty res Q -* lval_receive ty res Q'.
   Proof.
-    rewrite /lval_receive. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
+    rewrite lval_receive.unlock. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
   Qed.
 
   Lemma operand_receive_frame ty res (Q Q' : val -> epred) :

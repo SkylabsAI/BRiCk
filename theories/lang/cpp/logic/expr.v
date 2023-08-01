@@ -903,12 +903,12 @@ Module Type Expr.
 
     Axiom wp_lval_call : forall f (es : list Expr) Q (ty : type),
         wp_call (evaluation_order.order_of OOCall) (type_of f) f es (fun res free =>
-           Reduce (lval_receive ty res $ fun v => Q v free))
+           lval_receive ty res $ fun v => Q v free)
         |-- wp_lval (Ecall f es ty) Q.
 
     Axiom wp_xval_call : forall f (es : list Expr) Q (ty : type),
         wp_call (evaluation_order.order_of OOCall) (type_of f) f es (fun res free =>
-           Reduce (xval_receive ty res $ fun v => Q v free))
+           xval_receive ty res $ fun v => Q v free)
         |-- wp_xval (Ecall f es ty) Q.
 
     Axiom wp_operand_call : forall ty f es Q,
