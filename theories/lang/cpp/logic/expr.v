@@ -238,18 +238,29 @@ Module Type Expr.
         We check pointer [p] is strictly valid and aligned.
         The official standard says (https://eel.is/c++draft/expr.unary.op#1):
 
-        > The unary * operator performs indirection: the expression to which it is applied
-        > shall be a pointer to an object type, or a pointer to a function type and the
-        > result is an lvalue referring to the object or function to which the expression
-        > points. If the type of the expression is “pointer to T”, the type of the result
-        > is “T”.
+        > The unary * operator performs indirection. Its operand shall be a
+        > prvalue of type “pointer to T”, where T is an object or function type.
+        > The operator yields an lvalue of type T denoting the object or function
+        > to which the operand points. [Note 1: Indirection through a pointer to
+        > an incomplete type (other than cv void) is valid. The lvalue thus
+        > obtained can be used in limited ways (to initialize a reference, for
+        > example); this lvalue must not be converted to a prvalue, see
+        > [conv.lval]. — end note]
 
         "The object or function" means we must require at least strict validity
         (to exclude null and past-the-end pointers).
-        We don't ask for [type_ptrR]: that would (unnecessarily?) forbid code like:
+        We don't ask for [type_ptrR]: that would incorrectly forbid code like:
         <<
-        struct A { int x; int *y{&*x}; };
+        struct A { int *y{&*&x}; int x; };
         >>
+
+        We also do not require the type to match, as that would incorrectly forbid:
+        <<
+        long x; int *y{&*&x};
+        >>
+        While the text is confusing, it does NOT relate static type [T] to the
+        object/function identified by the pointer.
+        See https://stackoverflow.com/a/76250740/53974.
      *)
     Axiom wp_lval_deref : forall ty e Q,
         wp_operand e (fun v free =>
