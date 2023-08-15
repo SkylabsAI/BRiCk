@@ -87,7 +87,12 @@ public:
     }
 
     virtual What shouldInclude(const Decl *d) {
-        SourceLocation loc = d->getSourceRange().getBegin();
+        auto loc = d->getSourceRange().getBegin();
+        if (auto fd = dyn_cast<FunctionDecl>(d)) {
+            auto poi = fd->getPointOfInstantiation();
+            if (poi.isValid())
+                loc = poi;
+        }
         return isIncluded(loc) ? What::DECLARATION : What::DEFINITION;
     }
 };
