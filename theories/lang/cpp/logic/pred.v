@@ -233,7 +233,7 @@ Module Type CPP_LOGIC
       Axiom reference_to_elim : forall ty p,
           reference_to ty p |--
             [| aligned_ptr_ty ty p |] ** [| p <> nullptr |] **
-            valid_ptr p ** if zero_sized_array ty then emp else strict_valid_ptr p.
+            init_validR p.
 
     End with_genv.
 

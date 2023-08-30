@@ -19,6 +19,30 @@ Import ChargeNotation.
 Section with_cpp.
   Context `{Σ : cpp_logic} {σ : genv}.
 
+  (**
+  A pointer to a zero-sized array is really a past-the-end pointer so it's only valid, not strictly valid.
+
+  NOTE: This is _intentionally_ not about object size, but about the shape of
+  the object graph; 0-sized arrays do not have subobjects.
+
+  TODO: recheck what's going on with nested arrays - but since for us arrays
+  aren't really objects, this should still work.
+  TODO^2: given << T x[m][n]; >>
+  can we map
+  <<
+  x[i][j]
+  >>
+  to `x .[ ty ! (i * n) + j]`?
+  That might be simpler than the alternative
+  `x .[ Tarray ty m ! i] .[ ty ! j ]`,
+  because we'd need quotienting reasoning principles on the latter.
+
+  NOTE: if [sizeof ty = 0] and we have [ty arr[n];], comparing [arr + i] and
+  [arr + j] will show they have the same address, but the pointers should not be
+  equal.
+
+  We enforce that via side conditions on [same_address_eq_type_ptr].
+  *)
   Definition init_validR (ty : type) : Rep :=
     if zero_sized_array ty then
       validR
