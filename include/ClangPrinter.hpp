@@ -60,6 +60,8 @@ public:
     // Print value name
     void printObjName(const clang::ValueDecl* decl, CoqPrinter& print,
                       bool raw = false);
+    void printName(const clang::NamedDecl* decl, CoqPrinter& print);
+
     void printTypeName(const clang::TypeDecl* decl, CoqPrinter& print) const;
 
     void printInstantiatableRecordName(const clang::RecordDecl* decl,

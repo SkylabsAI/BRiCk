@@ -350,11 +350,53 @@ public:
         print.end_ctor();
     }
 
+    static void printTemplateArgument(const TemplateArgument& ta,
+                                      CoqPrinter& print, ClangPrinter& cprint) {
+        switch (ta.getKind()) {
+        case TemplateArgument::ArgKind::Type:
+            print.ctor("TypeArg");
+            cprint.printQualType(ta.getAsType(), print);
+            print.end_ctor();
+            break;
+        case TemplateArgument::ArgKind::Expression:
+            print.ctor("ExprArg");
+            cprint.printExpr(ta.getAsExpr(), print);
+            print.end_ctor();
+            break;
+        case TemplateArgument::ArgKind::Declaration:
+            print.ctor("ExprArg");
+            print.ctor("Evar", false);
+            print.ctor("Gname", false);
+            cprint.printObjName(ta.getAsDecl(), print);
+            print.end_ctor();
+            cprint.printQualType(ta.getAsDecl()->getType(), print);
+            print.end_ctor();
+            print.end_ctor();
+            break;
+        default:
+            assert(false && "unsupported template argument");
+        }
+    }
+
     void VisitTemplateSpecializationType(const TemplateSpecializationType* type,
                                          CoqPrinter& print,
                                          ClangPrinter& cprint) {
         if (type->isSugared()) {
-            cprint.printQualType(type->desugar(), print);
+            return cprint.printQualType(type->desugar(), print);
+        }
+
+        auto name = type->getTemplateName();
+        if (auto td = name.getAsTemplateDecl()) {
+            print.ctor("Tinst_name");
+            // TODO: The following does not work because it does not print template information.
+            // this seems to be because [td] points to the record as opposed to the template information
+            cprint.printName(td, print);
+            print.output() << fmt::nbsp;
+            print.list(type->template_arguments(),
+                       [&cprint](auto& print, const TemplateArgument& i) {
+                           printTemplateArgument(i, print, cprint);
+                       });
+            print.end_ctor();
         } else {
             unsupported_type(type, print, cprint);
         }
@@ -366,6 +408,7 @@ public:
             // The guard ensure the type visitor terminates.
             cprint.printQualType(type->desugar(), print);
         } else if (print.templates()) {
+            // TODO: this is not correct
             cprint.printQualType(type->getUnderlyingType(), print);
         } else {
             unsupported_type(type, print, cprint);
@@ -389,12 +432,16 @@ public:
 
     void VisitInjectedClassNameType(const InjectedClassNameType* type,
                                     CoqPrinter& print, ClangPrinter& cprint) {
-        if (type->getDecl()) {
-            print.ctor("Tvar", false);
+        if (auto tst = type->getInjectedTST()) {
+            Visit(tst, print, cprint);
+#if 0
+        } else if (type->getDecl()) {
+            print.ctor("Tvar (* InjectedClassNameType *)", false);
             cprint.printTypeName(type->getDecl(), print);
             print.end_ctor();
+#endif
         } else {
-            logging::log() << "no underlying declaration for \n";
+            logging::unsupported() << "no underlying declaration for \n";
 #if CLANG_VERSION_MAJOR >= 11
             type->dump(logging::log(), cprint.getContext());
 #else
