@@ -1135,13 +1135,15 @@ public:
     void VisitCXXNewExpr(const CXXNewExpr* expr, CoqPrinter& print,
                          ClangPrinter& cprint, const ASTContext&,
                          OpaqueNames& li) {
-        print.ctor("Enew");
         if (expr->getOperatorNew()) {
+            print.ctor("Enew");
             print.begin_tuple();
             cprint.printObjName(expr->getOperatorNew(), print);
             print.next_tuple();
             cprint.printQualType(expr->getOperatorNew()->getType(), print);
             print.end_tuple() << fmt::nbsp;
+        } else if (print.templates()) {
+            print.ctor("Eunresolved_new");
         } else {
             logging::fatal() << "missing operator [new]\n";
             logging::die();
@@ -1173,10 +1175,10 @@ public:
     void VisitCXXDeleteExpr(const CXXDeleteExpr* expr, CoqPrinter& print,
                             ClangPrinter& cprint, const ASTContext&,
                             OpaqueNames& li) {
-        print.ctor("Edelete");
-        print.output() << fmt::BOOL(expr->isArrayForm()) << fmt::nbsp;
-
         if (auto op = expr->getOperatorDelete()) {
+            print.ctor("Edelete");
+            print.output() << fmt::BOOL(expr->isArrayForm()) << fmt::nbsp;
+
             if (op->isDestroyingOperatorDelete()) {
                 logging::fatal() << "destroying delete is not supported\n";
                 logging::die();
@@ -1186,6 +1188,9 @@ public:
             print.next_tuple();
             cprint.printQualType(op->getType(), print);
             print.end_tuple();
+        } else if (print.templates()) {
+            print.ctor("Eunresolved_delete");
+            print.output() << fmt::BOOL(expr->isArrayForm()) << fmt::nbsp;
         } else {
             logging::fatal() << "missing [delete] operator\n";
             logging::die();
