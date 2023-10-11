@@ -146,6 +146,7 @@ build_latest:
 # that those match the versions in our "public" Docker image.
 build_public_opam:
   script:
+    - opam install --assume-depexts -y coq-lens
     - opam install --assume-depexts -y .
   needs: [dune-build]
   extends:
