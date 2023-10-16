@@ -3,8 +3,10 @@ From Coq.Lists Require Import List.
 From Coq.Strings Require Import String.
 (* Avoid [From MetaCoq.Template Require Import utils All.]
 to work around https://github.com/MetaCoq/metacoq/issues/580 *)
-From MetaCoq.Template Require Import utils monad_utils.
+
+From MetaCoq.Utils Require Export monad_utils MCUtils.
 From MetaCoq.Template Require Import Ast Loader TemplateMonad.
+
 From Lens Require Import Lens.
 
 Import MCMonadNotation.
@@ -62,6 +64,9 @@ Fixpoint get_arity (t : term) : nat :=
   | tProd _ _ t => S (get_arity t)
   | _ => 0
   end.
+
+(* Fix upstream scoping bug; upstream just opens [Local Open Scope bs.] *)
+Bind Scope bs_scope with String.t.
 
 Local Definition getFields (mi : mutual_inductive_body) (n : nat) : TemplateMonad Info :=
   match nth_error mi.(ind_bodies) n with
