@@ -3,7 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-From stdpp Require Import fin_maps.
+From stdpp Require Import fin_maps gmap.
 From bedrock.prelude Require Import base bytestring.
 From bedrock.lang.cpp Require Import syntax.translation_unit syntax.types.
 
@@ -13,9 +13,6 @@ Require Import test.test_translation_unit_validity_cpp.
   complete_pointee_type wellscoped_type wellscoped_types : core.
 #[local] Hint Constructors valid_decl : core.
 #[local] Hint Extern 10 => done : core.
-
-#[global] Instance: OMap avl.IM.t. Admitted.
-#[global] Instance: FinMap bs avl.IM.t. Admitted.
 
 #[local] Hint Extern 10 => match goal with
 | H : In _ _ |- _ => simpl in *; intuition simplify_eq
@@ -31,23 +28,3 @@ Proof.
   #[local] Opaque module.
   (*all: repeat apply List.Forall_cons; rewrite /type_of_value/=/qual_norm/=; eauto 20.
 Qed. *) Admitted.
-#[local] Transparent module.
-
-(* XXX These settings are only good to print raw contents. *)
-Module view_awl.
-  Export avl.IM.Raw(Leaf, Node).
-  Export avl.IM(bst, Bst).
-
-  (* Can these settings be #[export]? Not a priority. *)
-
-  (* Hide proof [I] *)
-  Add Printing Constructor avl.IM.bst.
-  Arguments avl.IM.Bst {_} _ {_}.
-
-  Arguments avl.IM.Raw.Leaf {_}.
-  Arguments avl.IM.Raw.Node {_} _ _ _ _ {_}. (* Hide AVL depth *)
-
-  (* Only for debugging, disabled in CI. *)
-  (* Eval cbv in module.(types). *)
-  (* Eval cbv in map snd $ map_to_list module.(types). *)
-End view_awl.

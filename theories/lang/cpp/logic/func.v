@@ -102,7 +102,7 @@ Definition derivationsR `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   The number of global entries is an upper bound on the height of the
   derivation tree.
   *)
-  let size := avl.IM.cardinal σ.(genv_tu).(types) in
+  let size := size σ.(genv_tu).(types) in
   derivationsR' tu q size include_base cls path.
 
 Section derivationsR.

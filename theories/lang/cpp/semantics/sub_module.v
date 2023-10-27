@@ -8,9 +8,8 @@ Require Import ExtLib.Tactics.
 (* Later modules reset [Obligation Tactic] (by importing stdpp). To ensure
 this reset propagates to clients, we must export one of them; we choose to
 export our [base] module. *)
-Require Import stdpp.fin_maps.
+From stdpp Require Import fin_maps gmap.
 From bedrock.prelude Require Export base.
-From bedrock.prelude Require Import avl.
 Require Import bedrock.lang.cpp.ast.
 
 (** TODO rename [sub_module] since it is not actually about modules
@@ -39,6 +38,16 @@ Require Import bedrock.lang.cpp.ast.
   intuition idtac; repeat (do_bool_decide; subst; repeat case_match);
   eauto using bool_decide_eq_true_2; try congruence.
 
+Definition find_any {T} (b : bs -> T -> bool) (l : gmap bs T) : bool :=
+  map_fold (λ (k : bs) (v : T) (acc : bool), if acc then true else b k v) false l.
+
+Theorem find_any_ok {T} b (l : gmap bs T) :
+  if find_any b l then
+    exists k v, l !! k = Some v /\ b k v = true
+  else
+    forall k v, l !! k = Some v -> b k v = false.
+Admitted.
+
 (** * Definitions for decidability *)
 Section compat_le.
   Context {T : Type}.
@@ -46,7 +55,7 @@ Section compat_le.
 
   (* NOTE: this is effectively [Decision (map_inclusion)],
      but is significantly more computationally efficient *)
-  Definition compat_le (l r : IM.t T) : bool :=
+  Definition compat_le (l r : gmap bs T) : bool :=
     negb $ find_any (fun k v => negb (f (Some v) (r !! k))) l.
 
   Lemma compat_le_sound : forall l r,
@@ -56,20 +65,13 @@ Section compat_le.
       else
         exists k : ident, f (l !! k) (r !! k) = false.
   Proof.
-    intros.
-    unfold compat_le.
+    move => l r Hf. rewrite /compat_le.
     generalize (find_any_ok (λ (k : bs) (v : T), negb (f (Some v) (r !! k))) l).
     generalize (find_any (λ (k : bs) (v : T), negb (f (Some v) (r !! k))) l).
-    destruct b; simpl; intros.
-    - destruct H0 as [ ? [ ? [ ? ? ] ] ].
-      exists x. unfold lookup, IM_lookup in *.
-      apply negb_true_iff in H1.
-      erewrite IM.find_1; eauto.
-    - unfold lookup, IM_lookup.
-      destruct (IM.find k l) eqn:Heq; eauto.
-      apply IM.find_2 in Heq.
-      eapply H0 in Heq.
-      apply negb_false_iff in Heq. eauto.
+    move => b; destruct b => /=.
+    - move => [k][v][H1] /negb_true_iff H2. exists k. by rewrite H1.
+    - move => H k. destruct (l !! k) eqn:Heq; last by apply Hf.
+      move: (H k t Heq) => /negb_false_iff //.
   Qed.
 
 End compat_le.
