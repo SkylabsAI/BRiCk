@@ -9,6 +9,222 @@ Require Import stdpp.fin_maps.
 Require Import bedrock.prelude.bytestring.
 Require Import bedrock.prelude.stdpp_ssreflect.
 
+Module Pairing.
+  Definition Pos_powN (p : positive) (n : N) : positive :=
+    match n with
+    | N.pos n => Pos.pow p n
+    | _       => 1%positive
+    end.
+
+  Definition Pos_double_and_add_1N (n : N) : positive :=
+    match n with
+    | N.pos n => xI n
+    | _       => xH
+    end.
+
+  Definition encode (nm : N * N) : positive :=
+    (Pos_powN 2 nm.1 * Pos_double_and_add_1N nm.2)%positive.
+
+  Fixpoint decode_aux (n : N) (p : positive) : N * N :=
+    match p with
+    | xO p => decode_aux (N.succ n) p
+    | xI p => (n, N.pos p)
+    | _    => (n, 0%N)
+    end.
+  Definition decode (p : positive) : N * N := decode_aux 0%N p.
+
+  Lemma decode_aux_pow2 (n : N) (p : positive) :
+    decode_aux n (2 ^ p) = (n + N.pos p, 0)%N.
+  Proof.
+    revert n. induction p as [|p IH] using Pos.peano_ind => n.
+    { by rewrite N.add_1_r. }
+    rewrite Pos.pow_succ_r.
+    rewrite /={}IH. f_equal.
+    rewrite -N.add_1_r -N.add_assoc. f_equal.
+    by rewrite N.add_1_l.
+  Qed.
+
+  Lemma decode_aux_pos_spec (n : N) (pn pm : positive) :
+    decode_aux n (2 ^ pn * pm~1) = (n + N.pos pn, N.pos pm)%N.
+  Proof.
+    revert n; induction pn as [|pn IH] using Pos.peano_ind => n.
+    { by rewrite /=N.add_1_r. }
+    rewrite Pos.pow_succ_r.
+    rewrite /={}IH. f_equal.
+    rewrite -N.add_1_r -N.add_assoc. f_equal.
+    by rewrite N.add_1_l.
+  Qed.
+
+  Lemma decode_encode (nm : N * N) : decode (encode nm) = nm.
+  Proof.
+    destruct nm as [n m]. rewrite /encode/=.
+    destruct n as [|pn]; destruct m as [|pm] => //=.
+    + rewrite Pos.mul_1_r. rewrite /decode. apply decode_aux_pow2.
+    + rewrite /decode. by rewrite decode_aux_pos_spec.
+  Qed.
+
+
+  Lemma decode_aux_acc_wf (p : positive) (acc n m : N) :
+    decode_aux acc p = (n, m) → (acc ≤ n)%N.
+  Proof.
+    revert acc n m; induction p as [p IH|p IH|] => acc n m /=.
+    - move => /= [<- _] //.
+    - move => /IH. lia.
+    - move => /= [<- _] //.
+  Qed.
+
+  Definition Pos_lt_wf := Wf_nat.well_founded_ltof positive Pos.to_nat.
+
+  Lemma decode_aux_pow2_invert (n : N) (p e : positive) :
+    decode_aux n p = (n + N.pos e, 0)%N → (2 ^ e)%positive = p.
+  Proof.
+    revert n p.
+    induction e as [e IH] using (well_founded_induction Pos_lt_wf) => n p.
+    destruct p as [p|p|]. 1,3: move => []; lia.
+    destruct e as [|e _] using Pos.peano_ind => /=.
+    - rewrite Pos.pow_1_r/= N.add_1_r.
+      destruct p as [p|p|]. 1,3: done.
+      move => /=/decode_aux_acc_wf. lia.
+    - move => H.
+      rewrite Pos.pow_succ_r. apply Pos.mul_cancel_l.
+      eapply IH; first (rewrite /ltof/=; lia).
+      erewrite H. f_equal. lia.
+  Qed.
+
+  Lemma encode_decode_aux (n : N) (p pn pm : positive) :
+    decode_aux n p = (n + N.pos pn, N.pos pm)%N → (2 ^ pn * pm~1)%positive = p.
+  Proof.
+    revert n p pm.
+    induction pn as [pn IH] using (well_founded_induction Pos_lt_wf) => n p pm.
+    destruct p as [p|p|]. 1,3: move => []; lia. move => /=.
+    destruct pn as [|pn _] using Pos.peano_ind => /=.
+    - rewrite Pos.pow_1_r/= N.add_1_r.
+      destruct p as [p|p|] => /=. 1,3: move => []; lia.
+      move => /=/decode_aux_acc_wf. lia.
+    - move => H.
+      rewrite Pos.pow_succ_r -Pos.mul_assoc.
+      apply Pos.mul_cancel_l.
+      eapply IH; first (rewrite /ltof/=; lia).
+      erewrite H. f_equal. lia.
+  Qed.
+
+  Lemma encode_decode (p : positive) : encode (decode p) = p.
+    destruct (decode p) as [n m] eqn:H; revert H.
+    rewrite /encode/decode/=.
+    destruct n as [|pn]; destruct m as [|pm] => /=.
+    - rewrite Pos.mul_1_l. destruct p => /=; [done| |done].
+      move => /decode_aux_acc_wf. lia.
+    - rewrite Pos.mul_1_l. destruct p => /=; [by move => [->]| |done].
+      move => /decode_aux_acc_wf. lia.
+    - rewrite Pos.mul_1_r. apply: decode_aux_pow2_invert.
+    - apply: encode_decode_aux.
+  Qed.
+End Pairing.
+
+Module BSAsPos.
+  Fixpoint encode_aux (s : bs) : N * N :=
+    match s with
+    | BS.EmptyString => (0%N, 0%N)
+    | BS.String b s =>
+        let '(len, e) := encode_aux s in
+        (N.succ len, 256 * e + Byte.to_N b)%N
+    end.
+  Definition encode (s : bs) : positive := Pairing.encode (encode_aux s).
+
+  Fixpoint decode_aux (len : nat) (e : N) : bs :=
+    match len with
+    | 0%nat => BS.EmptyString
+    | S len =>
+        let '(q, r) := N.div_eucl e 256%N in
+        let b :=
+          match Byte.of_N r with
+          | Some b => b
+          | None   => Byte.x00 (* Unreachable. *)
+          end
+        in
+        BS.String b (decode_aux len q)
+    end.
+  Definition decode (p : positive) : bs :=
+    let (len, e) := Pairing.decode p in
+    decode_aux (N.to_nat len) e.
+
+  Definition decode_Some (p : positive) : option bs :=
+    Some (decode p).
+
+  Goal True.
+    assert (let s := "Hello, world!"%bs in decode (encode s) = s); [done|].
+  Abort.
+
+  Lemma N_div_eucl_lt_spec (b q r : N) :
+    (r < b)%N → N.div_eucl (b * q + r)%N b = (q, r).
+  Proof.
+    (* Proof by Olivier Laurent on Zulip. *)
+    intro Hr.
+    rewrite (surjective_pairing (N.div_eucl (b * q + r) b)).
+    symmetry. f_equal.
+    - exact (N.div_unique _ _ _ _ Hr eq_refl).
+    - exact (N.mod_unique _ _ _ _ Hr eq_refl).
+  Qed.
+
+  Lemma decode_encode_aux (s : bs) (len e : N) :
+    encode_aux s = (len, e) → decode_aux (N.to_nat len) e = s.
+  Proof.
+    revert e s; induction len as [|len IH] using N.peano_ind => e s.
+    - destruct s as [|b s]; first done. simpl.
+      destruct (encode_aux s) as [??].
+      move => []. lia.
+    - destruct s as [|b s] => /=; first (move => []; lia).
+      destruct (encode_aux s) as [len' e'] eqn:Heq.
+      rewrite N2Nat.inj_succ/=.
+      destruct (N.div_eucl e 256) as [q r] eqn:Hdiv.
+      move => [] /N.succ_inj ? ?. subst len' e.
+      rewrite N_div_eucl_lt_spec in Hdiv; last first.
+      { rewrite /Byte.to_N; case_match; lia. }
+      move: Hdiv => [<-<-].
+      rewrite Byte.of_to_N. f_equal. by apply IH.
+  Qed.
+
+  Eval vm_compute in decode_aux 0%nat 2%N.
+
+  Lemma encode_decode_aux (len e : N) :
+    encode_aux (decode_aux (N.to_nat len) e) = (len, e).
+  Proof.
+    (* FIXME false when [len = 0] *)
+  Admitted.
+
+  Lemma decode_encode (s : bs) : decode (encode s) = s.
+  Proof.
+    rewrite /encode/decode/=.
+    destruct (encode_aux s) as [len e] eqn:Henc.
+    rewrite Pairing.decode_encode.
+    by apply decode_encode_aux.
+  Qed.
+
+  Lemma encode_decode (p : positive) : encode (decode p) = p.
+    rewrite /encode/decode/=.
+    destruct (Pairing.decode p) as [len e] eqn:Hdec.
+    rewrite encode_decode_aux -Hdec.
+    apply Pairing.encode_decode.
+  Qed.
+
+  Lemma encode_as_decode (s : bs) (p : positive) : decode p = s → p = encode s.
+  Proof. move => H. rewrite -(encode_decode p) H. done. Qed.
+End BSAsPos.
+
+
+#[local] Remove Hints bytestring_countable : typeclass_instances.
+
+#[global, program]
+Instance bs_countable : Countable bs := {|
+  encode := BSAsPos.encode;
+  decode := BSAsPos.decode_Some;
+|}.
+Next Obligation.
+  move => ?. rewrite /BSAsPos.decode_Some/=.
+  f_equal; apply BSAsPos.decode_encode.
+Qed.
+
+
 Record bs_map {V : Type} := mkBSMap { bs_pmap : Pmap V }.
 Arguments bs_map : clear implicits.
 
@@ -39,129 +255,35 @@ Arguments bs_map : clear implicits.
   in
   map_fold f acc m.(bs_pmap).
 
-Require Import Coq.Program.Wf.
-
-Definition log256 (n : N) : N := N.log2 n / 8.
-
-Fixpoint enc_and_lengthN (s : bs) : N * N :=
-  match s with
-  | BS.EmptyString => (0%N, 0%N)
-  | BS.String b s =>
-      let '(e, len) := enc_and_lengthN s in
-      (N.succ (Byte.to_N b) * 256 ^ len + e, N.succ len)%N
-  end.
-Definition enc (s : bs) : N := (enc_and_lengthN s).1.
-
-Goal True.
-  assert (enc (BS.parse []) = 0%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.x00]) = 1%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.x01]) = 2%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.xff]) = 256%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.x00; Byte.x00]) = 257%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.x00; Byte.x01]) = 258%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.xff; Byte.xff]) = 65792%N) as _ by reflexivity.
-  assert (enc (BS.parse [Byte.x00; Byte.x00; Byte.x00]) = 65793%N) as _ by reflexivity.
-Abort.
-
-Definition byte_of_N (n : N) : Byte.byte :=
-  match Byte.of_N n with
-  | None => Byte.x00
-  | Some b => b
-  end.
-
-Fixpoint all_ff_pos (p : positive) : bs :=
-  match p with
-  | xH => BS.String Byte.xff BS.EmptyString
-  | xI p => let s := all_ff_pos p in BS.String Byte.xff (BS.append s s)
-  | xO p => let s := all_ff_pos p in BS.append s s
-  end.
-Definition all_ff (n : N) : bs :=
-  match n with
-  | N0 => BS.EmptyString
-  | Npos p => all_ff_pos p
-  end.
-
-Lemma N_lt_acc (n : N) : Acc N.lt n.
-  apply (N.strong_right_induction _ 0); last exact (N.le_0_l n).
-  move => m H IH.
-  constructor => k Hk.
-  refine (IH k (N.le_0_l k) Hk).
-Defined.
-
-#[local] Set Transparent Obligations.
-
-Program Fixpoint dec (n : N) {wf N.lt n} : bs :=
-  let len := log256 n in (* The string has either [len] or [len+1] characters. *)
-  let qr := N.div_eucl n (256 ^ len) in
-  match qr.1 with
-  | 0%N =>
-    match qr.2 with
-    | 0%N => BS.EmptyString
-    | r   => BS.String (byte_of_N (N.pred r)) BS.EmptyString
-    end
-  | q   =>
-    match qr.2 with
-    | 0%N => all_ff len
-    | r   => BS.String (byte_of_N (N.pred r)) (dec q)
-    end
-  end.
-Next Obligation. done. Defined.
-Next Obligation.
-  move => n _ len qr s1 s2 Hq ? s3 s4 Hr ?; subst len s1 s2 s3 s4.
-  revert qr Hq Hr.
-  have := N.div_eucl_spec n (256 ^ log256 n).
-  destruct (N.div_eucl n (256 ^ log256 n)) as [q r] => Heq.
-  move => qr; subst qr; move => /= Hq Hr. rewrite {}Heq.
-  assert (1 ≤ 256 ^ log256 n)%N as Hlem1 by lia.
-  assert (1 * q + r ≤ 256 ^ log256 n * q + r)%N as Hlem2.
-  { by apply N.add_le_mono_r, N.mul_le_mono_r. }
-  revert Hlem1 Hlem2.
-  generalize (2 ^ log256 n)%N. lia.
-Defined.
-Next Obligation. done. Defined.
-Next Obligation. done. Defined.
-Next Obligation. refine (wf_guard 1000%nat N_lt_acc). Defined.
-
-Eval vm_compute in log256 0%N.
-Eval vm_compute in N.div_eucl 0%N (256 ^ 0%N)%N.
-Eval vm_compute in enc "Hello, world!"%bs.
-(* Set Printing All. *)
-Eval vm_compute in dec 0%N.
-Eval vm_compute in dec 1%N.
-
-Eval vm_compute in log256 1%N.
-Eval vm_compute in N.div_eucl 1%N (256 ^ 0)%N.
-Eval vm_compute in N.div_eucl 1%N (256 ^ 0)%N.
-
-
-Axiom bs_decode_total : forall (i : positive), @decode bs _ _ i ≠ None.
-Axiom bs_decode_surj : forall (i : positive) (b : bs), decode i = Some b → i = encode b.
-
 #[global] Instance bs_map_finmap : FinMap BS.t bs_map.
 Proof.
   constructor.
-  - move => ? [m1][m2]. rewrite /lookup/bs_map_lookup/=.
+  - move => ? [m1][m2]. rewrite /lookup/bs_map_lookup.
     move => H. f_equal. apply map_eq. move => i.
-    destruct (@decode bs _ _ i) eqn:Heq.
-    + apply bs_decode_surj in Heq. subst i. done.
-    + exfalso. by apply (bs_decode_total i).
+    destruct (@decode bs _ _ i) as [s|] eqn:Heq.
+    + enough (i = encode s) by by subst i. move: Heq.
+      rewrite /decode/encode/=/BSAsPos.decode_Some.
+      move => []. apply BSAsPos.encode_as_decode.
+    + exfalso. by rewrite /decode/=/BSAsPos.decode_Some in Heq.
   - done.
-  - move => *. rewrite /lookup/bs_map_lookup/=. apply lookup_partial_alter.
-  - move => ??? i1 i2 H. rewrite /lookup/bs_map_lookup/=. apply lookup_partial_alter_ne.
+  - move => *. rewrite /lookup/bs_map_lookup. apply lookup_partial_alter.
+  - move => ??? i1 i2 H. rewrite /lookup/bs_map_lookup. apply lookup_partial_alter_ne.
     move => Heq. apply H.
     have: (@decode bs _ _ (encode i1) = decode (encode i2)) by rewrite Heq.
     rewrite !decode_encode => [][]//.
-  - move => *. rewrite /fmap/bs_map_fmap/lookup/bs_map_lookup/=. apply lookup_fmap.
-  - move => *. rewrite /omap/bs_map_omap/lookup/bs_map_lookup/=. apply lookup_omap.
-  - move => *. rewrite /merge/bs_map_merge/lookup/bs_map_lookup/=. apply lookup_merge.
+  - move => *. rewrite /fmap/bs_map_fmap/lookup/bs_map_lookup. apply lookup_fmap.
+  - move => *. rewrite /omap/bs_map_omap/lookup/bs_map_lookup. apply lookup_omap.
+  - move => *. rewrite /merge/bs_map_merge/lookup/bs_map_lookup. apply lookup_merge.
   - move => A B P f b.
     rewrite /map_fold/bs_map_map_fold/lookup/bs_map_lookup.
-    rewrite /empty/bs_map_empty/insert/map_insert/partial_alter/bs_map_partial_alter/=.
-    move => H1 H2 [m]/=.
+    rewrite /empty/bs_map_empty/insert/map_insert/partial_alter/bs_map_partial_alter.
+    move => H1 H2 [m].
     apply: (map_fold_ind (fun b m => P b {| bs_pmap := m |})); [done|].
-    rewrite /insert/map_insert/=.
-    move => i v m0 r P1 P2. case_match.
-    + have Hi: i = encode t by apply bs_decode_surj.
-      rewrite Hi in P1 |- *. apply (H2 _ _ {| bs_pmap := m0 |} _ P1 P2).
-    + exfalso. move: H. clear. apply bs_decode_total.
+    rewrite /insert/map_insert.
+    move => i v m0 r P1 P2. case_match eqn:Hi.
+    + have Hdec: i = encode t.
+      { move: Hi. rewrite /decode/encode/=/BSAsPos.decode_Some.
+        move => []. apply BSAsPos.encode_as_decode. }
+      rewrite Hdec in P1 |- *. apply (H2 _ _ {| bs_pmap := m0 |} _ P1 P2).
+    + exfalso. move: Hi. by rewrite /decode/=/BSAsPos.decode_Some.
 Qed.
