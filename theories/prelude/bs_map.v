@@ -9,21 +9,47 @@ Require Import stdpp.fin_maps.
 Require Import bedrock.prelude.bytestring.
 Require Import bedrock.prelude.stdpp_ssreflect.
 
-Module Pairing.
-  Definition Pos_powN (p : positive) (n : N) : positive :=
-    match n with
-    | N.pos n => Pos.pow p n
-    | _       => 1%positive
-    end.
+Lemma N_div_eucl_lt_spec (b q r : N) :
+  (r < b)%N → N.div_eucl (b * q + r)%N b = (q, r).
+Proof.
+  (* Proof by Olivier Laurent on Zulip. *)
+  intro Hr.
+  rewrite (surjective_pairing (N.div_eucl (b * q + r) b)).
+  symmetry. f_equal.
+  - exact (N.div_unique _ _ _ _ Hr eq_refl).
+  - exact (N.mod_unique _ _ _ _ Hr eq_refl).
+Qed.
 
-  Definition Pos_double_and_add_1N (n : N) : positive :=
+Definition Byte_of_N_total (n : N) : Byte.byte :=
+  match Byte.of_N n with
+  | Some b => b
+  | None   => Byte.x00
+  end.
+
+Lemma Byte_of_N_is_Some (n : N) : (n < 256)%N -> is_Some (Byte.of_N n).
+Proof.
+  move => H. rewrite /Byte.of_N. repeat case_match.
+  all: first [by eexists | lia].
+Qed.
+
+Fixpoint BS_repeat_x00 (n : nat) : bs :=
+  match n with
+  | O   => BS.EmptyString
+  | S n => BS.String "000"%byte (BS_repeat_x00 n)
+  end.
+
+Lemma BS_append_nil_r (s : bs) : BS.append s "" = s.
+Proof. induction s as [|b s IH]; [done | by rewrite /= IH]. Qed.
+
+Module Pairing.
+  Definition Pos_double_succ_N (n : N) : positive :=
     match n with
     | N.pos n => xI n
     | _       => xH
     end.
 
   Definition encode (nm : N * N) : positive :=
-    (Pos_powN 2 nm.1 * Pos_double_and_add_1N nm.2)%positive.
+    (Pos.shiftl 1%positive nm.1 * Pos_double_succ_N nm.2)%positive.
 
   Fixpoint decode_aux (n : N) (p : positive) : N * N :=
     match p with
@@ -122,93 +148,130 @@ Module Pairing.
 End Pairing.
 
 Module BSAsPos.
-  Fixpoint encode_aux (s : bs) : N * N :=
+  #[local] Open Scope N.
+
+  Fixpoint strip_trailing_x00 (s : bs) : N * bs :=
     match s with
-    | BS.EmptyString => (0%N, 0%N)
-    | BS.String b s =>
-        let '(len, e) := encode_aux s in
-        (N.succ len, 256 * e + Byte.to_N b)%N
+    | BS.EmptyString => (0%N, s)
+    | BS.String b s  =>
+        let '(n, s) := strip_trailing_x00 s in
+        match (Byte.eqb b "000"%byte, s) with
+        | (true, ""%bs) => (N.succ n, s)
+        | _             => (n, BS.String b s)
+        end
     end.
-  Definition encode (s : bs) : positive := Pairing.encode (encode_aux s).
 
-  Fixpoint decode_aux (len : nat) (e : N) : bs :=
+  Lemma strip_trailing_x00_repeat (n : N) :
+    strip_trailing_x00 (BS_repeat_x00 (N.to_nat n)) = (n, ""%bs).
+  Proof.
+    induction n as [|n IH] using N.peano_ind => /=; first done.
+    by rewrite N2Nat.inj_succ /= IH.
+  Qed.
+
+  Lemma strip_trailing_x00_append_repeat_x00 (s : bs) (n : N) :
+    let '(k, s') := strip_trailing_x00 s in
+    strip_trailing_x00 (s ++ BS_repeat_x00 (N.to_nat n)) = (k + n, s').
+  Proof.
+    rewrite (surjective_pairing (strip_trailing_x00 s)).
+    revert n; induction s as [|b s IH] => n /=.
+    - by rewrite strip_trailing_x00_repeat N.add_0_l.
+    - rewrite {}IH. repeat case_match; simpl in *; simplify_eq => //.
+      by rewrite N.add_succ_l.
+  Qed.
+
+  (* encode_aux [b1; b2; b3] = (3, b3b2b1) *)
+  (* encode_aux [b1; b2; b3; 00; 00] = (5, 0000b3b2b1) *)
+  Fixpoint encode_length_aux (s : bs) : N * N :=
+    match s with
+    | BS.EmptyString => (0, 0)
+    | BS.String b s  =>
+        let '(len, e) := encode_length_aux s in
+        (N.succ len, Byte.to_N b + N.shiftl e 8)
+    end.
+  Definition encode_aux (s : bs) : N :=
+    (encode_length_aux s).2.
+  Definition encode (s : bs) : positive :=
+    let '(n, s) := strip_trailing_x00 s in
+    let e := encode_aux s in
+    Pairing.encode (n, e).
+
+  Fixpoint decode_length_aux (len : nat) (e : N) : bs :=
     match len with
-    | 0%nat => BS.EmptyString
+    | O     => ""%bs
     | S len =>
-        let '(q, r) := N.div_eucl e 256%N in
-        let b :=
-          match Byte.of_N r with
-          | Some b => b
-          | None   => Byte.x00 (* Unreachable. *)
-          end
-        in
-        BS.String b (decode_aux len q)
+        let q := N.shiftr e 8 in
+        let r := N.land e 255 in
+        let b := Byte_of_N_total r in
+        BS.String b (decode_length_aux len q)
     end.
+  Definition encoded_length (n : N) : N :=
+    let bits := N.log2_up n in
+    let q := N.shiftr bits 3 in
+    let r := N.land bits 7 in
+    if r is 0%N then q else N.succ q.
+  Definition decode_aux (e : N) : bs :=
+    let len := encoded_length e in
+    decode_length_aux (N.to_nat len) e.
   Definition decode (p : positive) : bs :=
-    let (len, e) := Pairing.decode p in
-    decode_aux (N.to_nat len) e.
+    let '(n, e) := Pairing.decode p in
+    let s := decode_aux e in
+    match n with
+    | 0%N => s
+    | _   => BS.append s (BS_repeat_x00 (N.to_nat n))
+    end.
 
-  Definition decode_Some (p : positive) : option bs :=
-    Some (decode p).
-
-  Goal True.
-    assert (let s := "Hello, world!"%bs in decode (encode s) = s); [done|].
-  Abort.
-
-  Lemma N_div_eucl_lt_spec (b q r : N) :
-    (r < b)%N → N.div_eucl (b * q + r)%N b = (q, r).
+  Lemma decode_encode_aux (s0 s : bs) (n : N) :
+    strip_trailing_x00 s0 = (n, s) →
+    (decode_aux (encode_aux s) ++ BS_repeat_x00 (N.to_nat n))%bs = s0.
   Proof.
-    (* Proof by Olivier Laurent on Zulip. *)
-    intro Hr.
-    rewrite (surjective_pairing (N.div_eucl (b * q + r) b)).
-    symmetry. f_equal.
-    - exact (N.div_unique _ _ _ _ Hr eq_refl).
-    - exact (N.mod_unique _ _ _ _ Hr eq_refl).
-  Qed.
+  Admitted.
 
-  Lemma decode_encode_aux (s : bs) (len e : N) :
-    encode_aux s = (len, e) → decode_aux (N.to_nat len) e = s.
+  Lemma encode_decode_aux (n : N) :
+    encode_aux (decode_aux n) = n.
   Proof.
-    revert e s; induction len as [|len IH] using N.peano_ind => e s.
-    - destruct s as [|b s]; first done. simpl.
-      destruct (encode_aux s) as [??].
-      move => []. lia.
-    - destruct s as [|b s] => /=; first (move => []; lia).
-      destruct (encode_aux s) as [len' e'] eqn:Heq.
-      rewrite N2Nat.inj_succ/=.
-      destruct (N.div_eucl e 256) as [q r] eqn:Hdiv.
-      move => [] /N.succ_inj ? ?. subst len' e.
-      rewrite N_div_eucl_lt_spec in Hdiv; last first.
-      { rewrite /Byte.to_N; case_match; lia. }
-      move: Hdiv => [<-<-].
-      rewrite Byte.of_to_N. f_equal. by apply IH.
-  Qed.
+  Admitted.
 
-  Eval vm_compute in decode_aux 0%nat 2%N.
-
-  Lemma encode_decode_aux (len e : N) :
-    encode_aux (decode_aux (N.to_nat len) e) = (len, e).
+  Lemma strip_trailing_x00_decode_aux (e : N) :
+    strip_trailing_x00 (decode_aux e) = (0%N, decode_aux e).
   Proof.
-    (* FIXME false when [len = 0] *)
+    remember (decode_aux e) as s eqn:Hs; revert e Hs.
+    induction s as [|b s IH] => e /= H; first done.
   Admitted.
 
   Lemma decode_encode (s : bs) : decode (encode s) = s.
   Proof.
-    rewrite /encode/decode/=.
-    destruct (encode_aux s) as [len e] eqn:Henc.
+    rewrite /encode/decode.
+    destruct (strip_trailing_x00 s) as [n s0] eqn:Hstrip.
     rewrite Pairing.decode_encode.
-    by apply decode_encode_aux.
+    destruct n as [|p].
+    - move: Hstrip => /decode_encode_aux/= <-.
+      by rewrite BS_append_nil_r.
+    - by apply decode_encode_aux.
   Qed.
 
   Lemma encode_decode (p : positive) : encode (decode p) = p.
-    rewrite /encode/decode/=.
-    destruct (Pairing.decode p) as [len e] eqn:Hdec.
-    rewrite encode_decode_aux -Hdec.
-    apply Pairing.encode_decode.
+  Proof.
+    rewrite /encode/decode.
+    destruct (Pairing.decode p) as [n e] eqn:Hdec.
+    destruct n as [|np].
+    - rewrite strip_trailing_x00_decode_aux.
+      rewrite encode_decode_aux.
+      by rewrite -Hdec Pairing.encode_decode.
+    - move: (strip_trailing_x00_append_repeat_x00 (decode_aux e) (Npos np)).
+      destruct (strip_trailing_x00 (decode_aux e)) as [k s'] eqn:Hstrip.
+      move => ->.
+      move: (Pairing.encode_decode p); rewrite {}Hdec => <-; f_equal.
+      have {2}->: (N.pos np = 0 + N.pos np)%N by lia.
+      apply pair_eq. rewrite N.add_cancel_r.
+      move: (strip_trailing_x00_decode_aux e). rewrite Hstrip.
+      move => [] ? ?. subst k s'. by rewrite encode_decode_aux.
   Qed.
 
   Lemma encode_as_decode (s : bs) (p : positive) : decode p = s → p = encode s.
   Proof. move => H. rewrite -(encode_decode p) H. done. Qed.
+
+  Definition decode_Some (p : positive) : option bs :=
+    Some (decode p).
 End BSAsPos.
 
 
