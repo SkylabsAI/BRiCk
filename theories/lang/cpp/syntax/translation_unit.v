@@ -4,7 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 From stdpp Require Import fin_maps gmap.
-From bedrock.prelude Require Import base.
+From bedrock.prelude Require Import base bs_map.
 From bedrock.lang.cpp.syntax Require Import names expr stmt types decl.
 Export decl.
 
@@ -68,9 +68,9 @@ Variant GlobDecl' {classname type Expr : Set} : Set :=
 Proof. solve_decision. Defined.
 Notation GlobDecl := (GlobDecl' globname type Expr).
 
-Definition symbol_table : Type := gmap bs ObjValue.
+Definition symbol_table : Type := bs_map ObjValue.
 
-Definition type_table : Type := gmap bs GlobDecl.
+Definition type_table : Type := bs_map GlobDecl.
 
 #[global] Instance Singleton_symbol_table : SingletonM obj_name ObjValue symbol_table := _.
 #[global] Instance Singleton_type_table : SingletonM globname GlobDecl type_table := _.

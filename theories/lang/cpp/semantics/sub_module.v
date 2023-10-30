@@ -9,7 +9,7 @@ Require Import ExtLib.Tactics.
 this reset propagates to clients, we must export one of them; we choose to
 export our [base] module. *)
 From stdpp Require Import fin_maps gmap.
-From bedrock.prelude Require Export base.
+From bedrock.prelude Require Export base bs_map.
 Require Import bedrock.lang.cpp.ast.
 
 (** TODO rename [sub_module] since it is not actually about modules
@@ -38,10 +38,10 @@ Require Import bedrock.lang.cpp.ast.
   intuition idtac; repeat (do_bool_decide; subst; repeat case_match);
   eauto using bool_decide_eq_true_2; try congruence.
 
-Definition find_any {T} (b : bs -> T -> bool) (l : gmap bs T) : bool :=
+Definition find_any {T} (b : bs -> T -> bool) (l : bs_map T) : bool :=
   map_fold (λ (k : bs) (v : T) (acc : bool), if acc then true else b k v) false l.
 
-Theorem find_any_ok {T} b (l : gmap bs T) :
+Theorem find_any_ok {T} b (l : bs_map T) :
   if find_any b l then
     exists k v, l !! k = Some v /\ b k v = true
   else
@@ -55,7 +55,7 @@ Section compat_le.
 
   (* NOTE: this is effectively [Decision (map_inclusion)],
      but is significantly more computationally efficient *)
-  Definition compat_le (l r : gmap bs T) : bool :=
+  Definition compat_le (l r : bs_map T) : bool :=
     negb $ find_any (fun k v => negb (f (Some v) (r !! k))) l.
 
   Lemma compat_le_sound : forall l r,
