@@ -219,7 +219,7 @@ Module Type RAW_BYTES_VAL
                            end) <$> decode x
       }.
     Next Obligation.
-      by destruct x; rewrite /= decode_encode/=.
+      destruct x; by rewrite /=/encode/bs_countable BSAsPos.decode_encode.
     Qed.
 
   End FieldOrBase.

@@ -211,10 +211,6 @@ Definition Dtype (name : globname) : translation_unitK :=
   fun syms tys k =>
   k syms $ <[ name := Gtype ]> tys.
 
-(* Definition translation_unit_canon (c : translation_unit) : translation_unit := *)
-(*   {| symbols := avl.map_canon c.(symbols) *)
-(*    ; types := avl.map_canon c.(types) |}. *)
-
 Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   match ls with
   | nil => fun syms tys k => k syms tys
@@ -223,8 +219,8 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
 
 Definition decls ls (e : endian) : translation_unit :=
   decls' ls ∅ ∅ $ fun a b =>
-  {| symbols := avl.map_canon a
-  ; types := avl.map_canon b
+  {| symbols := a
+  ; types := b
   ; initializer := nil (* FIXME *)
   ; byte_order := e |}.
 

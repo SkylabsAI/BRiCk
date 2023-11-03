@@ -7,7 +7,7 @@
 (** Support code for [simple_pointers.v]. *)
 
 From stdpp Require Import gmap.
-From bedrock.prelude Require Import base addr option avl.
+From bedrock.prelude Require Import base addr option.
 From bedrock.lang.cpp.semantics Require Import values.
 
 Implicit Types (σ : genv).
@@ -15,10 +15,9 @@ Implicit Types (σ : genv).
 #[local] Open Scope Z_scope.
 
 Module canonical_tu.
-  Definition im_to_gmap {V} (m : IM.t V) : gmap BS.t V :=
-    list_to_map (map_to_list m).
-  Definition symbol_table_canon : Set := gmap BS.t ObjValue.
-  Definition type_table_canon : Set := gmap BS.t GlobDecl.
+  Definition im_to_gmap {V} (m : bs_map V) : bs_map V := m.
+  Definition symbol_table_canon : Set := bs_map ObjValue.
+  Definition type_table_canon : Set := bs_map GlobDecl.
 
   #[global] Instance symbol_table_canon_eq_dec : EqDecision symbol_table_canon.
   Proof. solve_decision. Qed.
