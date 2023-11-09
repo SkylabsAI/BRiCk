@@ -222,15 +222,27 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition decls ls (e : endian) : translation_unit :=
-  decls' ls ∅ ∅ $ fun a b =>
-      let tu := {| symbols := avl.map_canon a
-                ; types := avl.map_canon b
-                ; initializer := nil (* FIXME *)
-                ; byte_order := e |} in
-      if checker.check_tu tu
-      then tu
-      else (* on a failure, return an empty translation unit *)
-           {| symbols := ∅ ; types := ∅ ; initializer := nil ; byte_order := e |}.
+Definition incomplete_translation_unit {T} (ls : T) : Set.
+Proof. exact unit. Qed.
+
+Definition decls ls e
+  (tu := decls' ls ∅ ∅ $ fun a b =>
+      {| symbols := avl.map_canon a
+       ; types := avl.map_canon b
+       ; initializer := nil (* FIXME *)
+       ; byte_order := e |})
+  (errs := checker.check_tu tu)
+  : match errs with
+    | [] => translation_unit
+    | _ => list _
+    end :=
+  match errs as errs return match errs with
+                            | [] => translation_unit
+                            | _ => list _
+                            end
+  with
+  | [] => tu
+  | _ => errs
+  end.
 
 Declare Reduction reduce_translation_unit := vm_compute.

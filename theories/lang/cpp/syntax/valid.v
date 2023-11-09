@@ -255,10 +255,12 @@ Section checker.
     | Gstruct s =>
         let* bs := check_list (fun x => classify_type (Tnamed x.1)) s.(s_bases) in
         let* fs := check_list (fun m => classify_type m.(mem_type)) s.(s_fields) in
-        mret $ fold_left intersect (bs ++ fs) mk_complete
+        let x := fold_left intersect (bs ++ fs) mk_complete in
+        mret $ if x.(complete) then mk_complete else null
     | Gunion u =>
         let* fs := check_list (fun m => classify_type m.(mem_type)) u.(u_fields) in
-        mret $ fold_left intersect fs mk_complete
+        let x := fold_left intersect fs mk_complete in
+        mret $ if x.(complete) then mk_complete else null
     | Genum ty _ =>
         let* c := classify_type ty in
         mret $ extend {| complete := c.(basic)
@@ -314,13 +316,15 @@ Section checker.
     | Some (s, _) => s
     end.
 
-  Definition check_tu (tu : translation_unit) : bool :=
-    List.forallb (fun a => match tu.(types) !! a.1 with
-                        | Some (Gconstant _ _) => true
-                        | Some Gtype => true
-                        | Some (Gstruct _ | Gunion _ | Genum _ _ | Gtypedef _) => a.2.(checker.complete)
-                        | _ => false
-                        end) $ avl.IM.elements (summarize_tu tu).
+  Definition check_tu (tu : translation_unit) : list _ :=
+    List.flat_map (fun a => match tu.(types) !! a.1 with
+                         | Some (Gconstant _ _) => []
+                         | Some Gtype => []
+                         | Some ((Gstruct _ | Gunion _ | Genum _ _ | Gtypedef _) as gd) =>
+                             if a.2.(checker.complete) then []
+                             else [(a.1, Some (gd, a.2))]
+                         | _ => [(a.1, None)]
+                         end) $ avl.IM.elements (summarize_tu tu).
 
 End checker.
 End checker.
@@ -328,7 +332,7 @@ End checker.
 (*
 Require bedrock.lang.cpp.test_cpp.
 
-Eval vm_compute in avl.IM.elements (checker.check_tu test_cpp.module).
+Eval vm_compute in checker.check_tu test_cpp.module.
 *)
 
 
