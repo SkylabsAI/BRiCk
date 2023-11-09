@@ -222,8 +222,8 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
   | m :: ms => fun syms tys k => m syms tys (fun s t => decls' ms s t k)
   end.
 
-Definition incomplete_translation_unit {T} (ls : T) : Set.
-Proof. exact unit. Qed.
+Record incomplete_translation_unit {T : Type} (ls : T) : Set := {}.
+
 
 Definition decls ls e
   (tu := decls' ls ∅ ∅ $ fun a b =>
@@ -234,15 +234,23 @@ Definition decls ls e
   (errs := checker.check_tu tu)
   : match errs with
     | [] => translation_unit
-    | _ => list _
+    | ls => @incomplete_translation_unit _ ls
     end :=
   match errs as errs return match errs with
                             | [] => translation_unit
-                            | _ => list _
+                            | ls => @incomplete_translation_unit _ ls
                             end
   with
   | [] => tu
-  | _ => errs
+  | ls => @Build_incomplete_translation_unit _ ls
   end.
-
+(*
+Definition decls ls e
+  (tu := decls' ls ∅ ∅ $ fun a b =>
+      {| symbols := avl.map_canon a
+       ; types := avl.map_canon b
+       ; initializer := nil (* FIXME *)
+       ; byte_order := e |}) :=
+  tu.
+*)
 Declare Reduction reduce_translation_unit := vm_compute.
