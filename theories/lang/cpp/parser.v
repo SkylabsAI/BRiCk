@@ -6,6 +6,7 @@
 Require Export bedrock.prelude.base.
 Require bedrock.prelude.option.
 Require Export bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.valid.
 
 (** * Derived forms used by cpp2v *)
 
@@ -223,9 +224,13 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
 
 Definition decls ls (e : endian) : translation_unit :=
   decls' ls ∅ ∅ $ fun a b =>
-  {| symbols := avl.map_canon a
-  ; types := avl.map_canon b
-  ; initializer := nil (* FIXME *)
-  ; byte_order := e |}.
+      let tu := {| symbols := avl.map_canon a
+                ; types := avl.map_canon b
+                ; initializer := nil (* FIXME *)
+                ; byte_order := e |} in
+      if checker.check_tu tu
+      then tu
+      else (* on a failure, return an empty translation unit *)
+           {| symbols := ∅ ; types := ∅ ; initializer := nil ; byte_order := e |}.
 
 Declare Reduction reduce_translation_unit := vm_compute.
