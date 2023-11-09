@@ -224,6 +224,44 @@ Fixpoint decls' (ls : list translation_unitK) : translation_unitK :=
 
 Record incomplete_translation_unit {T : Type} (ls : T) : Set := {}.
 
+Definition decls'' ls e
+  : list _ + translation_unit :=
+  let tu := decls' ls ∅ ∅ $ fun a b =>
+      {| symbols := avl.map_canon a
+       ; types := avl.map_canon b
+       ; initializer := nil (* FIXME *)
+       ; byte_order := e |} in
+  match checker.check_tu tu with
+  | [] => inr tu
+  | errs => inl errs
+  end.
+(*
+  match errs
+  match errs with
+  | [] => translation_unit
+  | ls => @incomplete_translation_unit _ ls
+  end :=
+  match errs as errs return match errs with
+                            | [] => translation_unit
+                            | ls => @incomplete_translation_unit _ ls
+                            end
+  with
+  | [] => tu
+  | ls => @Build_incomplete_translation_unit _ ls
+  end.
+*)
+
+Notation decls ls e :=
+  (ltac:(let tu := eval vm_compute in (decls'' ls e) in
+         lazymatch tu with
+         | inl ?errs => exact errs
+         | inr ?tu => exact tu
+         end)) (only parsing).
+(*
+      {| symbols := avl.map_canon a
+       ; types := avl.map_canon b
+       ; initializer := nil (* FIXME *)
+       ; byte_order := e |})))
 
 Definition decls ls e
   (tu := decls' ls ∅ ∅ $ fun a b =>
@@ -253,4 +291,5 @@ Definition decls ls e
        ; byte_order := e |}) :=
   tu.
 *)
-Declare Reduction reduce_translation_unit := vm_compute.
+*)
+Declare Reduction reduce_translation_unit := hnf.
