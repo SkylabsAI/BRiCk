@@ -79,10 +79,10 @@ Section checker.
   Definition union (a b : classification) : classification :=
     let a := extend a in
     let b := extend b in
-    extend {| pointee := a.(pointee) || b.(pointee)
-     ; scoped := a.(scoped) || b.(scoped)
-     ; complete := a.(complete) || b.(complete)
-     ; basic := a.(basic) || b.(basic) |}.
+    extend {| pointee  := a.(pointee)  || b.(pointee)
+            ; scoped   := a.(scoped)   || b.(scoped)
+            ; complete := a.(complete) || b.(complete)
+            ; basic    := a.(basic)    || b.(basic) |}.
 
 
   Definition mk_basic : classification :=
@@ -115,14 +115,14 @@ Section checker.
         let* c := classify_type t in
         mret $ extend {| complete := c.(pointee)
                        ; scoped := false
-                       ; pointee := false
+                       ; pointee := true
                        ; basic := false |}
     | Tarray t n =>
         if bool_decide (0 < n)%N then
           let* c := classify_type t in
           mret $ extend {| complete := c.(complete)
                          ; scoped := c.(scoped)
-                         ; basic := false ; pointee := false |}
+                         ; basic := false ; pointee := true |}
         else mret null
     | Tnamed nm
     | Tenum nm =>

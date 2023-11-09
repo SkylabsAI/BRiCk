@@ -148,6 +148,9 @@ Section with_type_table.
   with complete_pointee_type : type -> Prop :=
   | complete_pt_qualified {q t} (_ : complete_pointee_type t)
     : complete_pointee_type (Tqualified q t)
+  | complete_pointee_ref {t} : complete_pointee_type t -> complete_pointee_type (Tref t)
+  | complete_pointee_rv_ref {t} : complete_pointee_type t -> complete_pointee_type (Trv_ref t)
+
   (*
     Pointers to array are only legal if the array is complete, at least
     in C, since they cannot actually be indexed or created.
@@ -280,6 +283,7 @@ Combined Scheme complete_mut_ind from complete_decl_mut_ind, complete_basic_type
   complete_pointee_type_mut_ind, complete_type_mut_ind,
   wellscoped_type_mut_ind, wellscoped_types_mut_ind.
 
+(*
 Lemma complete_basic_type_not_ref te t : complete_basic_type te t → not_ref_type t.
 Proof. by inversion 1. Qed.
 Lemma complete_pointee_type_not_ref te t : complete_pointee_type te t → not_ref_type t.
@@ -291,6 +295,7 @@ Proof.
     try by [exact: complete_pointee_type_not_ref| tauto].
   move => /complete_basic_type_not_ref; naive_solver.
 Qed.
+*)
 
 (**
 Adapted from Krebbers'15, Definition 3.3.6:
