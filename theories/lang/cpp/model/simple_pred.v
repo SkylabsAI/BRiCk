@@ -140,10 +140,6 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
     }.
 
   Definition cppG : gFunctors -> Type := cppG'.
-  Existing Class cppG.
-  (* Used to be needed to prevent turning instances of cppG' into cppG and risking loops in this file;
-  should not hurt now. *)
-  #[global] Typeclasses Opaque cppG.
 
   #[global] Instance has_inv Σ : cppG Σ -> invGS Σ := @has_inv' Σ.
   #[global] Instance has_cinv Σ : cppG Σ -> cinvG Σ := @has_cinv' Σ.
@@ -151,10 +147,10 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
   Include CPP_LOGIC_CLASS_MIXIN.
 
   Section with_cpp.
-    Context `{Σ : cpp_logic}.
+    Context `{Σ : cpp_logic ti}.
 
     Existing Class cppG'.
-    #[local] Instance cppG_cppG' Σ : cppG Σ -> cppG' Σ := id.
+    #[local] Instance cppG_cppG' : cppG' Σ := LOGIC._has_G.
     #[local] Existing Instances heapGS ghost_memG mem_injG blocksG codeG.
 
     Definition heap_own (a : addr) q (r : runtime_val') : mpred :=
