@@ -620,6 +620,12 @@ Section with_array_frac.
   #[global] Instance arrayR_as_fractional l q `{!∀ x, Fractional (λ q, R q x)} :
     AsFractional (arrayR ty (R q) l) (λ q, arrayR ty (R q) l) q.
   Proof. exact: Build_AsFractional. Qed.
+
+  #[global] Instance arrayR_frac_valid xs q :
+    (lengthN xs <> 0)%N ->
+    (∀ x, Observe [| q ≤ 1 |]%Qp (R q x)) ->
+    Observe [| q ≤ 1 |]%Qp (arrayR ty (R q) xs).
+  Proof. case: xs => [//|x xs]. rewrite arrayR_cons. apply _. Qed.
 End with_array_frac.
 
 Section with_array_cfrac.
@@ -639,6 +645,11 @@ Section with_array_cfrac.
     AsCFractional (arrayR ty (R q) l) (λ q, arrayR ty (R q) l) q.
   Proof. solve_as_cfrac. Qed.
 
+  #[global] Instance arrayR_cfrac_valid xs :
+    (lengthN xs <> 0)%N ->
+    CFracValid1 R ->
+    CFracValid0 (λ q, arrayR ty (R q) xs).
+  Proof. case: xs => [//|x xs]. split; intros. rewrite arrayR_cons. apply _. Qed.
 End with_array_cfrac.
 
 #[global] Hint Opaque arrR arrayR : typeclass_instances.
