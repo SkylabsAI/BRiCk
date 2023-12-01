@@ -36,25 +36,22 @@ Module Type CPP_LOGIC_CLASS_MIXIN (Import CC : CPP_LOGIC_CLASS_BASE).
   |}.
 
   Class cpp_logic {thread_info : biIndex} : Type :=
-  { _Σ       : gFunctors
-  ; _ghost   : _cpp_ghost
-  ; has_cppG : cppG _Σ
+  { cpp_Σ       : gFunctors
+  ; cpp_ghost   : _cpp_ghost
+  ; cpp_has_cppG : cppG cpp_Σ
   }.
   #[global] Arguments cpp_logic : clear implicits.
-  Coercion _Σ : cpp_logic >-> gFunctors.
 
   (* Coercing cpp_logic to LOGIC.logic *)
   #[global] Instance cpp_logic_logic `{Σ : cpp_logic thread_info} : LOGIC.logic thread_info := {|
-    LOGIC._ghost_type := cpp_GS Σ thread_info
-  ; LOGIC._ghost := _ghost
-  ; LOGIC._has_G := has_cppG
+    LOGIC._Σ := cpp_Σ
+  ; LOGIC._ghost_type := cpp_GS cpp_Σ thread_info
+  ; LOGIC._ghost := cpp_ghost
+  ; LOGIC._has_G := cpp_has_cppG
   |}.
   Coercion cpp_logic_logic : cpp_logic >-> LOGIC.logic.
+  #[global] Hint Opaque cpp_logic_logic : typeclass_instances br_opacity.
 
-  #[global] Instance cpp_logic_has_inv `{Σ : !cpp_logic thread_info}
-    : invGS Σ := LOGIC.has_inv.
-  #[global] Instance cpp_logic_has_cinv `{Σ : !cpp_logic thread_info}
-    : cinvG Σ := LOGIC.has_cinv.
 End CPP_LOGIC_CLASS_MIXIN.
 
 Module Type CPP_LOGIC_CLASS := CPP_LOGIC_CLASS_BASE <+ CPP_LOGIC_CLASS_MIXIN.

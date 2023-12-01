@@ -109,14 +109,14 @@ Module SimpleCPP_BASE <: CPP_LOGIC_CLASS.
   Lemma length_Z_to_bytes {σ} n sgn v : length (Z_to_bytes (σ:=σ) n sgn v) = bytesNat n.
   Proof. by rewrite /Z_to_bytes fmap_length _Z_to_bytes_length. Qed.
 
-  Record cpp_ghost : Type :=
+  Record cpp_ghost' : Type :=
     { heap_name : gname
     ; ghost_mem_name : gname
     ; mem_inj_name : gname
     ; blocks_name : gname
     ; code_name : gname
     }.
-  Definition _cpp_ghost := cpp_ghost.
+  Definition _cpp_ghost := cpp_ghost'.
 
   Record cppG' (Σ : gFunctors) : Type :=
     { heapGS : inG Σ (gmapR addr (cfractionalR runtime_val'))
@@ -848,8 +848,8 @@ Module SimpleCPP.
     Instance type_ptr_mono :
       Proper (genv_leq ==> eq ==> eq ==> (⊢)) (@type_ptr).
     Proof.
-      rewrite /type_ptr /aligned_ptr_ty => σ1 σ2 Heq.
-      solve_proper_prepare. rewrite (valid_ptr_o_sub_proper Heq).
+      rewrite /type_ptr /aligned_ptr_ty => σ1 σ2 Heq x y ????; subst.
+      rewrite (valid_ptr_o_sub_proper Heq).
       do 3 f_equiv.
       - move=> -[align [HalTy Halp]]. eexists; split => //.
         move: Heq HalTy => /Proper_align_of /(_ y _ eq_refl).

@@ -19,7 +19,8 @@ From iris.base_logic.lib Require Import own cancelable_invariants.
 Require Import iris.bi.monpred.
 
 From bedrock.prelude Require Import base.
-From bedrock.lang Require Import bi.prelude.
+From bedrock.lang Require Import bi.prelude bi.entailsN.
+From bedrock.lang.cpp.logic Require Import upred_entailsN monpred_entailsN.
 Import ChargeNotation.
 
 Module LOGIC.
@@ -73,6 +74,7 @@ Module LOGIC.
   ; preGS_has_cinv : preGS -> cinvG Σ
   } .
   Existing Class preGS.
+  (* Not making preGS_has_inv/cinv instances, we use logic_has_inv/cinv below instead. *)
   #[global] Arguments GpreS : clear implicits.
   #[global] Hint Mode GpreS - - : typeclass_instances.
 
@@ -151,10 +153,11 @@ Module LOGIC.
   #[global] Arguments logic : clear implicits.
   #[global] Hint Mode logic - : typeclass_instances.
 
-  #[global] Instance has_inv `{!logic thread_info} : invGS _Σ
+  #[global] Instance logic_has_inv `{!logic thread_info} : invGS _Σ
     := preGS_has_inv _has_G.
-  #[global] Instance has_cinv `{!logic thread_info} : cinvG _Σ
+  #[global] Instance logic_has_cinv `{!logic thread_info} : cinvG _Σ
     := preGS_has_cinv _has_G.
+  #[global] Hint Opaque logic_has_inv logic_has_cinv : typeclass_instances br_opacity.
 
   (** A logic instance is at least some logic
 
@@ -192,6 +195,9 @@ Module LOGIC.
 
 End LOGIC.
 #[global] Coercion LOGIC._Σ : LOGIC.logic >-> gFunctors.
+#[global] Hint Opaque LOGIC._Σ : typeclass_instances br_opacity.
+#[global] Opaque LOGIC._Σ.
+Export LOGIC(_Σ,_ghost).
 
 Section mpred.
   Context `{Σ : !LOGIC.logic thread_info}.
@@ -212,6 +218,8 @@ Section mpred.
   Sealing mpred is better *)
   #[global] Instance : BiBUpd mpredI | 0 := monPred_bi_bupd _ _.
   #[global] Instance : BiFUpd mpredI | 0 := monPred_bi_fupd _ _.
+  #[global] Instance : BiEntailsN mpredI | 0 := monPred_bi_entailsN.
+
 End mpred.
 
 Bind Scope bi_scope with mpred.
