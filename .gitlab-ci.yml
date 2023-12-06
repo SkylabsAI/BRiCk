@@ -321,6 +321,9 @@ prepare_cpp2v_env:
     - mkdir -p ~/.cache/ ~/.config/dune/
     - ls ~/.cache/dune
     - cp $CI_PROJECT_DIR/dune-ci/dune_config ~/.config/dune/config
+    # Installing extra deps for the fm-ci-tools
+    - sudo apt-get install zlib1g-dev
+    - opam install -y camlzip
 
 .postupdate-dunecache:
   after_script:
