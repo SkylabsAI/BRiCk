@@ -300,7 +300,7 @@ prepare_cpp2v_env:
     DUNE_CACHE: enabled
     DUNE_CACHE_STORAGE_MODE: copy
   before_script:
-    - git clone --depth 1 https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/bedrocksystems/fm-ci-tools.git
+    - git clone --depth 1 --branch rodolphe/revertrevert https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/bedrocksystems/fm-ci-tools.git
     - cat ./fm-ci-tools/fm_dune/build_env_dune.inc.sh
     - source ./fm-ci-tools/fm_dune/build_env_dune.inc.sh
     - ./fm-ci-tools/fm_dune/filter_build_env_dune.sh >> build.env
