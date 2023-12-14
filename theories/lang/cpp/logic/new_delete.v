@@ -48,6 +48,12 @@ Module Type Expr__newdelete.
    *)
   Parameter new_tokenR : forall `{Σ : cpp_logic} (q : Qp) (ty : type), Rep.
 
+  Parameter new_overhead_tokenR :
+    forall `{Σ : cpp_logic}
+    (q : Qp)
+    (storage_ptr_overhead_sz : ptr * N),
+    Rep.
+
   Section with_cpp_logic.
     Context `{Σ : cpp_logic}.
 
@@ -55,6 +61,11 @@ Module Type Expr__newdelete.
       FracSplittable_1 new_tokenR.
     #[global] Declare Instance new_tokenR_agree :
       AgreeF1 new_tokenR.
+
+    #[global] Declare Instance new_overhead_tokenR_frac :
+      FracSplittable_1 new_overhead_tokenR.
+    #[global] Declare Instance new_overhead_tokenR_agree :
+      AgreeF1 new_overhead_tokenR.
 
     Section with_resolve.
       Context {σ : genv} (ρ : region).
