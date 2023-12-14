@@ -314,6 +314,7 @@ Module Type Expr__newdelete.
                                 provides_storage
                                   (storage_ptr .[Tu8 ! overhead_sz])
                                   obj_ptr array_ty -*
+                                obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, overhead_sz) -*
                                 wp_opt_initialize oinit array_ty obj_ptr
                                   (fun free'' =>
                                      (* Track the type we are allocating
@@ -390,6 +391,7 @@ Module Type Expr__newdelete.
                               provides_storage
                                 (storage_ptr .[Tu8 ! overhead_sz])
                                 obj_ptr array_ty -*
+                              obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, overhead_sz) -*
                               letI* free'' := wp_opt_initialize oinit array_ty obj_ptr in
                                    (* Track the type we are allocating
                                       so it can be checked at [delete]
@@ -642,6 +644,7 @@ Module Type Expr__newdelete.
                       provides_storage
                         (storage_ptr .[Tu8 ! overhead_sz])
                         obj_ptr array_ty **
+                      obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, overhead_sz) **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [destroy_val]. *)
@@ -679,6 +682,7 @@ Module Type Expr__newdelete.
                     provides_storage
                       (storage_ptr .[Tu8 ! overhead_sz])
                       obj_ptr array_ty **
+                    obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, overhead_sz) **
                     (* Transfer memory to underlying storage pointer; unlike in
                        [end_provides_storage], this memory was pre-destructed by
                        [destroy_val]. *)
