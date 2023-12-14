@@ -165,6 +165,7 @@ Module Type Expr__newdelete.
                             (* This also ensures these pointers share their
                               address (see [provides_storage_same_address]) *)
                             provides_storage storage_ptr obj_ptr aty -*
+                            obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, 0%N) -*
                             wp_opt_initialize oinit aty obj_ptr (fun free' =>
                               (* Track the type we are allocating
                                 so it can be checked at [delete].
@@ -215,6 +216,7 @@ Module Type Expr__newdelete.
                         (* This also ensures these pointers share their
                           address (see [provides_storage_same_address]) *)
                         provides_storage storage_ptr obj_ptr aty -*
+                        obj_ptr |-> new_overhead_tokenR 1 (storage_ptr, 0%N) -*
                         wp_opt_initialize oinit aty obj_ptr (fun free' =>
                           (* Track the type we are allocating
                             so it can be checked at [delete].
@@ -559,6 +561,7 @@ Module Type Expr__newdelete.
                     Exists storage_ptr sz, [| size_of mdc_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)
                       provides_storage storage_ptr this' mdc_ty **
+                      this' |-> new_overhead_tokenR 1 (storage_ptr, 0%N) **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [destroy_val]. *)
@@ -589,6 +592,7 @@ Module Type Expr__newdelete.
                   Exists storage_ptr sz, [| size_of mdc_ty = Some sz |] **
                     (* v---- Token for converting obj memory to storage memory *)
                     provides_storage storage_ptr this' mdc_ty **
+                    this' |-> new_overhead_tokenR 1 (storage_ptr, 0%N) **
                     (* Transfer memory to underlying storage pointer; unlike in
                        [end_provides_storage], this memory was pre-destructed by
                        [destroy_val]. *)
