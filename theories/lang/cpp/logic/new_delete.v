@@ -10,6 +10,7 @@
 Require Import iris.bi.lib.fractional.
 Require Import iris.proofmode.proofmode.
 From bedrock.lang.cpp Require Import ast semantics.
+From bedrock.lang.bi.spec Require Import frac_splittable nary_classes.
 From bedrock.lang.cpp.logic Require Import
      pred path_pred heap_pred
      destroy initializers dispatch
@@ -46,18 +47,14 @@ Module Type Expr__newdelete.
       [new_tokenR q allocation_type] tracks this Dynamic Type information.
    *)
   Parameter new_tokenR : forall `{Σ : cpp_logic} (q : Qp) (ty : type), Rep.
-  #[global] Declare Instance new_tokenR_timeless `{Σ : cpp_logic} q ty :
-    Timeless (new_tokenR q ty).
-  #[global] Declare Instance new_tokenR_fractional `{Σ : cpp_logic} ty :
-    Fractional (fun q => new_tokenR q ty).
-  #[global] Declare Instance new_tokenR_agree `{Σ : cpp_logic} q ty1 ty2 :
-    Observe2 [| ty1 = ty2 |] (new_tokenR q ty1) (new_tokenR q ty2).
-  #[global] Instance new_tokenR_as_fractional `{Σ : cpp_logic} q ty :
-    AsFractional (new_tokenR q ty) (fun q => new_tokenR q ty) q.
-  Proof. exact: Build_AsFractional. Qed.
 
   Section with_cpp_logic.
     Context `{Σ : cpp_logic}.
+
+    #[global] Declare Instance new_tokenR_frac :
+      FracSplittable_1 new_tokenR.
+    #[global] Declare Instance new_tokenR_agree :
+      AgreeF1 new_tokenR.
 
     Section with_resolve.
       Context {σ : genv} (ρ : region).
