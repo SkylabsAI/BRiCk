@@ -276,7 +276,7 @@ Module Type Expr__newdelete.
                     allocation size must fit in a `size_t`. See
                      https://eel.is/c++draft/expr.new#16 for more information *)
                     [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
-                    (* NOTE: This is [Forall sz'] because the C++ Abstract Machine can choose
+                    (* NOTE: This is [Forall overhead_sz] because the C++ Abstract Machine can choose
                              however many bytes it wants to use for metadata when handling
                              dynamically allocated arrays.
                      *)
@@ -621,16 +621,16 @@ Module Type Expr__newdelete.
                (* /---- Calling destructor with object pointer
                   v     Note: virtual dispatch is not allowed for [delete[]] *)
                destroy_val tu array_ty obj_ptr (
-                    Exists storage_ptr (sz sz' : N),
+                    Exists storage_ptr (sz overhead_sz : N),
                       [| size_of array_ty = Some sz |] **
                       (* v---- Token for converting obj memory to storage memory *)
                       provides_storage
-                        (storage_ptr .[Tu8 ! sz'])
+                        (storage_ptr .[Tu8 ! overhead_sz])
                         obj_ptr array_ty **
                       (* Transfer memory to underlying storage pointer; unlike in
                          [end_provides_storage], this memory was pre-destructed by
                          [destroy_val]. *)
-                      (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) -*
+                      (storage_ptr |-> blockR (overhead_sz + sz) (cQp.m 1) -*
                        (* v---- Calling deallocator with storage pointer.
                           Note: we rely on the AST to have correctly resolved this since the dispatch is statically known.
                         *)
@@ -658,16 +658,16 @@ Module Type Expr__newdelete.
              (* /---- Calling destructor with object pointer
                 v     Note: virtual dispatch is not allowed for [delete[]] *)
              destroy_val tu array_ty obj_ptr (
-                  Exists storage_ptr (sz sz' : N),
+                  Exists storage_ptr (sz overhead_sz : N),
                     [| size_of array_ty = Some sz |] **
                     (* v---- Token for converting obj memory to storage memory *)
                     provides_storage
-                      (storage_ptr .[Tu8 ! sz'])
+                      (storage_ptr .[Tu8 ! overhead_sz])
                       obj_ptr array_ty **
                     (* Transfer memory to underlying storage pointer; unlike in
                        [end_provides_storage], this memory was pre-destructed by
                        [destroy_val]. *)
-                    (storage_ptr |-> blockR (sz' + sz) (cQp.m 1) -*
+                    (storage_ptr |-> blockR (overhead_sz + sz) (cQp.m 1) -*
                      (* /---- Calling deallocator with storage pointer.
                         |  Note: we rely on the AST to have correctly resolved
                         v  this since the dispatch is statically known.
