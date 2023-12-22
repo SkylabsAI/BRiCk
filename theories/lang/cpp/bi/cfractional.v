@@ -234,6 +234,36 @@ Section cfractional.
   Proof. intros HP ???????. rewrite cQp.mk_add'. apply HP. Qed.
 End cfractional.
 
+Section cfracvalid.
+  Context {PROP : bi}.
+  Implicit Types (P Q : PROP).
+
+  #[global] Instance cfracvalid0_sep_l (F G : cQp.t -> PROP) :
+    CFracValid0 F -> CFracValid0 (fun q => F q ** G q).
+  Proof. by move=>[?]; constructor=>?; apply: observe_sep_l. Qed.
+
+  #[global] Instance cfracvalid0_sep_r (F G : cQp.t -> PROP) :
+    CFracValid0 G -> CFracValid0 (fun q => F q ** G q).
+  Proof. by move=>[?]; constructor=>?; apply: observe_sep_r. Qed.
+
+  #[global] Instance cfracvalid1_sep_l A (F G : cQp.t -> A -> PROP) :
+    CFracValid1 F -> CFracValid1 (fun q a => F q a ** G q a).
+  Proof. by move=>[?]; constructor=>??; apply: observe_sep_l. Qed.
+
+  #[global] Instance cfracvalid1_sep_r A (F G : cQp.t -> A -> PROP) :
+    CFracValid1 G -> CFracValid1 (fun q a => F q a ** G q a).
+  Proof. by move=>[?]; constructor=>??; apply: observe_sep_r. Qed.
+
+  #[global] Instance cfracvalid2_sep_l A B (F G : cQp.t -> A -> B -> PROP) :
+    CFracValid2 F -> CFracValid2 (fun q a b => F q a b ** G q a b).
+  Proof. by move=>[?]; constructor=>???; apply: observe_sep_l. Qed.
+
+  #[global] Instance cfracvalid2_sep_r A B (F G : cQp.t -> A -> B -> PROP) :
+    CFracValid2 G -> CFracValid2 (fun q a b => F q a b ** G q a b).
+  Proof. by move=>[?]; constructor=>???; apply: observe_sep_r. Qed.
+
+End cfracvalid.
+
 (** ** Backwards compatibility *)
 
 (**
