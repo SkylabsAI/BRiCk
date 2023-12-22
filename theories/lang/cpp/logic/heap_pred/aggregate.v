@@ -35,6 +35,8 @@ Section aggregate.
   Proof. rewrite structR.unlock. constructor. intros; apply as_Rep_only_provable_observe. refine _. Qed.
   #[global] Instance structR_frac_valid_eta : CFracValid0 (fun q => structR cls q).
   Proof. apply structR_frac_valid. Qed.
+  #[global] Instance structR_frac_valid1 A : CFracValid1 (fun q (_ : A) => structR cls q).
+  Proof. constructor; intros; refine _. Qed.
 
   #[global] Instance structR_as_fractional : AsCFractional0 (structR cls).
   Proof. solve_as_cfrac. Qed.
