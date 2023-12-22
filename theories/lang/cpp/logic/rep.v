@@ -369,6 +369,22 @@ Section with_cpp.
     Observe2 [! Q !] R1 R2 → Observe2 [! Q !] (o |-> R1) (o |-> R2).
   Proof. rewrite -{2}_offsetR_pure. apply _. Qed.
 
+  #[global] Instance _offsetR_cfracvalid0 {R : cQp.t -> Rep} (o : offset) :
+    CFracValid0 (fun q => R q) ->
+    CFracValid0 (fun q => o |-> R q).
+  Proof.
+    move=>[O]; constructor=>?.
+    apply/_offsetR_observe_only_provable.
+  Qed.
+
+  #[global] Instance _offsetR_cfracvalid1 {A} {R : cQp.t -> A -> Rep} (o : offset) :
+    CFracValid1 (fun q a => R q a) ->
+    CFracValid1 (fun q a => o |-> R q a).
+  Proof.
+    move=>[O]; constructor=>??.
+    by apply/_offsetR_observe_only_provable.
+  Qed.
+
   Lemma _offsetR_obs o r P :
     r |-- r ** [| P |] →
     o |-> r |-- o |-> r ** [| P |].
