@@ -268,7 +268,7 @@ Inductive type : Set :=
 | Tnullptr
 (* architecture-specific types; currently unused.
    some [Tarch] types, e.g. ARM SVE, are "sizeless", hence [option size]. *)
-| Tarch (_ : option bitsize) (name : bs)
+| Tarch (_ : option bitsize) (name : SmallStr.t)
 .
 (**
 For documentation purposes, we often use the following aliases.
@@ -338,7 +338,7 @@ Section type_ind'.
   Hypothesis Tqualified_ind' : forall (q : type_qualifiers) (ty : type),
     P ty -> P (Tqualified q ty).
   Hypothesis Tnullptr_ind' : P Tnullptr.
-  Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : bs),
+  Hypothesis Tarch_ind' : forall (osize : option bitsize) (name : SmallStr.t),
     P (Tarch osize name).
 
   Fixpoint type_ind' (ty : type) : P ty :=

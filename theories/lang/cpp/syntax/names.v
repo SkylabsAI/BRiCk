@@ -5,19 +5,19 @@
  *)
 From stdpp Require Import countable strings.
 Require Import bedrock.prelude.base.
-Require Export bedrock.prelude.bytestring.
+Require Export bedrock.prelude.smallstr.
 
 Set Primitive Projections.
 
 #[local] Open Scope N_scope.
 
 (* this represents names that exist in object files. *)
-Definition obj_name : Set := bs.
-Bind Scope bs_scope with obj_name.
+Definition obj_name : Set := SmallStr.t.
+Bind Scope smallstr_scope with obj_name.
 #[global] Instance obj_name_eq: EqDecision obj_name := _.
 
-Definition ident : Set := bs.
-Bind Scope bs_scope with ident.
+Definition ident : Set := SmallStr.t.
+Bind Scope smallstr_scope with ident.
 #[global] Instance ident_eq: EqDecision ident := _.
 
 (* naming in C++ is complex.
@@ -32,7 +32,7 @@ Bind Scope bs_scope with ident.
  * - there are also "unnamed" functions, e.g. constructors and destructors
  *)
 Definition globname : Set := ident.
-Bind Scope bs_scope with globname.
+#[global] Bind Scope smallstr_scope with globname.
   (* these are mangled names. for consistency, we're going to
    * mangle everything.
    *)
@@ -40,7 +40,7 @@ Bind Scope bs_scope with globname.
 
 (* local names *)
 Definition localname : Set := ident.
-Bind Scope bs_scope with localname.
+#[global] Bind Scope smallstr_scope with localname.
 #[global] Instance localname_eq: EqDecision localname := _.
 
 (**

@@ -100,7 +100,7 @@ Variant UnOp : Set :=
 | Uplus	(* + *)
 | Unot	(* ! *)
 | Ubnot	(* ~ *)
-| Uunsupported (_ : bs).
+| Uunsupported (_ : SmallStr.t).
 #[global] Instance: EqDecision UnOp.
 Proof. solve_decision. Defined.
 #[global] Instance UnOp_countable : Countable UnOp.
@@ -144,7 +144,7 @@ Variant BinOp : Set :=
 | Bxor	(* ^ *)
 | Bdotp	(* .* *)
 | Bdotip	(* ->* *)
-| Bunsupported (_ : bs).
+| Bunsupported (_ : SmallStr.t).
 #[global] Instance: EqDecision BinOp.
 Proof. solve_decision. Defined.
 #[global] Instance BinOp_countable : Countable BinOp.
@@ -246,7 +246,7 @@ Variant BuiltinFn : Set :=
 | Bin_ctzll
 | Bin_popcount
 | Bin_popcountl
-| Bin_unknown (_ : bs)
+| Bin_unknown (_ : SmallStr.t)
 .
 #[global] Instance: EqDecision BuiltinFn.
 Proof. solve_decision. Defined.
@@ -427,7 +427,7 @@ Inductive Expr : Set :=
 | Earrayloop_init (oname : N) (src : Expr) (level : N) (length : N) (init : Expr) (_ : exprtype)
 | Earrayloop_index (level : N) (_ : exprtype)
 | Eopaque_ref (name : N) (_ : ValCat) (_ : exprtype)
-| Eunsupported (_ : bs) (_ : ValCat) (_ : exprtype)
+| Eunsupported (_ : SmallStr.t) (_ : ValCat) (_ : exprtype)
 .
 Notation MethodRef := ((obj_name * dispatch_type * functype) + Expr)%type (only parsing).
 

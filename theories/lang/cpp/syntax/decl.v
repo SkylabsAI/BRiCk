@@ -225,17 +225,20 @@ Variant Dtor_type : Set := Dt_Deleting | Dt_Complete | Dt_Base | Dt_Comdat.
 #[global] Instance: EqDecision Dtor_type.
 Proof. solve_decision. Defined.
 
+Import Byte.
+
 Definition dtor_name (type : Dtor_type) (cls : globname) : obj_name :=
-  match cls with
-  | BS.String _ (BS.String _ s) =>
-    ("_ZN" ++ s ++ "D" ++ ("0" (*match type with
-                          | Dt_Deleting => "0"
-                          | Dt_Complete => "1"
-                          | Dt_Base => "2"
-                          | Dt_Comdat => "5"
-                          end *)) ++ "Ev")
+  match SmallStr.print cls with
+  | _ :: _ :: s =>
+      SmallStr.parse ("_" :: "Z" :: "N" :: s ++ "D" :: "0" :: "E" :: ["v"])%byte
+  (*match type with
+    | Dt_Deleting => "0"
+    | Dt_Complete => "1"
+    | Dt_Base => "2"
+    | Dt_Comdat => "5"
+    end *)
   | _ => ""
-  end%bs.
+  end.
 
 (* [Tmember_func ty fty] constructs the function type for a
      member function that takes a [this] parameter of [ty]
