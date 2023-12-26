@@ -26,6 +26,38 @@ Module PArray.
 Export PArray.
 
 
+Definition foldl_i {A B} : (int -> A -> B -> B) -> array A -> B -> B :=
+  fun f a b =>
+    let l := length a in
+    let g k '(b,i) :=
+      let a := get a i in
+      (f i a b, (i+1)%uint63)
+    in
+    let '(res,_) :=
+      nat_rect
+      (fun _ => B * int)%type
+      (b, 0%uint63)
+      g
+      (Z.to_nat (Uint63.to_Z (l)))
+    in
+    res.
+
+Definition foldr_i {A B} : (int -> A -> B -> B) -> array A -> B -> B :=
+  fun f a b =>
+    let l := length a in
+    let g k '(b,i) :=
+      let a := get a (l - i - 1)%uint63 in
+      (f i a b, (i+1)%uint63)
+    in
+    let '(res,_) :=
+      nat_rect
+      (fun _ => B * int)%type
+      (b, 0%uint63)
+      g
+      (Z.to_nat (Uint63.to_Z (l)))
+    in
+    res.
+
 Lemma default_get {A} (a : array A) : default a = a.[length a].
 Proof. rewrite get_out_of_bounds //. lia. Qed.
 
