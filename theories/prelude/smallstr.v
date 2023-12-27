@@ -255,7 +255,7 @@ Fixpoint read_bytes (n : nat) (i : int) (acc : list byte) : list byte :=
       read_bytes n i (int_to_byte b :: acc)
   end.
 
-Definition print_sub a from len : list byte :=
+Definition print_sub_aux a from len : list byte :=
 Eval cbn beta fix match delta [read_bytes] in
   let r := R.split from len in
   let acc := [] in
@@ -285,11 +285,14 @@ Eval cbn beta fix match delta [read_bytes] in
   | None => acc
   end.
 
+Definition print_sub s from len :=
+  let a := s.(smallstr_bytes) in
+  let slen := get a 0%uint63 in
+  print_sub_aux a from (if Uint63.ltb slen (from+len) then slen else (from+len))%uint63.
+
 Definition print s : list byte :=
 Eval lazy beta fix match delta [print_sub] in
-  let a := s.(smallstr_bytes) in
-  let len := get a 0%uint63 in
-  print_sub a 0 len.
+  print_sub s 0 (len s).
 
 (* Eval lazy in print_aux_new (parse [x61;x62;x63;x64;x65;x66;x67;x68]).(smallstr_bytes) 0 8. *)
 
@@ -371,16 +374,25 @@ Definition shrink s (n : int) :=
 
 Eval lazy in print (shrink (parse ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"]%byte) 9).
 
+Definition concat s1 ss :=
+  let lens := List.fold_left (fun t s => Uint63.add t (len s)) ss 0%uint63 in
+  if Uint63.eqb lens 0 then s1 else
+  let out := extend s1 lens in
+  let go :=
+    fix go offset ss out :=
+      match ss with
+      | s :: ss =>
+          let out := set_bytes out offset (print s) in
+          go (offset + len s)%uint63 ss out
+      | [] => out
+      end
+  in
+  go (len s1) ss out.
+
+Eval lazy in print (concat (parse ["x";"y";"z"]%byte) [(parse (repeat x61 5)); (parse (repeat x62 5))]).
+
 Definition append s1 s2 :=
-  let len2 := len s2 in
-  if Uint63.eqb len2 0 then s1 else
-  let len1 := len s1 in
-  if Uint63.eqb len2 0 then s2 else
-  (* let newlen := len1 + len2 in *)
-  (* let '{|smallstr_bytes := a1|} := s1 in *)
-  (* let '{|smallstr_bytes := a2|} := s2 in *)
-  let s3 := extend s1 len2 in
-  snd (List.fold_left (fun '(i,out) b => ((i+1)%uint63, set_byte out i b)) (print s2) (len1, s3)).
+  concat s1 [s2].
 
 Eval lazy in append (parse (repeat x61 5)) (parse (repeat x62 5)).
 Eval lazy in print (append (parse (repeat x61 5)) (parse (repeat x62 5))).
@@ -398,7 +410,7 @@ Definition sub s start l :=
   let last := div_up newlen 7 in
   let newarrlen := (1+last)%uint63 in
   let out := PArray.make newarrlen 0%uint63 in
-  let bytes := print_sub a start l in
+  let bytes := print_sub_aux a start l in
   let out := Smallstr (PArray.set out 0 newlen) in
   let out := List.fold_left (fun '(i, out) b => ((i+1)%uint63, set_byte out i b)) bytes (0%uint63,out) in
   out.2.
