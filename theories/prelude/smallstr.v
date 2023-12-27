@@ -122,17 +122,19 @@ Eval lazy in to_bits (255<<48)%uint63.
 
 Definition max_val := Eval cbv in (max_int >> 7)%uint63.
 Definition zero_mask sh := ((255 << (sh * 8)) lxor max_val)%uint63.
-(* Mask out n many characters from the suffix *)
-Definition zero_masks n := (max_val >> (n * 8))%uint63.
+(* Mask out n many characters from the prefix *)
+Definition zero_masks_pref n := (max_val >> (n * 8))%uint63.
+Definition zero_masks_suff n := (max_val land (max_val << (n * 8)))%uint63.
 
-Eval lazy in to_bits (zero_masks 6).
+Eval lazy in to_bits (zero_masks_pref 6).
+Eval lazy in to_bits (zero_masks_suff 6).
 
 Definition len s := let '{|smallstr_bytes := a|} := s in get a 0%uint63.
 
 Definition position (i : Uint63.int) : Uint63.int * Uint63.int :=
   let (q,r) := Uint63.diveucl i 7 in
   (* index 0 is the string length *)
-  (q+1, r)%uint63.
+  (q+1, 6-r)%uint63.
 
 Definition div_up (i1 i2 : int) :=
   let (q,r) := diveucl i1 i2 in
@@ -208,6 +210,9 @@ Module R.
       n: int
     }.
 
+  (* [split from len] computes [t]. The following case is the really difficult one:
+     - [len < 7]: we treat the entire range as an overhang (which can contain an offset for [from])
+   *)
   Definition split from len :=
     let lenlt7 := Uint63.ltb len 7 in
     let under := Uint63.mod from 7 in
@@ -241,13 +246,6 @@ Module R.
     |}%uint63.
 End R.
 
-Eval lazy in R.split 0 1.
-Eval lazy in R.split 0 8.
-Eval lazy in R.split 6 1.
-Eval lazy in R.split 26 2.
-Eval lazy in R.split 6 8.
-Eval lazy in R.split 6 9.
-
 Fixpoint read_bytes (n : nat) (i : int) (acc : list byte) : list byte :=
   match n with
   | 0 => acc
@@ -257,7 +255,7 @@ Fixpoint read_bytes (n : nat) (i : int) (acc : list byte) : list byte :=
       read_bytes n i (int_to_byte b :: acc)
   end.
 
-Definition print_aux_new a from len : list byte :=
+Definition print_sub a from len : list byte :=
 Eval cbn beta fix match delta [read_bytes] in
   let r := R.split from len in
   let acc := [] in
@@ -287,182 +285,26 @@ Eval cbn beta fix match delta [read_bytes] in
   | None => acc
   end.
 
-Eval lazy in read_bytes 7 107075202213222 [].
-
-Eval lazy in R.split 0 9.
-Eval lazy in R.split 1 3.
-Eval lazy in R.split 1 7.
-Eval lazy in (parse ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"]%byte).(smallstr_bytes).
-Eval lazy in (parse ["a"; "b"; "c"; "d"]%byte).(smallstr_bytes).
-Eval lazy in read_bytes 2 (27411251759939584 >> (0 * 8)) [].
-
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"]%byte).(smallstr_bytes) 0 4.
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"; "e"]%byte).(smallstr_bytes) 0 5.
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"]%byte).(smallstr_bytes) 1 3.
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"]%byte).(smallstr_bytes) 1 7.
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"]%byte).(smallstr_bytes) 0 8.
-
-
-Definition print_aux a from len : list byte :=
-Eval cbn beta fix match delta [read_bytes] in
-  let fuel := int_to_nat len in
-  let last := div_up (from+len) 7 in
-  let go :=
-    fix go n pos ind todo acc {struct n} :=
-      match n with
-      | 0 => acc
-      | S n as m =>
-          let bucket := PArray.get a pos in
-          (* let bytes := read_bytes bucketlen bucket acc in *)
-          let pos := (pos - 1)%uint63 in
-          let bucketlen := (Uint63.mod ind 7)%uint63 in
-          let bucketlen_nat := int_to_nat bucketlen in
-          let ind := (ind - bucketlen)%uint63 in
-          let todo := (todo - bucketlen)%uint63 in
-          match bucketlen_nat, n with
-          | 0, S (S (S (S (S (S n))))) => go n pos ind todo (read_bytes 7 bucket acc)
-          | 6,   (S (S (S (S (S n))))) => go n pos ind todo (read_bytes 6 bucket acc)
-          | 5,   (  (S (S (S (S n))))) => go n pos ind todo (read_bytes 5 bucket acc)
-          | 4,   (  (  (S (S (S n))))) => go n pos ind todo (read_bytes 4 bucket acc)
-          | 3,   (  (  (  (S (S n))))) => go n pos ind todo (read_bytes 3 bucket acc)
-          | 2,   (  (  (  (  (S n))))) => go n pos ind todo (read_bytes 2 bucket acc)
-          | 1,   (  (  (  (  (  n))))) => go n pos ind todo (read_bytes 1 bucket acc)
-          | _, _ =>
-              let bucketlen := if Uint63.eqb bucketlen 0 then 7%uint63 else bucketlen in
-              let '(skip, bucketlen, bucket) :=
-                if Uint63.ltb todo bucketlen then
-                  (int_to_nat (7-todo)%uint63, todo, (bucket >> ((7-todo) * 8))%uint63)
-                else
-                  (0, bucketlen, bucket)
-              in
-              read_bytes bucketlen_nat bucket acc
-          end
-      end
-  in
-  go fuel last (from+len)%uint63 len [].
-
-
-Definition print_new s : list byte :=
-Eval cbn beta fix match delta [read_bytes] in
-  let a := s.(smallstr_bytes) in
-  let len := get a 0%uint63 in
-  let len_nat := int_to_nat len in
-  let last := div_up len 7 in
-  let go :=
-    fix go n pos bucketlen acc {struct n} :=
-      match n with
-      | 0 => acc
-      | S n as m =>
-          let bucket := PArray.get a pos in
-          (* let bytes := read_bytes bucketlen bucket acc in *)
-          go n (pos - 1)%uint63 7 (read_bytes bucketlen bucket acc)
-      end
-  in
-  let bucketlen :=
-    match (int_to_nat (Uint63.mod len 7)) with
-    | 0 => 7
-    | _ as b => b
-    end
-  in
-  go (int_to_nat last) last bucketlen [].
-
 Definition print s : list byte :=
-Eval cbn beta fix match delta [read_bytes] in
+Eval lazy beta fix match delta [print_sub] in
   let a := s.(smallstr_bytes) in
   let len := get a 0%uint63 in
-  let len_nat := int_to_nat len in
-  let last := div_up len 7 in
-  let go :=
-    fix go n pos bucketlen acc {struct n} :=
-      match n with
-      | 0 => acc
-      | S n as m =>
-          let bucket := PArray.get a pos in
-          match bucketlen, n with
-          | 0, S (S (S (S (S (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 7 bucket acc)
-          | 6,   (S (S (S (S (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 6 bucket acc)
-          | 5,   (  (S (S (S (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 5 bucket acc)
-          | 4,   (  (  (S (S (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 4 bucket acc)
-          | 3,   (  (  (  (S (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 3 bucket acc)
-          | 2,   (  (  (  (  (S n))))) => go n (pos - 1)%uint63 0 (read_bytes 2 bucket acc)
-          | 1,   (  (  (  (  (  n))))) => go n (pos - 1)%uint63 0 (read_bytes 1 bucket acc)
-          | _, _ => read_bytes bucketlen bucket acc
-          end
-      end
-  in
-  go len_nat last (int_to_nat (Uint63.mod len 7)) [].
-
-Definition print2 s : list byte :=
-Eval lazy beta fix match delta [print_aux Uint63.add] in
-  let a := s.(smallstr_bytes) in
-  let len := get a 0%uint63 in
-  print_aux a 0 len.
-
-Definition print2_new s : list byte :=
-Eval lazy beta fix match delta [print_aux_new] in
-  let a := s.(smallstr_bytes) in
-  let len := get a 0%uint63 in
-  print_aux_new a 0 len.
+  print_sub a 0 len.
 
 (* Eval lazy in print_aux_new (parse [x61;x62;x63;x64;x65;x66;x67;x68]).(smallstr_bytes) 0 8. *)
 
+#[local] Notation teststr := (parse (repeat x61 1000)).
+Instructions Eval lazy in
+  PArray.get teststr.(smallstr_bytes) 0.
+Instructions Eval vm_compute in
+  PArray.get teststr.(smallstr_bytes) 0.
+
+#[local] Example teststr_comp := Eval vm_compute in parse (repeat x61 1000).
 
 Instructions Eval lazy in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print_new s).
+  List.length (print teststr_comp).
 Instructions Eval vm_compute in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print_new s).
-
-Instructions Eval lazy in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print2_new s).
-Instructions Eval vm_compute in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print2_new s).
-(* 49244932 *)
-(* 56597152 *)
-
-Instructions Eval lazy in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print2 s).
-Instructions Eval vm_compute in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print2 s).
-(* 159097997 *)
-(*  59796203 *)
-
-
-Instructions Eval lazy in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print s).
-Instructions Eval vm_compute in
-  let l := repeat x61 1000 in
-  let s := parse l in
-  List.length (print s).
-(* 55441262 *)
-(* 56904102 *)
-
-
-Instructions Eval lazy in
-  let l := repeat x61 10000 in
-  let s := parse l in
-  PArray.get s.(smallstr_bytes) 0.
-Instructions Eval vm_compute in
-  let l := repeat x61 10000 in
-  let s := parse l in
-  PArray.get s.(smallstr_bytes) 0.
-(* 500850420 *)
-(*  26930178 *)
-
-
+  List.length (print teststr_comp).
 
 
 (* [set s i b] sets byte [i] to value [b] in string [s]. Returns [s] unchanged if [i] is bigger or equal to the [len s]. *)
@@ -476,12 +318,16 @@ Definition set_byte s i (b : byte) :=
     let a := PArray.set a pos bucket in
     {|smallstr_bytes := a|}.
 
+Eval lazy in print (set_byte (parse (repeat x61 13)) 12 x62).
+
 Fixpoint set_bytes s i (bs : list byte) :=
   match bs with
   | [] => s
   | b :: bs =>
       set_bytes (set_byte s i b) (i+1)%uint63 bs
   end.
+
+Eval lazy in print (set_bytes (parse (repeat x61 13)) 11 [x62;x63]).
 
 (* [extend s n] extends [s] by [n] many zero bytes. *)
 Definition extend s (n : int) :=
@@ -519,9 +365,11 @@ Definition shrink s (n : int) :=
     let out := PArray.set out 0 n in
     let out :=
       if Uint63.eqb partial 0 then out else
-      PArray.set out last (PArray.get out last land zero_masks (7-partial))%uint63
+      PArray.set out last (PArray.get out last land zero_masks_suff (7-partial))%uint63
     in
     Smallstr out.
+
+Eval lazy in print (shrink (parse ["a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"]%byte) 9).
 
 Definition append s1 s2 :=
   let len2 := len s2 in
@@ -537,7 +385,9 @@ Definition append s1 s2 :=
 Eval lazy in append (parse (repeat x61 5)) (parse (repeat x62 5)).
 Eval lazy in print (append (parse (repeat x61 5)) (parse (repeat x62 5))).
 
-(* [sub s start l] returns a new string that contains bytes [start .. start+l-1] of [s]. *)
+(* [sub s start l] returns a new string that contains bytes [start .. start+l-1] of [s].
+   If [start+l-1] is bigger than [len s], the result is truncated to bytes [start .. len s].
+ *)
 Definition sub s start l :=
   let len := len s in
   if Uint63.eqb start 0 && Uint63.eqb l len then s else
@@ -548,12 +398,10 @@ Definition sub s start l :=
   let last := div_up newlen 7 in
   let newarrlen := (1+last)%uint63 in
   let out := PArray.make newarrlen 0%uint63 in
-  let bytes := print_aux_new a start l in
+  let bytes := print_sub a start l in
   let out := Smallstr (PArray.set out 0 newlen) in
   let out := List.fold_left (fun '(i, out) b => ((i+1)%uint63, set_byte out i b)) bytes (0%uint63,out) in
   out.2.
-
-Eval lazy in print_aux_new (parse ["a"; "b"; "c"; "d"]%byte).(smallstr_bytes) 1 3.
 
 Eval lazy in print (sub (parse ["a"; "b"; "c"; "d"]%byte) 1 4).
 
@@ -561,7 +409,7 @@ Eval lazy in print (sub (parse ["a"; "b"; "c"; "d"]%byte) 1 4).
 Import BinInt.
 
 
-#[global] String Notation SmallStr.smallstr SmallStr.parse SmallStr.print2_new : smallstr_scope.
+#[global] String Notation SmallStr.smallstr SmallStr.parse SmallStr.print : smallstr_scope.
 
 Definition compare s1 s2 :=
   (PArray.compare (cmp:=Uint63.compare) s1.(smallstr_bytes) s2.(smallstr_bytes)).
@@ -680,7 +528,7 @@ Instructions Eval vm_compute in SmallStr.eqb "abcdefghi000000adkfjadsfkjasdfkjas
 Module Type TEST.
   Import Coq.Strings.String.
   Definition sanity (s : string) :=
-    if String.eqb (string_of_list_byte (SmallStr.print2_new (SmallStr.parse (list_byte_of_string s)))) s then True else False.
+    if String.eqb (string_of_list_byte (SmallStr.print (SmallStr.parse (list_byte_of_string s)))) s then True else False.
 
   Succeed Example _1 : sanity "a" := I.
   Succeed Example _1 : sanity "ab" := I.
