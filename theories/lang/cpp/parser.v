@@ -108,8 +108,8 @@ Section type.
 
 End type.
 Notation Tdecay_type original adjusted := (adjusted) (only parsing).
-Notation Tincomplete_array ty := (Tptr ty) (only parsing).
-Notation Tvariable_array ty e := (Tptr ty) (only parsing).
+Notation Tincomplete_array ty := (Tarch None "incomplete-array") (only parsing).
+Notation Tvariable_array ty e := (Tarch None "variable-length-array") (only parsing).
 
 (** ** Expressions *)
 
