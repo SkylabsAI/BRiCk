@@ -106,6 +106,7 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
 
   | Tarray ety sz =>
     default_initialize_array (default_initialize ety) tu ety sz p (fun _ => Q FreeTemps.id)
+  | Tincomplete_array _ => ERROR "default initialize incomplete array"
 
   | Tref _
   | Trv_ref _ => ERROR "default initialization of reference"
@@ -383,6 +384,7 @@ magic wands.
       (* non-primitives are handled via prvalue-initialization semantics *)
     | Tarray _ _
     | Tnamed _ => wp_init tu ρ (tqualified cv ty) addr init Q
+    | Tincomplete_array _ => UNSUPPORTED (initializing_type ty init)
 
     | Tref ty =>
       let rty := Tref $ erase_qualifiers ty in
@@ -858,7 +860,8 @@ Section wp_initialize.
                            )
   | WpInitFuncArch cv ty' : match ty' with
                         | Tfunction _ _
-                        | Tarch _ _ => true
+                        | Tarch _ _
+                        | Tincomplete_array _ => true
                         | _ => false
                         end ->
                          (cv, ty') = decompose_type ty ->

@@ -530,6 +530,7 @@ Section body.
 
     | Tarray ety sz =>
       |={top}=> |> wp_destroy_array tu cv ety sz this Q
+    | Tincomplete_array ety => |={top}=> False
 
     | Tref r_ty
     | Trv_ref r_ty =>
@@ -824,6 +825,7 @@ Section val_array.
       | Tmember_pointer _ _
       | Tvoid =>
         wp_destroy_prim tu cv rty this Q
+      | Tincomplete_array _ => False
       | Tfunction _ _
       | Tarch _ _ => False
       end.
