@@ -1357,11 +1357,20 @@ Module Type Expr.
 
     (** [is_array_of aty ety] checks that [aty] is a type representing an
         array of [ety].
-        NOTE that cpp2v currently prints the type `int[]` as [int*]
-             so we also permit that type.
+        NOTE that cpp2v does not support variable or incomplete array
+             types, but they show up here.
+             - [Tincomplete_array] is represented as
+               [Tarch None "incomplete-array"], and
+             - [Tvariable_array] is represented as
+               [Tarch None "variable-length-array"]
+             so we also permit those types.
      *)
     Definition is_array_of (aty ety : type) : Prop :=
       match aty with
+      | Tarch None ar =>
+          if bool_decide (ar = "incomplete-array"%bs)
+           || bool_decide (ar = "variable-length-array"%bs)
+          then True else False
       | Tarray ety' _ => ety = ety'
       | Tptr ety' => ety = ety'
       | _ => False
