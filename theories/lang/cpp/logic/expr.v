@@ -583,9 +583,8 @@ Module Type Expr.
        We cannot write a rule for C functions without extending our
        treatment of value categories to account for this difference.
      *)
-    Axiom wp_operand_cast_fun2ptr_cpp : forall cc ar ret args g Q,
+    Axiom wp_operand_cast_fun2ptr_cpp : forall cc ar ret args e Q,
         let ty := Tfunction (cc:=cc) (ar:=ar) ret args in
-        let e := Eglobal g ty in
             wp_lval e (fun v => Q (Vptr v))
         |-- wp_operand (Ecast Cfun2ptr e Prvalue (Tptr ty)) Q.
 
