@@ -49,26 +49,26 @@ Module ExprNotations.
    *)
 
   Notation "$ v"
-      := (Econst_ref (Lname v%bs) _)
+      := (Econst_ref (Lname v%smallstr) _)
          ( in custom CPP_expr at level 0
          , v constr
          , format "'[' $ v ']'"
          , only printing).
   Notation "$ :: v"
-      := (Econst_ref (Gname v%bs) _)
+      := (Econst_ref (Gname v%smallstr) _)
          ( in custom CPP_expr at level 0
          , v constr
          , format "'[' $ :: v ']'"
          , only printing).
 
   Notation "$ v"
-      := (Evar (Lname v%bs) _)
+      := (Evar (Lname v%smallstr) _)
          ( in custom CPP_expr at level 0
          , v constr
          , format "'[' $ v ']'"
          , only printing).
   Notation "$ :: v"
-      := (Evar (Gname v%bs) _)
+      := (Evar (Gname v%smallstr) _)
          ( in custom CPP_expr at level 0
          , v constr
          , format "'[' $ :: v ']'"
@@ -109,7 +109,7 @@ Module ExprNotations.
   Notation "'!'" := (Unot) (in custom CPP_expr at level 0, only printing).
   Notation "'~'" := (Ubnot) (in custom CPP_expr at level 0, only printing).
   Notation "'{:unop:UNSUPPORTED:' msg ':}'"
-      := (Uunsupported msg%bs)
+      := (Uunsupported msg%smallstr)
          ( in custom CPP_expr at level 0
          , msg constr
          , format "'[hv  ' {:unop:UNSUPPORTED: msg :} ']'"
@@ -293,7 +293,7 @@ Module ExprNotations.
          , only printing).
 
   Notation "e . fld"
-      := (Emember e (Build_field _ fld%bs) _ _)
+      := (Emember e (Build_field _ fld%smallstr) _ _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , fld constr
@@ -304,7 +304,7 @@ Module ExprNotations.
      include a notation for it.
    *)
   Notation "e . fn ()"
-      := (Emember_call (inl (fn%bs, _, _)) e nil _)
+      := (Emember_call (inl (fn%smallstr, _, _)) e nil _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , fn constr
@@ -355,20 +355,20 @@ Module ExprNotations.
          , only printing).
 
   Notation "'offsetof(' cls , fld ')'"
-      := (Eoffsetof cls%bs fld%bs _)
+      := (Eoffsetof cls%smallstr fld%smallstr _)
          ( in custom CPP_expr at level 200
          , fld constr
          , format "'[' offsetof( cls , fld ) ']'"
          , only printing).
 
   Notation "'#' cls ()"
-      := (Econstructor cls%bs nil _)
+      := (Econstructor cls%smallstr nil _)
          ( in custom CPP_expr at level 20
          , cls constr
          , format "'[' # cls () ']'"
          , only printing).
   Notation "'#' cls ( a1 , .. , a2 )"
-      := (Econstructor cls%bs (cons a1 .. (cons a2 nil) ..) _)
+      := (Econstructor cls%smallstr (cons a1 .. (cons a2 nil) ..) _)
          ( in custom CPP_expr at level 20
          , a1 custom CPP_expr at level 200
          , a2 custom CPP_expr at level 200
@@ -500,7 +500,7 @@ Module ExprNotations.
   Notation "'__builtin_popcount'" := (Bin_popcount) ( in custom CPP_expr at level 0, only printing).
   Notation "'__builtin_popcountl'" := (Bin_popcountl) ( in custom CPP_expr at level 0, only printing).
   Notation "'__builtin_UNKNOWN_' nm"
-      := (Bin_unknown nm%bs)
+      := (Bin_unknown nm%smallstr)
          ( in custom CPP_expr at level 0
          , nm constr
          , format "'[' __builtin_UNKNOWN_ nm ']'"
@@ -526,7 +526,7 @@ Module ExprNotations.
   (* TODO (JH): [Earrayloop_init]/[Earrayloop_index]/[Eopaque_ref] *)
 
   Notation "'{UNSUPPORTED:' msg '}'"
-      := (Eunsupported msg%bs _ _)
+      := (Eunsupported msg%smallstr _ _)
          ( in custom CPP_expr at level 0
          , msg constr
          , format "'[hv   ' {UNSUPPORTED:  msg } ']'"

@@ -15,10 +15,10 @@ Implicit Types (σ : genv).
 #[local] Open Scope Z_scope.
 
 Module canonical_tu.
-  Definition im_to_gmap {V} (m : IM.t V) : gmap BS.t V :=
+  Definition im_to_gmap {V} (m : IM.t V) : gmap SmallStr.t V :=
     list_to_map (map_to_list m).
-  Definition symbol_table_canon : Set := gmap BS.t ObjValue.
-  Definition type_table_canon : Set := gmap BS.t GlobDecl.
+  Definition symbol_table_canon : Set := gmap SmallStr.t ObjValue.
+  Definition type_table_canon : Set := gmap SmallStr.t GlobDecl.
 
   #[global] Instance symbol_table_canon_eq_dec : EqDecision symbol_table_canon.
   Proof. solve_decision. Qed.

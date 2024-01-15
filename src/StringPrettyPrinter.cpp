@@ -78,7 +78,7 @@ private:
 
         char buf[25];
         snprintf(buf, sizeof buf, "%02x", c);
-        print.output() << "(BS.String Byte.x" << buf << " ";
+        print.output() << "(SmallStr.append (SmallStr.parse [Byte.x])" << buf << " ";
         parens_to_close++;
     }
     // Count open parens to close. The value is -1 iff state is not PrettyState::ESCAPE.

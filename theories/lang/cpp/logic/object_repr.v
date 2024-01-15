@@ -508,7 +508,7 @@ Section with_rawable.
           p .[ Tu8 ! i ] |-> rawsR q (dropN i rs)
       |-- p .[ Tu8 ! i ] |-> arrayR Tu8 (fun tt => anyR Tu8 q)
                                         (replicateN (lengthN rs - i) ()).
-  Proof.
+  Proof using X R.
     intros **; clear Hsz Hdecode_sz Hencode_sz Hnonzero HR_decode HR_encode.
     generalize dependent i; generalize dependent p.
     induction rs as [| r rs IHrs]; intros p i.

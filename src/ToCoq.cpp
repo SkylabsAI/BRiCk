@@ -78,7 +78,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
         ClangPrinter cprint(compiler_, ctxt);
 
         fmt << "Require Import bedrock.lang.cpp.parser." << fmt::line
-            << fmt::line << "#[local] Open Scope bs_scope." << fmt::line;
+            << fmt::line << "#[local] Open Scope smallstr_scope." << fmt::line;
         // << "Import ListNotations." << fmt::line;
 
         fmt << fmt::line
@@ -137,7 +137,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
         ClangPrinter cprint(compiler_, ctxt);
 
         fmt << "Require Import bedrock.auto.cpp.templates.mparser." << fmt::line
-            << fmt::line << "#[local] Open Scope bs_scope." << fmt::line;
+            << fmt::line << "#[local] Open Scope smallstr_scope." << fmt::line;
 
         fmt << fmt::line
             << "Definition templates : Mtranslation_unit :=" << fmt::indent

@@ -25,6 +25,7 @@ Proof. iIntros "Q W R". iApply ("Q" with "(W R)"). Qed.
 
 #[local] Set Printing Coercions.
 
+(* TODO: use %smallstr. Currently generates an error later in the file regarding HOAS for arrays?? *)
 #[local] Arguments ERROR {_ _} _%bs.
 #[local] Arguments UNSUPPORTED {_ _} _%bs.
 #[local] Arguments wpi : simpl never.
@@ -36,7 +37,7 @@ implement the part of http://eel.is/c++draft/class.cdtor#3 about
 members. This enables their dereference via [wp_lval_deref].
 *)
 mlock Definition svalid_members `{Σ : cpp_logic, σ : genv}
-    (cls : globname) (members : list (bs * type)) : Rep :=
+    (cls : globname) (members : list (SmallStr.t * type)) : Rep :=
   reference_toR (Tnamed cls) **
   [** list] m ∈ members,
   _field {| f_type := cls ; f_name := m.1 |} |-> reference_toR m.2.
@@ -573,7 +574,11 @@ Definition wpi_members `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ 
           wpi tu ρ cls this i (wpi_members members Q)
         | _ =>
           (* there are multiple initializers for this field *)
-          ERROR ("multiple initializers for field: " ++ cls ++ "::" ++ m.(mem_name))
+          ERROR ("multiple initializers for field: "
+                 ++ (BS.parse (SmallStr.print cls))
+                 ++ "::"
+                 ++ (BS.parse (SmallStr.print (m.(mem_name))))
+            )
         end
       | InitIndirect _ _ =>
         (*
@@ -582,7 +587,11 @@ Definition wpi_members `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ 
 
         TODO currently not supported
         *)
-        UNSUPPORTED ("indirect initialization: " ++ cls ++ "::" ++ m.(mem_name))
+        UNSUPPORTED ("indirect initialization: "
+                 ++ (BS.parse (SmallStr.print cls))
+                 ++ "::"
+                 ++ (BS.parse (SmallStr.print (m.(mem_name))))
+          )
       | _ => False%I (* unreachable due to the filter *)
       end
     end
@@ -623,13 +632,13 @@ Definition wpi_bases `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
       (*
       There is no initializer for this base class.
       *)
-      ERROR ("wpi_bases: missing base class initializer: " ++ cls)
+      ERROR ("wpi_bases: missing base class initializer: " ++ (BS.parse (SmallStr.print cls)))
     | i :: nil =>
       (* there is an initializer for this class *)
       wpi tu ρ cls this i (wpi_bases bases Q)
     | _ :: _ :: _ =>
       (* there are multiple initializers for this, so we fail *)
-      ERROR ("wpi_bases: multiple initializers for base: " ++ cls ++ "::" ++ b)
+      ERROR ("wpi_bases: multiple initializers for base: " ++ (BS.parse (SmallStr.print cls)) ++ "::" ++ (BS.parse (SmallStr.print b)))
     end
   end.
 
@@ -846,7 +855,7 @@ that implies [type_ptr].
         letI* := Kreturn_void in
         |={top}=>?u |> Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p
 
-      | _ => ERROR ("wp_ctor: constructor for non-aggregate (" ++ ctor.(c_class) ++ ")")
+      | _ => ERROR ("wp_ctor: constructor for non-aggregate (" ++ (BS.parse (SmallStr.print ctor.(c_class))) ++ ")")
       end
     | _ => ERROR "wp_ctor: constructor without leading [this] argument"
     end

@@ -70,14 +70,14 @@ Module StmtNotations.
 
   (* TODO (JH): Notations for other [VarDecl] forms *)
   Notation "ty $ v ;"
-      := (Dvar v%bs ty None)
+      := (Dvar v%smallstr ty None)
          ( in custom CPP_stmt at level 0
          , ty custom CPP_type at level 200
          , v constr
          , format "'[' ty  $ v ; ']'"
          , only printing).
   Notation "ty $ v = e ;"
-      := (Dvar v%bs ty (Some e))
+      := (Dvar v%smallstr ty (Some e))
          ( in custom CPP_stmt at level 0
          , e custom CPP_expr at level 200
          , ty custom CPP_type at level 200
@@ -251,7 +251,7 @@ Module StmtNotations.
          , format "'[' s ']'"
          , only printing).
   Notation "'[[' attr1 , .. , attr2 ']]' s"
-      := (Sattr (cons attr1%bs .. (cons attr2%bs nil) ..) s)
+      := (Sattr (cons attr1%smallstr .. (cons attr2%smallstr nil) ..) s)
          ( in custom CPP_stmt at level 0
          , attr1 constr
          , attr2 constr
@@ -262,7 +262,7 @@ Module StmtNotations.
   (* TODO (JH): [Sasm] *)
 
   Notation "'<LABEL:' lbl > s"
-      := (Slabeled lbl%bs s)
+      := (Slabeled lbl%smallstr s)
          ( in custom CPP_stmt at level 0
          , lbl constr
          , s custom CPP_stmt at level 200
@@ -270,14 +270,14 @@ Module StmtNotations.
          , only printing).
 
   Notation "'goto' lbl ;"
-      := (Sgoto lbl%bs)
+      := (Sgoto lbl%smallstr)
          ( in custom CPP_stmt at level 0
          , lbl constr
          , format "'[' goto  lbl ; ']'"
          , only printing).
 
   Notation "'{UNSUPPORTED:' msg '}'"
-      := (Sunsupported msg%bs)
+      := (Sunsupported msg%smallstr)
          ( in custom CPP_stmt at level 0
          , msg constr
          , format "'[hv   ' {UNSUPPORTED:  msg } ']'"

@@ -80,7 +80,7 @@ Inductive Stmt' {type Expr : Set} : Set :=
 
 | Sattr (_ : list ident) (_ : Stmt')
 
-| Sasm (_ : bs) (volatile : bool)
+| Sasm (_ : SmallStr.t) (volatile : bool)
        (inputs : list (ident * Expr))
        (outputs : list (ident * Expr))
        (clobbers : list ident)

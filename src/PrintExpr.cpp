@@ -712,7 +712,7 @@ public:
                              OpaqueNames&) {
         // [PredefinedExpr] constructs a [string] which is always ascii
         print.ctor("Estring");
-        print.ctor("BS.string_to_bytes");
+        print.ctor("SmallStr.to_Ns");
         print.str(expr->getFunctionName()->getString());
         print.end_ctor();
         print_string_type(expr, print, cprint);

@@ -13,6 +13,7 @@
  *)
 From elpi.apps Require Import locker.
 Require Export bedrock.prelude.addr.
+Require Export bedrock.prelude.bytestring.
 
 From bedrock.lang.bi Require Export prelude observe spec.knowledge.
 From bedrock.lang.cpp.logic Require Export mpred rep.

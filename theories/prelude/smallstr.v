@@ -294,6 +294,9 @@ Definition print s : list byte :=
 Eval lazy beta fix match delta [print_sub] in
   print_sub s 0 (len s).
 
+Definition to_Ns s : list N :=
+  List.map (Byte.to_N) (print s).
+
 (* Eval lazy in print_aux_new (parse [x61;x62;x63;x64;x65;x66;x67;x68]).(smallstr_bytes) 0 8. *)
 
 #[local] Notation teststr := (parse (repeat x61 1000)).
@@ -521,6 +524,8 @@ End SmallStr.
 
 #[global] Bind Scope smallstr_scope with SmallStr.t.
 #[global] String Notation SmallStr.smallstr SmallStr.parse SmallStr.print : smallstr_scope.
+
+#[global] Infix "++" := (SmallStr.append) : smallstr_scope.
 
 Eval cbv in "ab"%smallstr.(SmallStr.smallstr_bytes).
 

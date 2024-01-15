@@ -45,12 +45,12 @@ End cpp_notation.
 
 (** ** Names *)
 
-Fixpoint do_end (ty : globname) : obj_name :=
-  match ty with
-  | BS.String _ BS.EmptyString => "D0Ev"
-  | BS.String x v => BS.String x (do_end v)
-  | _ => BS.EmptyString
-  end.
+Import Uint63 Byte.
+
+Definition do_end (ty : globname) : obj_name :=
+  let len := SmallStr.len ty in
+  let s := SmallStr.extend ty 3%uint63 in
+  SmallStr.set_bytes s (len - 1)%uint63 ["D"; "0"; "E"; "v"]%byte.
 
 (** Build the name of a destructor for a type.
     NOTE this can be improved if we essentially turn it into a
@@ -58,21 +58,22 @@ Fixpoint do_end (ty : globname) : obj_name :=
     implications that we should solve in a separate issue.
  *)
 Definition DTOR (ty : globname) : obj_name :=
-  match ty with
-  | BS.String _ (BS.String _ ((BS.String c _) as rest)) =>
+  match SmallStr.print_sub ty 0 3 with
+  | [_; _; c] =>
+    let rest := SmallStr.sub ty 3 (SmallStr.len ty) in
     if bool_decide (c = "N"%byte) then
-      "_Z" ++ do_end rest
+      SmallStr.append "_Z" (do_end rest)
     else
-      "_ZN" ++ rest ++ "D0Ev"
-  | BS.String _ (BS.String _ v) => "_ZN" ++ do_end v
+      SmallStr.concat "_ZN" [rest; "D0Ev"]
+  | [_;_] => SmallStr.append "_ZN" (do_end "")
   | _ => "OOPS"
-  end%bs.
+  end%smallstr.
 
 Definition Nanon (ty : globname) : globname :=
-  "#" ++ ty.
+  SmallStr.append "#" ty.
 
 Definition Cenum_const (e : globname) (x : ident) : obj_name :=
-  e ++ "::" ++ x.
+  SmallStr.concat e ["::"%smallstr; x].
 
 Definition pure_virt (x : obj_name) : obj_name * option obj_name :=
   (x, None).
@@ -92,7 +93,7 @@ Section type.
   Unsupported types. [description] is meant to be only used for
   documentation.
   *)
-  Definition Tunsupported `{!Inhabited type} (description : bs) : type.
+  Definition Tunsupported `{!Inhabited type} (description : SmallStr.t) : type.
   Proof. exact inhabitant. Qed.
 
   (*
@@ -103,7 +104,7 @@ Section type.
     underlying.
   Definition Tunderlying (enum : type) {underlying : type} : type :=
     underlying.
-  Definition Tunary_xform (name : bs) (arg : type) {result : type} : type :=
+  Definition Tunary_xform (name : SmallStr.t) (arg : type) {result : type} : type :=
     result.
 
 End type.
@@ -161,7 +162,7 @@ Definition translation_unitK : Type :=
   symbol_table -> type_table -> (symbol_table -> type_table -> translation_unit) -> translation_unit.
 
 (** TODO FM-601 don't ignore this *)
-Definition Dstatic_assert (_ : option bs) (_ : Expr) : translation_unitK :=
+Definition Dstatic_assert (_ : option SmallStr.t) (_ : Expr) : translation_unitK :=
   fun syms tys k =>
   k syms tys.
 

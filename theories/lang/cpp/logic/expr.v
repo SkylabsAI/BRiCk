@@ -1531,13 +1531,13 @@ Module Type Expr.
        injective and we don't expect the [N] to be very large in practice so we pick
        a very naive encoding.
      *)
-    Definition N_to_bs (n : N) : bs :=
-      N.peano_rect (fun _ => bs)
-                   BS.EmptyString
-                   (fun _ x => BS.String "1" x) n.
+    Definition N_to_bs (n : N) : list Byte.byte :=
+      N.peano_rect (fun _ => _)
+                   []
+                   (fun _ x => "1"%byte :: x) n.
 
-    Definition arrayloop_loop_index (n : N) : bs := "!loop_index" ++ N_to_bs n.
-    Definition opaque_val (n : N) : bs := "%opaque" ++ N_to_bs n.
+    Definition arrayloop_loop_index (n : N) : SmallStr.t := SmallStr.append "!loop_index" (SmallStr.parse (N_to_bs n)).
+    Definition opaque_val (n : N) : SmallStr.t := SmallStr.append "%opaque" (SmallStr.parse (N_to_bs n)).
 
     (* Maybe we can `Rbind (opaque n) p`, and then add `_opaque` to encapsulate looking this up in the region;
        the new premise would be (after Loc:=ptr goes in) `Q _opaque` *)

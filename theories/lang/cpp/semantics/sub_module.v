@@ -58,8 +58,8 @@ Section compat_le.
   Proof.
     intros.
     unfold compat_le.
-    generalize (find_any_ok (λ (k : bs) (v : T), negb (f (Some v) (r !! k))) l).
-    generalize (find_any (λ (k : bs) (v : T), negb (f (Some v) (r !! k))) l).
+    generalize (find_any_ok (λ (k : SmallStr.t) (v : T), negb (f (Some v) (r !! k))) l).
+    generalize (find_any (λ (k : SmallStr.t) (v : T), negb (f (Some v) (r !! k))) l).
     destruct b; simpl; intros.
     - destruct H0 as [ ? [ ? [ ? ? ] ] ].
       exists x. unfold lookup, IM_lookup in *.
