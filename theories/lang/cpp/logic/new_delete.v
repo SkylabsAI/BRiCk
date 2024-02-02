@@ -441,15 +441,19 @@ Module Type Expr__newdelete.
       erase_qualifiers t1 = erase_qualifiers t2.
   End with_cpp_logic.
 
-  Definition array_compatible (is_array : bool) (ty : type) : Prop :=
-    match ty with
-    | Tarray _ _ => is_array = true
-    | Tincomplete_array _
-    | Tvariable_array _ => False
-    | _ => is_array = false
+
+  (** [array_compatible fty dty] says that [fty] is an array
+      (possibly multi-dimensional) of [dty].
+      Both [fty] and [dty] should have qualifiers erased.
+   *)
+  Fixpoint array_compatible (full_ty : type) (delete_ty : type) : Prop :=
+    full_ty = delete_ty \/
+    match full_ty with
+    | Tarray ty _ => array_compatible ty delete_ty
+    | _ => False
     end.
 
-  (* [wp_delete] encapsulates the logic needed to <<delete>> an
+  (** [wp_delete] encapsulates the logic needed to <<delete>> an
       object of a particular type.
 
       In the future, when we support C++20's destroying <<delete>>, we
@@ -457,17 +461,42 @@ Module Type Expr__newdelete.
       to destroy the object.
     *)
   mlock
-  Definition wp_delete `{Σ : cpp_logic} {σ : genv} (tu : translation_unit) (delete_fn : _) (array : bool) destroyed_type obj_ptr Q : mpred :=
+  Definition wp_delete `{Σ : cpp_logic} {σ : genv} (tu : translation_unit) (array : bool) (delete_fn : _)
+    (destroyed_type : type) (obj_ptr : ptr) Q : mpred :=
     denoteModule tu -*
-    letI* this', mdc_ty := resolve_dtor tu destroyed_type obj_ptr in
-    Exists cv_mdc storage_ptr overhead,
-      this' |-> new_tokenR 1 (cv_mdc, storage_ptr, overhead) ** [| cv_compat cv_mdc mdc_ty |] **
-      [| array_compatible array cv_mdc |] **
-      Exists tu', denoteModule tu' **
-      letI* := destroy_val tu' cv_mdc this' (* << invoke the destructor *) in
-        Exists (sz : N), [| size_of mdc_ty = Some sz |] **
+    let del '(fn, ty) p :=
+      (* NOTE: There are several possible overloads for delete functions, but we
+         only support the simplest, i.e. <<void operator delete(void* )>>.
+       *)
+      (letI* p', free := alloc_pointer p in
+       |> letI* p := wp_fptr tu.(types) ty (_global fn) (p' :: nil) in
+          letI* := interp tu free in
+          operand_receive Tvoid p Q)%I
+    in
+    if bool_decide (obj_ptr = nullptr) then
+      (* in the case of deleting a nullptr, the standard allows calling the
+         deletion function or doing nothing. *)
+      Q Vvoid //\\ del delete_fn nullptr
+    else
+      if array then
+        Exists cv_ty storage_ptr overhead sz,
+        obj_ptr |-> new_tokenR 1 (cv_ty, storage_ptr, overhead) **
+          [| array_compatible (erase_qualifiers cv_ty) (erase_qualifiers destroyed_type) |] **
+          [| size_of cv_ty = Some sz |] **
+          letI* := destroy_val tu cv_ty obj_ptr (* << invoke the destructor *) in
           (storage_ptr .[ Tuchar ! -overhead ] |-> blockR (overhead + sz) (cQp.m 1)
-            -* delete_val tu' delete_fn mdc_ty (storage_ptr .[ Tuchar ! -overhead ]) (Q Vvoid)).
+           -* del delete_fn (storage_ptr .[ Tuchar ! -overhead ]))
+      else
+        (letI* this', mdc_ty := resolve_dtor tu destroyed_type obj_ptr in
+         Exists cv_mdc storage_ptr overhead tu' sz,
+          this' |-> new_tokenR 1 (cv_mdc, storage_ptr, overhead) ** [| cv_compat cv_mdc mdc_ty |] **
+          denoteModule tu' **
+          [| size_of mdc_ty = Some sz |] **
+          (* The following lines of code need to be adapted to support
+             destroying delete. *)
+          letI* := destroy_val tu' cv_mdc this' (* << invoke the destructor *) in
+          (storage_ptr .[ Tuchar ! -overhead ] |-> blockR (overhead + sz) (cQp.m 1)
+           -* delete_val tu' delete_fn mdc_ty (storage_ptr .[ Tuchar ! -overhead ]) (Q Vvoid)))%I.
   #[global] Arguments wp_delete {_ _ _ σ}.
 
   Section delete.
@@ -479,20 +508,33 @@ Module Type Expr__newdelete.
       #[local] Notation wp_operand := (wp_operand tu ρ).
 
       Lemma wp_delete_frame : forall tu fn ary ty p Q Q',
-          Forall p, Q p -* Q' p |-- wp_delete tu fn ty ary p Q -* wp_delete tu fn ty ary p Q'.
+          Forall p, Q p -* Q' p |-- wp_delete tu ary fn ty p Q -* wp_delete tu ary fn ty p Q'.
       Proof.
         rewrite wp_delete.unlock; intros.
         iIntros "X Y M"; iSpecialize ("Y" with "M"); iRevert "Y".
-        iApply resolve_dtor_frame; iIntros (??) "Y".
-        iDestruct "Y" as (???) "Y".
-        iExists _, _, _.
-        iDestruct "Y" as "[$[$[$Y]]]".
-        iDestruct "Y" as (?) "Y".
-        iExists _; iDestruct "Y" as "[$ Y]".
-        iRevert "Y"; iApply destroy_val_frame; first reflexivity.
-        iIntros "Y"; iDestruct "Y" as (?) "Y"; iExists _; iDestruct "Y" as "[$ Y]".
-        iIntros "Z"; iSpecialize ("Y" with "Z").
-        iRevert "Y"; iApply delete_val_frame. eauto.
+        case_bool_decide.
+        { iIntros "K"; iSplit.
+          { iApply "X"; iDestruct "K" as "[$ _]". }
+          { case_match; subst.
+            iDestruct "K" as "[_ K]".
+            iRevert "K".
+            iApply alloc_pointer_frame. iIntros (??) "K".
+            iNext. iRevert "K"; iApply wp_fptr_frame.
+            iIntros (?); iApply interp_frame; iApply operand_receive_frame; eauto. } }
+        { case_match.
+          { iIntros "K"; iDestruct "K" as (????) "(NT&%&%&K)".
+            iExists _, _, _, _; iFrame "∗%".
+            iRevert "K". iApply destroy_val_frame; first reflexivity.
+            iIntros "K Y". iSpecialize ("K" with "Y").
+            case_match. iRevert "K"; iApply alloc_pointer_frame.
+            iIntros (??) "Y !>"; iRevert "Y"; iApply wp_fptr_frame.
+            iIntros (?); iApply interp_frame; iApply operand_receive_frame; eauto. }
+          { iApply resolve_dtor_frame; iIntros (??).
+            iIntros "K"; iDestruct "K" as (?????) "(NT&%&M&%&K)".
+            iExists _, _, _, _, _. iFrame "M NT %".
+            iRevert "K"; iApply destroy_val_frame; first reflexivity.
+            iIntros "K S"; iSpecialize ("K" with "S").
+            iRevert "K"; iApply delete_val_frame; eauto. } }
       Qed.
 
       (* <<delete>>
@@ -525,17 +567,10 @@ Module Type Expr__newdelete.
         (* call the destructor on the object, and then call delete_fn *)
         (letI* v , free := wp_operand e in
           Exists obj_ptr, [| v = Vptr obj_ptr |] **
-          if bool_decide (obj_ptr = nullptr)
-          then
-            (* this conjunction justifies the compiler calling the delete function
-                or not calling it when the argument is null. *)
-              (delete_val tu delete_fn destroyed_type obj_ptr $ Q Vvoid free)
-            ∧ Q Vvoid free
-          else
-            (* v---- Calling destructor with object pointer *)
-            wp_delete tu delete_fn false destroyed_type obj_ptr (fun v => Q v free))
+          wp_delete tu false delete_fn destroyed_type obj_ptr (fun v => Q v free))
       |-- wp_operand (Edelete false delete_fn e destroyed_type) Q.
 
+      (*
       (** [wp_operand_delete_default] specializes [wp_operand_delete] for invocations of
         *  the form <<delete p;>> - where <<p>> is a non-null pointer to an object whose
         *  most-derived destructor is defined in the current translation unit.
@@ -548,7 +583,7 @@ Module Type Expr__newdelete.
         (letI* v, free := wp_operand e in
             Exists obj_ptr, [| v = Vptr obj_ptr |] ** [| obj_ptr <> nullptr |] **
             (* v---- Calling destructor with object pointer *)
-              wp_delete tu delete_fn false destroyed_type obj_ptr (fun v => Q v free))
+              wp_delete tu false delete_fn destroyed_type obj_ptr (fun v => Q v free))
       |-- wp_operand (Edelete false delete_fn e destroyed_type) Q.
       Proof.
         intros **; iIntros "operand".
@@ -559,7 +594,7 @@ Module Type Expr__newdelete.
         iExists obj_ptr; iSplitR; first done.
         rewrite bool_decide_false; last assumption.
         iApply wp_delete_frame; eauto.
-      Qed.
+      Qed. *)
 
       (* NOTE: [destroyed_type] will refer to the /element/ of the array *)
       Axiom wp_operand_array_delete :
@@ -569,18 +604,7 @@ Module Type Expr__newdelete.
         (* call the destructor on the object, and then call delete_fn *)
         (letI* v, free := wp_operand e in
           Exists obj_ptr, [| v = Vptr obj_ptr |] **
-          Exists array_size,
-          let array_ty := Tarray destroyed_type array_size in
-          if bool_decide (obj_ptr = nullptr)
-          then
-            (* this conjunction justifies the compiler calling the delete function
-              or not calling it. *)
-              delete_val tu delete_fn array_ty nullptr (Q Vvoid free)
-            ∧ Q Vvoid free
-          else (
-            (* TODO: the only downside that I see to using [wp_delete] here instead
-              of inlining it is that the AST has already fixed the deallocation function *)
-            wp_delete tu delete_fn true array_ty obj_ptr (fun v => Q v free)))
+          wp_delete tu true delete_fn destroyed_type obj_ptr (fun v => Q v free))
       |-- wp_operand (Edelete true delete_fn e destroyed_type) Q.
 
       Section NOTE_potentially_relaxing_array_delete.
