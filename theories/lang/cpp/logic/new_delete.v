@@ -79,7 +79,7 @@ Module Type Expr__newdelete.
     Context `{Σ : cpp_logic} {σ : genv}.
 
     #[global] Declare Instance new_token_provides_storage : forall obj q ty storage (offset : N),
-      Observe (provides_storage (storage .[ Tuchar ! offset ]) obj ty)
+      Observe (provides_storage storage obj ty)
               (obj |-> new_tokenR q (ty, storage, offset)).
 
     #[global] Declare Instance new_token_type_size : forall q ty storage (offset : N),
