@@ -335,7 +335,7 @@ prepare_cpp2v_env:
   variables:
     CODEQ_LOG: ${CI_PROJECT_DIR}/dune_build_codeq.log
   tags:
-    - fm.nfs.1
+    - fm.nfs1
 
 .dune-build-base:
   extends:
