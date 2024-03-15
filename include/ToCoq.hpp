@@ -29,12 +29,13 @@ public:
 	explicit ToCoqConsumer(clang::CompilerInstance *compiler,
 						   const path output_file, const path notations_file,
 						   const path templates_file, const path name_test_file,
-						   bool ast2, Trace::Mask trace, bool elaborate = true,
-						   bool comment = false)
+						   bool structured_keys, Trace::Mask trace,
+						   bool comment,
+						   bool elaborate = true)
 		: compiler_(compiler), output_file_(output_file),
 		  notations_file_(notations_file), templates_file_(templates_file),
-		  name_test_file_(name_test_file), ast2_(ast2), trace_(trace),
-		  elaborate_(elaborate), comment_{comment} {}
+		  name_test_file_(name_test_file), structured_keys_(structured_keys),
+		  trace_(trace), comment_{comment}, elaborate_(elaborate) {}
 
 public:
 	// Implementation of `clang::ASTConsumer`
@@ -74,8 +75,8 @@ private:
 	const path notations_file_;
 	const path templates_file_;
 	const path name_test_file_;
-	const bool ast2_;
+	const bool structured_keys_;
 	const Trace::Mask trace_;
+	const bool comment_;
 	bool elaborate_;
-	bool comment_;
 };

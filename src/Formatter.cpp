@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/raw_ostream.h"
@@ -57,7 +58,7 @@ Formatter::indent() {
 }
 void
 Formatter::outdent() {
-	assert(this->depth >= 2);
+	always_assert(this->depth >= 2);
 	this->depth -= 2;
 }
 

@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "ClangPrinter.hpp"
 #include "CoqPrinter.hpp"
 #include "Formatter.hpp"
@@ -74,12 +75,29 @@ ClangPrinter::printOverloadableOperator(clang::OverloadedOperatorKind oo,
 										CoqPrinter& print, loc::loc loc) {
 	if (trace(Trace::Expr))
 		trace("printOverloadableOperator", loc);
+	auto with_array = [&](StringRef name, bool array) -> auto& {
+		guard::ctor _(print, name, false);
+		return print.boolean(array);
+	};
+	switch (oo) {
+	case OO_New:
+		return with_array("OONew", false);
+	case OO_Array_New:
+		return with_array("OONew", true);
+	case OO_Delete:
+		return with_array("OODelete", false);
+	case OO_Array_Delete:
+		return with_array("OODelete", true);
+	default:
+		break;
+	}
 	switch (oo) {
 #define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
 	case OO_##Name:                                                            \
 		return print.output() << "OO" << #Name;
 #include "clang/Basic/OperatorKinds.def"
 #undef OVERLOADED_OPERATOR
+#undef OVERLOADED_OPERATOR_MULTI
 	default:
 		error_prefix(logging::fatal(), loc)
 			<< "unknown overloadable operator " << oo << "\n";
@@ -147,11 +165,9 @@ printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
 		print.ctor("Cderived2base");
 		// note that [path] does *not* include the type of the argument
 		print.list(ce->path(), [&](auto i) {
-			if (const Type* t = i->getType().getTypePtrOrNull()) {
-				cprint.printTypeName(t->getAsRecordDecl(), print, loc::of(t));
-			} else {
-				assert(false && "no type");
-			}
+			auto t = i->getType().getTypePtrOrNull();
+			always_assert(t && "Cderived2base without type");
+			cprint.printType(*t, print, loc::of(ce));
 		});
 		print.end_ctor();
 		break;
@@ -160,11 +176,9 @@ printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
 		print.ctor("Cbase2derived");
 		// note that [path] does *not* include the type of the argument
 		print.list(ce->path(), [&](auto i) {
-			if (const Type* t = i->getType().getTypePtrOrNull()) {
-				cprint.printTypeName(t->getAsRecordDecl(), print, loc::of(t));
-			} else {
-				assert(false && "no type");
-			}
+			auto t = i->getType().getTypePtrOrNull();
+			always_assert(t && "Cbase2derived without type");
+			cprint.printType(*t, print, loc::of(ce));
 		});
 		print.end_ctor();
 		break;
@@ -198,7 +212,7 @@ ClangPrinter::printValueDeclExpr(const ValueDecl* decl, CoqPrinter& print,
 		}
 	} else {
 		print.ctor("Eglobal", false);
-		printObjName(*decl, print);
+		printName(*decl, print);
 	}
 	print.output() << fmt::nbsp;
 	printQualType(decl->getType(), print, loc::of(decl));
@@ -315,8 +329,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			assert(dependent || expr->getRHS()->getType() == expr->getType() &&
-									"types must match");
+			always_assert(dependent ||
+						  expr->getRHS()->getType() == expr->getType() &&
+							  "types must match");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_LAnd:
@@ -325,8 +340,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			assert(dependent || expr->getType().getTypePtr()->isBooleanType() &&
-									"&& is a bool");
+			always_assert(dependent ||
+						  expr->getType().getTypePtr()->isBooleanType() &&
+							  "&& is a bool");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_LOr:
@@ -335,8 +351,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			assert(dependent || expr->getType().getTypePtr()->isBooleanType() &&
-									"|| is a bool");
+			always_assert(dependent ||
+						  expr->getType().getTypePtr()->isBooleanType() &&
+							  "|| is a bool");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_Assign:
@@ -455,7 +472,7 @@ public:
 			auto ed = dyn_cast<EnumDecl>(ecd->getDeclContext());
 			if (expr->getType()->isEnumeralType()) {
 				print.ctor("Eenum_const", false);
-				cprint.printTypeName(ed, print, loc::of(ecd));
+				cprint.printName(ed, print, loc::of(ecd));
 				print.output() << fmt::nbsp;
 				cprint.printUnqualifiedName(*ecd, print);
 				print.end_ctor();
@@ -464,23 +481,18 @@ public:
 				// this expression occurs in? If so, then we could assert that
 				// this is in the scope of the enumeration.
 				print.ctor("Eenum_const_at", false);
-				cprint.printTypeName(ed, print, loc::of(ecd));
+				cprint.printName(ed, print, loc::of(ecd));
 				print.output() << fmt::nbsp;
 				cprint.printUnqualifiedName(*ecd, print);
 				print.output() << fmt::nbsp;
 				done(expr, print, cprint);
 			}
 		} else if (auto param = dyn_cast<NonTypeTemplateParmDecl>(d)) {
-			if (print.templates() && print.ast2()) {
+			if (print.templates()) {
 				// TODO: Add some tests
 				guard::ctor _(print, "Eparam");
 				cprint.printUnqualifiedName(*param, print);
 			} else {
-				/*
-                Warning: Invoking clang's Itanium mangler on
-                NonTypeTemplateParmDecl (via printValueDeclExpr) can
-                crash.
-                */
 				unsupported_expr(expr, print, cprint, std::nullopt,
 								 /*well_known*/ true);
 			}
@@ -495,41 +507,43 @@ public:
 		if (!print.templates())
 			return unsupported_expr(expr, print, cprint);
 
-		auto name = expr->getName();
-		auto printname = [&]() -> auto& {
-			return print.str(name.getAsString());
-		};
-		switch (name.getNameKind()) {
-		case DeclarationName::NameKind::Identifier:
-			/*
-            Example: A function name that couldn't be resolved due to an
-            argument depending on a template parameter.
-            */
+		/*
+		TODO: This seems
 
-			if (print.ast2()) {
-				auto atomic = [&]() -> fmt::Formatter& {
-					guard::ctor _(print, "Nglobal", false);
+		- A bit limited --- compare to/share code with structured::printFunctionName
+
+		- A bit off --- `name.getAsString` does not account for `Ndtor` etc
+		*/
+		auto name = expr->getName();
+		switch (name.getNameKind()) {
+		case DeclarationName::NameKind::Identifier: {
+			/*
+			Example: A function name that couldn't be resolved due to an
+			argument depending on a template parameter.
+			*/
+
+			auto atomic = [&]() -> fmt::Formatter& {
+				guard::ctor _(print, "Nglobal", false);
+				{
+					guard::ctor _(print, "Nfunction", false);
+					print.output() << "nil" << fmt::nbsp;
 					{
-						guard::ctor _(print, "Nfunction", false);
-						print.output() << "nil" << fmt::nbsp;
-						{
-							guard::ctor _(print, "Nf", false);
-							printname();
-						}
-						return print.output() << fmt::nbsp << "nil";
+						guard::ctor _(print, "Nf", false);
+						print.str(name.getAsString());
 					}
-				};
-				// TODO: This presumably needs work for scoped templates
-				if (expr->hasExplicitTemplateArgs()) {
-					guard::ctor _(print, "Ninst");
-					atomic() << fmt::nbsp;
-					cprint.printTemplateArgumentList(expr->template_arguments(),
-													 print);
-				} else
-					atomic();
+					return print.output() << fmt::nbsp << "nil";
+				}
+			};
+			// TODO: This presumably needs work for scoped templates
+			if (expr->hasExplicitTemplateArgs()) {
+				guard::ctor _(print, "Ninst");
+				atomic() << fmt::nbsp;
+				cprint.printTemplateArgumentList(expr->template_arguments(),
+												 print);
 			} else
-				printname();
+				atomic();
 			break;
+		}
 
 		default:
 			return unsupported_expr(expr, print, cprint);
@@ -542,8 +556,8 @@ public:
 		auto callee = expr->getCallee();
 		if (print.templates() && is_dependent(expr)) {
 			/*
-            Either the function or an argument is dependent.
-            */
+			Either the function or an argument is dependent.
+			*/
 			guard::ctor ctor(print, "Eunresolved_call");
 			cprint.printExpr(expr->getCallee(), print, li) << fmt::line;
 			print.list(expr->arguments(),
@@ -551,7 +565,7 @@ public:
 		} else if (auto pd = dyn_cast<CXXPseudoDestructorExpr>(callee)) {
 			// in the clang AST, pseudo destructors are represented as calls
 			// but in the BRiCk AST, they are their own construct.
-			assert(expr->arguments().empty());
+			always_assert(expr->arguments().empty());
 			print.ctor("Epseudo_destructor")
 				<< fmt::BOOL(pd->isArrow()) << fmt::nbsp;
 			cprint.printQualType(pd->getDestroyedType(), print, loc::of(pd));
@@ -564,7 +578,7 @@ public:
 			print.output() << fmt::line;
 			print.list(expr->arguments(),
 					   [&](auto i) { cprint.printExpr(i, print, li); });
-			done(expr, print, cprint, print.templates() ? Done::NONE : Done::T);
+			done(expr, print, cprint, Done::NONE);
 		}
 	}
 
@@ -580,14 +594,14 @@ public:
 		// and function calls, we need to desugar this to a method
 		// if the called function is a method.
 		if (auto method = dyn_cast<CXXMethodDecl>(callee)) {
-			assert(!method->isStatic() &&
-				   "operator overloads can not be static");
+			always_assert(!method->isStatic() &&
+						  "operator overloads can not be static");
 			print.ctor("Eoperator_member_call");
 			cprint.printOverloadableOperator(expr->getOperator(), print,
 											 loc::of(expr))
 				<< fmt::nbsp;
 
-			cprint.printObjName(*method, print);
+			cprint.printName(*method, print);
 			print.output() << fmt::nbsp
 						   << (method->isVirtual() ? "Virtual" : "Direct")
 						   << fmt::nbsp;
@@ -607,7 +621,7 @@ public:
 											 loc::of(expr))
 				<< fmt::nbsp;
 
-			cprint.printObjName(*function, print);
+			cprint.printName(*function, print);
 			print.output() << fmt::nbsp;
 			cprint.printQualType(function->getType(), print, loc::of(function));
 			print.output() << fmt::nbsp;
@@ -618,7 +632,7 @@ public:
 			logging::die();
 		}
 
-		done(expr, print, cprint);
+		done(expr, print, cprint, Done::NONE);
 	}
 
 	void VisitCastExpr(const CastExpr* expr, CoqPrinter& print,
@@ -627,14 +641,14 @@ public:
 		if (expr->getCastKind() == CastKind::CK_ConstructorConversion ||
 			expr->getCastKind() == CastKind::CK_UserDefinedConversion) {
 			auto cf = expr->getConversionFunction();
-			assert(cf &&
-				   "UserDefinedConversion must have a ConversionFunction");
+			always_assert(
+				cf && "UserDefinedConversion must have a ConversionFunction");
 			// desugar user casts to function calls
 			auto vd = dyn_cast<ValueDecl>(cf);
-			assert(vd && "conversion function must be a [ValueDecl]");
+			always_assert(vd && "conversion function must be a [ValueDecl]");
 			print.ctor("Ecast");
 			print.ctor("Cuser");
-			cprint.printObjName(*vd, print);
+			cprint.printName(*vd, print);
 			print.end_ctor();
 
 			print.output() << fmt::nbsp;
@@ -658,16 +672,16 @@ public:
 		// that contains the builtin.
 		if (expr->getCastKind() == CastKind::CK_BuiltinFnToFnPtr) {
 			auto ref = dyn_cast<DeclRefExpr>(expr->getSubExpr());
-			assert(ref && "builtin function to function pointer must be "
-						  "applied to a literal variable");
-			assert(is_builtin(ref->getDecl()));
+			always_assert(ref && "builtin function to function pointer must be "
+								 "applied to a literal variable");
+			always_assert(is_builtin(ref->getDecl()));
 			print.ctor("Ebuiltin", false);
 			// assume that this is a builtin
-			cprint.printObjName(ref->getDecl(), print, loc::of(ref));
+			cprint.printName(ref->getDecl(), print, loc::of(ref));
 			print.output() << fmt::nbsp;
 			auto type = expr->getType();
-			assert(type->isPointerType() &&
-				   "builtin to pointer is not a pointer");
+			always_assert(type->isPointerType() &&
+						  "builtin to pointer is not a pointer");
 			cprint.printQualType(type.getTypePtr()->getPointeeType(), print,
 								 loc::of(expr));
 			print.end_ctor();
@@ -741,7 +755,7 @@ public:
 			cprint.printType(at->getElementType().getTypePtr(), print,
 							 loc::of(expr));
 		} else {
-			assert(false && "string literal does not have array type");
+			always_assert(false && "string literal does not have array type");
 		}
 	}
 
@@ -832,16 +846,17 @@ public:
 			print.output() << ")" << fmt::nbsp;
 			print.boolean(fd->isMutable());
 		} else if (auto vd = dyn_cast<VarDecl>(member)) {
-			assert(vd->isStaticDataMember() &&
-				   "variable referenced through member must be a static data "
-				   "member");
+			always_assert(
+				vd->isStaticDataMember() &&
+				"variable referenced through member must be a static data "
+				"member");
 			print.output() << "(inr ";
-			cprint.printObjName(*vd, print);
+			cprint.printName(*vd, print);
 			print.output() << ")" << fmt::nbsp;
 			print.boolean(false);
 		} else if (auto md = dyn_cast<CXXMethodDecl>(member)) {
 			print.output() << "(inr ";
-			cprint.printObjName(*md, print);
+			cprint.printName(*md, print);
 			print.output() << ")" << fmt::nbsp;
 			print.boolean(false);
 		} else {
@@ -889,7 +904,7 @@ public:
 							   OpaqueNames& li) {
 		print.ctor("Econstructor");
 		// print.output() << expr->isElidable() << fmt::nbsp;
-		cprint.printObjName(expr->getConstructor(), print, loc::of(expr));
+		cprint.printName(expr->getConstructor(), print, loc::of(expr));
 		print.output() << fmt::nbsp;
 		print.list(expr->arguments(),
 				   [&](auto i) { cprint.printExpr(i, print, li); });
@@ -903,7 +918,7 @@ public:
 		print.ctor("Econstructor");
 		// print.output() << expr->isElidable() << fmt::nbsp;
 		auto ctor = expr->getConstructor();
-		cprint.printObjName(ctor, print, loc::of(expr));
+		cprint.printName(ctor, print, loc::of(expr));
 		print.output() << fmt::nbsp;
 		// NOTE clang does not include the arguments to the constructor here
 		// they are forwarded from the function itself; however, with the
@@ -932,7 +947,7 @@ public:
 		auto method = expr->getMethodDecl();
 		if (auto me = dyn_cast<MemberExpr>(callee)) {
 			print.ctor("inl") << fmt::lparen;
-			cprint.printObjName(method, print, loc::of(expr));
+			cprint.printName(method, print, loc::of(expr));
 			print.output() << "," << fmt::nbsp;
 			if (me->hasQualifier() or not method->isVirtual()) {
 				// not virtual call
@@ -946,8 +961,8 @@ public:
 					dyn_cast<CXXMethodDecl>(me->getMemberDecl())) {
 				cprint.printQualType(md->getType(), print, loc::of(md));
 			} else {
-				assert(false &&
-					   "MemberDecl in MemberCall must be a MethodDecl");
+				always_assert(false &&
+							  "MemberDecl in MemberCall must be a MethodDecl");
 			}
 			print.output() << fmt::rparen;
 			print.end_ctor();
@@ -991,24 +1006,24 @@ public:
 				cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
 				break;
 			default:
-				assert(false &&
-					   "pointer to member function should be a pointer");
+				always_assert(false &&
+							  "pointer to member function should be a pointer");
 			}
 		} else {
-			assert(false && "no method and not a binary operator");
+			always_assert(false && "no method and not a binary operator");
 		}
 		print.output() << fmt::nbsp;
 		print.list(expr->arguments(),
 				   [&](auto i) { cprint.printExpr(i, print, li); });
 #if 0
-        print.output() << fmt::nbsp << fmt::lparen;
-        for (auto i : expr->arguments()) {
-            cprint.printExpr(i, print, li);
-            print.cons();
-        }
-        print.end_list();
+	print.output() << fmt::nbsp << fmt::lparen;
+	for (auto i : expr->arguments()) {
+		cprint.printExpr(i, print, li);
+		print.cons();
+	}
+	print.end_list();
 #endif
-		done(expr, print, cprint, print.templates() ? Done::NONE : Done::T);
+		done(expr, print, cprint, Done::NONE);
 	}
 
 	void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr* expr,
@@ -1066,7 +1081,7 @@ public:
 							OpaqueNames& names) {
 		if (!print.templates())
 			return unsupported_expr(expr, print, cprint);
-		assert(is_dependent(expr));
+		always_assert(is_dependent(expr));
 
 		print.ctor("Eunresolved_parenlist");
 
@@ -1097,7 +1112,7 @@ public:
 		if (expr->isTransparent()) {
 			// "transparent" intializer lists are no-ops in the semantics
 			// and are retained in the clang AST only for printing purposes.
-			assert(expr->inits().size() == 1);
+			always_assert(expr->inits().size() == 1);
 			cprint.printExpr(expr->getInit(0), print, li);
 		} else {
 			print.ctor("Einitlist");
@@ -1147,7 +1162,7 @@ public:
 				cprint.printExpr(expr->getArgumentExpr(), print, li);
 				print.output() << fmt::rparen;
 			} else {
-				assert(false);
+				always_assert(false);
 				//fatal("argument to sizeof/alignof is not a type or an expression.");
 			}
 		};
@@ -1185,9 +1200,12 @@ public:
 		switch (comm.getKind()) {
 		case OffsetOfNode::Kind::Field: {
 			print.ctor("Eoffsetof");
-			cprint.printTypeName(comm.getField()->getParent(), print,
-								 loc::of(expr));
-			print.output() << fmt::nbsp;
+			auto field = comm.getField();
+			auto parent = field ? field->getParent() : nullptr;
+			auto ty = parent ? parent->getTypeForDecl() : nullptr;
+			always_assert(ty && "offsetof without type");
+
+			cprint.printType(*ty, print, loc::of(expr)) << fmt::nbsp;
 			print.str(comm.getField()->getName()) << fmt::nbsp;
 			done(expr, print, cprint);
 			return;
@@ -1217,7 +1235,7 @@ public:
 		print.ctor("Enew");
 
 		print.begin_tuple();
-		cprint.printObjName(*new_fn, print);
+		cprint.printName(*new_fn, print);
 		print.next_tuple();
 		cprint.printQualType(new_fn->getType(), print, loc::of(new_fn));
 		print.end_tuple() << fmt::nbsp;
@@ -1227,10 +1245,10 @@ public:
 		}) << fmt::nbsp;
 
 		if (new_fn->isReservedGlobalPlacementOperator()) {
-			assert(expr->getNumPlacementArgs() == 1 &&
-				   "placement new gets a single argument");
-			assert(!expr->passAlignment() &&
-				   "alignment is not passed to placement new");
+			always_assert(expr->getNumPlacementArgs() == 1 &&
+						  "placement new gets a single argument");
+			always_assert(!expr->passAlignment() &&
+						  "alignment is not passed to placement new");
 			print.output() << "NonAllocating" << fmt::nbsp;
 		} else {
 			print.ctor("Allocating")
@@ -1245,7 +1263,7 @@ public:
 		// NOTE: the clang documentation says that this can return
 		// None even if it is an array new, but I have not found a
 		// way to trigger that.
-		assert(expr->isArray() == (bool)expr->getArraySize());
+		always_assert(expr->isArray() == (bool)expr->getArraySize());
 		printOptionalExpr(expr->getArraySize(), print, cprint, li);
 
 		print.output() << fmt::nbsp;
@@ -1267,7 +1285,7 @@ public:
 				logging::die();
 			}
 			print.begin_tuple();
-			cprint.printObjName(*op, print);
+			cprint.printName(*op, print);
 			print.next_tuple();
 			cprint.printQualType(op->getType(), print, loc::of(op));
 			print.end_tuple();
@@ -1485,7 +1503,7 @@ ClangPrinter::printExpr(const clang::Expr* expr, CoqPrinter& print,
 		using namespace logging;
 		fatal() << "Error: BUG indentation bug in during: "
 				<< expr->getStmtClassName() << "\n";
-		assert(false);
+		always_assert(false);
 	}
 	return print.output();
 }

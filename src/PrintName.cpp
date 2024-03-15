@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "ClangPrinter.hpp"
 #include "CoqPrinter.hpp"
 #include "Formatter.hpp"
@@ -208,6 +209,14 @@ NOTE: The existing ItaniumMangler does *almost* what we want
 except it does not produce cross-translation unit unique names
 for anonymous types which renders it largely unusable for
 modular verification purposes.
+
+TODO:
+- Cover all declarations, not just named declarations
+
+- Move away from Itanium mangling (which can crash on template
+parameters and which does not cover enough names for verification
+and which assigns disambiguating numbers different from those used
+in `Nanon` and which does not lend itself to efficient demangling)
 */
 
 static GlobalDecl
@@ -241,8 +250,8 @@ printSimpleContext(const DeclContext* dc, CoqPrinter& print,
 			llvm::raw_string_ostream out(sout);
 			mangle.mangleName(to_gd(dtor), out);
 			out.flush();
-			// TODO: assertions are generally disabled
-			assert(3 < sout.length() && "mangled string length is too small");
+			always_assert(3 < sout.length() &&
+						  "mangled string length is too small");
 			sout =
 				sout.substr(0, sout.length() - 4); // cut off the final 'DnEv'
 			if (not ts->getDeclContext()->isTranslationUnit() or
@@ -353,8 +362,8 @@ printSimpleContext(const DeclContext* dc, CoqPrinter& print,
 		llvm::raw_string_ostream out(sout);
 		mangle.mangleName(to_gd(fd), out);
 		out.flush();
-		// TODO: assertions are generally disabled
-		assert(3 < sout.length() && "mangled string length is too small");
+		always_assert(3 < sout.length() &&
+					  "mangled string length is too small");
 		if (not fd->getDeclContext()->isTranslationUnit()) {
 			print.output() << sout << (remaining == 0 ? "E" : "");
 			return 2; // we approximate the whole string by 2
@@ -505,7 +514,7 @@ the numbers picked by the ABI (e.g., in its  nonterminals
 <<discriminator>>, <<unnamed-type-name>>).
 
 TODO: Clang does not use declaration contexts to separate names with
-internal linkage inside funciton bodies. To assign disambiguating
+internal linkage inside function bodies. To assign disambiguating
 anonymous indices, we have to traverse the function's body, and not just
 the declaration context chain. See FunctionDecl::getBody and
 Stmt::children.
@@ -659,15 +668,9 @@ printTemplateParameter(const NamedDecl* pdecl, CoqPrinter& print,
 
 	auto unsupported = [&](StringRef msg) -> auto& {
 		auto loc = loc::refine(gloc, pdecl);
-		if (print.ast2()) {
-			::unsupported(cprint, loc) << msg << "\n";
-			guard::ctor _(print, as_arg ? "Aunsupported" : "Punsupported",
-						  false);
-			return print.str(msg);
-		} else {
-			::fatal(cprint, loc) << "unsupported " << msg << "\n";
-			logging::die();
-		}
+		::unsupported(cprint, loc) << msg << "\n";
+		guard::ctor _(print, as_arg ? "Aunsupported" : "Punsupported", false);
+		return print.str(msg);
 	};
 
 	if (!pdecl)
@@ -678,11 +681,11 @@ printTemplateParameter(const NamedDecl* pdecl, CoqPrinter& print,
 		return unsupported("template parameter pack");
 
 	/*
-    TODO: We could presumably infer a name for some unnamed template
-    parameters.
+	TODO: We could presumably infer a name for some unnamed template
+	parameters.
 
-    See `TemplateParmPosition`, `printNameForAnonTemplateParam`.
-    */
+	See `TemplateParmPosition`, `printNameForAnonTemplateParam`.
+	*/
 	auto id = decl.getIdentifier();
 	if (!id)
 		return unsupported("unnamed template parameter");
@@ -691,21 +694,18 @@ printTemplateParameter(const NamedDecl* pdecl, CoqPrinter& print,
 	switch (decl.getKind()) {
 	case Decl::Kind::TemplateTypeParm:
 		if (as_arg) {
-			guard::ctor _(print, print.ast2() ? "Atype" : "TypeArg", false);
-			guard::ctor t(print, print.ast2() ? "Tparam" : "Tvar", false);
+			guard::ctor _1(print, "Atype", false);
+			guard::ctor _2(print, "Tparam", false);
 			return print.str(name);
 		} else {
-			guard::ctor _(print, print.ast2() ? "Ptype" : "TypeParam", false);
+			guard::ctor _(print, "Ptype", false);
 			return print.str(name);
 		}
 
 	case Decl::Kind::NonTypeTemplateParm:
-		if (!print.ast2())
-			return unsupported("non-type template parameter");
-
 		if (as_arg) {
-			guard::ctor _(print, "Avalue", false);
-			guard::ctor t(print, "Tparam", false);
+			guard::ctor _1(print, "Avalue", false);
+			guard::ctor _2(print, "Tparam", false);
 			return print.str(name);
 		} else {
 			auto& param = cast<NonTypeTemplateParmDecl>(decl);
@@ -737,34 +737,20 @@ printTemplateParameters(const Decl& decl, CoqPrinter& print,
 		return print.output() << "nil";
 }
 
-template<typename Err, typename Val>
-static void
-printTemplateArgumentValue(CoqPrinter& print, Err err, Val val) {
-	if (print.ast2()) {
-		guard::ctor _(print, "Avalue", false);
-		val();
-	} else
-		err();
-}
-
 static fmt::Formatter&
 printTemplateArgument(const TemplateArgument& arg, CoqPrinter& print,
 					  ClangPrinter& cprint, loc::loc loc) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Name))
 		cprint.trace("printTemplateArgument", loc);
 	auto kind = arg.getKind();
-	auto ast2_only = [&]() NORETURN {
-		::fatal(cprint, loc) << "unsupported template argument of kind "
-							 << templateArgumentKindName(kind) << "\n";
-		logging::die();
-	};
 	auto Avalue = [&](auto val) -> auto& {
-		printTemplateArgumentValue(print, ast2_only, val);
+		guard::ctor _(print, "Avalue", false);
+		val();
 		return print.output();
 	};
 	switch (kind) {
 	case TemplateArgument::ArgKind::Type: {
-		guard::ctor _(print, print.ast2() ? "Atype" : "TypeArg", false);
+		guard::ctor _(print, "Atype", false);
 		return cprint.printQualType(arg.getAsType(), print, loc);
 	}
 	case TemplateArgument::ArgKind::Expression:
@@ -783,31 +769,28 @@ printTemplateArgument(const TemplateArgument& arg, CoqPrinter& print,
 
 	case TemplateArgument::ArgKind::Declaration:
 		/*
-        TODO: Examples
-        ```
-        struct B { int next; };
-        template<int(B::*next_ptr)> struct A{};
-        void test() {
-            A<&B::next> a;
-        }
-        ```
-        */
+		TODO: Examples
+		```
+		struct B { int next; };
+		template<int(B::*next_ptr)> struct A{};
+		void test() {
+		A<&B::next> a;
+		}
+		```
+		*/
 		return Avalue([&]() {
 			return cprint.printValueDeclExpr(arg.getAsDecl(), print);
 		});
 
-	default:
-		if (print.ast2()) {
-			std::string what;
-			llvm::raw_string_ostream os{what};
-			os << "template argument of kind "
-			   << templateArgumentKindName(kind);
-			unsupported(cprint, loc, false) << what << "\n";
+	default: {
+		auto k = templateArgumentKindName(kind);
+		if (cprint.warn_well_known) {
+			unsupported(cprint, loc, false) << "template argument of kind " << k << "\n";
 			arg.dump(logging::debug());
-			guard::ctor _(print, "Aunsupported", false);
-			return print.str(what);
-		} else
-			ast2_only();
+		}
+		guard::ctor _(print, "Aunsupported", false);
+		return print.str(k);
+	}
 	}
 }
 
@@ -991,6 +974,13 @@ printAtomicName(const DeclContext& ctx, const Decl& decl, CoqPrinter& print,
 	case Decl::Kind::ClassTemplate:
 		return ident_or_anon();
 
+	case Decl::Kind::Field:
+		/*
+		TODO: Other parts of cpp2v emit anonymous fields using
+		<<field_name.t>>. Here, we use <<Nanon>>.
+		*/
+		return ident_or_anon();
+
 	case Decl::Kind::Function:
 	case Decl::Kind::CXXMethod:
 	case Decl::Kind::CXXConstructor:
@@ -1013,9 +1003,9 @@ printAtomicName(const DeclContext& ctx, const Decl& decl, CoqPrinter& print,
 
 	case Decl::Kind::EnumConstant:
 		/*
-        Enum constant names should not arise in practice (see
-        `Eenum_const`). They're supported here for `--test-name`.
-        */
+		Enum constant names should not arise in practice (see
+		`Eenum_const`). They're supported here for `--test-name`.
+		*/
 		return ident_or_anon("anonymous enum constant");
 
 		// TODO: Ndecltype
@@ -1043,33 +1033,12 @@ printTemplateSpecialization(const Decl& decl, CoqPrinter& print,
 		return true;
 	} else
 		return false;
-#if 0
-    auto go = [&](auto* temp, auto* args) {
-        if (temp && args) {
-            if (ClangPrinter::debug && cprint.trace(Trace::Name))
-                cprint.trace("printTemplateSpecialization", loc::of(decl));
-            guard::ctor _(print, "Ninst");
-            printName(*temp, print, cprint) << fmt::line;
-            printTemplateArgumentList(*args, print, cprint, loc::of(decl));
-            return true;
-        } else
-            return false;
-    };
-    if (auto ts = dyn_cast<ClassTemplateSpecializationDecl>(&decl))
-        return go(ts->getSpecializedTemplate(), &ts->getTemplateArgs());
-    else if (auto fd = dyn_cast<FunctionDecl>(&decl))
-        return go(fd->getPrimaryTemplate(),
-                  fd->getTemplateSpecializationArgs());
-    else if (auto ts = dyn_cast<VarTemplateSpecializationDecl>(&decl))
-        return go(ts->getSpecializedTemplate(), &ts->getTemplateArgs());
-    return false;
-#endif
 }
 
 static fmt::Formatter&
 printName(const Decl& decl, CoqPrinter& print, ClangPrinter& cprint) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Name))
-		cprint.trace("printName", loc::of(decl));
+		cprint.trace("structured::printName", loc::of(decl));
 
 	if (printTemplateSpecialization(decl, print, cprint))
 		return print.output();
@@ -1107,12 +1076,105 @@ printDtorName(const CXXRecordDecl& decl, CoqPrinter& print,
 
 } // namespace structured
 
+template<typename T>
+T&
+deref(CoqPrinter& print, ClangPrinter& cprint, const std::string whence, T* p,
+	  loc::loc loc) {
+	if (!p) {
+		fatal(cprint, loc) << whence << ": null pointer\n";
+		print.die();
+	}
+	return *p;
+}
+
+fmt::Formatter&
+ClangPrinter::printNameComment(const Decl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printNameComment", loc::of(decl));
+	if (comment_)
+		if (auto nd = dyn_cast<NamedDecl>(&decl)) {
+			std::string cmt;
+			llvm::raw_string_ostream os{cmt};
+			structured::printNameForDiagnostics(os, *nd, getContext());
+			return print.cmt(cmt);
+		}
+	return print.output();
+}
+
+fmt::Formatter&
+ClangPrinter::printNameAsKey(const Decl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printNameAsKey", loc::of(decl));
+	if (print.structured_keys())
+		return structured::printName(decl, print, *this);
+	else
+		return mangled::printName(decl, print, *this);
+}
+
+fmt::Formatter&
+ClangPrinter::printNameAsKey(const Decl* p, CoqPrinter& print, loc::loc loc) {
+	auto& decl = deref(print, *this, "printNameAsKey", p, loc);
+	return printNameAsKey(decl, print);
+}
+
+fmt::Formatter&
+ClangPrinter::printName(const Decl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printName", loc::of(decl));
+	return structured::printName(decl, print, *this);
+}
+
+fmt::Formatter&
+ClangPrinter::printName(const Decl* p, CoqPrinter& print, loc::loc loc) {
+	auto& decl = deref(print, *this, "printName", p, loc);
+	return printName(decl, print);
+}
+
+fmt::Formatter&
+ClangPrinter::printUnsupportedName(StringRef msg, CoqPrinter& print) {
+	guard::ctor _(print, "Nunsupported");
+	return print.str(msg);
+}
+
+fmt::Formatter&
+ClangPrinter::printDtorName(const CXXRecordDecl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printDtorName", loc::of(decl));
+	return structured::printDtorName(decl, print, *this);
+}
+
+fmt::Formatter&
+ClangPrinter::printUnqualifiedName(const NamedDecl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printUnqualifiedName", loc::of(decl));
+	if (auto id = decl.getIdentifier())
+		return print.str(id->getName());
+	else {
+		unsupported(*this, loc::of(decl)) << "unnamed, unqualified name\n";
+		return print.str("<unsupported unnamed, unqualified name>");
+	}
+}
+
+fmt::Formatter&
+ClangPrinter::printUnqualifiedName(const NamedDecl* p, CoqPrinter& print,
+								   loc::loc loc) {
+	auto& decl = deref(print, *this, "printUnqualifiedName", p, loc);
+	return printUnqualifiedName(decl, print);
+}
+
 fmt::Formatter&
 ClangPrinter::printTemplateParameters(const Decl& decl, CoqPrinter& print,
 									  bool as_arg) {
 	if (trace(Trace::Name))
 		trace("printTemplateParameters", loc::of(decl));
 	return structured::printTemplateParameters(decl, print, *this, as_arg);
+}
+
+fmt::Formatter&
+ClangPrinter::printTemplateArguments(const Decl& decl, CoqPrinter& print) {
+	if (trace(Trace::Name))
+		trace("printTemplateArguments", loc::of(decl));
+	return structured::printTemplateArguments(decl, print, *this);
 }
 
 fmt::Formatter&
@@ -1144,155 +1206,4 @@ ClangPrinter::printTemplateArgumentList(ArrayRef<TemplateArgumentLoc> args,
 		structured::printTemplateArgument(arg.getArgument(), print, cprint,
 										  loc::of(arg));
 	});
-}
-
-fmt::Formatter&
-ClangPrinter::printTemplateArguments(const Decl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printTemplateArguments", loc::of(decl));
-	return structured::printTemplateArguments(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printNameComment(const Decl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printNameComment", loc::of(decl));
-	if (comment_)
-		if (auto nd = dyn_cast<NamedDecl>(&decl)) {
-			std::string cmt;
-			llvm::raw_string_ostream os{cmt};
-			structured::printNameForDiagnostics(os, *nd, getContext());
-			return print.cmt(cmt);
-		}
-	return print.output();
-}
-
-template<typename T>
-T&
-deref(CoqPrinter& print, ClangPrinter& cprint, const std::string whence, T* p,
-	  loc::loc loc) {
-	if (!p) {
-		fatal(cprint, loc) << whence << ": null pointer\n";
-		print.die();
-	}
-	return *p;
-}
-
-fmt::Formatter&
-ClangPrinter::printStructuredName(const Decl& decl, CoqPrinter& print) {
-	assert(print.ast2());
-	if (trace(Trace::Name))
-		trace("printStructuredName", loc::of(decl));
-	return structured::printName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printUnqualifiedName(const NamedDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printUnqualifiedName", loc::of(decl));
-	if (auto id = decl.getIdentifier())
-		return print.str(id->getName());
-	else {
-		unsupported(*this, loc::of(decl)) << "unnamed, unqualified name\n";
-		return print.str("<unsupported unnamed, unqualified name>");
-	}
-}
-
-fmt::Formatter&
-ClangPrinter::printUnqualifiedName(const NamedDecl* p, CoqPrinter& print,
-								   loc::loc loc) {
-	auto& decl = deref(print, *this, "printUnqualifiedName", p, loc);
-	return printUnqualifiedName(decl, print);
-}
-
-fmt::Formatter&
-ClangPrinter::printMangledName(const Decl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printMangledName", loc::of(decl));
-	return mangled::printName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printMangledTypeName(const TypeDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printMangledTypeName", loc::of(decl));
-	return mangled::printTypeName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printMangledTypeName(const TypeDecl* p, CoqPrinter& print,
-								   loc::loc loc) {
-	auto& decl = deref(print, *this, "printMangledTypeName", p, loc);
-	return printMangledTypeName(decl, print);
-}
-
-fmt::Formatter&
-ClangPrinter::printMangledObjName(const ValueDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printMangledObjName", loc::of(decl));
-	return mangled::printObjName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printMangledObjName(const ValueDecl* p, CoqPrinter& print,
-								  loc::loc loc) {
-	auto& decl = deref(print, *this, "printMangledObjName", p, loc);
-	return printMangledObjName(decl, print);
-}
-
-fmt::Formatter&
-ClangPrinter::printUnsupportedName(StringRef msg, CoqPrinter& print) {
-	if (print.ast2()) {
-		guard::ctor _(print, "Nunsupported");
-		return print.str(msg);
-	} else {
-		std::string buf;
-		llvm::raw_string_ostream os{buf};
-		os << "?<" << msg << ">";
-		return print.str(buf);
-	}
-}
-
-fmt::Formatter&
-ClangPrinter::printTypeName(const TypeDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printTypeName", loc::of(decl));
-	if (print.ast2())
-		return structured::printName(decl, print, *this);
-	else
-		return mangled::printTypeName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printTypeName(const TypeDecl* p, CoqPrinter& print,
-							loc::loc loc) {
-	auto& decl = deref(print, *this, "printTypeName", p, loc);
-	return printTypeName(decl, print);
-}
-
-fmt::Formatter&
-ClangPrinter::printDtorName(const CXXRecordDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printDtorName", loc::of(decl));
-	if (print.ast2())
-		return structured::printDtorName(decl, print, *this);
-	else
-		return mangled::printDtorName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printObjName(const ValueDecl& decl, CoqPrinter& print) {
-	if (trace(Trace::Name))
-		trace("printObjName", loc::of(decl));
-	if (print.ast2())
-		return structured::printName(decl, print, *this);
-	else
-		return mangled::printObjName(decl, print, *this);
-}
-
-fmt::Formatter&
-ClangPrinter::printObjName(const ValueDecl* p, CoqPrinter& print,
-						   loc::loc loc) {
-	auto& decl = deref(print, *this, "printObjName", p, loc);
-	return printObjName(decl, print);
 }
