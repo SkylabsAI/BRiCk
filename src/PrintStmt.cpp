@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "ClangPrinter.hpp"
 #include "CoqPrinter.hpp"
 #include "Formatter.hpp"
@@ -348,6 +349,6 @@ ClangPrinter::printStmt(const clang::Stmt *stmt, CoqPrinter &print) {
 		trace("printStmt", loc::of(stmt));
 	__attribute__((unused)) auto depth = print.output().get_depth();
 	PrintStmt::printer.Visit(stmt, print, *this, *this->context_);
-	assert(depth == print.output().get_depth());
+	always_assert(depth == print.output().get_depth());
 	return print.output();
 }

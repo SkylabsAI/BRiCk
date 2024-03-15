@@ -110,7 +110,7 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 				print.output()
 					<< "Notation \"'" << s_notation << "'\" :=" << fmt::nbsp;
 
-				cprint.printTypeName(*rd, print);
+				cprint.printName(*rd, print);
 				print.output()
 					<< "%bs (in custom cppglobal at level 0)." << fmt::line;
 			}

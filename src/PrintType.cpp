@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "ClangPrinter.hpp"
 #include "CoqPrinter.hpp"
 #include "Logging.hpp"
@@ -111,12 +112,10 @@ public:
 			// https://gcc.gnu.org/onlinedocs/gcc-11.1.0/gcc/Type-Traits.html
 
 			print.ctor("@Tunderlying", false);
-			print.type() << fmt::nbsp;
 			break;
 
 		default:
 			print.ctor("@Tunary_xform", false);
-			print.type() << fmt::nbsp;
 
 			print.str(getTransformName(kind));
 			print.output() << "%bs" << fmt::nbsp;
@@ -155,7 +154,7 @@ public:
 
 	void VisitTemplateTypeParmType(const TemplateTypeParmType* type,
 								   CoqPrinter& print, ClangPrinter& cprint) {
-		print.ctor(print.ast2() ? "Tparam" : "Tvar", false);
+		print.ctor("Tparam", false);
 		if (auto ident = type->getIdentifier()) {
 			print.str(ident->getName());
 		} else {
@@ -169,14 +168,14 @@ public:
 					   ClangPrinter& cprint) {
 		auto ed = type->getDecl()->getCanonicalDecl();
 		print.ctor("Tenum", false);
-		cprint.printTypeName(ed, print, loc::of(type));
+		cprint.printName(ed, print, loc::of(type));
 		print.end_ctor();
 	}
 
 	void VisitRecordType(const RecordType* type, CoqPrinter& print,
 						 ClangPrinter& cprint) {
 		print.ctor("Tnamed", false);
-		cprint.printTypeName(type->getDecl(), print, loc::of(type));
+		cprint.printName(type->getDecl(), print, loc::of(type));
 		print.end_ctor();
 	}
 
@@ -220,6 +219,8 @@ public:
 			CASE(Float, "Tfloat")
 			CASE(Double, "Tdouble")
 			CASE(LongDouble, "Tlongdouble")
+			CASE(Float16, "Tfloat16")
+			CASE(Float128, "Tfloat128")
 #undef CASE
 		case BuiltinType::Kind::Dependent:
 			if (print.templates()) {
@@ -239,11 +240,14 @@ public:
 
 		default:
 			if (type->isAnyCharacterType()) {
-				assert(false && "unexpected character type");
+				type->dump();
+				always_assert(false && "unexpected character type");
 			} else if (type->isFloatingPoint()) {
-				assert(false && "unexpected floating point type");
+				type->dump();
+				always_assert(false && "unexpected floating point type");
 			} else if (type->isIntegerType()) {
-				assert(false);
+				type->dump();
+				always_assert(false);
 			} else if (type->isSizelessBuiltinType()) {
 				// TODO: This seems a bit random. Do we need
 				// another type constructor?
@@ -283,9 +287,8 @@ public:
 						  ClangPrinter& cprint) {
 		if (PRINT_ALIAS) {
 			print.ctor("@Talias", false);
-			print.type() << fmt::nbsp;
 			print.output() << "\"";
-			cprint.printTypeName(type->getDecl(), print, loc::of(type));
+			cprint.printName(type->getDecl(), print, loc::of(type));
 			// printing a "human readable" type
 			// type->getDecl()->printQualifiedName(print.output().nobreak());
 			print.output() << "\"" << fmt::nbsp;
@@ -302,17 +305,17 @@ public:
 
 	void VisitFunctionProtoType(const FunctionProtoType* type,
 								CoqPrinter& print, ClangPrinter& cprint) {
-		print.ctor("@Tfunction");
-		cprint.printCallingConv(type->getCallConv(), print, loc::of(type));
-		print.output() << fmt::nbsp;
-		cprint.printVariadic(type->isVariadic(), print);
-		print.output() << fmt::nbsp;
-		cprint.printQualType(type->getReturnType(), print, loc::of(type));
-		print.output() << fmt::nbsp;
+		guard::ctor _1(print, "Tfunction");
+		guard::ctor _2(print, "@FunctionType");
+		print.output() << (print.templates() ? "Mtype" : "Stype") << fmt::nbsp;
+		cprint.printCallingConv(type->getCallConv(), print, loc::of(type))
+			<< fmt::nbsp;
+		cprint.printVariadic(type->isVariadic(), print) << fmt::nbsp;
+		cprint.printQualType(type->getReturnType(), print, loc::of(type))
+			<< fmt::nbsp;
 		print.list(type->param_types(), [&](auto i) {
 			cprint.printQualType(i, print, loc::of(type));
 		});
-		print.end_ctor();
 	}
 
 	void VisitElaboratedType(const ElaboratedType* type, CoqPrinter& print,
@@ -385,24 +388,23 @@ public:
 		};
 		if (type->isSugared()) {
 			cprint.printQualType(type->desugar(), print, loc::of(type));
-		} else if (print.ast2()) {
+		} else {
 			/*
-            TODO: See the comment in VisitInjectedClassNameType. We
-            probably have to print the entire specialized scope, and not
-            just this type.
-            */
+			TODO: See the comment in VisitInjectedClassNameType. We
+			probably have to print the entire specialized scope, and not
+			just this type.
+			*/
 			auto temp = type->getTemplateName().getAsTemplateDecl();
 			auto args = type->template_arguments();
 			if (temp) {
 				printRiskyTypeComment(type, print, cprint) << fmt::nbsp;
 				guard::ctor _1(print, "Tnamed");
 				guard::ctor _2(print, "Ninst");
-				cprint.printStructuredName(*temp, print) << fmt::nbsp;
+				cprint.printName(*temp, print) << fmt::nbsp;
 				cprint.printTemplateArgumentList(args, print);
 			} else
 				unsupported();
-		} else
-			unsupported();
+		}
 	}
 
 	void VisitDecltypeType(const DecltypeType* type, CoqPrinter& print,
@@ -424,8 +426,8 @@ public:
 			cprint.printQualType(type->desugar(), print, loc::of(type));
 		} else if (print.templates()) {
 			/*
-            TODO: Test whether we need printQualTypeOption here.
-            */
+			TODO: Test whether we need printQualTypeOption here.
+			*/
 			cprint.printQualType(type->getUnderlyingExpr()->getType(), print,
 								 loc::of(type));
 		} else {
@@ -435,45 +437,31 @@ public:
 
 	void VisitInjectedClassNameType(const InjectedClassNameType* type,
 									CoqPrinter& print, ClangPrinter& cprint) {
-		auto nodecl = [&]() {
+		always_assert(print.templates());
+
+		if (auto decl = type->getDecl()) {
+			/*
+			TODO: We probably have to make this smarter.
+
+			Cobble up some examples and decide if there is a problem
+			with always synthesizing arguments.
+
+			Example idea: Print the type of a template in a
+			(partially) specialized scope.
+
+			Algorithm idea: We probably have have to walk up the
+			declaration context chain, collecting a list of
+			`TemplateArgument + TemplateParameter` entries, and
+			synthesizing only those arguments that are "missing".
+			*/
+			printRiskyTypeComment(type, print, cprint) << fmt::nbsp;
+			guard::ctor _1(print, "Tnamed");
+			guard::ctor _2(print, "Ninst");
+			cprint.printName(*decl, print) << fmt::nbsp;
+			cprint.printTemplateParameters(*decl, print, true);
+		} else {
 			unsupported(print, cprint, loc::of(type),
 						"injected class name without declaration");
-		};
-		if (print.templates() && print.ast2()) {
-			if (auto decl = type->getDecl()) {
-				/*
-                TODO: We probably have to make this smarter.
-
-                Cobble up some examples and decide if there is a problem
-                with always synthesizing arguments.
-
-                Example idea: Print the type of a template in a
-                (partially) specialized scope.
-
-                Algorithm idea: We probably have have to walk up the
-                declaration context chain, collecting a list of
-                `TemplateArgument + TemplateParameter` entries, and
-                synthesizing only those arguments that are "missing".
-                */
-				printRiskyTypeComment(type, print, cprint) << fmt::nbsp;
-				guard::ctor _1(print, "Tnamed");
-				guard::ctor _2(print, "Ninst");
-				cprint.printStructuredName(*decl, print) << fmt::nbsp;
-				cprint.printTemplateParameters(*decl, print, true);
-			} else
-				nodecl();
-		} else {
-			if (auto decl = type->getDecl()) {
-				guard::ctor _(print, "Tvar");
-				cprint.printTypeName(*decl, print);
-			} else {
-				nodecl();
-				if (false) {
-					// Previously, we complained but kept going with the IST.
-					cprint.printQualType(type->getInjectedSpecializationType(),
-										 print, loc::of(type));
-				}
-			}
 		}
 	}
 
@@ -482,13 +470,13 @@ public:
 		print.ctor("Tmember_pointer");
 		auto class_type = type->getClass();
 		if (!print.templates()) {
-			cprint.printTypeName(class_type->getAsCXXRecordDecl(), print,
-								 loc::of(type));
+			cprint.printName(class_type->getAsCXXRecordDecl(), print,
+							 loc::of(type));
 		} else {
 			/*
-            `class_type` may not be a concrete class (e.g., it could
-            be a template parameter).
-            */
+			`class_type` may not be a concrete class (e.g., it could
+			be a template parameter).
+			*/
 			this->Visit(class_type, print, cprint);
 		}
 		print.output() << fmt::nbsp;
@@ -503,7 +491,7 @@ public:
 
 	void VisitUsingType(const UsingType* type, CoqPrinter& print,
 						ClangPrinter& cprint) {
-		assert(type->isSugared());
+		always_assert(type->isSugared());
 		cprint.printQualType(type->getUnderlyingType(), print, loc::of(type));
 	}
 };
@@ -511,12 +499,12 @@ public:
 PrintType PrintType::printer;
 
 fmt::Formatter&
-ClangPrinter::printType(const Type& type, CoqPrinter& print) {
+ClangPrinter::printType(const Type& type, CoqPrinter& print, loc::loc loc) {
 	if (trace(Trace::Type))
-		trace("printType", loc::of(type));
+		trace("printType", loc::refine(loc, type));
 	__attribute__((unused)) auto depth = print.output().get_depth();
 	PrintType::printer.Visit(&type, print, *this);
-	assert(depth == print.output().get_depth());
+	always_assert(depth == print.output().get_depth());
 	return print.output();
 }
 
@@ -524,7 +512,7 @@ fmt::Formatter&
 ClangPrinter::printType(const clang::Type* type, CoqPrinter& print,
 						loc::loc loc) {
 	if (type)
-		return printType(*type, print);
+		return printType(*type, print, loc);
 	else
 		fatal(print, *this, loc, "unexpected null type in printType");
 }
@@ -541,15 +529,15 @@ ClangPrinter::printQualType(const QualType& qt, CoqPrinter& print,
 			} else {
 				print.ctor("Qconst", false);
 			}
-			printType(*p, print);
+			printType(*p, print, loc);
 			print.end_ctor();
 		} else {
 			if (qt.isLocalVolatileQualified()) {
 				print.ctor("Qmut_volatile", false);
-				printType(*p, print);
+				printType(*p, print, loc);
 				print.end_ctor();
 			} else {
-				printType(*p, print);
+				printType(*p, print, loc);
 			}
 		}
 		return print.output();

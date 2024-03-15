@@ -184,12 +184,17 @@ Qed.
 Definition build {e} (b : IM.Raw.t e) (pf : Is_true (check_canon None None b)) :IM.t e :=
   {| IM.this := b; IM.is_bst := check_canon_ok _ _ pf |}.
 
-(* this canonicalizes the proof *)
+(* These canonicalize the proof *)
+Definition from_raw_or {A} (t : IM.Raw.tree A) (default : unit -> IM.t A) : IM.t A :=
+  match check_canon None None t as pf return (pf -> IM.Raw.bst t) -> IM.t A with
+  | true => fun pf => {| IM.this := t; IM.is_bst := pf I |}
+  | false => fun _ => default()
+  end (@check_canon_ok _ t).
+Definition from_raw {A} (t : IM.Raw.tree A) : IM.t A :=
+  from_raw_or t $ fun _ =>
+  IM.Raw.fold (fun k v acc => IM.add k v acc) t (IM.empty A).
 Definition map_canon {e} (b : IM.t e) : IM.t e :=
-  match check_canon None None b.(IM.this) as X return (X -> IM.Raw.bst b.(IM.this)) -> _ with
-  | true => fun x => {| IM.this := IM.this b; IM.is_bst := x I |}
-  | false => fun _ => b
-  end (@check_canon_ok _ b.(IM.this)).
+  from_raw_or b.(IM.this) $ fun _ => b.
 
 Lemma fold_left_cons {A B : Type} (l1 l2 : list (A * B)) :
   fold_left (fun acc e => (e.1, e.2) :: acc) l1 l2 = rev l1 ++ l2.

@@ -58,6 +58,7 @@ static cl::opt<bool> Verboser("vv", cl::desc("verboser"), cl::Optional,
 							  cl::cat(Cpp2V));
 static cl::opt<bool> Quiet("q", cl::desc("quiet"), cl::Optional,
 						   cl::cat(Cpp2V));
+
 static cl::opt<bool> Comment("comment", cl::desc("include name comments"),
 							 cl::Optional, cl::cat(Cpp2V));
 
@@ -69,8 +70,10 @@ static cl::opt<std::string> Templates("templates", cl::desc("print templates"),
 									  cl::value_desc("filename"), cl::Optional,
 									  cl::cat(Cpp2V));
 
-static cl::opt<bool> Ast2("ast2", cl::desc("print using AST2 (templates only)"),
-						  cl::Optional, cl::cat(Cpp2V));
+static cl::opt<bool> StructuredKeys(
+	"structured-keys",
+	cl::desc("use structured names as keys in translation units"), cl::Optional,
+	cl::cat(Cpp2V));
 
 static cl::opt<std::string> NameTest("name-test",
 									 cl::desc("print structured names"),
@@ -101,16 +104,20 @@ public:
 	CreateASTConsumer(clang::CompilerInstance &Compiler,
 					  llvm::StringRef InFile) override {
 #if 0
-        Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back("with");
-        Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back("internal");
-        for (auto i : Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames) {
-            llvm::errs() << i << "\n";
-        }
+	Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back(
+		"with");
+	Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames.push_back(
+		"internal");
+	for (auto i :
+		 Compiler.getInvocation().getLangOpts()->CommentOpts.BlockCommandNames) {
+		llvm::errs() << i << "\n";
+	}
 #endif
-		auto result = new ToCoqConsumer(
-			&Compiler, to_opt(VFileOutput), to_opt(NamesFile),
-			to_opt(Templates), to_opt(NameTest), Ast2,
-			Trace::fromBits(TraceBits.getBits()), true, Comment);
+		auto result = new ToCoqConsumer(&Compiler, to_opt(VFileOutput),
+										to_opt(NamesFile), to_opt(Templates),
+										to_opt(NameTest), StructuredKeys,
+										Trace::fromBits(TraceBits.getBits()),
+										Comment);
 		return std::unique_ptr<clang::ASTConsumer>(result);
 	}
 

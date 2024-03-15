@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  */
 #include "ModuleBuilder.hpp"
+#include "Assert.hpp"
 #include "CommentScanner.hpp"
 #include "DeclVisitorWithArgs.h"
 #include "Filter.hpp"
@@ -104,7 +105,7 @@ public:
 
 	void VisitTranslationUnitDecl(const TranslationUnitDecl *decl,
 								  Flags flags) {
-		assert(flags.none());
+		always_assert(flags.none());
 
 		for (auto i : decl->decls()) {
 			this->Visit(i, flags);
@@ -233,7 +234,7 @@ public:
 	}
 
 	void VisitNamespaceDecl(const NamespaceDecl *decl, Flags flags) {
-		assert(flags.none());
+		always_assert(flags.none());
 
 		VisitDeclContext(decl, flags);
 	}
@@ -249,7 +250,7 @@ public:
 	}
 
 	void VisitLinkageSpecDecl(const LinkageSpecDecl *decl, Flags flags) {
-		assert(flags.none());
+		always_assert(flags.none());
 
 		VisitDeclContext(decl, flags);
 	}
