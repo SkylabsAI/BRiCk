@@ -211,9 +211,11 @@ Notation int_type := int_type.t.
 
 Module float_type.
   Variant t : Set :=
+    | Ffloat16
     | Ffloat
     | Fdouble
-    | Flongdouble.
+    | Flongdouble
+    | Ffloat128.
 
   #[global] Instance t_eq_dec : EqDecision t := ltac:(solve_decision).
   #[global] Instance t_countable : Countable t.
@@ -221,11 +223,11 @@ Module float_type.
     apply (inj_countable'
       (λ cc,
         match cc with
-        | Ffloat => 0 | Fdouble => 1 | Flongdouble => 2
+        | Ffloat16 => 3 | Ffloat => 0 | Fdouble => 1 | Flongdouble => 2 | Ffloat128 => 4
         end)
       (λ n,
         match n with
-        | 0 => Ffloat | 1 => Fdouble | 2 => Flongdouble
+        | 0 => Ffloat | 1 => Fdouble | 2 => Flongdouble | 3 => Ffloat16 | 4 => Ffloat128
         | _ => Ffloat	(** dummy *)
         end)).
     abstract (by intros []).
@@ -233,9 +235,11 @@ Module float_type.
 
   Definition bytesN (t : t) : N :=
     match t with
+    | Ffloat16 => 2
     | Ffloat => 4
     | Fdouble => 8
     | Flongdouble => 16
+    | Ffloat128 => Evaluate (128 / 8)%N
     end.
 
   Definition bitsN (t : t) : N :=
@@ -1676,6 +1680,8 @@ Notation Tlong  := (Tnum int_type.Ilong Signed) (only parsing).
 Notation Tulonglong := (Tnum int_type.Ilonglong Unsigned) (only parsing).
 Notation Tlonglong  := (Tnum int_type.Ilonglong Signed) (only parsing).
 
+Notation Tfloat16 := (Tfloat_ float_type.Ffloat16).
 Notation Tfloat := (Tfloat_ float_type.Ffloat).
 Notation Tdouble := (Tfloat_ float_type.Fdouble).
 Notation Tlongdouble := (Tfloat_ float_type.Flongdouble).
+Notation Tfloat128 := (Tfloat_ float_type.Ffloat128).

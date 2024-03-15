@@ -162,29 +162,47 @@ public:
 	}
 	llvm::raw_ostream& trace(llvm::StringRef whence, loc::loc);
 
-	// Names, respecting --ast2
+	// Operators
 
-	fmt::Formatter& printUnsupportedName(llvm::StringRef, CoqPrinter&);
-	fmt::Formatter& printTypeName(const clang::TypeDecl& decl,
-								  CoqPrinter& print);
-	fmt::Formatter& printTypeName(const clang::TypeDecl* decl,
-								  CoqPrinter& print, loc::loc);
-	fmt::Formatter& printDtorName(const clang::CXXRecordDecl&, CoqPrinter&);
-	fmt::Formatter& printObjName(const clang::ValueDecl& decl,
-								 CoqPrinter& print);
-	fmt::Formatter& printObjName(const clang::ValueDecl* decl,
-								 CoqPrinter& print, loc::loc);
+	fmt::Formatter& printOverloadableOperator(clang::OverloadedOperatorKind,
+											  CoqPrinter&, loc::loc);
+
+	// Names
+
+	fmt::Formatter& printNameComment(const clang::Decl&, CoqPrinter&);
+
+	fmt::Formatter& printNameAsKey(const clang::Decl&, CoqPrinter&); // : bs
+	fmt::Formatter& printNameAsKey(const clang::Decl*, CoqPrinter&, loc::loc);
+
+	fmt::Formatter& printName(const clang::Decl&, CoqPrinter&); // name
+	fmt::Formatter& printName(const clang::Decl*, CoqPrinter&, loc::loc);
+
+	// TODO: Can we drop these?
+	fmt::Formatter& printUnsupportedName(llvm::StringRef, CoqPrinter&); // name
+
+	fmt::Formatter& printDtorName(const clang::CXXRecordDecl&,
+								  CoqPrinter&); // name
+
+	fmt::Formatter& printUnqualifiedName(const clang::NamedDecl&,
+										 CoqPrinter&); // : bs
+	fmt::Formatter& printUnqualifiedName(const clang::NamedDecl*, CoqPrinter&,
+										 loc::loc);
 
 	// Print all parameters in scope; for example, with
 	// `template<typename T> struct s{ int x; template<typename U> void
 	// f(T, U); };`, emits roughly `<T>` for `s` and `<T,U>` for `s::f`.
 	// With `as_arg`, print template arguments synthesized from parameters.
-	fmt::Formatter& printTemplateParameters(const clang::Decl&, CoqPrinter&,
-											bool as_arg = false);
+	fmt::Formatter& printTemplateParameters(
+		const clang::Decl&, CoqPrinter&,
+		bool as_arg = false); // list temp_param or list temp_arg
+
+	// Print all arguments in scope
+	fmt::Formatter& printTemplateArguments(const clang::Decl&,
+										   CoqPrinter&); // list temp_arg
 
 	fmt::Formatter&
 	printTemplateArgumentList(const clang::TemplateArgumentList&, CoqPrinter&,
-							  loc::loc);
+							  loc::loc); // `list temp_arg`
 	fmt::Formatter&
 	printTemplateArgumentList(llvm::ArrayRef<clang::TemplateArgument>,
 							  CoqPrinter&);
@@ -192,38 +210,10 @@ public:
 	printTemplateArgumentList(llvm::ArrayRef<clang::TemplateArgumentLoc>,
 							  CoqPrinter&);
 
-	// Print all arguments in scope
-	fmt::Formatter& printTemplateArguments(const clang::Decl&, CoqPrinter&);
-
-	// Names, ignoring --ast2
-
-	fmt::Formatter& printNameComment(const clang::Decl&, CoqPrinter&);
-	fmt::Formatter& printStructuredName(const clang::Decl&,
-										CoqPrinter&);				   // : name
-	fmt::Formatter& printMangledName(const clang::Decl&, CoqPrinter&); // : bs
-	fmt::Formatter& printMangledTypeName(const clang::TypeDecl&,
-										 CoqPrinter&); // : bs
-	fmt::Formatter& printMangledTypeName(const clang::TypeDecl*, CoqPrinter&,
-										 loc::loc);
-	fmt::Formatter& printMangledObjName(const clang::ValueDecl&,
-										CoqPrinter&); // : bs
-	fmt::Formatter& printMangledObjName(const clang::ValueDecl*, CoqPrinter&,
-										loc::loc);
-	fmt::Formatter& printUnqualifiedName(const clang::NamedDecl&,
-										 CoqPrinter&); // : bs
-	fmt::Formatter& printUnqualifiedName(const clang::NamedDecl*, CoqPrinter&,
-										 loc::loc);
-
 	// TODO: Adjust and use in the structured name printer
 	fmt::Formatter& printNameForAnonTemplateParam(unsigned depth,
 												  unsigned index,
 												  CoqPrinter& print, loc::loc);
-
-	fmt::Formatter& printParamName(const clang::ParmVarDecl* d,
-								   CoqPrinter& print);
-
-	fmt::Formatter& printOverloadableOperator(clang::OverloadedOperatorKind,
-											  CoqPrinter&, loc::loc);
 
 	// Types
 
@@ -232,7 +222,7 @@ public:
 	fmt::Formatter& printQualTypeOption(const clang::QualType& qt,
 										CoqPrinter& print, loc::loc loc);
 
-	fmt::Formatter& printType(const clang::Type&, CoqPrinter&);
+	fmt::Formatter& printType(const clang::Type&, CoqPrinter&, loc::loc);
 	fmt::Formatter& printType(const clang::Type* t, CoqPrinter& print,
 							  loc::loc);
 
@@ -260,6 +250,10 @@ public:
 									   CoqPrinter& print, OpaqueNames&);
 	fmt::Formatter& printValueDeclExpr(const clang::ValueDecl*,
 									   CoqPrinter& print);
+
+	// TODO: Discuss. Rename to printFunctionParamName.
+	fmt::Formatter& printParamName(const clang::ParmVarDecl* d,
+								   CoqPrinter& print);
 
 	// Statements
 

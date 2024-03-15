@@ -73,6 +73,7 @@ add_llvm_library(tocoq
   src/NotationWriter.cpp
   src/Formatter.cpp
   src/Logging.cpp
+  src/Assert.cpp
   src/Location.cpp
   src/Template.cpp
   src/ClangPrinter.cpp

@@ -3,6 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  */
+#include "Assert.hpp"
 #include "ClangPrinter.hpp"
 #include "CoqPrinter.hpp"
 #include "DeclVisitorWithArgs.h"
@@ -154,9 +155,9 @@ printSpecialization(const Decl &decl, CoqPrinter &print, ClangPrinter &cprint) {
 	if (auto pat = recoverPattern(decl)) {
 		guard::ctor _(print, "Dinstantiation");
 		cprint.printNameComment(decl, print) << fmt::nbsp;
-		cprint.printMangledName(decl, print) << fmt::nbsp;
+		cprint.printNameAsKey(decl, print) << fmt::nbsp;
 		cprint.printNameComment(*pat, print) << fmt::nbsp;
-		cprint.printMangledName(*pat, print) << fmt::nbsp;
+		cprint.printNameAsKey(*pat, print) << fmt::nbsp;
 		cprint.printTemplateArguments(decl, print);
 		return true;
 	} else {
@@ -175,12 +176,10 @@ struct DeclPrinter {
 
 	const StringRef ctor;
 	const Printer<T> print_body;
-	const bool ast2_only;
 
 	DeclPrinter() = delete;
-	DeclPrinter(StringRef c, Printer<T> p, bool b = false)
-		: ctor{c}, print_body{p}, ast2_only{b} {
-		assert(p != nullptr);
+	DeclPrinter(StringRef c, Printer<T> p) : ctor{c}, print_body{p} {
+		always_assert(p != nullptr);
 	}
 
 	/// Project a decl D from an inhabitant of T
@@ -197,8 +196,8 @@ struct DeclPrinter {
 	/// - `(ctor name body)` if `decl` is neither a template nor a
 	/// specialization,
 	///
-	/// - `(ctor params name body)` (and, AST2 only, `(Dname name
-	/// structured_name)`) if `decl` is a template, and
+	/// - `(ctor params name body)` and `(Dname name structured_name)`
+	/// if `decl` is a template, and
 	///
 	/// - `(Dinstantiation ..)` if `decl` is a specialization.
 
@@ -216,23 +215,16 @@ struct DeclPrinter {
 				if (!decl.isTemplated() || isSpecialized(decl))
 					return false;
 
-				if (ast2_only && !print.ast2())
-					return false;
-
-				std::string ctor_template{ctor};
-				if (!print.ast2())
-					ctor_template += "_template";
-
-				guard::ctor _(print, ctor_template);
+				guard::ctor _(print, ctor);
 				cprint.printNameComment(decl, print) << fmt::nbsp;
 				cprint.printTemplateParameters(decl, print) << fmt::nbsp;
-				cprint.printMangledName(decl, print) << fmt::nbsp;
+				cprint.printNameAsKey(decl, print) << fmt::nbsp;
 				print_body(box, print, cprint, ctxt);
 				return true;
 			} else {
 				guard::ctor _(print, ctor);
 				cprint.printNameComment(decl, print) << fmt::nbsp;
-				cprint.printMangledName(decl, print) << fmt::nbsp;
+				cprint.printNameAsKey(decl, print) << fmt::nbsp;
 				print_body(box, print, cprint, ctxt);
 				return true;
 			}
@@ -246,19 +238,19 @@ struct DeclPrinter {
 		};
 		auto printDeclWithName = [&]() {
 			auto r = printDeclWith();
-			if (r && print.templates() && print.ast2()) {
+			if (r && print.templates()) {
 				/*
-                This abstraction violation (presupposing we're printing
-                a list of declarations) seems simpler than, say,
-                changing the return type of ClangPrinter::printDecl to
-                distinguish three cases. It's short term, as is `Dname`.
-                */
+				This abstraction violation (presupposing we're printing
+				a list of declarations) seems simpler than, say,
+				changing the return type of ClangPrinter::printDecl to
+				distinguish three cases. It's short term, as is `Dname`.
+				*/
 				print.cons();
 
 				guard::ctor _(print, "Dname");
 				cprint.printNameComment(decl, print) << fmt::nbsp;
-				cprint.printMangledName(decl, print) << fmt::nbsp;
-				cprint.printStructuredName(decl, print);
+				cprint.printNameAsKey(decl, print) << fmt::nbsp;
+				cprint.printName(decl, print);
 			}
 			return r;
 		};
@@ -278,7 +270,7 @@ printType(const TypeDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 	return print.output();
 }
 }
-static const DeclPrinter Dtype("Dtype", printType, /*ast2_only*/ true);
+static const DeclPrinter Dtype("Dtype", printType);
 
 // Type aliases
 namespace {
@@ -290,7 +282,7 @@ printTypedef(const TypedefNameDecl &decl, CoqPrinter &print,
 	return cprint.printQualType(decl.getUnderlyingType(), print, loc::of(decl));
 }
 }
-static const DeclPrinter Dtypedef("Dtypedef", printTypedef, /*ast2_only*/ true);
+static const DeclPrinter Dtypedef("Dtypedef", printTypedef);
 
 // Structures and unions
 namespace {
@@ -303,15 +295,15 @@ printClassName(const RecordDecl &decl, CoqPrinter &print,
 
 	if (print.templates()) {
 		/*
-        NOTE (AST2): Locally, we know `decl` is a template, making it
-        reasonable to synthesize _all_ template arguments from
-        parameters. Nevertheless, we leave it to the type printer (and
-        VisitInjectedClassNameType) to handle argument synthesis because
-        such types get printed from other contexts.
-        */
+		NOTE: Locally, we know `decl` is a template, making it
+		reasonable to synthesize _all_ template arguments from
+		parameters. Nevertheless, we leave it to the type printer (and
+		VisitInjectedClassNameType) to handle argument synthesis
+		because such types get printed from other contexts.
+		*/
 		return cprint.printType(decl.getTypeForDecl(), print, loc::of(decl));
 	} else
-		return cprint.printTypeName(decl, print);
+		return cprint.printName(decl, print);
 }
 
 static fmt::Formatter &
@@ -363,30 +355,24 @@ getTypeAsRecord(const ValueDecl &decl) {
 static fmt::Formatter &
 printAnonymousFieldName(const FieldDecl &field, CoqPrinter &print,
 						ClangPrinter &cprint) {
-	/*
-    TODO: We could support more unnamed fields using something like
-    `mem_name : ident + N`.
-    */
-	auto unsupported = [&](StringRef msg) -> auto & {
-		::unsupported(cprint, loc::of(field), msg);
-		return cprint.printUnsupportedName(msg, print);
-	};
-	if (!print.ast2()) {
-		guard::ctor _(print, "Nanon");
-		if (auto rec = getTypeAsRecord(field))
-			return cprint.printTypeName(rec, print, loc::of(field));
-		else
-			return unsupported("field not of record type");
-	} else
-		return unsupported("unnamed field");
+	if (auto rec = getTypeAsRecord(field)) {
+		guard::ctor _(print, "field_name.Anon");
+		return cprint.printName(rec, print, loc::of(field));
+	} else {
+		unsupported(cprint, loc::of(field),
+					"anonymous field not of record type");
+		guard::ctor _(print, "field_name.Id", false);
+		return print.str("<anonymous field not of record type>");
+	}
 }
 
 static fmt::Formatter &
 printFieldName(const FieldDecl &field, CoqPrinter &print,
 			   ClangPrinter &cprint) {
-	if (auto id = field.getIdentifier())
+	if (auto id = field.getIdentifier()) {
+		guard::ctor _(print, "field_name.Id", false);
 		return print.str(id->getName());
-	else
+	} else
 		return printAnonymousFieldName(field, print, cprint);
 }
 
@@ -446,15 +432,14 @@ printStructBases(const CXXRecordDecl &decl, const ASTRecordLayout *layout,
 			return dependent();
 		else if (auto record = type->getAsCXXRecordDecl()) {
 			guard::tuple _(print);
-			cprint.printTypeName(record, print, loc::of(type))
-				<< fmt::tuple_sep;
+			cprint.printName(record, print, loc::of(type)) << fmt::tuple_sep;
 			auto li =
 				layout ? layout->getBaseClassOffset(record).getQuantity() : 0;
 			return printLayoutInfo(li, print);
 		} else if (!ClangPrinter::warn_well_known && type->isDependentType()) {
 			/*
-            The guard on `record` used to be an assert, and ignored.
-            */
+			The guard on `record` used to be an assert, and ignored.
+			*/
 			return dependent();
 		} else
 			fatal("base class not of RecordType");
@@ -480,7 +465,7 @@ printStructVirtuals(const CXXRecordDecl &decl, CoqPrinter &print,
 			return false;
 		guard::ctor _(print, is_pure_virtual(*m) ? "pure_virt" : "impl_virt",
 					  false);
-		cprint.printObjName(m, print, loc::of(decl));
+		cprint.printName(m, print, loc::of(decl));
 		return true;
 	});
 }
@@ -495,8 +480,8 @@ printStructOverrides(const CXXRecordDecl &decl, CoqPrinter &print,
 		if (m->isVirtual() and not is_pure_virtual(*m)) {
 			for (auto o : m->overridden_methods()) {
 				print.output() << "(";
-				cprint.printObjName(o, print, loc::of(m)) << fmt::tuple_sep;
-				cprint.printObjName(*m, print) << ")" << fmt::cons;
+				cprint.printName(o, print, loc::of(m)) << fmt::tuple_sep;
+				cprint.printName(*m, print) << ")" << fmt::cons;
 			}
 		}
 	}
@@ -510,7 +495,7 @@ printDeleteName(const CXXRecordDecl &decl, CoqPrinter &print,
 	auto del = dtor ? dtor->getOperatorDelete() : nullptr;
 	if (del) {
 		guard::some _(print);
-		return cprint.printObjName(*del, print);
+		return cprint.printName(*del, print);
 	} else
 		return print.none();
 }
@@ -547,8 +532,8 @@ printStruct(const CXXRecordDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 			const ASTContext &ctxt) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 		cprint.trace("printStruct", loc::of(decl));
-	assert(decl.getTagKind() == TagTypeKind::TTK_Class ||
-		   decl.getTagKind() == TagTypeKind::TTK_Struct);
+	always_assert(decl.getTagKind() == TagTypeKind::TTK_Class ||
+				  decl.getTagKind() == TagTypeKind::TTK_Struct);
 
 	if (!decl.isCompleteDefinition())
 		return print.none();
@@ -575,7 +560,7 @@ printUnion(const CXXRecordDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 		   const ASTContext &ctxt) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 		cprint.trace("printUnion", loc::of(decl));
-	assert(decl.getTagKind() == TagTypeKind::TTK_Union);
+	always_assert(decl.getTagKind() == TagTypeKind::TTK_Union);
 
 	if (!decl.isCompleteDefinition())
 		return print.none();
@@ -747,18 +732,9 @@ printInitPath(const CXXConstructorDecl &decl, const CXXCtorInitializer &init,
 					 NORETURN { ::fatal(cprint, loc::of(decl), msg); };
 	if (init.isMemberInitializer()) {
 		auto fd = init.getMember();
-		if (ClangPrinter::warn_well_known) {
-			auto id = fd ? fd->getIdentifier() : nullptr;
-			if (!id)
-				fatal("field initializer with null or unnamed field");
-			guard::ctor _(print, "InitField", false);
-			return print.str(id->getName());
-		} else if (fd) {
-			// this can print an invalid field name
-			guard::ctor _(print, "InitField", false);
-			return print.str(fd->getNameAsString());
-		} else
-			fatal("field initializer with null field");
+		always_assert(fd && "member initializer without member");
+		guard::ctor _(print, "InitField", false);
+		return printFieldName(*fd, print, cprint);
 	} else if (init.isBaseInitializer()) {
 		guard::ctor _(print, "InitBase", false);
 		return printClassName(init.getBaseClass(), print, cprint,
@@ -767,9 +743,10 @@ printInitPath(const CXXConstructorDecl &decl, const CXXCtorInitializer &init,
 		auto fd = init.getIndirectMember();
 		if (!fd)
 			fatal("indirect field initializer without field");
-		guard::ctor _(print, "InitIndirect", false);
+		guard::ctor _1(print, "InitIndirect", false);
 		auto id = printIndirectFieldChain(decl, *fd, print, cprint);
 		print.output() << fmt::nbsp;
+		guard::ctor _2(print, "field_name.Id", false);
 		return print.str(id->getName());
 	} else if (init.isDelegatingInitializer())
 		return print.output() << "InitThis";
@@ -780,11 +757,11 @@ printInitPath(const CXXConstructorDecl &decl, const CXXCtorInitializer &init,
 static fmt::Formatter &
 printInitType(const CXXConstructorDecl &decl, const CXXCtorInitializer &init,
 			  CoqPrinter &print, ClangPrinter &cprint) {
-	// TODO: Print Tunsupported and keep going under ast2.
+	// TODO: Print Tunsupported and keep going
 	auto fatal = [&](StringRef msg)
 					 NORETURN { ::fatal(cprint, loc::of(decl), msg); };
 	auto use_type = [&](const Type &type) -> auto & {
-		return cprint.printType(type, print);
+		return cprint.printType(type, print, loc::of(decl));
 	};
 	auto use_qualtype = [&](const QualType qt) -> auto & {
 		return cprint.printQualType(qt, print, loc::of(decl));
@@ -889,7 +866,7 @@ printVar(const VarDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 		return print.none();
 }
 }
-static const DeclPrinter Dvariable("Dvariable", printVar, /*ast2_only*/ true);
+static const DeclPrinter Dvariable("Dvariable", printVar);
 
 // Enumerations
 namespace {
@@ -991,16 +968,16 @@ crackEnumConst(const EnumConstantDecl &decl, CoqPrinter &print,
 	auto bt = ut.getTypePtr()->getAs<BuiltinType>();
 	if (!bt) {
 		/*
-        TODO: With work here and in Coq, we might support constants in
-        enumerations with dependent underlying types.
-        */
+		TODO: With work here and in Coq, we might support constants in
+		enumerations with dependent underlying types.
+		*/
 		return fail("underlying integral type not a builtin");
 	}
 	if (isTemplate(*ed)) {
 		/*
-        TODO: With work here, we could print concrete enumeration
-        constants in dependent scopes.
-        */
+		TODO: With work here, we could print concrete enumeration
+		constants in dependent scopes.
+		*/
 		return fail("dependent scope");
 	}
 
@@ -1022,7 +999,7 @@ printEnumConst(const EnumConst &c, CoqPrinter &print, ClangPrinter &cprint,
 	if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 		cprint.trace("printEnumConst", loc::of(decl));
 
-	cprint.printTypeName(ed, print) << fmt::nbsp;
+	cprint.printName(ed, print) << fmt::nbsp;
 	cprint.printQualType(ut, print, loc::of(decl)) << fmt::nbsp;
 	uv.print(print) << fmt::nbsp;
 	if (auto e = decl.getInitExpr()) {
@@ -1034,9 +1011,8 @@ printEnumConst(const EnumConst &c, CoqPrinter &print, ClangPrinter &cprint,
 }
 } // Enumerations
 
-static const DeclPrinter Denum("Denum", printEnum, /*ast2_only*/ true);
-static const DeclPrinter Denum_constant("Denum_constant", printEnumConst,
-										/*ast2_only*/ true);
+static const DeclPrinter Denum("Denum", printEnum);
+static const DeclPrinter Denum_constant("Denum_constant", printEnumConst);
 
 // Static asserts
 namespace {
@@ -1128,8 +1104,8 @@ public:
 	bool VisitTypedefNameDecl(const TypedefNameDecl *decl, CoqPrinter &print,
 							  ClangPrinter &cprint, const ASTContext &ctxt) {
 		/*
-        TODO: Adjust `type_table_le` and the template logic.
-        */
+		TODO: Adjust `type_table_le` and the template logic.
+		*/
 		return false;
 
 		if (ClangPrinter::debug && cprint.trace(Trace::Decl))
@@ -1228,17 +1204,17 @@ public:
 		if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 			cprint.trace("VisitStaticAssertDecl", loc::of(decl));
 		/*
-        TODO: There _might_ be a case for supporting templated static
-        asserts (e.g., when they have complicated proofs based mostly on
-        templated code)).
-        */
+		TODO: There _might_ be a case for supporting templated static
+		asserts (e.g., when they have complicated proofs based mostly on
+		templated code)).
+		*/
 		if (auto e = decl->getAssertExpr()) {
 			guard::ctor _(print, "Dstatic_assert");
 			/*
-            TODO: We insist on a StringLiteral message (the historical
-            type). Consider dropping that requirement and using
-            Stmt::printPretty.
-            */
+			TODO: We insist on a StringLiteral message (the historical
+			type). Consider dropping that requirement and using
+			Stmt::printPretty.
+			*/
 			if (auto msg = staticAssertMessage(*decl)) {
 				guard::some _(print);
 				print.str(msg->getString());

@@ -34,7 +34,7 @@ private:
 		// TODO when destructors move to classes, we can change this
 		if (auto dest = get_dtor(qt)) {
 			print.some();
-			cprint.printObjName(*dest, print);
+			cprint.printName(*dest, print);
 			print.end_ctor();
 		} else {
 			print.none();
@@ -52,7 +52,7 @@ public:
 				cprint.getCompiler().getLangOpts().ThreadsafeStatics;
 			print.ctor("Dinit");
 			print.output() << fmt::BOOL(thread_safe) << fmt::nbsp;
-			cprint.printMangledObjName(*decl, print);
+			cprint.printName(*decl, print);
 			print.output() << fmt::nbsp;
 		} else {
 			print.ctor("Dvar")
@@ -128,7 +128,7 @@ public:
 
 			print.end_ctor(); //Dvar
 #if 0
-            this->Visit(b->getHoldingVar(), print, cprint, on);
+	this->Visit(b->getHoldingVar(), print, cprint, on);
 #endif
 		});
 

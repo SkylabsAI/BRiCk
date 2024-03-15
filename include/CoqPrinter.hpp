@@ -17,11 +17,12 @@ class CoqPrinter {
 private:
 	fmt::Formatter& output_;
 	const bool templates_;
-	const bool ast2_;
+	const bool structured_keys_;
 
 public:
-	CoqPrinter(fmt::Formatter& output, bool templates, bool ast2)
-		: output_(output), templates_(templates), ast2_(ast2) {}
+	CoqPrinter(fmt::Formatter& output, bool templates, bool structured_keys)
+		: output_(output), templates_(templates),
+		  structured_keys_(structured_keys) {}
 
 	fmt::Formatter& output() const {
 		return output_;
@@ -29,8 +30,8 @@ public:
 	bool templates() const {
 		return templates_;
 	}
-	bool ast2() const {
-		return ast2_;
+	bool structured_keys() const {
+		return structured_keys_;
 	}
 
 	[[noreturn]] void die() {

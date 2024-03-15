@@ -13,10 +13,10 @@ fmt::Formatter&
 CoqPrinter::str(llvm::StringRef str) {
 	auto& os = output_;
 	/*
-    Coq string literals may include embeded newlines
-    and utf8 sequences. We only need to double any
-    occurrences of `"`.
-    */
+	Coq string literals may include embeded newlines
+	and utf8 sequences. We only need to double any
+	occurrences of `"`.
+	*/
 	os << '\"';
 	for (char c : str) {
 		os << c;

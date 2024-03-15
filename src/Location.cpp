@@ -48,6 +48,11 @@ of<>(DeclContext& c) {
 }
 
 loc
+refine(loc fallback, loc loc) {
+	return loc && loc->getLoc().isValid() ? loc : fallback;
+}
+
+loc
 Loc::mk(const TypeLoc& t) {
 	if (t.getType().getTypePtrOrNull()) {
 		Loc::box<TypeLoc> box{&t};

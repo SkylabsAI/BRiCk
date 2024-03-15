@@ -174,13 +174,23 @@ of(T* ptr) {
 	return ptr ? of(*ptr) : none;
 }
 
+/// `loc` if that's defined and has a location; otherwise `fallback`
+loc refine(loc fallback, loc loc);
+
 /// `loc::of(t)` if that's defined and has a location; otherwise,
 /// `fallback`
 template<typename T>
 loc
-refine(loc fallback, T t) {
-	auto loc = of(t);
-	return loc && loc->getLoc().isValid() ? loc : fallback;
+refine(loc fallback, T* t) {
+	return refine(fallback, of(t));
+}
+
+/// `loc::of(t)` if that's defined and has a location; otherwise,
+/// `fallback`
+template<typename T>
+loc
+refine(loc fallback, T& t) {
+	return refine(fallback, of(t));
 }
 
 // Formatting
