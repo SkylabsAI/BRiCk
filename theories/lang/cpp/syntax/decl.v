@@ -203,6 +203,7 @@ Record Initializer' {classname type Expr : Set} : Set := Build_Initializer
 Proof. solve_decision. Defined.
 Notation Initializer := (Initializer' globname decltype Expr).
 
+(** TODO: Rename <<obj_name>> to <<name>> and use it for <<c_class>> *)
 Record Ctor' {classname obj_name type Expr : Set} : Set := Build_Ctor
 { c_class  : classname
 ; c_params : list (ident * type)
@@ -218,6 +219,7 @@ Notation Ctor := (Ctor' globname obj_name decltype Expr).
 
 (** *** Destructors *)
 
+(** TODO: Rename <<obj_name>> to <<name>> and use it for <<d_class>>; drop <<classname>> *)
 Record Dtor' {classname obj_name type Expr : Set} : Set := Build_Dtor
 { d_class  : classname
 ; d_cc     : calling_conv
