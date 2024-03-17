@@ -305,6 +305,37 @@ with a value category).
 *)
 #[global] Instance Cast_eq_dec : EqDecision3 Cast'.
 Proof. solve_decision. Defined.
+Module Cast.
+  Definition existsb {classname obj_name type : Set}
+      (GN : classname -> bool) (ON : obj_name -> bool) (T : type -> bool) :=
+    fix existsb (c : Cast' classname obj_name type) : bool :=
+    match c with
+    | Cdependent
+    | Cbitcast
+    | Clvaluebitcast
+    | Cl2r
+    | Cnoop
+    | Carray2ptr
+    | Cfun2ptr
+    | Cint2ptr
+    | Cptr2int
+    | Cptr2bool => false
+    | Cderived2base path
+    | Cbase2derived path => List.existsb GN path
+    | Cintegral
+    | Cint2bool
+    | Cfloat2int
+    | Cnull2ptr
+    | Cbuiltin2fun
+    | Cctor
+    | C2void => false
+    | Cuser on => ON on
+    | Creinterpret t => T t
+    | Cstatic c => existsb c
+    | Cdynamic gn1 gn2 => GN gn1 || GN gn2
+    | Cconst t => T t
+    end.
+End Cast.
 Notation Cast := (Cast' globname obj_name exprtype).	(** TODO (FM-3431): Should be [decltype] *)
 
 (** Dispatch *)
@@ -341,6 +372,19 @@ Module operator_impl.
 
   #[global] Instance t_eq_dec : EqDecision2 t.
   Proof. solve_decision. Defined.
+
+  Definition functype {name type} (i : t name type) : type :=
+    match i with
+    | Func _ t => t
+    | MFunc _ _ t => t
+    end.
+
+  Definition existsb {name type : Set} (f : name -> bool) (g : type -> bool)
+      (i : operator_impl.t name type) : bool :=
+    match i with
+    | Func fn ft
+    | MFunc fn _ ft => f fn || g ft
+    end.
 End operator_impl.
 #[global] Notation operator_impl := (operator_impl.t obj_name functype).
 
@@ -447,9 +491,6 @@ NOTE: Enumeration constants lack addresses (unlike other globals).
 | Eopaque_ref (name : N) (_ : ValCat) (_ : exprtype)
 | Eunsupported (_ : bs) (_ : ValCat) (_ : exprtype)
 .
-Definition MethodRef' (obj_name functype Expr : Set) : Set :=
-  (obj_name * dispatch_type * functype) + Expr.
-Notation MethodRef := (MethodRef' obj_name functype Expr).
 
 #[global] Instance expr_inhabited : Inhabited Expr.
 Proof. exact (populate Enull). Qed.
@@ -463,3 +504,17 @@ Proof.
 Defined.
 
 Definition Edefault_init_expr (e : Expr) : Expr := e.
+
+Definition MethodRef' (obj_name functype Expr : Set) : Set :=
+  (obj_name * dispatch_type * functype) + Expr.
+Notation MethodRef := (MethodRef' obj_name functype Expr).
+
+Module MethodRef.
+  Definition existsb {name functype Expr : Set}
+      (f : name -> bool) (g : functype -> bool) (h : Expr -> bool)
+      (a : MethodRef' name functype Expr) : bool :=
+    match a with
+    | inl p => f p.1.1 || g p.2
+    | inr e => h e
+    end.
+End MethodRef.
