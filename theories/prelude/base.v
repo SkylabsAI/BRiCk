@@ -105,6 +105,47 @@ Definition flip2 {A B C D} (f : A -> B -> C -> D) (b : B) (c : C) (a : A) : D :=
 Lemma dec_stable_iff `{Decision P} : ¬ ¬ P ↔ P.
 Proof. split. apply dec_stable. tauto. Qed.
 
+(** ** Monads *)
+(**
+We put most notation in [stdpp_scope] (open by default).
+
+We put notation with other purposes, like [let*], in [monad_scope]
+(not open by default).
+
+One can locally open [monad_scope], or use notations like <<funM>>,
+<<letM*>>.
+*)
+
+Declare Scope monad_scope.
+Delimit Scope monad_scope with M.
+
+(**
+NOTE: We bundle these effects so they can be replayed.
+*)
+Module Export MonadNotations.
+
+  #[global] Notation "'funM' x .. y => t" :=
+    (fun x => .. (fun y => t%M) ..) (only parsing) : function_scope.
+  #[global] Notation "'letM*' x , .. , z := t 'in' f" :=
+    (mbind (fun x => .. (fun z => f) ..) t%M) (only parsing) : stdpp_scope.
+  #[global] Notation "'letM*' := t 'in' f" :=
+    (mbind (fun _ : unit => f) t%M) (only parsing) : stdpp_scope.
+
+  #[global] Notation "m >>= f" := (mbind f m) : stdpp_scope.
+  #[global] Notation "m ≫= f" := (m >>= f) (only parsing) : stdpp_scope.
+  #[global] Notation "m >>=@{ M } f" := (mbind (M:=M) f m) (only parsing) : stdpp_scope.
+
+  #[global] Notation "( m >>=.)" := (fun f => mbind f m) (only parsing) : stdpp_scope.
+  #[global] Notation "(.>>= f )" := (mbind f) (only parsing) : stdpp_scope.
+  #[global] Notation "(>>=)" := mbind (only parsing) : stdpp_scope.
+
+  #[global] Notation "'let*' x , .. , z := t 'in' f" :=
+    (mbind (fun x => .. (fun z => f) ..) t) (only parsing) : monad_scope.
+  #[global] Notation "'let*' := t 'in' f" :=
+    (mbind (fun _ : unit => f) t) (only parsing) : monad_scope.
+
+End MonadNotations.
+
 (* Very incomplete set of monadic liftings. *)
 Definition liftM2 `{MRet M, MBind M} `(f : A → B → C) : M A → M B → M C :=
   λ mx my,
