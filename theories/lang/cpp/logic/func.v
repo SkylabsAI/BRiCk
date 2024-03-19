@@ -43,7 +43,7 @@ implement the part of http://eel.is/c++draft/class.cdtor#3 about
 members. This enables their dereference via [wp_lval_deref].
 *)
 mlock Definition svalid_members `{Σ : cpp_logic, σ : genv}
-    (cls : globname) (members : list (bs * type)) : Rep :=
+    (cls : globname) (members : list (field_name * type)) : Rep :=
   reference_toR (Tnamed cls) **
   [** list] m ∈ members,
   _field {| f_type := cls ; f_name := m.1 |} |-> reference_toR m.2.
@@ -580,7 +580,7 @@ Definition wpi_members `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ 
           wpi tu ρ cls this i (wpi_members members Q)
         | _ =>
           (* there are multiple initializers for this field *)
-          ERROR ("multiple initializers for field: " ++ cls ++ "::" ++ m.(mem_name))
+          ERROR ("multiple initializers for field", (cls, m))
         end
       | InitIndirect _ _ =>
         (*
@@ -589,7 +589,7 @@ Definition wpi_members `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ 
 
         TODO currently not supported
         *)
-        UNSUPPORTED ("indirect initialization: " ++ cls ++ "::" ++ m.(mem_name))
+        UNSUPPORTED ("indirect initialization", (cls, m))
       | _ => False%I (* unreachable due to the filter *)
       end
     end

@@ -59,7 +59,7 @@ Definition type_of_value (o : ObjValue) : type :=
 
 Variant GlobDecl' {classname obj_name type Expr : Set} : Set :=
 | Gtype     (* this is a type declaration, but not a definition *)
-| Gunion    (_ : Union' obj_name type Expr) (* union body *)
+| Gunion    (_ : Union' classname obj_name type Expr) (* union body *)
 | Gstruct   (_ : Struct' classname obj_name type Expr) (* struct body *)
 | Genum     (_ : type) (_ : list ident) (* *)
 | Gconstant (_ : type) (init : option Expr) (* used for enumerator constants*)
