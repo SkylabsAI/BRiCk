@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020-2023 BedRock Systems, Inc.
+ * Copyright (c) 2020-2024 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -181,7 +181,7 @@ Module Type Expr.
         match valcat_of a , drop_qualifiers (type_of a) with
         | Lvalue , Tnamed nm =>
           letI* base, free := wp_lval a in
-          letI* p := read_decl (base ,, _field {| f_type := nm ; f_name := m |}) ty in
+          letI* p := read_decl (base ,, _field {| f_type := nm ; f_name := field_name.Id m |}) ty in
           Q p free
         | _ , _ => False
           (* NOTE If the object is a temporary, then the field access will also be a
@@ -197,7 +197,7 @@ Module Type Expr.
         match valcat_of a , drop_qualifiers (type_of a) with
         | Xvalue , Tnamed nm =>
           letI* base, free := wp_xval a in
-          letI* p := read_decl (base ,, _field {| f_type := nm ; f_name := m |}) ty in
+          letI* p := read_decl (base ,, _field {| f_type := nm ; f_name := field_name.Id m |}) ty in
           Q p free
         | _ , _ => False
           (* This does not occur because our AST explicitly contains [Cl2r] casts.

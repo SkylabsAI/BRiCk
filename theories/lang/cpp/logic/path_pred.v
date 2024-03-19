@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020 BedRock Systems, Inc.
+ * Copyright (c) 2020-2024 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -48,8 +48,8 @@ Arguments _global {resolve} _ : rename.
 
 
 (* this is for `Indirect` field references *)
-Fixpoint path_to_Offset (resolve:genv) (from : globname) (final : ident)
-         (ls : list (ident * globname))
+Fixpoint path_to_Offset (resolve:genv) (from : globname) (final : field_name)
+         (ls : list (field_name * globname))
   : offset :=
   match ls with
   | [] => o_field resolve {| f_type := from ; f_name := final |}
@@ -66,7 +66,6 @@ Definition offset_for {resolve:genv} (cls : globname) (f : InitPath) : offset :=
   match f with
   | InitBase parent => o_base resolve cls parent
   | InitField i => o_field resolve {| f_type := cls ; f_name := i |}
-  | InitIndirect ls final =>
-    path_to_Offset resolve cls final ls
+  | InitIndirect ls final => path_to_Offset resolve cls final ls
   | InitThis => o_id
   end.

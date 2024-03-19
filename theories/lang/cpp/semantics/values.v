@@ -214,7 +214,7 @@ Module Type RAW_BYTES_VAL
        *Always* qualify this name, e.g. [FieldOrBase.t]
      *)
     Variant t : Set :=
-    | Field (f : ident)
+    | Field (_ : field_name)
     | Base (_ : globname).
 
     #[global] Instance t_eq_dec : EqDecision t := ltac:(solve_decision).
