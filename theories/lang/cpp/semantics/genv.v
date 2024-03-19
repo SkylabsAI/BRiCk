@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020-2023 BedRock Systems, Inc.
+ * Copyright (c) 2020-2024 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -230,7 +230,7 @@ Proof. by intros ? ->. Qed.
 Section type_of_field.
   Context {σ: genv}.
 
-  Definition type_of_field (cls : globname) (f : ident) : option type :=
+  Definition type_of_field (cls : globname) (f : field_name) : option type :=
     match σ.(genv_tu) !! cls with
     | None => None
     | Some (Gstruct st) =>

@@ -23,20 +23,20 @@ Record LayoutInfo : Set :=
 #[global] Instance: EqDecision LayoutInfo.
 Proof. solve_decision. Defined.
 
-Record Member' {type Expr : Set} : Set := mkMember
-{ mem_name : ident	(** TODO: Number anonymous fields *)
+Record Member' {classname type Expr : Set} : Set := mkMember
+{ mem_name : field_name.t classname
 ; mem_type : type
 ; mem_mutable : bool
 ; mem_init : option Expr
 ; mem_layout : LayoutInfo }.
-#[global] Arguments Member' _ _ : clear implicits, assert.
-#[global] Arguments mkMember {_ _} &.
-#[global] Instance: EqDecision2 Member'.
+#[global] Arguments Member' : clear implicits.
+#[global] Arguments mkMember {_ _ _} & _ _ _ _ _ : assert.
+#[global] Instance: EqDecision3 Member'.
 Proof. solve_decision. Defined.
-Notation Member := (Member' type Expr).
+Notation Member := (Member' globname type Expr).
 
-Record Union' {obj_name type Expr : Set} : Set := Build_Union
-{ u_fields : list (Member' type Expr)
+Record Union' {classname obj_name type Expr : Set} : Set := Build_Union
+{ u_fields : list (Member' classname type Expr)
   (* ^ fields with type, initializer, and layout information *)
 ; u_dtor : obj_name
   (* ^ the name of the destructor *)
@@ -49,12 +49,11 @@ Record Union' {obj_name type Expr : Set} : Set := Build_Union
 ; u_alignment : N
   (* ^ alignment of the union *)
 }.
-#[global] Arguments Union' _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Union {_ _ _} &.
-#[global] Instance: EqDecision3 Union'.
+#[global] Arguments Union' : clear implicits.
+#[global] Arguments Build_Union {_ _ _ _} & _ _ _ _ _ _ : assert.
+#[global] Instance: EqDecision4 Union'.
 Proof. solve_decision. Defined.
-Notation Union := (Union' obj_name type Expr).
-
+Notation Union := (Union' globname obj_name type Expr).
 
 Variant LayoutType : Set := POD | Standard | Unspecified.
 #[global] Instance: EqDecision LayoutType.
@@ -64,7 +63,7 @@ Proof. solve_decision. Defined.
 Record Struct' {classname obj_name type Expr : Set} : Set := Build_Struct
 { s_bases : list (classname * LayoutInfo)
   (* ^ base classes *)
-; s_fields : list (Member' type Expr)
+; s_fields : list (Member' classname type Expr)
   (* ^ fields with type, initializer, and layout information *)
 ; s_virtuals : list (obj_name * option obj_name)
   (* ^ function_name -> symbol *)
@@ -90,8 +89,8 @@ Record Struct' {classname obj_name type Expr : Set} : Set := Build_Struct
 ; s_alignment : N
   (* ^ alignment of the structure *)
 }.
-#[global] Arguments Struct' _ _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Struct {_ _ _ _} &.
+#[global] Arguments Struct' : clear implicits.
+#[global] Arguments Build_Struct {_ _ _ _} & _ _ _ _ _ _ _ _ _ _ : assert.
 #[global] Instance: EqDecision4 Struct'.
 Proof. solve_decision. Defined.
 Notation Struct := (Struct' globname obj_name type Expr).
@@ -142,8 +141,8 @@ Record Func' {obj_name type Expr : Set} : Set := Build_Func
 ; f_arity  : function_arity
 ; f_body   : option (FunctionBody' obj_name type Expr)
 }.
-#[global] Arguments Func' _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Func {_ _ _} &.
+#[global] Arguments Func' : clear implicits.
+#[global] Arguments Build_Func {_ _ _} & _ _ _ _ _ : assert.
 #[global] Instance: EqDecision3 Func'.
 Proof. solve_decision. Defined.
 #[global] Instance Func_inhabited {obj_name type Expr : Set} `{!Inhabited type} :
@@ -162,8 +161,8 @@ Record Method' {classname obj_name type Expr : Set} : Set := Build_Method
 ; m_arity   : function_arity
 ; m_body    : option (OrDefault (Stmt' obj_name type Expr))
 }.
-#[global] Arguments Method' _ _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Method {_ _ _ _} &.
+#[global] Arguments Method' : clear implicits.
+#[global] Arguments Build_Method {_ _ _ _} & _ _ _ _ _ _ _ : assert.
 #[global] Instance: EqDecision4 Method'.
 Proof. solve_decision. Defined.
 Notation Method := (Method' globname obj_name decltype Expr).
@@ -185,10 +184,10 @@ Definition static_method {classname obj_name type Expr : Set} (m : Method' class
 
 Variant InitPath' {classname : Set} : Set :=
 | InitBase (_ : classname)
-| InitField (_ : ident)
-| InitIndirect (anon_path : list (ident * classname)) (_ : ident)
+| InitField (_ : field_name.t classname)
+| InitIndirect (anon_path : list (field_name.t classname * classname)) (_ : field_name.t classname)
 | InitThis.
-#[global] Arguments InitPath' _ : clear implicits, assert.
+#[global] Arguments InitPath' : clear implicits.
 #[global] Instance: EqDecision1 InitPath'.
 Proof. solve_decision. Defined.
 #[global] Notation InitPath := (InitPath' globname).
@@ -197,8 +196,8 @@ Record Initializer' {classname type Expr : Set} : Set := Build_Initializer
   { init_path : InitPath' classname
   ; init_type : type
   ; init_init : Expr }.
-#[global] Arguments Initializer' _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Initializer {_ _ _} &.
+#[global] Arguments Initializer' : clear implicits.
+#[global] Arguments Build_Initializer {_ _ _} & _ _ _ : assert.
 #[global] Instance: EqDecision3 Initializer'.
 Proof. solve_decision. Defined.
 Notation Initializer := (Initializer' globname decltype Expr).
@@ -211,8 +210,8 @@ Record Ctor' {classname obj_name type Expr : Set} : Set := Build_Ctor
 ; c_arity  : function_arity
 ; c_body   : option (OrDefault (list (Initializer' classname type Expr) * Stmt' obj_name type Expr))
 }.
-#[global] Arguments Ctor' _ _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Ctor {_ _ _ _} &.
+#[global] Arguments Ctor' : clear implicits.
+#[global] Arguments Build_Ctor {_ _ _ _} & _ _ _ _ _ : assert.
 #[global] Instance: EqDecision4 Ctor'.
 Proof. solve_decision. Defined.
 Notation Ctor := (Ctor' globname obj_name decltype Expr).
@@ -225,8 +224,8 @@ Record Dtor' {classname obj_name type Expr : Set} : Set := Build_Dtor
 ; d_cc     : calling_conv
 ; d_body   : option (OrDefault (Stmt' obj_name type Expr))
 }.
-#[global] Arguments Dtor' _ _ _ _ : clear implicits, assert.
-#[global] Arguments Build_Dtor {_ _ _ _} &.
+#[global] Arguments Dtor' : clear implicits.
+#[global] Arguments Build_Dtor {_ _ _ _} & _ _ _ : assert.
 #[global] Instance: EqDecision4 Dtor'.
 Proof. solve_decision. Defined.
 Notation Dtor := (Dtor' globname obj_name decltype Expr).

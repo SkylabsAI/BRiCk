@@ -284,7 +284,7 @@ Qed.
 
 (** [offset_of] *)
 
-Fixpoint find_assoc_list {T} (f : ident) (fs : list (ident * T)) : option T :=
+Fixpoint find_assoc_list {K T} `{!EqDecision K} (f : K) (fs : list (K * T)) : option T :=
   match fs with
   | nil => None
   | (f',v) :: fs =>
@@ -293,7 +293,7 @@ Fixpoint find_assoc_list {T} (f : ident) (fs : list (ident * T)) : option T :=
     else find_assoc_list f fs
   end%list.
 
-Lemma find_assoc_list_elem_of {T} base xs :
+Lemma find_assoc_list_elem_of {K T} `{!EqDecision K} (base : K) xs :
   (∃ v, (base, v) ∈ xs) ->
   ∃ y, find_assoc_list (T := T) base xs = Some y.
 Proof.
@@ -308,7 +308,7 @@ Qed.
 (* note: we expose the fact that reference fields are compiled to pointers,
    so the [offset_of] a reference field is the offset of the pointer.
  *)
-Definition offset_of (resolve : genv) (t : globname) (f : ident) : option Z :=
+Definition offset_of (resolve : genv) (t : globname) (f : field_name) : option Z :=
   match glob_def resolve t with
   | Some (Gstruct s) =>
     find_assoc_list f (List.map (fun m => (m.(mem_name),m.(mem_layout).(li_offset) / 8)) s.(s_fields))
