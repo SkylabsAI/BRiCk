@@ -14,8 +14,6 @@ Require Import bedrock.lang.cpp.logic.wp.
 Require Import bedrock.lang.cpp.logic.path_pred.
 Require Import bedrock.lang.cpp.logic.heap_pred.
 Require Import bedrock.lang.cpp.logic.const.
-Require Import bedrock.lang.cpp.logic.dispatch.
-Require Import bedrock.lang.cpp.logic.layout.
 Require Import bedrock.lang.cpp.logic.arr.
 
 #[local] Set Printing Coercions.
@@ -56,7 +54,7 @@ using (say) type classes for the side-conditions arising in its theory
 
 (** [wp_gen] *)
 (**
-[wp_gen WP n Q] "runs" [WP i] for [0 <= i < n] (higest to lowest). It satisfies
+[wp_gen WP n Q] "runs" [WP i] for [0 <= i < n] (highest to lowest). It satisfies
 <<
   wp_gen WP n Q =
     letI* := WP (n - 1) in
