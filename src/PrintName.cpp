@@ -112,7 +112,7 @@ printFunctionParameterTypes(raw_ostream& os, const FunctionDecl& decl,
 							const PrintingPolicy& policy) {
 	os << '(';
 	auto ps = decl.parameters();
-	for (auto i = 0; i < ps.size(); i++) {
+	for (size_t i = 0; i < ps.size(); i++) {
 		if (auto vd = ps[i])
 			vd->getType().print(os, policy);
 		else
@@ -785,7 +785,8 @@ printTemplateArgument(const TemplateArgument& arg, CoqPrinter& print,
 	default: {
 		auto k = templateArgumentKindName(kind);
 		if (cprint.warn_well_known) {
-			unsupported(cprint, loc, false) << "template argument of kind " << k << "\n";
+			unsupported(cprint, loc, false)
+				<< "template argument of kind " << k << "\n";
 			arg.dump(logging::debug());
 		}
 		guard::ctor _(print, "Aunsupported", false);
@@ -1052,12 +1053,96 @@ printName(const Decl& decl, CoqPrinter& print, ClangPrinter& cprint) {
 			return atomic();
 		} else {
 			guard::ctor _(print, "Nscoped");
-			printName(toDecl(ctx, cprint, loc::of(decl)), print, cprint)
+			cprint.printName(toDecl(ctx, cprint, loc::of(decl)), print)
 				<< fmt::nbsp;
+			//			printName(toDecl(ctx, cprint, loc::of(decl)), print, cprint) << fmt::nbsp;
 			return atomic();
 		}
 	}
 }
+
+#if 0
+template<typename DERIVED, typename RetTy>
+struct NameVisitor {
+	RetTy Visit(const Decl* decl) {
+		auto self = static_cast<DERIVED*>(this);
+		if (auto sd = recoverSpecialization(decl)) {
+			return self->VisitInst(decl, sd->temp, sd->args);
+		}
+		auto ctx = getNonIgnorableAncestor(decl);
+		if (auto nd = dyn_cast<NamedDecl>(decl)) {
+			if (ctx->isTranslationUnit()) {
+				return self->VisitScoped(ctx, decl, true);
+			} else {
+				return self->VisitScoped(ctx, decl, false);
+			}
+		} else {
+			llvm::errs() << "decl is not named (" << decl->getDeclKindName()
+						 << ")\n";
+			always_assert(false && "unnamed decl");
+		}
+	}
+
+	RetTy Visit(const DeclContext* dc) {
+		auto self = static_cast<DERIVED*>(this);
+		if (auto tu = dyn_cast<TranslationUnitDecl>(dc))
+			return self->VisitTU(tu);
+		if (auto d = dyn_cast<Decl>(dc)) {
+			return self->Visit(d);
+		} else
+			return self->Visit(dc->getParent())
+	}
+
+	// For override
+	RetTy VisitName(const NamedDecl*) {
+		return RetTy{};
+	}
+
+	RetTy VisitTU(const TranslationUnitDecl*) {
+		return Ty{};
+	}
+
+	RetTy VisitInst(const Decl* whole, const TemplateDecl*,
+					TemplateArgumentList&) {
+		return VisitName(whole);
+	}
+	RetTy VisitScoped(const DeclContext*, const NamedDecl* decl, bool global) {
+		return VisitName(decl);
+	}
+
+	ClangPrinter& cprint_;
+};
+
+struct PrintName : NameVisitor<PrintName, void> {
+
+	void VisitScoped(const DeclContext* ctx, const NamedDecl* decl,
+					 bool global) {
+		auto atomic = [&]() -> auto {
+			printAtomicName(*ctx, *decl, print, cprint);
+		};
+		if (global) {
+			guard::ctor _(print, "Nglobal");
+			return atomic();
+		} else {
+			guard::ctor _(print, "Nscoped");
+			Visit(ctx);
+			print.output() << fmt::nbsp;
+			return atomic();
+		}
+	}
+
+	void VisitInst(const Decl* whole, const TemplateDecl* temp,
+				   TemplateArgumentList& args) {
+		guard::ctor _(print, "Ninst");
+		Visit(temp);
+		print.output() << fmt::nbsp;
+		printTemplateArgumentList(args, print, cprint, loc::of(decl));
+	}
+
+	ClangPrinter& cprint;
+	CoqPrinter& print;
+};
+#endif
 
 static fmt::Formatter&
 printDtorName(const CXXRecordDecl& decl, CoqPrinter& print,
@@ -1121,6 +1206,13 @@ fmt::Formatter&
 ClangPrinter::printName(const Decl& decl, CoqPrinter& print) {
 	if (trace(Trace::Name))
 		trace("printName", loc::of(decl));
+	if (auto nd = dyn_cast<NamedDecl>(&decl)) {
+		if (print.reference(nd))
+			return print.output();
+	} else {
+		llvm::errs() << "not a named decl\n";
+		decl.dump();
+	}
 	return structured::printName(decl, print, *this);
 }
 

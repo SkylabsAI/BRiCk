@@ -98,6 +98,9 @@ static cl::bits<Trace::Bit> TraceBits(
 			   clEnumValN(Trace::Bit::ALL, "ALL", "trace everything")),
 	cl::cat(Cpp2V));
 
+static cl::opt<bool> NoSharing("no-sharing", cl::desc("disable sharing"),
+							  cl::Optional, cl::ValueOptional, cl::cat(Cpp2V));
+
 class ToCoqAction : public clang::ASTFrontendAction {
 public:
 	virtual std::unique_ptr<clang::ASTConsumer>
@@ -117,7 +120,7 @@ public:
 										to_opt(NamesFile), to_opt(Templates),
 										to_opt(NameTest), StructuredKeys,
 										Trace::fromBits(TraceBits.getBits()),
-										Comment);
+										Comment, !NoSharing);
 		return std::unique_ptr<clang::ASTConsumer>(result);
 	}
 
