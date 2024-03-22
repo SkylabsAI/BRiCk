@@ -6,8 +6,14 @@
 #pragma once
 
 #include "Formatter.hpp"
+#include "PrePrint.hpp"
 #include <clang/AST/Expr.h>
 #include <llvm/ADT/StringRef.h>
+
+namespace clang {
+class NamedDecl;
+class Type;
+};
 
 namespace logging {
 [[noreturn]] void die();
@@ -18,11 +24,20 @@ private:
 	fmt::Formatter& output_;
 	const bool templates_;
 	const bool structured_keys_;
+	Cache& name_cache_;
 
 public:
-	CoqPrinter(fmt::Formatter& output, bool templates, bool structured_keys)
+	CoqPrinter(fmt::Formatter& output, bool templates, bool structured_keys,
+			   Cache& c)
 		: output_(output), templates_(templates),
-		  structured_keys_(structured_keys) {}
+		  structured_keys_(structured_keys), name_cache_{c} {}
+
+	bool reference(const clang::Type* p) {
+		return name_cache_.reference(p, output_);
+	}
+	bool reference(const clang::NamedDecl* p) {
+		return name_cache_.reference(p, output_);
+	}
 
 	fmt::Formatter& output() const {
 		return output_;

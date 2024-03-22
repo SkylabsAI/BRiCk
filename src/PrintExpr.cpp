@@ -329,9 +329,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			always_assert(dependent ||
-						  expr->getRHS()->getType() == expr->getType() &&
-							  "types must match");
+			always_assert(
+				(dependent || expr->getRHS()->getType() == expr->getType()) &&
+				"types must match");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_LAnd:
@@ -340,9 +340,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			always_assert(dependent ||
-						  expr->getType().getTypePtr()->isBooleanType() &&
-							  "&& is a bool");
+			always_assert(
+				(dependent || expr->getType().getTypePtr()->isBooleanType()) &&
+				"&& is a bool");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_LOr:
@@ -351,9 +351,9 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getRHS(), print);
 			// TODO: Can be overloaded
-			always_assert(dependent ||
-						  expr->getType().getTypePtr()->isBooleanType() &&
-							  "|| is a bool");
+			always_assert(
+				(dependent || expr->getType().getTypePtr()->isBooleanType()) &&
+				"|| is a bool");
 			print.end_ctor(); // no type information
 			return;
 		case BinaryOperatorKind::BO_Assign:

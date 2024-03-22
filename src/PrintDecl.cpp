@@ -90,7 +90,7 @@ static bool
 isSpecialized(const Decl &decl) {
 	if (isImplicitSpecialMethod(decl))
 		return false;
-	if (auto d = dyn_cast<EnumConstantDecl>(&decl))
+	if (isa<EnumConstantDecl>(&decl))
 		return false; // avoid too many warnings
 
 	// We conservatively avoid recoverPattern. Instead, we check the

@@ -30,17 +30,17 @@ public:
 						   const path output_file, const path notations_file,
 						   const path templates_file, const path name_test_file,
 						   bool structured_keys, Trace::Mask trace,
-						   bool comment,
+						   bool comment, bool sharing,
 						   bool elaborate = true)
 		: compiler_(compiler), output_file_(output_file),
 		  notations_file_(notations_file), templates_file_(templates_file),
 		  name_test_file_(name_test_file), structured_keys_(structured_keys),
-		  trace_(trace), comment_{comment}, elaborate_(elaborate) {}
+		  trace_(trace), comment_{comment}, sharing_{sharing}, elaborate_(elaborate) {}
 
 public:
 	// Implementation of `clang::ASTConsumer`
 	virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
-		toCoqModule(&Context, Context.getTranslationUnitDecl());
+		toCoqModule(&Context, Context.getTranslationUnitDecl(), sharing_);
 	}
 
 	virtual void HandleTagDeclDefinition(TagDecl *decl) override;
@@ -66,7 +66,8 @@ public:
 	}
 
 private:
-	void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl);
+	void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl,
+					 bool sharing);
 	void elab(Decl *, bool rec = false);
 
 private:
@@ -78,5 +79,6 @@ private:
 	const bool structured_keys_;
 	const Trace::Mask trace_;
 	const bool comment_;
+	const bool sharing_;
 	bool elaborate_;
 };

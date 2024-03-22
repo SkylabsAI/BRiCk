@@ -9,6 +9,7 @@
 #include "CoqPrinter.hpp"
 #include "Filter.hpp"
 #include "ModuleBuilder.hpp"
+#include "PrePrint.hpp"
 #include "SpecCollector.hpp"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -83,7 +84,7 @@ test(const clang::Decl* decl, CoqPrinter& print, ClangPrinter& cprint) {
 
 void
 ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
-						   clang::TranslationUnitDecl* decl) {
+						   clang::TranslationUnitDecl* decl, bool sharing) {
 
 #if 0
 	NoInclude noInclude(ctxt->getSourceManager());
@@ -114,11 +115,36 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 	};
 
 	with_open_file(output_file_, [&](Formatter& fmt) {
-		CoqPrinter print(fmt, /*templates*/ false, structured_keys_);
+		Cache cache;
+		CoqPrinter print(fmt, /*templates*/ false, structured_keys_, cache);
 		ClangPrinter cprint(compiler_, ctxt, trace_, comment_);
 
 		parser(print);
 		bytestring(print) << fmt::line;
+
+		if (sharing) {
+			PRINTER<clang::Type> type_fn = [&](auto prefix, auto num,
+											   auto* type) {
+				print.output() << "#[local] Definition " << prefix << num
+							   << " : Stype := ";
+				cprint.printType(type, print, loc::of(type));
+				print.output() << "." << fmt::line;
+			};
+			PRINTER<clang::NamedDecl> name_fn = [&](auto prefix, auto num,
+													auto* decl) {
+				print.output() << "#[local] Definition " << prefix << num
+							   << " : Sname := ";
+				cprint.printName(decl, print, loc::of(decl));
+				print.output() << "." << fmt::line;
+			};
+
+			for (auto decl : mod.declarations()) {
+				prePrintDecl(decl, cache, type_fn, name_fn);
+			}
+			for (auto decl : mod.definitions()) {
+				prePrintDecl(decl, cache, type_fn, name_fn);
+			}
+		}
 
 		print.output()
 			<< "Definition module : translation_unit := " << fmt::indent
@@ -152,19 +178,12 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 	with_open_file(notations_file_, [&](Formatter& spec_fmt) {
 		auto& ctxt = decl->getASTContext();
-		CoqPrinter print(spec_fmt, /*templates*/ false, structured_keys_);
+		Cache c;
+		CoqPrinter print(spec_fmt, /*templates*/ false, structured_keys_, c);
 		ClangPrinter cprint(compiler_, &ctxt, trace_, comment_);
 		// PrintSpec printer(ctxt);
 
 		NoInclude source(ctxt.getSourceManager());
-
-		// print.output() << "(*" << fmt::line
-		//                << " * Notations extracted from "
-		//                << ctxt.getSourceManager()
-		//                       .getFileEntryForID(
-		//                           ctxt.getSourceManager().getMainFileID())
-		//                       ->getName()
-		//                << fmt::line << " *)" << fmt::line;
 
 		parser(print);
 
@@ -173,7 +192,8 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 	});
 
 	with_open_file(templates_file_, [&](Formatter& fmt) {
-		CoqPrinter print(fmt, /*templates*/ true, structured_keys_);
+		Cache c;
+		CoqPrinter print(fmt, /*templates*/ true, structured_keys_, c);
 		ClangPrinter cprint(compiler_, ctxt, trace_, comment_);
 
 		parser(print);
@@ -187,6 +207,8 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 		print.begin_list();
 		for (auto decl : mod.template_declarations()) {
+			// if (sharing)
+			// 	prePrintDecl(decl, c, print, cprint);
 			printDecl(decl, print, cprint);
 		}
 		for (auto decl : mod.template_definitions()) {
@@ -198,7 +220,8 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 	});
 
 	with_open_file(name_test_file_, [&](Formatter& fmt) {
-		CoqPrinter print(fmt, /*templates*/ true, /*structured_keys*/ true);
+		Cache c;
+		CoqPrinter print(fmt, /*templates*/ true, /*structured_keys*/ true, c);
 		ClangPrinter cprint(compiler_, ctxt, trace_, comment_);
 
 		auto testnames = [&](const std::string id,

@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  */
 #include "Location.hpp"
+#include "Assert.hpp"
 #include "Logging.hpp"
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/DeclCXX.h>
@@ -158,6 +159,8 @@ Loc::describe(raw_ostream& os, const ASTContext& context) const {
 	case Kind::Tal:
 		u.tal->getArgument().print(policy, os, true);
 		return os;
+	default:
+		always_assert(false);
 	}
 }
 
@@ -186,6 +189,8 @@ Loc::dump(raw_ostream& os, const ASTContext& context) const {
 	case Kind::Tal:
 		u.tal->getArgument().dump(os);
 		return os;
+	default:
+		always_assert(false);
 	}
 }
 
