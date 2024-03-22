@@ -53,10 +53,16 @@ unsupported_type(CoqPrinter& print, ClangPrinter& cprint, const Type* type,
 class PrintType :
 	public TypeVisitor<PrintType, void, CoqPrinter&, ClangPrinter&> {
 private:
-	PrintType() {}
+	PrintType() = default;
 
 public:
 	static PrintType printer;
+
+	void Visit(const Type* type, CoqPrinter& print, ClangPrinter& cprint) {
+		if (not print.reference(type))
+			TypeVisitor<PrintType, void, CoqPrinter&, ClangPrinter&>::Visit(
+				type, print, cprint);
+	}
 
 	void VisitType(const Type* type, CoqPrinter& print, ClangPrinter& cprint) {
 		unsupported_type(print, cprint, type);

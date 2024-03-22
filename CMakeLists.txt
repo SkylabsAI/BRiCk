@@ -78,6 +78,7 @@ add_llvm_library(tocoq
   src/Template.cpp
   src/ClangPrinter.cpp
   src/StringPrettyPrinter.cpp
+  src/PrePrint.cpp
   src/ToCoq.cpp
   src/FromClang.cpp
 )

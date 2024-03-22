@@ -563,6 +563,12 @@ Notation Tlong := (Tnum int_type.Ilong Signed) (only parsing).
 Notation Tulonglong := (Tnum int_type.Ilonglong Unsigned) (only parsing).
 Notation Tlonglong := (Tnum int_type.Ilonglong Signed) (only parsing).
 
+Notation Tfloat16 := (Tfloat_ float_type.Ffloat16).
+Notation Tfloat := (Tfloat_ float_type.Ffloat).
+Notation Tdouble := (Tfloat_ float_type.Fdouble).
+Notation Tlongdouble := (Tfloat_ float_type.Flongdouble).
+Notation Tfloat128 := (Tfloat_ float_type.Ffloat128).
+
 (** ** Qualifier normalization *)
 (**
 [decompose_type t] strips any top-level qualifiers from [t] and

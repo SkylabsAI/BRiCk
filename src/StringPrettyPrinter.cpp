@@ -32,7 +32,7 @@ CoqPrinter::cmt(llvm::StringRef str) {
 	os << "(* ";
 	auto b = str.begin();
 	auto n = str.size();
-	for (auto i = 0; i < n; i++) {
+	for (size_t i = 0; i < n; i++) {
 		char c = *(b + i);
 		os << c;
 		if ((c == '(' || c == '*') && i + 1 < n) {
