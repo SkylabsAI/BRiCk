@@ -34,7 +34,7 @@
        : type
   
   Notation_Tarray_2 uses section variables ty n.
-  Notation_Tnamed_1 = {t: "foobarbaz"}
+  Notation_Tnamed_1 = {t: Nglobal (Nid "foobarbaz")}
        : type
   Notation_Tnamed_2 = {t: nm}
        : type
@@ -58,8 +58,12 @@
   Notation_Tfunction_novariadic_args_nowrap_2 uses section variables
   rty aty1 aty2.
   Notation_Tfunction_novariadic_args_wrap =
-  {t: extern CC_C ???("askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk",
-                      "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk") -> void}
+  {t: extern CC_C ???(Nglobal
+                        (Nid
+                           "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"),
+                      Nglobal
+                        (Nid
+                           "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk")) -> void}
        : type
   Notation_Tfunction_variadic_noargs_1 =
   {t: extern CC_C ???()(...) -> void}
@@ -79,27 +83,32 @@
   Notation_Tfunction_variadic_args_nowrap_2 uses section variables
   rty aty1 aty2.
   Notation_Tfunction_variadic_args_wrap =
-  {t: extern CC_C ???("askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk",
-                      "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk")(...) -> void}
+  {t: extern CC_C ???(Nglobal
+                        (Nid
+                           "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"),
+                      Nglobal
+                        (Nid
+                           "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"))(...) -> void}
        : type
   Notation_Tbool = {t: bool}
        : type
-  Notation_Tmember_pointer_1 = {t: ptr["foobarbaz"]<int8>}
+  Notation_Tmember_pointer_1 =
+  {t: ptr[Nglobal (Nid "foobarbaz")]<char>}
        : type
-  Notation_mut_1 = {t: mut bool}
+  Notation_mut_1 = Qmut ({t: bool})
        : type
-  Notation_mut_2 = {t: mut mut bool}
+  Notation_mut_2 = Qmut (Qmut ({t: bool}))
        : type
-  Notation_const_1 = {t: const bool}
+  Notation_const_1 = Qconst ({t: bool})
        : type
-  Notation_const_2 = {t: const ptr<const void>}
+  Notation_const_2 = Qconst ({t: ptr<{?: Qconst ({t: void})}>})
        : type
   Notation_volatile_1 = {t: volatile bool}
        : type
-  Notation_volatile_2 = {t: volatile ptr<const void>}
+  Notation_volatile_2 = {t: volatile ptr<{?: Qconst ({t: void})}>}
        : type
-  Notation_const_volatile_1 = {t: const volatile bool}
+  Notation_const_volatile_1 = Qconst_volatile ({t: bool})
        : type
   Notation_const_volatile_2 =
-  {t: const volatile ptr<const volatile void>}
+  Qconst_volatile ({t: ptr<{?: Qconst_volatile ({t: void})}>})
        : type

@@ -3,12 +3,15 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import bedrock.lang.cpp.ast.
+Require Import Coq.Numbers.BinNums.
+Require Import Coq.NArith.BinNat.
+Require Import bedrock.prelude.bytestring_core.
+Require Import bedrock.lang.cpp.syntax.
 Require Import bedrock.lang.cpp.notations.
 Require Import bedrock.lang.cpp.code_notations.
 
 Section TestTypeNotations.
-  Context (ty rty aty1 aty2 : type) (n : N) (nm : bs).
+  Context (ty rty aty1 aty2 : type) (n : BinNums.N) (nm : name).
 
   #[local] Definition Notation_Tptr_1 : type := Tptr Tbool.
   #[local] Definition Notation_Tptr_2 : type := Tptr ty.
@@ -29,45 +32,52 @@ Section TestTypeNotations.
   #[local] Definition Notation_void : type := Tvoid.
   Print Notation_void.
 
-  #[local] Definition Notation_Tarray_1 : type := Tarray Tnullptr 100.
+  #[local] Definition Notation_Tarray_1 : type := Tarray Tnullptr 100%N.
   #[local] Definition Notation_Tarray_2 : type := Tarray ty n.
   Print Notation_Tarray_1. Print Notation_Tarray_2.
 
-  #[local] Definition Notation_Tnamed_1 : type := Tnamed "foobarbaz".
+  #[local] Definition Notation_Tnamed_1 : type := Tnamed (Nglobal (Nid "foobarbaz")).
   #[local] Definition Notation_Tnamed_2 : type := Tnamed nm.
   Print Notation_Tnamed_1. Print Notation_Tnamed_2.
 
-  #[local] Definition Notation_Tfunction_novariadic_noargs_1 : type := Tfunction Tvoid nil.
-  #[local] Definition Notation_Tfunction_novariadic_noargs_2 : type := Tfunction rty nil.
+  #[local] Definition Notation_Tfunction_novariadic_noargs_1 : type :=
+    Tfunction (FunctionType Tvoid nil).
+  #[local] Definition Notation_Tfunction_novariadic_noargs_2 : type :=
+    Tfunction (FunctionType rty nil).
   Print Notation_Tfunction_novariadic_noargs_1. Print Notation_Tfunction_novariadic_noargs_2.
 
-  #[local] Definition Notation_Tfunction_novariadic_args_nowrap_1 : type := Tfunction Tvoid (cons Tbool (cons Tnullptr nil)).
-  #[local] Definition Notation_Tfunction_novariadic_args_nowrap_2 : type := Tfunction rty (cons aty1 (cons Tvoid (cons aty2 nil))).
+  #[local] Definition Notation_Tfunction_novariadic_args_nowrap_1 : type :=
+    Tfunction (FunctionType Tvoid (cons Tbool (cons Tnullptr nil))).
+  #[local] Definition Notation_Tfunction_novariadic_args_nowrap_2 : type :=
+    Tfunction (FunctionType rty (cons aty1 (cons Tvoid (cons aty2 nil)))).
   Print Notation_Tfunction_novariadic_args_nowrap_1.
   Print Notation_Tfunction_novariadic_args_nowrap_2.
 
-  #[local] Definition Notation_Tfunction_novariadic_args_wrap : type := Tfunction Tvoid (cons (Tnamed "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk")
-                          (cons (Tnamed "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk") nil)).
+  #[local] Definition Notation_Tfunction_novariadic_args_wrap : type :=
+    Tfunction (FunctionType Tvoid (cons (Tnamed (Nglobal (Nid "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk")))
+                          (cons (Tnamed (Nglobal (Nid "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"))) nil))).
   Print Notation_Tfunction_novariadic_args_wrap.
 
-  #[local] Definition Notation_Tfunction_variadic_noargs_1 : type := Tfunction (ar:=Ar_Variadic) Tvoid nil.
-  #[local] Definition Notation_Tfunction_variadic_noargs_2 : type := Tfunction (ar:=Ar_Variadic) rty nil.
+  #[local] Definition Notation_Tfunction_variadic_noargs_1 : type := Tfunction (FunctionType (ft_arity:=Ar_Variadic) Tvoid nil).
+  #[local] Definition Notation_Tfunction_variadic_noargs_2 : type := Tfunction (FunctionType (ft_arity:=Ar_Variadic) rty nil).
   Print Notation_Tfunction_variadic_noargs_1. Print Notation_Tfunction_variadic_noargs_2.
 
-  #[local] Definition Notation_Tfunction_variadic_args_nowrap_1 : type := Tfunction (ar:=Ar_Variadic) Tvoid (cons Tbool (cons Tnullptr nil)).
-  #[local] Definition Notation_Tfunction_variadic_args_nowrap_2 : type := Tfunction (ar:=Ar_Variadic) rty (cons aty1 (cons Tvoid (cons aty2 nil))).
+  #[local] Definition Notation_Tfunction_variadic_args_nowrap_1 : type :=
+    Tfunction (FunctionType (ft_arity:=Ar_Variadic) Tvoid (cons Tbool (cons Tnullptr nil))).
+  #[local] Definition Notation_Tfunction_variadic_args_nowrap_2 : type :=
+    Tfunction (FunctionType (ft_arity:=Ar_Variadic) rty (cons aty1 (cons Tvoid (cons aty2 nil)))).
   Print Notation_Tfunction_variadic_args_nowrap_1.
   Print Notation_Tfunction_variadic_args_nowrap_2.
 
-  #[local] Definition Notation_Tfunction_variadic_args_wrap : type := Tfunction (ar:=Ar_Variadic)
-              Tvoid (cons (Tnamed "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk")
-                          (cons (Tnamed "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk") nil)).
+  #[local] Definition Notation_Tfunction_variadic_args_wrap : type := Tfunction (FunctionType (ft_arity:=Ar_Variadic)
+              Tvoid (cons (Tnamed (Nglobal (Nid "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk")))
+                          (cons (Tnamed (Nglobal (Nid "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"))) nil))).
   Print Notation_Tfunction_variadic_args_wrap.
 
   #[local] Definition Notation_Tbool : type := Tbool.
   Print Notation_Tbool.
 
-  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer "foobarbaz" Ti8.
+  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer (Nglobal (Nid "foobarbaz")) Tchar.
   Print Notation_Tmember_pointer_1.
 
   Section Qualifiers.

@@ -4,14 +4,14 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Import bedrock.lang.cpp.parser2.prelude.
-Require Import bedrock.lang.cpp.parser2.lang.
+Require Import bedrock.lang.cpp.parser.prelude.
+Require Import bedrock.lang.cpp.parser.lang.
 
 (** * Derived types emitted by cpp2v *)
 
 Module ParserType (Import Lang : PARSER_LANG).
-  #[local] Notation globname := (globname parser_lang).
-  #[local] Notation type := (type parser_lang).
+  #[local] Notation globname := (globname' parser_lang).
+  #[local] Notation type := (type' parser_lang).
 
   Definition Qconst_volatile : type -> type :=
     Tqualified QCV.

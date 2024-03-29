@@ -225,6 +225,117 @@ ClangPrinter::printValueDeclExpr(const ValueDecl* decl, CoqPrinter& print) {
 	return printValueDeclExpr(decl, print, names);
 }
 
+/**
+ * This class prints a dependent name (of Coq type [Mname]).
+ */
+struct PrintDependentName : public ConstStmtVisitor<PrintDependentName, void> {
+
+	PrintDependentName(CoqPrinter& print_, ClangPrinter& cprint_)
+		: print(print_), cprint(cprint_) {}
+
+	void printDeclarationName(const DeclarationName& name) {
+		/*
+		TODO: This seems
+
+		- A bit limited --- compare to/share code with structured::printFunctionName
+
+		- A bit off --- `name.getAsString` does not account for `Ndtor` etc
+		*/
+		switch (name.getNameKind()) {
+		case DeclarationName::NameKind::Identifier: {
+			/*
+			Example: A function name that couldn't be resolved due to an
+			argument depending on a template parameter.
+			*/
+
+			auto atomic = [&]() -> fmt::Formatter& {
+				{
+					guard::ctor _(print, "Nfunction", false);
+					print.output() << "nil" << fmt::nbsp;
+					{
+						guard::ctor _(print, "Nf", false);
+						print.str(name.getAsString());
+					}
+					return print.output() << fmt::nbsp << "nil";
+				}
+			};
+
+			atomic();
+			break;
+		}
+
+		default:
+			llvm::errs() << "printDeclarationName(" << name.getNameKind()
+						 << ")";
+			name.dump();
+			print.output() << "(Nunsupported \"printDeclarationName("
+						   << name.getNameKind() << ")\")";
+		}
+	}
+
+	void Visit(const Expr* expr) {
+		llvm::errs() << "printDependentName(" << expr->getStmtClassName()
+					 << ")\n";
+		expr->dump();
+		ConstStmtVisitor<PrintDependentName, void>::Visit(expr);
+	}
+
+	void printNestedName(const DeclarationName& name,
+						 const NestedNameSpecifierLoc nnl) {
+		auto nn = nnl.getNestedNameSpecifier();
+		if (not nn) {
+			guard::ctor _(print, "Nglobal");
+			printDeclarationName(name);
+		} else if (nn->getKind() == NestedNameSpecifier::Global) {
+			guard::ctor _(print, "Nglobal");
+			printDeclarationName(name);
+		} else {
+			guard::ctor _(print, "Nscoped");
+			cprint.printName(nn, print, loc::loc(nnl.getBeginLoc()));
+			print.output() << fmt::nbsp;
+			printDeclarationName(name);
+		}
+	}
+
+	void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr* expr) {
+		if (expr->hasExplicitTemplateArgs()) {
+			guard::ctor _(print, "Ninst");
+			printNestedName(expr->getDeclName(), expr->getQualifierLoc());
+			print.output() << fmt::nbsp;
+			cprint.printTemplateArgumentList(expr->template_arguments(), print);
+		} else {
+			printNestedName(expr->getDeclName(), expr->getQualifierLoc());
+		}
+	}
+
+	void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr) {
+		printNestedName(expr->getName(), expr->getQualifierLoc());
+	}
+
+	void VisitUnresolvedMemberExpr(const UnresolvedMemberExpr* expr) {
+		auto name = expr->getName();
+		llvm::errs() << "printDeclarationName(" << expr->getName().getNameKind()
+					 << ")";
+		name.dump();
+
+		print.output() << "(Nunsupported \"VisitnresolvedMemberExpr\")";
+	}
+
+	void VisitExpr(const Expr* expr) {
+		llvm::errs() << "PrintDependentName(" << expr->getStmtClassName()
+					 << ")\n";
+		expr->dump();
+		always_assert(false && "expression is no an overload expression");
+	}
+
+private:
+	CoqPrinter& print;
+	ClangPrinter& cprint;
+};
+
+/**
+ * This class prints an expression (of Coq type [Expr] or [MExpr])
+ */
 class PrintExpr :
 	public ConstStmtVisitor<PrintExpr, void, CoqPrinter&, ClangPrinter&,
 							const ASTContext&, OpaqueNames&> {
@@ -259,8 +370,27 @@ public:
 
 	// These are template TODOs
 	IGNORE(CXXUnresolvedConstructExpr)
-	IGNORE(DependentScopeDeclRefExpr)
 	IGNORE(SizeOfPackExpr) // used in BHV
+
+	void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr* expr,
+										CoqPrinter& print, ClangPrinter& cprint,
+										const ASTContext&, OpaqueNames&) {
+		if (!print.templates())
+			return unsupported_expr(expr, print, cprint);
+
+		guard::ctor _(print, "Eunresolved_global");
+		PrintDependentName{print, cprint}.Visit(expr);
+	}
+
+	void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
+								   CoqPrinter& print, ClangPrinter& cprint,
+								   const ASTContext&, OpaqueNames&) {
+		if (!print.templates())
+			return unsupported_expr(expr, print, cprint);
+
+		guard::ctor _(print, "Eunresolved_global");
+		PrintDependentName{print, cprint}.Visit(expr);
+	}
 
 	void VisitRecoveryExpr(const RecoveryExpr* expr, CoqPrinter& print,
 						   ClangPrinter& cprint, const ASTContext&,
@@ -501,65 +631,17 @@ public:
 		}
 	}
 
-	void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
-								   CoqPrinter& print, ClangPrinter& cprint,
-								   const ASTContext&, OpaqueNames&) {
-		if (!print.templates())
-			return unsupported_expr(expr, print, cprint);
-
-		/*
-		TODO: This seems
-
-		- A bit limited --- compare to/share code with structured::printFunctionName
-
-		- A bit off --- `name.getAsString` does not account for `Ndtor` etc
-		*/
-		auto name = expr->getName();
-		switch (name.getNameKind()) {
-		case DeclarationName::NameKind::Identifier: {
-			/*
-			Example: A function name that couldn't be resolved due to an
-			argument depending on a template parameter.
-			*/
-
-			auto atomic = [&]() -> fmt::Formatter& {
-				guard::ctor _(print, "Nglobal", false);
-				{
-					guard::ctor _(print, "Nfunction", false);
-					print.output() << "nil" << fmt::nbsp;
-					{
-						guard::ctor _(print, "Nf", false);
-						print.str(name.getAsString());
-					}
-					return print.output() << fmt::nbsp << "nil";
-				}
-			};
-			// TODO: This presumably needs work for scoped templates
-			if (expr->hasExplicitTemplateArgs()) {
-				guard::ctor _(print, "Ninst");
-				atomic() << fmt::nbsp;
-				cprint.printTemplateArgumentList(expr->template_arguments(),
-												 print);
-			} else
-				atomic();
-			break;
-		}
-
-		default:
-			return unsupported_expr(expr, print, cprint);
-		}
-	}
-
 	void VisitCallExpr(const CallExpr* expr, CoqPrinter& print,
 					   ClangPrinter& cprint, const ASTContext&,
 					   OpaqueNames& li) {
 		auto callee = expr->getCallee();
-		if (print.templates() && is_dependent(expr)) {
+		if (is_dependent(expr)) {
 			/*
 			Either the function or an argument is dependent.
 			*/
 			guard::ctor ctor(print, "Eunresolved_call");
-			cprint.printExpr(expr->getCallee(), print, li) << fmt::line;
+			PrintDependentName{print, cprint}.Visit(callee);
+			print.output() << fmt::nbsp;
 			print.list(expr->arguments(),
 					   [&](auto i) { cprint.printExpr(i, print, li); });
 		} else if (auto pd = dyn_cast<CXXPseudoDestructorExpr>(callee)) {
@@ -1249,9 +1331,9 @@ public:
 						  "placement new gets a single argument");
 			always_assert(!expr->passAlignment() &&
 						  "alignment is not passed to placement new");
-			print.output() << "NonAllocating" << fmt::nbsp;
+			print.output() << "new_form.NonAllocating" << fmt::nbsp;
 		} else {
-			print.ctor("Allocating")
+			print.ctor("new_form.Allocating")
 				<< fmt::BOOL(expr->passAlignment()) << fmt::nbsp;
 			print.end_ctor() << fmt::nbsp;
 		}

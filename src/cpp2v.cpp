@@ -70,10 +70,10 @@ static cl::opt<std::string> Templates("templates", cl::desc("print templates"),
 									  cl::value_desc("filename"), cl::Optional,
 									  cl::cat(Cpp2V));
 
-static cl::opt<bool> StructuredKeys(
-	"structured-keys",
-	cl::desc("use structured names as keys in translation units"), cl::Optional,
-	cl::cat(Cpp2V));
+static cl::opt<bool>
+	MangledKeys("mangled-keys",
+				cl::desc("use mangled names as keys in translation units"),
+				cl::Optional, cl::cat(Cpp2V));
 
 static cl::opt<std::string> NameTest("name-test",
 									 cl::desc("print structured names"),
@@ -116,11 +116,10 @@ public:
 		llvm::errs() << i << "\n";
 	}
 #endif
-		auto result = new ToCoqConsumer(&Compiler, to_opt(VFileOutput),
-										to_opt(NamesFile), to_opt(Templates),
-										to_opt(NameTest), StructuredKeys,
-										Trace::fromBits(TraceBits.getBits()),
-										Comment, !NoSharing);
+		auto result = new ToCoqConsumer(
+			&Compiler, to_opt(VFileOutput), to_opt(NamesFile),
+			to_opt(Templates), to_opt(NameTest), !MangledKeys,
+			Trace::fromBits(TraceBits.getBits()), Comment, !NoSharing);
 		return std::unique_ptr<clang::ASTConsumer>(result);
 	}
 

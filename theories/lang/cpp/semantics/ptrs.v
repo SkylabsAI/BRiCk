@@ -18,7 +18,7 @@ Require Import bedrock.prelude.addr.
 Require Import bedrock.prelude.option.
 Require Import bedrock.prelude.numbers.
 
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
 Require Export bedrock.lang.cpp.semantics.types.
 Require Export bedrock.lang.cpp.semantics.genv.
 
@@ -203,7 +203,7 @@ Module Type PTRS.
    *)
   (* ^ the address of global variables & functions *)
   Parameter global_ptr :
-    translation_unit -> obj_name -> ptr.
+    translation_unit -> name -> ptr.
     (* Dynamic loading might require adding some abstract [translation_unit_id]. *)
     (* Might need deferring, as it needs designing a [translation_unit_id];
      since loading the same translation unit twice can give different
@@ -244,15 +244,15 @@ Module Type PTRS.
   (* [o_sub_0] axiom is required because any object is a 1-object array
      (https://eel.is/c++draft/expr.add#footnote-80).
    *)
-  Axiom o_sub_0 : ∀ σ ty, is_Some (size_of σ ty) -> .[ty ! 0] = o_id.
+  Axiom o_sub_0 : ∀ {σ : genv} ty, is_Some (size_of σ ty) -> .[ty ! 0] = o_id.
   (* TODO: drop (is_Some (size_of σ ty)) via
      `displacement (o_sub σ ty i) = if (i = 0) then 0 else i * size_of σ ty`
    *)
 
   (** going up and down the class hierarchy, one step at a time;
   these offsets are only for non-virtual inheritance. *)
-  Parameter o_base : genv -> forall (derived base : globname), offset.
-  Parameter o_derived : genv -> forall (base derived : globname), offset.
+  Parameter o_base : genv -> forall (derived base : name), offset.
+  Parameter o_derived : genv -> forall (base derived : name), offset.
 
   (* We're ignoring virtual inheritance here, since we have no plans to
   support it for now, but this might hold there too. *)
@@ -322,10 +322,10 @@ Module Type PTRS.
   this axiom to POD/Standard-layout structures.
   *)
   Axiom eval_o_field : forall σ f n cls st,
-    f = {| f_name := n ; f_type := cls |} ->
+    f = Field cls n ->
     glob_def σ cls = Some (Gstruct st) ->
     st.(s_layout) = POD \/ st.(s_layout) = Standard ->
-    eval_offset σ (o_field σ f) = offset_of σ (f_type f) (f_name f).
+    eval_offset σ (o_field σ f) = offset_of σ cls n.
 
   (* [eval_offset] respects the monoidal structure of [offset]s *)
   Axiom eval_offset_dot : ∀ σ (o1 o2 : offset),

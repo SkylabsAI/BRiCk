@@ -68,7 +68,7 @@
   Arguments NOTATION_wp_decl_nowrap decl%CPP_stmt_scope Q%function_scope
   NOTATION_wp_atomic_nil =
   λ (M : coPset) (Q : val → mpred),
-    ::wpAtomic (Mask ↦ M; Type ↦ ptr<void>) {e: {?: expr.AO__atomic_load}()}
+    ::wpAtomic (Mask ↦ M; Type ↦ ptr<void>) {e: {?: AO__atomic_load}()}
        : coPset → (val → mpred) → mpred
   
   Arguments NOTATION_wp_atomic_nil M Q%function_scope
@@ -76,7 +76,7 @@
   λ (M : coPset) (Q : val → mpred),
     ::wpAtomic
       (Mask ↦ M; Type ↦ ptr<void>) 
-      {e: {?: expr.AO__atomic_load}(Vundef, Vundef, Vundef)}
+      {e: {?: AO__atomic_load}(Vundef, Vundef, Vundef)}
        : coPset → (val → mpred) → mpred
   
   Arguments NOTATION_wp_atomic_cons_nowrap M Q%function_scope
@@ -84,14 +84,14 @@
   λ (M : coPset) (Q : val → mpred),
     ::wpAtomic
       (Mask ↦ M; Type ↦ ptr<void>) 
-      {e: {?: expr.AO__atomic_load}(Vundef,
-                                    Vundef,
-                                    Vundef,
-                                    Vundef,
-                                    Vundef,
-                                    Vundef,
-                                    Vundef,
-                                    1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089%Z)}
+      {e: {?: AO__atomic_load}(Vundef,
+                               Vundef,
+                               Vundef,
+                               Vundef,
+                               Vundef,
+                               Vundef,
+                               Vundef,
+                               1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089%Z)}
        : coPset → (val → mpred) → mpred
   
   Arguments NOTATION_wp_atomic_cons_wrap M Q%function_scope
@@ -325,32 +325,32 @@
   
   Arguments NOTATION_wp_dtor tu D ls%list_scope Q%function_scope
   NOTATION_wp_args_nowrap =
-  λ (tys_ar : expr.evaluation_order.t) (es : list (wp.WPE.M ptr)) 
+  λ (tys_ar : evaluation_order.t) (es : list (wp.WPE.M ptr)) 
     (Q : list decltype * function_arity),
     ::wpArgs
       [region:
         "bar" @ WpTestDefns.p'; "foo" @ WpTestDefns.p;
         [this := WpTestDefns.this]; return ptr<void>]
-       : expr.evaluation_order.t
+       : evaluation_order.t
          → list (wp.WPE.M ptr)
            → list decltype * function_arity
-             → list expr.Expr
+             → list Expr
                → (list ptr → list ptr → FreeTemps → FreeTemps → mpred) → mpred
   
   Arguments NOTATION_wp_args_nowrap tys_ar es%list_scope 
     Q es%list_scope Q%function_scope
   NOTATION_wp_args_wrap =
-  λ (tys_ar : expr.evaluation_order.t) (es : list (wp.WPE.M ptr)) 
+  λ (tys_ar : evaluation_order.t) (es : list (wp.WPE.M ptr)) 
     (Q : list decltype * function_arity),
     ::wpArgs
       [region:
         "qux" @ WpTestDefns.p'''; "baz" @ WpTestDefns.p'';
         "bar" @ WpTestDefns.p'; "foo" @ WpTestDefns.p;
         [this := WpTestDefns.this]; return ptr<void>]
-       : expr.evaluation_order.t
+       : evaluation_order.t
          → list (wp.WPE.M ptr)
            → list decltype * function_arity
-             → list expr.Expr
+             → list Expr
                → (list ptr → list ptr → FreeTemps → FreeTemps → mpred) → mpred
   
   Arguments NOTATION_wp_args_wrap tys_ar es%list_scope 
@@ -448,7 +448,7 @@
   Arguments NOTATION_wp_decl_nowrap decl%CPP_stmt_scope Q%function_scope
   NOTATION_wp_atomic_nil =
   λ (M : coPset) (Q : val → mpred),
-    ::wpAtomic (Mask ↦ M; Type ↦ ptr<void>)  {e: expr.AO__atomic_load()} Q
+    ::wpAtomic (Mask ↦ M; Type ↦ ptr<void>)  {e: AO__atomic_load()} Q
        : coPset → (val → mpred) → mpred
   
   Arguments NOTATION_wp_atomic_nil M Q%function_scope
@@ -456,7 +456,7 @@
   λ (M : coPset) (Q : val → mpred),
     ::wpAtomic
       (Mask ↦ M; Type ↦ ptr<void>) 
-       {e: expr.AO__atomic_load(Vundef, Vundef, Vundef)}
+       {e: AO__atomic_load(Vundef, Vundef, Vundef)}
       Q
        : coPset → (val → mpred) → mpred
   
@@ -465,14 +465,14 @@
   λ (M : coPset) (Q : val → mpred),
     ::wpAtomic
       (Mask ↦ M; Type ↦ ptr<void>) 
-       {e: expr.AO__atomic_load(Vundef,
-                                Vundef,
-                                Vundef,
-                                Vundef,
-                                Vundef,
-                                Vundef,
-                                Vundef,
-                                1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089%Z)}
+       {e: AO__atomic_load(Vundef,
+                           Vundef,
+                           Vundef,
+                           Vundef,
+                           Vundef,
+                           Vundef,
+                           Vundef,
+                           1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089%Z)}
       Q
        : coPset → (val → mpred) → mpred
   
@@ -714,23 +714,23 @@
   
   Arguments NOTATION_wp_dtor tu D ls%list_scope Q%function_scope
   NOTATION_wp_args_nowrap =
-  λ (tys_ar : expr.evaluation_order.t) (es : list (wp.WPE.M ptr)) 
+  λ (tys_ar : evaluation_order.t) (es : list (wp.WPE.M ptr)) 
     (Q : list decltype * function_arity),
     ::wpArgs
       [region:
         "bar" @ WpTestDefns.p'; "foo" @ WpTestDefns.p;
         [this := WpTestDefns.this]; return ptr<void>]
       Q
-       : expr.evaluation_order.t
+       : evaluation_order.t
          → list (wp.WPE.M ptr)
            → list decltype * function_arity
-             → list expr.Expr
+             → list Expr
                → (list ptr → list ptr → FreeTemps → FreeTemps → mpred) → mpred
   
   Arguments NOTATION_wp_args_nowrap tys_ar es%list_scope 
     Q es%list_scope Q%function_scope
   NOTATION_wp_args_wrap =
-  λ (tys_ar : expr.evaluation_order.t) (es : list (wp.WPE.M ptr)) 
+  λ (tys_ar : evaluation_order.t) (es : list (wp.WPE.M ptr)) 
     (Q : list decltype * function_arity),
     ::wpArgs
       [region:
@@ -738,10 +738,10 @@
         "bar" @ WpTestDefns.p'; "foo" @ WpTestDefns.p;
         [this := WpTestDefns.this]; return ptr<void>]
       Q
-       : expr.evaluation_order.t
+       : evaluation_order.t
          → list (wp.WPE.M ptr)
            → list decltype * function_arity
-             → list expr.Expr
+             → list Expr
                → (list ptr → list ptr → FreeTemps → FreeTemps → mpred) → mpred
   
   Arguments NOTATION_wp_args_wrap tys_ar es%list_scope 

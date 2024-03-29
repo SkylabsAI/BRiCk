@@ -31,9 +31,9 @@ Section with_Sigma.
       you write predicates more conveniently.
  *)
 
-  Notation "`::Point::x`" :={| f_type := "Z4Point" ; f_name := field_name.Id "_Z4Pointx" |} (at level 0).
+  Notation "`::Point::x`" := (Nscoped (Nglobal $ Nid "Point") (Nid "x")) (at level 0).
 
-  Notation "`::Point::y`" :={| f_type := "Z4Point" ; f_name := field_name.Id "_Z4Pointy" |} (at level 0).
+  Notation "`::Point::y`" := (Nscoped (Nglobal $ Nid "Point") (Nid "y")) (at level 0).
 
   (**
 Just like [intR] defines the memory representation for the type [int],
@@ -41,7 +41,7 @@ we can define [PointR] to define the memory representation for the class [Point]
 The following says, that the field x contains the integer 1 and field y contains
 the integer value [5] *)
 
-    Example PointR15 (q : Qp) : Rep :=
+  Example PointR15 (q : Qp) : Rep :=
     _field `::Point::x`  |-> intR q 1 **
     _field `::Point::y`  |-> intR q 5.
 

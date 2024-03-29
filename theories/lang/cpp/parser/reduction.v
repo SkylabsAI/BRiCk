@@ -4,8 +4,4 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Import bedrock.lang.cpp.parser2.prelude.
-
-Module Type PARSER_LANG.
-  Parameter Inline parser_lang : Set.
-End PARSER_LANG.
+Declare Reduction reduce_translation_unit := vm_compute.
