@@ -5,9 +5,7 @@
  *)
 Require Import Coq.ZArith.ZArith.
 
-Require bedrock.lang.cpp.ast.
-Require Import bedrock.lang.cpp.syntax.expr.
-Require Import bedrock.lang.cpp.syntax.names.
+Require Import bedrock.lang.cpp.syntax.core.
 Require Export bedrock.lang.cpp.syntax.type_notations.
 
 #[local] Open Scope Z_scope.
@@ -290,7 +288,7 @@ Module ExprNotations.
          , only printing).
 
   Notation "e . fld"
-      := (Emember e (Build_field _ fld%bs) _ _)
+      := (Emember e fld%bs _ _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , fld constr

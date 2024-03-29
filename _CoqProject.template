@@ -73,6 +73,7 @@ theories/prelude/named_binder.v
 
 theories/prelude/base.v
 theories/prelude/option.v
+theories/prelude/sum.v
 theories/prelude/addr.v
 theories/prelude/numbers.v
 theories/prelude/bytestring.v
@@ -83,6 +84,7 @@ theories/prelude/gmap.v
 theories/prelude/list.v
 theories/prelude/list_numbers.v
 theories/prelude/bitsN.v
+theories/prelude/compare.v
 
 theories/prelude/axioms/funext.v
 theories/prelude/bool.v
@@ -197,17 +199,23 @@ theories/lang/cpp/arith/builtins.v
 theories/lang/cpp/arith/z_to_bytes.v
 
 # Syntax
-theories/lang/cpp/syntax/names.v
-theories/lang/cpp/syntax/types.v
-theories/lang/cpp/syntax/type_notations.v
-theories/lang/cpp/syntax/expr.v
-theories/lang/cpp/syntax/expr_notations.v
-theories/lang/cpp/syntax/stmt.v
-theories/lang/cpp/syntax/stmt_notations.v
+theories/lang/cpp/syntax/compare.v
+theories/lang/cpp/syntax/core.v
 theories/lang/cpp/syntax/decl.v
+theories/lang/cpp/syntax/expr_notations.v
+theories/lang/cpp/syntax/notations.v
+theories/lang/cpp/syntax/overloadable.v
+theories/lang/cpp/syntax/preliminary.v
+theories/lang/cpp/syntax/prelude.v
+theories/lang/cpp/syntax/pretty.v
+theories/lang/cpp/syntax/stmt_notations.v
+theories/lang/cpp/syntax/stmt.v
+theories/lang/cpp/syntax/templates.v
 theories/lang/cpp/syntax/translation_unit.v
+theories/lang/cpp/syntax/type_notations.v
+theories/lang/cpp/syntax/types.v
 theories/lang/cpp/syntax/typing.v
-theories/lang/cpp/ast.v
+theories/lang/cpp/syntax.v
 theories/lang/cpp/code_notations.v
 
 # Semantics
@@ -226,6 +234,7 @@ theories/lang/cpp/semantics/cast_operator.v
 theories/lang/cpp/semantics/types.v
 theories/lang/cpp/semantics/dispatch.v
 theories/lang/cpp/semantics/intensional.v
+theories/lang/cpp/semantics/heap_types.v
 theories/lang/cpp/semantics.v
 
 # Program Logic
@@ -299,6 +308,14 @@ theories/lang/cpp/primitives.v
 theories/lang/cpp/specs/elaborate.v
 
 # Notations for cpp2v
+theories/lang/cpp/parser/prelude.v
+theories/lang/cpp/parser/decl.v
+theories/lang/cpp/parser/expr.v
+theories/lang/cpp/parser/lang.v
+theories/lang/cpp/parser/reduction.v
+theories/lang/cpp/parser/stmt.v
+theories/lang/cpp/parser/type.v
+theories/lang/cpp/parser/notation.v
 theories/lang/cpp/parser.v
 
 # Soundness semantics

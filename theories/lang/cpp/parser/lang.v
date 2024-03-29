@@ -4,7 +4,8 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Export bedrock.prelude.base.
-Require Export bedrock.prelude.bytestring.
-Require Export bedrock.prelude.option.
-Require Export bedrock.lang.cpp.syntax2.
+Require Import bedrock.lang.cpp.parser.prelude.
+
+Module Type PARSER_LANG.
+  Parameter Inline parser_lang : lang.t.
+End PARSER_LANG.

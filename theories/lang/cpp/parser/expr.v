@@ -4,20 +4,21 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
-Require Import bedrock.lang.cpp.parser2.prelude.
-Require Import bedrock.lang.cpp.parser2.lang.
+Require Import bedrock.lang.cpp.syntax.types(drop_qualifiers).
+Require Import bedrock.lang.cpp.parser.prelude.
+Require Import bedrock.lang.cpp.parser.lang.
 
 #[local] Arguments force_some _ {_} : assert.	(** TODO: Upstream? *)
 
 (** * Derived expressions emitted by cpp2v *)
 
 Module ParserExpr (Import Lang : PARSER_LANG).
-  #[local] Notation name := (name parser_lang).
-  #[local] Notation obj_name := (obj_name parser_lang).
-  #[local] Notation type := (type parser_lang).
-  #[local] Notation exprtype := (exprtype parser_lang).
-  #[local] Notation decltype := (decltype parser_lang).
-  #[local] Notation Expr := (Expr parser_lang).
+  #[local] Notation name := (name' parser_lang).
+  #[local] Notation obj_name := (obj_name' parser_lang).
+  #[local] Notation type := (type' parser_lang).
+  #[local] Notation exprtype := (exprtype' parser_lang).
+  #[local] Notation decltype := (decltype' parser_lang).
+  #[local] Notation Expr := (Expr' parser_lang).
 
   Definition Eoperator_member_call (oo : OverloadableOperator) (nm : obj_name) (ct : dispatch_type) (ft : type) (obj : Expr) (es : list Expr) : Expr :=
     Eoperator_call oo (operator_impl.MFunc nm ct ft) (obj :: es).
@@ -36,7 +37,7 @@ Module ParserExpr (Import Lang : PARSER_LANG).
     let e :=
       if arrow then
         match drop_qualifiers $ type_of e with
-        | Tptr t => Some (ast2.Ederef e t)
+        | Tptr t => Some (Ederef e t)
         | _ => None
         end
       else

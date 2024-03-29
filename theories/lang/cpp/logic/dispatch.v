@@ -7,7 +7,7 @@
  * reflecting virtual function dispatch in the logic.
  *)
 Require Import bedrock.lang.proofmode.proofmode.
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
 Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.heap_pred.
@@ -33,6 +33,14 @@ Section with_cpp.
     | base :: rest => o_dot (base_to_derived base rest) (o_derived σ base derived)
     end.
 
+  Fixpoint base_to_derived_ty {σ : genv} (derived : globname) (path : list type) : option offset :=
+    match path with
+    | nil => Some o_id
+    | Tnamed base :: rest => (fun rest => o_dot rest (o_derived σ base derived)) <$> (base_to_derived_ty base rest)
+    | _ => None
+    end.
+
+
   (** [derived_to_base derived path] is the offset from [derived]
       from the path [path]. For example,
       [[
@@ -48,6 +56,14 @@ Section with_cpp.
     | nil => o_id
     | base :: rest => o_dot (o_base σ derived base) (derived_to_base base rest)
     end.
+
+  Fixpoint derived_to_base_ty {σ : genv} (derived : globname) (path : list type) : option offset :=
+    match path with
+    | nil => Some o_id
+    | Tnamed base :: rest => o_dot (o_base σ derived base) <$> (derived_to_base_ty base rest)
+    | _ => None
+    end.
+
 
   (** If successful, returns a pair of the function pointer to the
    *  implementation and the downcast for [this] pointer. *)

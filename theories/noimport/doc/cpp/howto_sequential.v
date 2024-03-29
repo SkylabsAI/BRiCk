@@ -77,12 +77,10 @@ Now let's write the representation predicate. It will refer to the
 by cpp2v as:
 *)
 
-Notation "'::Range::_begin'" :=
-{| f_type := "_Z5Range" ; f_name := field_name.Id "_begin"
- |} (in custom cppglobal at level 0).
-Notation "'::Range::_size'" :=
-{| f_type := "_Z5Range" ; f_name := field_name.Id "_size"
- |} (in custom cppglobal at level 0).
+Notation "'::Range::_begin'" := (Nscoped (Nglobal $ Nid "Range") (Nid "_begin"))
+                                (in custom cppglobal at level 0).
+Notation "'::Range::_size'" := (Nscoped (Nglobal $ Nid "Range") (Nid "_size"))
+                               (in custom cppglobal at level 0).
 
 Definition _begin := _field `::Range::_begin`.
 Definition _size := _field `::Range::_size`.

@@ -29,7 +29,7 @@ applying its functors. We capture what we need.
 Module FMapExtra.
 
   Module Type LEIBNIZ_EQ (T : Equalities.Eq).
-    Parameter eqL : T.eq = @eq T.t.
+    Parameter eqL : forall a b, T.eq a b -> a = b.
   End LEIBNIZ_EQ.
 
   Module Type RAW (Key : OrderedType).
@@ -267,6 +267,14 @@ Module FMapExtra.
 
     #[local] Notation K := Key.t.
 
+    (* This proof requires that [Key.eq a b -> a = b]
+       This could be relaxed if we change the statement to:
+       [[
+       m !! k = Some v -> exists xs ys k',
+            map_to_list m = xs ++ (k', v) :: ys /\
+            Key.eq k k'
+       ]]
+     *)
     Lemma map_to_list_elements {A} (k : Key.t) (v : A) (m : Map.t A) :
       m !! k = Some v ->
       exists xs ys, map_to_list m = xs ++ (k, v) :: ys.
@@ -278,7 +286,8 @@ Module FMapExtra.
       apply Map.elements_1 in H.
       eapply InA_alt in H.
       destruct H as [p [H1 H2]].
-      rewrite /Map.eq_key_elt eqL /= in H1. destruct H1; subst.
+      rewrite /Map.eq_key_elt/= in H1.
+      destruct H1 as [H1 ?]; apply eqL in H1; subst.
       eapply in_split in H2.
       destruct H2 as [l1 [l2 ->]].
       exists (rev l2), (rev l1).
@@ -288,6 +297,9 @@ Module FMapExtra.
     Definition find_any {T} (p : K -> T -> bool) (m : Map.t T) : bool :=
       Map.fold (fun k v (acc : bool) => if acc then true else p k v) m false.
 
+    (* This proof only requires that [b] is invariant under [Key.eq], i.e.
+       [forall k k' v, Key.eq k k' -> b k v = b k' v]
+     *)
     Lemma find_any_ok {T} b (m : Map.t T) :
       if find_any b m
       then exists k v, Map.MapsTo k v m /\ b k v = true
@@ -300,16 +312,16 @@ Module FMapExtra.
         then exists k v, InA (Map.eq_key_elt (elt:=T)) (k, v) (Map.elements m) /\ b k v = true
         else forall k v, InA (Map.eq_key_elt (elt:=T)) (k, v) (Map.elements m) -> b k v = false
       ).
-      { rewrite/Map.eq_key_elt eqL/=. induction (Map.elements m) as [|kv kvs IH]; simpl.
+      { rewrite/Map.eq_key_elt.  (* rewrite eqL. /=. *) induction (Map.elements m) as [|kv kvs IH]; simpl.
         { inversion 1. }
         { destruct (b kv.1 kv.2) eqn:?.
           { enough (fold_left (λ (a : bool) (p : Map.key * T), if a then true else b p.1 p.2) kvs true = true) as ->.
-            { do 2 eexists. split; eauto. }
+            { do 2 eexists. split; eauto. left. split; eauto. reflexivity. }
             clear. induction kvs; simpl; auto. }
           { case_match.
             { destruct IH as (? & ? & ? & ?). do 2 eexists; split; eauto. }
             { inversion 1 as [???Hhd|].
-              { cbn in Hhd. destruct Hhd. by simplify_eq. }
+              { cbn in Hhd. destruct Hhd. subst. apply eqL in H3. by subst. }
               { simplify_eq. auto. } } } } }
       { destruct (fold_left _ _ false).
         { destruct Hsuff as [ k [ v [ ? ? ] ] ].
@@ -324,7 +336,8 @@ End FMapExtra.
 (* backwards compatibility *)
 
 Module IM.
-  Definition eqL : OT_bs.eq = @eq bs := eq_refl.
+  Lemma eqL : forall a b, OT_bs.eq a b -> a = b.
+  Proof. done. Qed.
   Include FMapAVL.Make OT_bs.
   Include FMapExtra.MIXIN OT_bs.
   Include FMapExtra.MIXIN_LEIBNIZ OT_bs.

@@ -15,7 +15,7 @@
 Require Import bedrock.prelude.base.
 Require Import bedrock.prelude.numbers.
 Require Export bedrock.lang.cpp.arith.operator.
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
 Require Import bedrock.lang.cpp.semantics.values.
 
 #[local] Open Scope Z_scope.
@@ -167,15 +167,25 @@ Definition promote_integral {σ : genv} (tu : translation_unit) (ty : type) : op
   | Tvoid
   | Tarray _ _
   | Tincomplete_array _
-  | Tvariable_array _
+  | Tvariable_array _ _
   | Tnamed _
-  | Tfunction _ _
+  | Tfunction _
   | Tmember_pointer _ _
   | Tfloat_ _
   | Tnullptr
   | Tarch _ _ => None
   | Tqualified _ _ => None (* unreachable *)
   | Tunsupported _ => None
+  | Tparam _
+  | Tresult_param _
+  | Tresult_global _
+  | Tresult_parenlist _ _
+  | Tresult_member_call _ _ _
+  | Tresult_member _ _
+  | Tresult_unop _ _
+  | Tresult_binop _ _ _
+  | Tdecltype _ (* ?? *)
+  | Tresult_call _ _ => None
   end.
 
 Goal forall {σ : genv} tu, promote_integral tu Tchar = Some Tint.

@@ -28,7 +28,7 @@ Definition primitiveR `{Σ : cpp_logic} {σ : genv} q ty :=
     uninitialized.
  *)
 mlock
-Definition anyR `{Σ : cpp_logic} {σ : genv} (ty : type) (q : cQp.t) : Rep :=
+Definition anyR `{Σ : cpp_logic} {σ : genv} (ty : Rtype) (q : cQp.t) : Rep :=
   everywhereR σ.(genv_tu) primitiveR q ty.
 #[global] Arguments anyR {_ _ Σ σ} _ _ : assert.
 
@@ -293,7 +293,7 @@ Section with_cpp.
 
   (** decompose a union into the classical disjunction of the alternatives
    *)
-  Lemma anyR_union : forall (cls : globname) un q,
+  Lemma anyR_union : forall cls un q,
     glob_def σ cls = Some (Gunion un) ->
         anyR (Tnamed cls) q
     -|- Reduce (union_defR anyR cls un q).

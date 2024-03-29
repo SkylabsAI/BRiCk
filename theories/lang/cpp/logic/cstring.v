@@ -11,7 +11,7 @@ Require Export Coq.Strings.Ascii.
 Require Import bedrock.lang.proofmode.proofmode.
 
 Require Import bedrock.prelude.stdpp_ssreflect.
-Require bedrock.prelude.bytestring.
+Require Import bedrock.prelude.bytestring.
 Require Import bedrock.prelude.base.
 Require Import bedrock.lang.bi.prelude.
 Require Import bedrock.lang.bi.observe.

@@ -4,9 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.prelude.base.
-Require Import bedrock.lang.cpp.syntax.names.
-Require Import bedrock.lang.cpp.syntax.types.
-Require Import bedrock.lang.cpp.syntax.expr.
+Require Import bedrock.lang.cpp.syntax.core.
 Require Import bedrock.prelude.bytestring.
 
 Set Primitive Projections.
@@ -17,16 +15,15 @@ Variant SwitchBranch : Set :=
 #[global] Instance: EqDecision SwitchBranch.
 Proof. solve_decision. Defined.
 
-Inductive VarDecl' {obj_name type Expr : Set} : Set :=
-| Dvar (name : localname) (_ : type) (init : option Expr)
-| Ddecompose (_ : Expr) (anon_var : ident) (_ : list VarDecl')
+Inductive VarDecl' {lang} : Set :=
+| Dvar (name : localname) (_ : type' lang) (init : option (Expr' lang))
+| Ddecompose (_ : Expr' lang) (anon_var : ident) (_ : list VarDecl')
   (* initialization of a function-local [static]. See https://eel.is/c++draft/stmt.dcl#3 *)
-| Dinit (thread_safe : bool) (name : obj_name) (_ : type) (init : option Expr).
-#[global] Arguments VarDecl' _ _ _ : clear implicits, assert.
-#[global] Instance VarDecl_eq_dec {obj_name type Expr : Set} `{!EqDecision obj_name, !EqDecision type, !EqDecision Expr} :
-  EqDecision (VarDecl' obj_name type Expr).
+| Dinit (thread_safe : bool) (name : name' lang) (_ : type' lang) (init : option (Expr' lang)).
+#[global] Arguments VarDecl' _ : clear implicits, assert.
+#[global] Instance VarDecl_eq_dec {lang} : EqDecision (VarDecl' lang).
 Proof.
-  refine (fix dec (x y : VarDecl' obj_name type Expr) : {x = y} + {x <> y} :=
+  refine (fix dec (x y : VarDecl' lang) : {x = y} + {x <> y} :=
             let _ : EqDecision _ := dec in
             match x as x , y as y return {x = y} + {x <> y} with
             | Ddecompose xi xx xs , Ddecompose yi yx ys =>
@@ -58,55 +55,48 @@ Proof.
   { by destruct pf as [ -> [ -> [ -> -> ] ] ]. }
   { intro. apply pf. inversion H; tauto. }
 Defined.
-Notation VarDecl := (VarDecl' obj_name decltype Expr).
+Notation VarDecl := (VarDecl' lang.cpp).
 
-Inductive Stmt' {obj_name type Expr : Set} : Set :=
+Inductive Stmt' {lang} : Set :=
 | Sseq    (_ : list Stmt')
-| Sdecl   (_ : list (VarDecl' obj_name type Expr))
+| Sdecl   (_ : list (VarDecl' lang))
 
-| Sif     (_ : option (VarDecl' obj_name type Expr)) (_ : Expr) (_ _ : Stmt')
-| Swhile  (_ : option (VarDecl' obj_name type Expr)) (_ : Expr) (_ : Stmt')
-| Sfor    (_ : option Stmt') (_ : option Expr) (_ : option Expr) (_ : Stmt')
-| Sdo     (_ : Stmt') (_ : Expr)
+| Sif     (_ : option (VarDecl' lang)) (_ : Expr' lang) (_ _ : Stmt')
+| Swhile  (_ : option (VarDecl' lang)) (_ : Expr' lang) (_ : Stmt')
+| Sfor    (_ : option Stmt') (_ : option (Expr' lang)) (_ : option (Expr' lang)) (_ : Stmt')
+| Sdo     (_ : Stmt') (_ : Expr' lang)
 
-| Sswitch (_ : option (VarDecl' obj_name type Expr)) (_ : Expr) (_ : Stmt')
+| Sswitch (_ : option (VarDecl' lang)) (_ : Expr' lang) (_ : Stmt')
 | Scase   (_ : SwitchBranch)
 | Sdefault
 
 | Sbreak
 | Scontinue
 
-| Sreturn (_ : option Expr)
+| Sreturn (_ : option (Expr' lang))
 
-| Sexpr   (_ : Expr)
+| Sexpr   (_ : Expr' lang)
 
 | Sattr (_ : list ident) (_ : Stmt')
 
 | Sasm (_ : bs) (volatile : bool)
-       (inputs : list (ident * Expr))
-       (outputs : list (ident * Expr))
+       (inputs : list (ident * (Expr' lang)))
+       (outputs : list (ident * (Expr' lang)))
        (clobbers : list ident)
 
 | Slabeled (_ : ident) (_ : Stmt')
 | Sgoto (_ : ident)
 | Sunsupported (_ : bs).
-#[global] Arguments Stmt' _ _ _ : clear implicits, assert.
-#[global] Instance Stmt_eq_dec {obj_name type Expr : Set} `{!EqDecision obj_name, !EqDecision type, !EqDecision Expr} :
-  EqDecision (Stmt' obj_name type Expr).
+#[global] Arguments Stmt' _ : clear implicits, assert.
+#[global] Instance Stmt_eq_dec {lang} : EqDecision (Stmt' lang).
 Proof.
   rewrite /RelDecision /Decision.
   fix IHs 1.
   rewrite -{1}/(EqDecision _) in IHs.
   decide equality; try solve_trivial_decision.
 Defined.
-Notation Stmt := (Stmt' obj_name decltype Expr).
+Notation Stmt := (Stmt' lang.cpp).
+Notation MStmt := (Stmt' lang.temp).
 
-Definition Sskip {obj_name type Expr : Set} : Stmt' obj_name type Expr := Sseq nil.
+Definition Sskip {lang} : Stmt' lang := Sseq nil.
 
-Variant OrDefault {t : Set} : Set :=
-| Defaulted
-| UserDefined (_ : t).
-Arguments OrDefault : clear implicits.
-
-#[global] Instance OrDefault_eq_dec: forall {T: Set}, EqDecision T -> EqDecision (OrDefault T).
-Proof. solve_decision. Defined.

@@ -356,8 +356,7 @@ static fmt::Formatter &
 printAnonymousFieldName(const FieldDecl &field, CoqPrinter &print,
 						ClangPrinter &cprint) {
 	if (auto rec = getTypeAsRecord(field)) {
-		guard::ctor _(print, "field_name.Anon");
-		return cprint.printName(rec, print, loc::of(field));
+		return cprint.printName(rec, print, loc::of(field), false);
 	} else {
 		unsupported(cprint, loc::of(field),
 					"anonymous field not of record type");
@@ -396,7 +395,9 @@ printFields(const CXXRecordDecl &decl, const ASTRecordLayout *layout,
 		if (field->isBitField())
 			fatal(cprint, loc::of(field), "bit fields are not supported");
 
-		guard::ctor _(print, "mkMember", i != 0);
+		guard::ctor _(print, "@mkMember", i != 0);
+		print.output() << (print.templates() ? "lang.temp" : "lang.cpp")
+					   << fmt::nbsp;
 		printFieldName(*field, print, cprint) << fmt::nbsp;
 		cprint.printQualType(field->getType(), print, loc::of(field))
 			<< fmt::nbsp;
@@ -424,25 +425,21 @@ printStructBases(const CXXRecordDecl &decl, const ASTRecordLayout *layout,
 			fatal("null base class");
 
 		auto dependent = [&]() -> auto & {
-			guard::tuple _(print);
-			cprint.printType(type, print, loc::of(decl)) << fmt::tuple_sep;
+			guard::ctor _(print, "mkBase");
+			cprint.printType(type, print, loc::of(decl)) << fmt::nbsp;
 			return printLayoutInfo(0, print);
 		};
 		if (print.templates())
 			return dependent();
-		else if (auto record = type->getAsCXXRecordDecl()) {
-			guard::tuple _(print);
-			cprint.printName(record, print, loc::of(type)) << fmt::tuple_sep;
+		else {
+			auto record = type->getAsCXXRecordDecl();
+			always_assert(record && "base class not a RecordType");
+			guard::ctor _(print, "mkBase");
+			cprint.printName(record, print, loc::of(type)) << fmt::nbsp;
 			auto li =
 				layout ? layout->getBaseClassOffset(record).getQuantity() : 0;
 			return printLayoutInfo(li, print);
-		} else if (!ClangPrinter::warn_well_known && type->isDependentType()) {
-			/*
-			The guard on `record` used to be an assert, and ignored.
-			*/
-			return dependent();
-		} else
-			fatal("base class not of RecordType");
+		}
 	});
 }
 
@@ -690,7 +687,7 @@ printMethod(const CXXMethodDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 		<< fmt::nbsp;
 	printFunctionParams(decl, print, cprint) << fmt::nbsp;
 	cprint.printCallingConv(decl, print) << fmt::nbsp;
-	cprint.printVariadic(decl.isVariadic(), print) << fmt::line;
+	cprint.printVariadic(decl.isVariadic(), print) << fmt::nbsp;
 	if (auto body = decl.getBody()) {
 		guard::some some(print);
 		guard::ctor _(print, "UserDefined");
@@ -730,20 +727,28 @@ printInitPath(const CXXConstructorDecl &decl, const CXXCtorInitializer &init,
 			  CoqPrinter &print, ClangPrinter &cprint) {
 	auto fatal = [&](StringRef msg)
 					 NORETURN { ::fatal(cprint, loc::of(decl), msg); };
+	auto lang = [&]() {
+		print.output() << fmt::nbsp
+					   << (print.templates() ? "lang.temp" : "lang.cpp")
+					   << fmt::nbsp;
+	};
 	if (init.isMemberInitializer()) {
 		auto fd = init.getMember();
 		always_assert(fd && "member initializer without member");
-		guard::ctor _(print, "InitField", false);
+		guard::ctor _(print, "@InitField", false);
+		lang();
 		return printFieldName(*fd, print, cprint);
 	} else if (init.isBaseInitializer()) {
-		guard::ctor _(print, "InitBase", false);
+		guard::ctor _(print, "@InitBase", false);
+		lang();
 		return printClassName(init.getBaseClass(), print, cprint,
 							  loc::of(decl));
 	} else if (init.isIndirectMemberInitializer()) {
 		auto fd = init.getIndirectMember();
 		if (!fd)
 			fatal("indirect field initializer without field");
-		guard::ctor _1(print, "InitIndirect", false);
+		guard::ctor _1(print, "@InitIndirect", false);
+		lang();
 		auto id = printIndirectFieldChain(decl, *fd, print, cprint);
 		print.output() << fmt::nbsp;
 		guard::ctor _2(print, "field_name.Id", false);
