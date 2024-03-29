@@ -5,7 +5,7 @@
  *)
 Require Import ExtLib.Tactics.Forward.
 Require Import bedrock.lang.proofmode.proofmode.
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
 Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.path_pred.
@@ -86,7 +86,7 @@ Section with_resolve.
 
   Definition arg_types (ty : functype) : option (list decltype * function_arity) :=
     match ty with
-    | @Tfunction _ ar _ args => Some (args, ar)
+    | Tfunction {| ft_arity := ar ; ft_params := args |} => Some (args, ar)
     | _ => None
     end.
 

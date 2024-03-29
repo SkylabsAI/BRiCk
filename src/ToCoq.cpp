@@ -105,7 +105,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 	auto parser = [&](CoqPrinter& print) -> auto& {
 		StringRef coqmod(print.templates() ?
 							 "bedrock.auto.cpp.templates.mparser2" :
-							 "bedrock.lang.cpp.parser2");
+							 "bedrock.lang.cpp.parser");
 		return print.output()
 			   << "Require Import " << coqmod << "." << fmt::line << fmt::line;
 	};
@@ -125,15 +125,15 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 		if (sharing) {
 			PRINTER<clang::Type> type_fn = [&](auto prefix, auto num,
 											   auto* type) {
-				print.output() << "#[local] Definition " << prefix << num
-							   << " : Stype := ";
+				print.output()
+					<< "#[local] Definition " << prefix << num << " : type := ";
 				cprint.printType(type, print, loc::of(type));
 				print.output() << "." << fmt::line;
 			};
 			PRINTER<clang::NamedDecl> name_fn = [&](auto prefix, auto num,
 													auto* decl) {
-				print.output() << "#[local] Definition " << prefix << num
-							   << " : Sname := ";
+				print.output()
+					<< "#[local] Definition " << prefix << num << " : name := ";
 				cprint.printName(decl, print, loc::of(decl));
 				print.output() << "." << fmt::line;
 			};

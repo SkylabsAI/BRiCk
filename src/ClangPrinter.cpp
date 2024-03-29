@@ -150,35 +150,7 @@ ClangPrinter::printField(const ValueDecl *decl, CoqPrinter &print) {
 	if (trace(Trace::Decl))
 		trace("printField", loc::of(decl));
 
-	if (auto f = dyn_cast<clang::FieldDecl>(decl)) {
-		guard::ctor _(print, "Build_field", false);
-		this->printName(f->getParent(), print, loc::of(f)) << fmt::nbsp;
-		if (auto id = f->getIdentifier()) {
-			guard::ctor _(print, "field_name.Id", false);
-			return print.str(id->getName());
-		} else {
-			const CXXRecordDecl *rd = f->getType()->getAsCXXRecordDecl();
-			always_assert(rd && "unnamed field must be a record");
-			guard::ctor _(print, "field_name.Anon", false);
-			return this->printName(rd, print, loc::of(f));
-		}
-	} else if (auto meth = dyn_cast<clang::CXXMethodDecl>(decl)) {
-		auto id = meth->getIdentifier();
-		always_assert(id && "unnamed method");
-		guard::ctor _1(print, "Build_field", false);
-		this->printName(meth->getParent(), print, loc::of(meth)) << fmt::nbsp;
-		guard::ctor _2(print, "field_name.Id", false);
-		return print.str(id->getName());
-	} else if (isa<VarDecl>(decl)) {
-		// TODO: We do not have the option to emit nothing here.
-		always_assert(false && "printField: VarDecl unsupported");
-	} else {
-		auto loc = loc::of(decl);
-		error_prefix(logging::fatal(), loc)
-			<< "error: member not pointing to field\n";
-		debug_dump(loc);
-		logging::die();
-	}
+	return this->printName(*decl, print);
 }
 
 std::string

@@ -6,14 +6,15 @@
 
 Require Import bedrock.prelude.base.
 Require Import bedrock.prelude.bytestring_core.
-Require Import bedrock.lang.cpp.syntax2.
+Require Import bedrock.lang.cpp.syntax.
 
+(*
 #[local] Notation Expr := SExpr.
 #[local] Notation Stmt := SStmt.
 #[local] Notation exprtype := Sexprtype.
 #[local] Notation decltype := Sdecltype.
 #[local] Notation ObjValue := SObjValue.
-
+*)
 
 Variant Error :=
 | ValCatError (_ : Expr) (observed expected : ValCat)
@@ -64,7 +65,7 @@ Definition check_stmt (s : Stmt) : list Error :=
 
 
 Definition run_test (tu : translation_unit) : list Error :=
-  match tu.(symbols) !! "_Z4testv"%bs with
+  match tu.(symbols) !! Nglobal (Nfunction [] (Nf "test") []) with
   | Some d =>
       match d with
       | Ofunction f =>

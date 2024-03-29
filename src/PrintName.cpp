@@ -1049,10 +1049,10 @@ printName(const Decl& decl, CoqPrinter& print, ClangPrinter& cprint) {
 			return printAtomicName(ctx, decl, print, cprint);
 		};
 		if (ctx->isTranslationUnit()) {
-			guard::ctor _(print, "Nglobal");
+			guard::ctor _(print, "Nglobal", false);
 			return atomic();
 		} else {
-			guard::ctor _(print, "Nscoped");
+			guard::ctor _(print, "Nscoped", false);
 			cprint.printName(toDecl(ctx, cprint, loc::of(decl)), print)
 				<< fmt::nbsp;
 			//			printName(toDecl(ctx, cprint, loc::of(decl)), print, cprint) << fmt::nbsp;
@@ -1191,7 +1191,7 @@ ClangPrinter::printNameAsKey(const Decl& decl, CoqPrinter& print) {
 	if (trace(Trace::Name))
 		trace("printNameAsKey", loc::of(decl));
 	if (print.structured_keys())
-		return structured::printName(decl, print, *this);
+		return printName(decl, print);
 	else
 		return mangled::printName(decl, print, *this);
 }
@@ -1203,23 +1203,58 @@ ClangPrinter::printNameAsKey(const Decl* p, CoqPrinter& print, loc::loc loc) {
 }
 
 fmt::Formatter&
-ClangPrinter::printName(const Decl& decl, CoqPrinter& print) {
+ClangPrinter::printName(const Decl& decl, CoqPrinter& print, bool full) {
 	if (trace(Trace::Name))
 		trace("printName", loc::of(decl));
-	if (auto nd = dyn_cast<NamedDecl>(&decl)) {
-		if (print.reference(nd))
-			return print.output();
-	} else {
-		llvm::errs() << "not a named decl\n";
-		decl.dump();
-	}
-	return structured::printName(decl, print, *this);
+	if (full) {
+		if (auto nd = dyn_cast<NamedDecl>(&decl)) {
+			if (print.reference(nd))
+				return print.output();
+		} else {
+			llvm::errs() << "not a named decl\n";
+			decl.dump();
+		}
+		return structured::printName(decl, print, *this);
+	} else
+		return structured::printAtomicName(*(decl.getDeclContext()), decl,
+										   print, *this);
 }
 
 fmt::Formatter&
-ClangPrinter::printName(const Decl* p, CoqPrinter& print, loc::loc loc) {
+ClangPrinter::printName(const Decl* p, CoqPrinter& print, loc::loc loc,
+						bool full) {
 	auto& decl = deref(print, *this, "printName", p, loc);
-	return printName(decl, print);
+	return printName(decl, print, full);
+}
+
+fmt::Formatter&
+ClangPrinter::printName(const NestedNameSpecifier* spec, CoqPrinter& print,
+						loc::loc loc) {
+	if (auto ns = spec->getAsNamespace()) {
+		printName(ns, print, loc);
+	} else if (auto nsa = spec->getAsNamespaceAlias()) {
+		printName(nsa, print, loc);
+	} else if (auto type = spec->getAsType()) {
+		guard::ctor _(print, "Ndependent", false);
+		printType(type, print, loc);
+	} else if (auto id = spec->getAsIdentifier()) {
+		bool is_global = not spec->getPrefix() ||
+						 spec->getPrefix()->getKind() ==
+							 NestedNameSpecifier::SpecifierKind::Global;
+
+		guard::ctor _(print, is_global ? "Nglobal" : "Nscoped", false);
+		if (not is_global) {
+			printName(spec->getPrefix(), print, loc);
+			print.output() << fmt::nbsp;
+		}
+		guard::ctor __(print, "Nid", false);
+		print.output() << "\"" << id->getName() << "\"";
+	} else {
+		llvm::errs() << "unknown NestedNameSpecifier(" << spec->getKind()
+					 << ")\n";
+		llvm::errs().flush();
+	}
+	return print.output();
 }
 
 fmt::Formatter&

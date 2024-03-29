@@ -313,7 +313,7 @@ public:
 								CoqPrinter& print, ClangPrinter& cprint) {
 		guard::ctor _1(print, "Tfunction");
 		guard::ctor _2(print, "@FunctionType");
-		print.output() << (print.templates() ? "Mtype" : "Stype") << fmt::nbsp;
+		print.output() << (print.templates() ? "Mtype" : "type") << fmt::nbsp;
 		cprint.printCallingConv(type->getCallConv(), print, loc::of(type))
 			<< fmt::nbsp;
 		cprint.printVariadic(type->isVariadic(), print) << fmt::nbsp;

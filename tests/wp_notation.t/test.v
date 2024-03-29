@@ -14,19 +14,19 @@ Module WpTestDefns.
   Context (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) (σ : genv) (tu : translation_unit) (q_c : bool) (ρ : region)
           (v : val) (p p' p'' p''' this : ptr)
           (free : FreeTemps) (E : epred) (K : Kpred).
-  #[local] Notation cv := (types.QC).
-  #[local] Notation ty := (types.Tptr types.Tvoid).
-  #[local] Notation e := (expr.Ebinop expr.Badd
-                                      (expr.Evar "foo" types.Tint)
-                                      (expr.Evar "bar" types.Tint)
-                                      types.Tint).
-  #[local] Notation s := (stmt.Sseq [ stmt.Sexpr e
-                                    ; stmt.Sbreak
-                                    ; stmt.Scontinue
-                                    ; stmt.Sexpr e
-                                    ; stmt.Sexpr e
-                                    ; stmt.Sreturn None
-                                    ; stmt.Sreturn (Some e)]%list).
+  #[local] Notation cv := (QC).
+  #[local] Notation ty := (Tptr Tvoid).
+  #[local] Notation e := (Ebinop Badd
+                                      (Evar "foo" Tint)
+                                      (Evar "bar" Tint)
+                                      Tint).
+  #[local] Notation s := (Sseq [ Sexpr e
+                              ; Sbreak
+                              ; Scontinue
+                              ; Sexpr e
+                              ; Sexpr e
+                              ; Sreturn None
+                              ; Sreturn (Some e)]%list).
 
   Section Statements.
     Definition NOTATION_wp_nowrap :=
@@ -41,18 +41,18 @@ Module WpTestDefns.
 
   Section Special.
     Definition NOTATION_wp_atomic_nil M Q :=
-      wp_atom M expr.AO__atomic_load ty [] Q.
+      wp_atom M AO__atomic_load ty [] Q.
     Definition NOTATION_wp_atomic_cons_nowrap M Q :=
-      wp_atom M expr.AO__atomic_load ty [Vundef; Vundef; Vundef] Q.
+      wp_atom M AO__atomic_load ty [Vundef; Vundef; Vundef] Q.
     Definition NOTATION_wp_atomic_cons_wrap M Q :=
-      wp_atom M expr.AO__atomic_load ty [Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vint 1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089] Q.
+      wp_atom M AO__atomic_load ty [Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vint 1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089] Q.
 
     Definition NOTATION_wp_builtin_nil Q :=
-      wp_builtin expr.Bin_popcount ty [] Q.
+      wp_builtin Bin_popcount ty [] Q.
     Definition NOTATION_wp_builtin_cons_nowrap Q :=
-      wp_builtin expr.Bin_popcount ty [Vundef; Vundef; Vundef] Q.
+      wp_builtin Bin_popcount ty [Vundef; Vundef; Vundef] Q.
     Definition NOTATION_wp_builtin_cons_wrap Q :=
-      wp_builtin expr.Bin_popcount ty [Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vint 1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089] Q.
+      wp_builtin Bin_popcount ty [Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vundef; Vint 1123784018923740981723509817230984710298374098123740981723490817230984710293840891273489012734089] Q.
   End Special.
 
   Section Cleanup.

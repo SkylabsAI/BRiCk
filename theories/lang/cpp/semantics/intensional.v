@@ -13,12 +13,14 @@
  * AST and remove these nodes.
  *)
 Require Import Coq.ZArith.ZArith_base.
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
+
+(* TODO: this should probably be moved to syntax/types *)
 
 (* this function determines whether the type is an aggregate type, i.e.
  * arrays and objects.
  *)
-Fixpoint is_aggregate (t : type) : bool :=
+Fixpoint is_aggregate {lang} (t : type' lang) : bool :=
   match t with
   | Tnamed _
   | Tarray _ _ => true
@@ -26,7 +28,7 @@ Fixpoint is_aggregate (t : type) : bool :=
   | _ => false
   end.
 
-Fixpoint is_void (t : type) : bool :=
+Fixpoint is_void {lang} (t : type' lang) : bool :=
   match t with
   | Tqualified _ t => is_void t
   | Tvoid => true
@@ -35,9 +37,9 @@ Fixpoint is_void (t : type) : bool :=
 
 (* this determines whether a type is initializable from a primitive.
  *)
-Fixpoint prim_initializable (t : type) : bool :=
+Fixpoint prim_initializable {lang} (t : type' lang) : bool :=
   match t with
-  | Tpointer _
+  | Tptr _
   | Tnum _ _
   | Tchar_ _
   | Tbool

@@ -38,6 +38,7 @@ class TemplateParameterList;
 class TemplateArgument;
 class TemplateArgumentLoc;
 class TemplateArgumentList;
+class NestedNameSpecifier;
 }
 
 namespace fmt {
@@ -175,8 +176,12 @@ public:
 	fmt::Formatter& printNameAsKey(const clang::Decl&, CoqPrinter&); // : bs
 	fmt::Formatter& printNameAsKey(const clang::Decl*, CoqPrinter&, loc::loc);
 
-	fmt::Formatter& printName(const clang::Decl&, CoqPrinter&); // name
-	fmt::Formatter& printName(const clang::Decl*, CoqPrinter&, loc::loc);
+	fmt::Formatter& printName(const clang::Decl&, CoqPrinter&,
+							  bool full = true); // name
+	fmt::Formatter& printName(const clang::Decl*, CoqPrinter&, loc::loc,
+							  bool full = true);
+	fmt::Formatter& printName(const clang::NestedNameSpecifier*, CoqPrinter&,
+							  loc::loc);
 
 	// TODO: Can we drop these?
 	fmt::Formatter& printUnsupportedName(llvm::StringRef, CoqPrinter&); // name

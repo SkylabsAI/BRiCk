@@ -7,10 +7,12 @@
 Require Import elpi.apps.derive.std.	(* tag *)
 Require Import bedrock.prelude.elpi.derive.
 Require Import bedrock.prelude.compare.
-Require Import bedrock.lang.cpp.syntax2.prelude.
-Require Import bedrock.lang.cpp.syntax2.syntax1.
-Require Import bedrock.lang.cpp.syntax2.overloadable.
-Require Import bedrock.lang.cpp.syntax2.ast2.
+Require Import bedrock.lang.cpp.syntax.prelude.
+Require Import bedrock.lang.cpp.syntax.preliminary.
+Require Import bedrock.lang.cpp.syntax.overloadable.
+Require Import bedrock.lang.cpp.syntax.core.
+Require Import bedrock.lang.cpp.syntax.stmt.
+Require Import bedrock.lang.cpp.syntax.decl.
 
 #[local] Set Primitive Projections.
 #[local] Open Scope positive_scope.
@@ -380,13 +382,13 @@ End type_qualifiers.
 #[global] Instance type_qualifiers_compare : Compare type_qualifiers := type_qualifiers.compare.
 
 Module Cast.
-  #[prefix="", only(tag)] derive Cast'.
+  #[prefix="", only(tag)] derive Cast_.
   Section compare.
     Context {classname name type : Set}.
     Context (compareGN : classname -> classname -> comparison).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
-    #[local] Notation Cast := (Cast' classname name type).
+    #[local] Notation Cast := (Cast_ classname name type).
     #[local] Notation TAG := (tag classname name type).
 
     Record box_Cdynamic : Set := Box_Cdynamic {
@@ -459,7 +461,7 @@ Module Cast.
   End compare.
 
 End Cast.
-#[global] Instance Cast_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (Cast' A B C) := Cast.compare compare compare compare.
+#[global] Instance Cast_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (Cast_ A B C) := Cast.compare compare compare compare.
 
 
 Module dispatch_type.
@@ -476,7 +478,7 @@ Module MethodRef.
     Context (compareON : obj_name -> obj_name -> comparison).
     Context (compareFT : functype -> functype -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
-    #[local] Notation MethodRef := (MethodRef' obj_name functype Expr).
+    #[local] Notation MethodRef := (MethodRef_ obj_name functype Expr).
 
     Definition compare : MethodRef -> MethodRef -> comparison :=
       sum.compare (
@@ -487,11 +489,11 @@ Module MethodRef.
       ) compareE.
   End compare.
 End MethodRef.
-#[global] Hint Opaque MethodRef' : typeclass_instances.
-#[global] Instance MethodRef_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (MethodRef' A B C) := MethodRef.compare compare compare compare.
+#[global] Hint Opaque MethodRef_ : typeclass_instances.
+#[global] Instance MethodRef_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (MethodRef_ A B C) := MethodRef.compare compare compare compare.
 
 Module operator_impl.
-  Export expr.operator_impl.
+  Export preliminary.operator_impl.
 
   Section compare.
     Context {obj_name type : Set}.
@@ -575,7 +577,7 @@ End function_arity.
 #[global] Instance function_arity_compare : Compare function_arity := function_arity.compare.
 
 Module new_form.
-  Export expr.new_form.
+  Export preliminary.new_form.
 
   #[prefix="", only(tag)] derive t.
   Definition car (t : positive) : Set :=
@@ -616,20 +618,20 @@ End new_form.
 Module function_type.
 
   Definition compare {type : Set} (compareT : type -> type -> comparison)
-      (x y : function_type' type) : comparison :=
+      (x y : function_type_ type) : comparison :=
     compare_lex (calling_conv.compare x.(ft_cc) y.(ft_cc)) $ fun _ =>
     compare_lex (function_arity.compare x.(ft_arity) y.(ft_arity)) $ fun _ =>
     compare_lex (compareT x.(ft_return) y.(ft_return)) $ fun _ =>
     List.compare compareT x.(ft_params) y.(ft_params).
 
 End function_type.
-#[global] Instance function_type_compare {A : Set} `{!Compare A} : Compare (function_type' A) := function_type.compare compare.
+#[global] Instance function_type_compare {A : Set} `{!Compare A} : Compare (function_type_ A) := function_type.compare compare.
 
 Module temp_param.
   Section compare.
     Context {type : Set}.
     Context (compareT : type -> type -> comparison).
-    #[local] Notation temp_param := (temp_param' type).
+    #[local] Notation temp_param := (temp_param_ type).
 
     Record box_Pvalue : Set := Box_Pvalue {
       box_Pvalue_0 : ident;
@@ -664,7 +666,7 @@ Module temp_param.
 
     #[local] Notation compare_ctor := (compare_ctor tag car data compare_data).
 
-    Definition compare (p : temp_param' type) : temp_param' type -> comparison :=
+    Definition compare (p : temp_param_ type) : temp_param_ type -> comparison :=
       match p with
       | Ptype id => compare_ctor (Reduce (tag (Ptype id))) (fun _ => Reduce (data (Ptype id)))
       | Pvalue id ty => compare_ctor (Reduce (tag (Pvalue id ty))) (fun _ => Reduce (data (Pvalue id ty)))
@@ -673,14 +675,14 @@ Module temp_param.
   End compare.
 
 End temp_param.
-#[global] Instance temp_param_compare {A : Set} `{!Compare A} : Compare (temp_param' A) := temp_param.compare compare.
+#[global] Instance temp_param_compare {A : Set} `{!Compare A} : Compare (temp_param_ A) := temp_param.compare compare.
 
 Module temp_arg.
   Section compare.
     Context {type Expr : Set}.
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
-    #[local] Notation temp_arg := (temp_arg' type Expr).
+    #[local] Notation temp_arg := (temp_arg_ type Expr).
 
     Definition tag (p : temp_arg) : positive :=
       match p with
@@ -718,7 +720,7 @@ Module temp_arg.
   End compare.
 
 End temp_arg.
-#[global] Instance temp_arg_compare {A B : Set} `{!Compare A, !Compare B} : Compare (temp_arg' A B) := temp_arg.compare compare compare.
+#[global] Instance temp_arg_compare {A B : Set} `{!Compare A, !Compare B} : Compare (temp_arg_ A B) := temp_arg.compare compare compare.
 
 Module OverloadableOperator.
   #[prefix="", only(tag)] derive OverloadableOperator.
@@ -806,7 +808,7 @@ Module function_name.
   Section compare.
     Context {type : Set}.
     Context (compareT : type -> type -> comparison).
-    #[local] Notation function_name := (function_name' type).
+    #[local] Notation function_name := (function_name_ type).
 
     Definition tag (x : function_name) : positive :=
       match x with
@@ -859,7 +861,7 @@ Module function_name.
   End compare.
 
 End function_name.
-#[global] Instance function_name_compare {A : Set} `{!Compare A} : Compare (function_name' A) := function_name.compare compare.
+#[global] Instance function_name_compare {A : Set} `{!Compare A} : Compare (function_name_ A) := function_name.compare compare.
 
 Module function_qualifier.
   #[prefix="", only(tag)] derive function_qualifier.
@@ -870,18 +872,17 @@ End function_qualifier.
 #[global] Instance function_qualifier_compare : Compare function_qualifier := function_qualifier.compare.
 
 Module atomic_name.
-  #[prefix="", only(tag)] derive atomic_name'.
-  #[global] Arguments tag {_ _} & _ : assert.
+  #[prefix="", only(tag)] derive atomic_name_.
+  #[global] Arguments tag {_} & _ : assert.
   Section compare.
     Context {type Expr : Set}.
     Context (compareT : type -> type -> comparison).
-    Context (compareE : Expr -> Expr -> comparison).
-    #[local] Notation atomic_name := (atomic_name' type Expr).
-    #[local] Notation tag := (@tag type Expr).
+    #[local] Notation atomic_name := (atomic_name_ type).
+    #[local] Notation tag := (@tag type).
 
     Record box_Nfunction : Set := Box_Nfunction {
       box_Nfunction_0 : list function_qualifier;
-      box_Nfunction_1 : function_name' type;
+      box_Nfunction_1 : function_name_ type;
       box_Nfunction_2 : list type;
     }.
     Definition box_Nfunction_compare (b1 b2 : box_Nfunction) : comparison :=
@@ -889,28 +890,18 @@ Module atomic_name.
       compare_lex (function_name.compare compareT b1.(box_Nfunction_1) b2.(box_Nfunction_1)) $ fun _ =>
       List.compare compareT b1.(box_Nfunction_2) b2.(box_Nfunction_2).
 
-    Record box_Ndecltype : Set := Box_Ndecltype {
-      box_Ndecltype_0 : bool;
-      box_Ndecltype_1 : Expr;
-    }.
-    Definition box_Ndecltype_compare (b1 b2 : box_Ndecltype) : comparison :=
-      compare_lex (Bool.compare b1.(box_Ndecltype_0) b2.(box_Ndecltype_0)) $ fun _ =>
-      compareE b1.(box_Ndecltype_1) b2.(box_Ndecltype_1).
-
     Definition car (t : positive) : Set :=
       match t with
       | 1 => bs
       | 2 => box_Nfunction
-      | 3 => box_Ndecltype
-      | 4 => list type
-      | 5 => N
+      | 3 => list type
+      | 4 => N
       | _ => bs
       end.
     Definition data (p : atomic_name) : car (tag p) :=
       match p with
       | Nid id => id
       | Nfunction qs f ts => Box_Nfunction qs f ts
-      | Ndecltype id e => Box_Ndecltype id e
       | Nclosure ts => ts
       | Nanon n => n
       | Nunsupported_atomic msg => msg
@@ -919,9 +910,8 @@ Module atomic_name.
       match t with
       | 1 => bs_cmp
       | 2 => box_Nfunction_compare
-      | 3 => box_Ndecltype_compare
-      | 4 => List.compare compareT
-      | 5 => N.compare
+      | 3 => List.compare compareT
+      | 4 => N.compare
       | _ => bs_cmp
       end.
 
@@ -931,7 +921,6 @@ Module atomic_name.
       match p with
       | Nid i => compare_ctor (Reduce (tag (Nid i))) (fun _ => Reduce (data (Nid i)))
       | Nfunction qs f ts => compare_ctor (Reduce (tag (Nfunction qs f ts))) (fun _ => Reduce (data (Nfunction qs f ts)))
-      | Ndecltype b e => compare_ctor (Reduce (tag (Ndecltype b e))) (fun _ => Reduce (data (Ndecltype b e)))
       | Nclosure ts => compare_ctor (Reduce (tag (Nclosure ts))) (fun _ => Reduce (data (Nclosure ts)))
       | Nanon n => compare_ctor (Reduce (tag (Nanon n))) (fun _ => Reduce (data (Nanon n)))
       | Nunsupported_atomic msg => compare_ctor (Reduce (tag (Nunsupported_atomic msg))) (fun _ => Reduce (data (Nunsupported_atomic msg)))
@@ -939,22 +928,22 @@ Module atomic_name.
   End compare.
 
 End atomic_name.
-#[global] Instance atomic_name_compare {A B : Set} `{!Compare A, !Compare B} : Compare (atomic_name' A B) := atomic_name.compare compare compare.
+#[global] Instance atomic_name_compare {A : Set} `{!Compare A} : Compare (atomic_name_ A) := atomic_name.compare compare.
 
 Module name.
   Section compare_body.
-    Context {lang : Set}.
-    #[local] Notation name := (name lang).
-    #[local] Notation type := (type lang).
-    #[local] Notation Expr := (Expr lang).
-    #[local] Notation atomic_name := (atomic_name' type Expr).
+    Context {lang : lang.t}.
+    #[local] Notation name := (name' lang).
+    #[local] Notation type := (type' lang).
+    #[local] Notation Expr := (Expr' lang).
+    #[local] Notation atomic_name := (atomic_name' lang).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
 
     Record box_Ninst : Set := Box_Ninst {
       box_Ninst_0 : name;
-      box_Ninst_1 : list (temp_arg' type Expr);
+      box_Ninst_1 : list (temp_arg' lang);
     }.
     Definition box_Ninst_compare (b1 b2 : box_Ninst) : comparison :=
       compare_lex (compareN b1.(box_Ninst_0) b2.(box_Ninst_0)) $ fun _ =>
@@ -966,34 +955,38 @@ Module name.
     }.
     Definition box_Nscoped_compare (b1 b2 : box_Nscoped) : comparison :=
       compare_lex (compareN b1.(box_Nscoped_0) b2.(box_Nscoped_0)) $ fun _ =>
-      atomic_name.compare compareT compareE b1.(box_Nscoped_1) b2.(box_Nscoped_1).
+      atomic_name.compare compareT b1.(box_Nscoped_1) b2.(box_Nscoped_1).
 
     Definition tag (n : name) : positive :=
       match n with
       | Ninst _ _ => 1
       | Nglobal _ => 2
-      | Nscoped _ _ => 3
-      | _ => 4
+      | Ndependent _ => 3
+      | Nscoped _ _ => 4
+      | _ => 5
       end.
     Definition car (t : positive) : Set :=
       match t with
       | 1 => box_Ninst
       | 2 => atomic_name
-      | 3 => box_Nscoped
+      | 3 => type
+      | 4 => box_Nscoped
       | _ => bs
       end.
     Definition data (n : name) : car (tag n) :=
       match n with
       | Ninst n args => Box_Ninst n args
       | Nglobal c => c
+      | Ndependent t => t
       | Nscoped n c => Box_Nscoped n c
       | Nunsupported msg => msg
       end.
     Definition compare_data (t : positive) : car t -> car t -> comparison :=
       match t with
       | 1 => box_Ninst_compare
-      | 2 => atomic_name.compare compareT compareE
-      | 3 => box_Nscoped_compare
+      | 2 => atomic_name.compare compareT
+      | 3 => compareT
+      | 4 => box_Nscoped_compare
       | _ => bs_cmp
       end.
 
@@ -1002,6 +995,7 @@ Module name.
       match n with
       | Ninst t xs => compare_ctor (Reduce (tag (Ninst t xs))) (fun _ => Reduce (data (Ninst t xs)))
       | Nglobal c => compare_ctor (Reduce (tag (Nglobal c))) (fun _ => Reduce (data (Nglobal c)))
+      | Ndependent t => compare_ctor (Reduce (tag (Ndependent t))) (fun _ => Reduce (data (Ndependent t)))
       | Nscoped n c => compare_ctor (Reduce (tag (Nscoped n c))) (fun _ => Reduce (data (Nscoped n c)))
       | Nunsupported msg => compare_ctor (Reduce (tag (Nunsupported msg))) (fun _ => Reduce (data (Nunsupported msg)))
       end.
@@ -1010,10 +1004,10 @@ End name.
 
 Module type.
   Section compare_body.
-    Context {lang : Set}.
-    #[local] Notation name := (name lang).
-    #[local] Notation type := (type lang).
-    #[local] Notation Expr := (Expr lang).
+    Context {lang : lang.t}.
+    #[local] Notation name := (name' lang).
+    #[local] Notation type := (type' lang).
+    #[local] Notation Expr := (Expr' lang).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
@@ -1168,7 +1162,7 @@ Module type.
       | 17 => type
       | 18 => box_Tvariable_array
       | 19 | 20 => name
-      | 21 => function_type' type
+      | 21 => function_type_ type
       | 22 => unit
       | 23 => box_Tmember_pointer
       | 24 => float_type.t
@@ -1276,11 +1270,10 @@ End type.
 
 Module Expr.
   Section compare_body.
-    Import LangNotations.
-    Context {lang : Set}.
-    #[local] Notation name := (name lang).
-    #[local] Notation type := (type lang).
-    #[local] Notation Expr := (Expr lang).
+    Context {lang : lang.t}.
+    #[local] Notation name := (name' lang).
+    #[local] Notation type := (type' lang).
+    #[local] Notation Expr := (Expr' lang).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
@@ -1442,7 +1435,7 @@ Module Expr.
       List.compare compareE b1.(box_Ecall_1) b2.(box_Ecall_1).
 
     Record box_Ecast : Set := Box_Ecast {
-      box_Ecast_0 : Cast lang;
+      box_Ecast_0 : Cast_ type name type;
       box_Ecast_1 : Expr;
       box_Ecast_2 : ValCat;
       box_Ecast_3 : type;
@@ -1466,7 +1459,7 @@ Module Expr.
       compareT b1.(box_Emember_3) b2.(box_Emember_3).
 
     Record box_Emember_call : Set := Box_Emember_call {
-      box_Emember_call_0 : MethodRef lang;
+      box_Emember_call_0 : MethodRef' lang;
       box_Emember_call_1 : Expr;
       box_Emember_call_2 : list Expr;
     }.
@@ -1477,7 +1470,7 @@ Module Expr.
 
     Record box_Eoperator_call : Set := Box_Eoperator_call {
       box_Eoperator_call_0 : OverloadableOperator;
-      box_Eoperator_call_1 : operator_impl lang;
+      box_Eoperator_call_1 : operator_impl.t name type;
       box_Eoperator_call_2 : list Expr;
     }.
     Definition box_Eoperator_call_compare (b1 b2 : box_Eoperator_call) : comparison :=
@@ -1949,10 +1942,10 @@ Module Expr.
 End Expr.
 
 Section compare.
-  Context {lang : Set}.
-  #[local] Notation name := (name lang).
-  #[local] Notation type := (type lang).
-  #[local] Notation Expr := (Expr lang).
+  Context {lang : lang.t}.
+  #[local] Notation name := (name' lang).
+  #[local] Notation type := (type' lang).
+  #[local] Notation Expr := (Expr' lang).
 
   Fixpoint compareN (n : name) : name -> comparison :=
     name.compare_body compareN compareT compareE n
@@ -1968,46 +1961,3 @@ Section compare.
   #[global] Instance Expr_compare : Compare Expr := compareE.
 
 End compare.
-
-(** ** Name maps *)
-
-#[global] Declare Instance name_comparison {lang} :
-  Comparison (compareN (lang:=lang)).	(** TODO *)
-
-Require Import Coq.Structures.OrderedTypeAlt.
-Require Import Coq.FSets.FMapAVL.
-Require Import bedrock.prelude.avl.
-
-Module Type LANG.
-  Parameter Inline lang : Set.
-End LANG.
-
-Module NameMap (Lang : LANG).
-  Module Compare.
-    Definition t : Type := name Lang.lang.
-    #[local] Definition compare : t -> t -> comparison := compareN.
-    #[local] Infix "?=" := compare.
-    #[local] Lemma compare_sym x y : (y ?= x) = CompOpp (x ?= y).
-    Proof. exact: compare_antisym. Qed.
-    #[local] Lemma compare_trans c x y z : (x ?= y) = c -> (y ?= z) = c -> (x ?= z) = c.
-    Proof. exact: base.compare_trans. Qed.
-  End Compare.
-  Module Key := OrderedType_from_Alt Compare.
-  Include FMapAVL.Make Key.
-  Include FMapExtra.MIXIN Key.
-End NameMap.
-
-Module NM.
-  #[local] Definition lang := cpp.
-  Include NameMap.
-End NM.
-
-Module TM.
-  #[local] Definition lang := temp.
-  Include NameMap.
-End TM.
-
-Definition table : Type := NM.t N.
-Definition Dnum (n : Sname) (v : N) : table -> table :=
-  <[ n := v ]>.
-Definition test : table := Dnum (Nglobal $ Nid "cats") 3 ∅.

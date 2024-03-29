@@ -5,9 +5,8 @@
  *)
 Require Import Coq.ZArith.ZArith.
 
-Require bedrock.lang.cpp.ast.
-Require Import bedrock.lang.cpp.syntax.names.
-Require Import bedrock.lang.cpp.syntax.types.
+Require Import bedrock.lang.cpp.syntax.core.
+Require Import bedrock.lang.cpp.syntax.notations.
 
 #[local] Open Scope Z_scope.
 #[local] Open Scope bs_scope.
@@ -132,14 +131,14 @@ Module Export TypeNotations.
          , format "'[' ty [ n ] ']'", only printing).
   Notation "nm" := (Tnamed nm%bs) (in custom CPP_type at level 0, nm constr, only printing).
   Notation "'extern' cc '???()' '->' rty"
-      := (@Tfunction cc Ar_Definite rty nil)
+      := (@Tfunction _ (@FunctionType _ cc Ar_Definite rty nil))
          ( in custom CPP_type at level 100
          , cc constr at level 0
          , rty custom CPP_type at level 200
          , format "'[' extern  cc  ???()  ->  rty ']'"
          , only printing).
   Notation "'extern' cc '???(' aty1 , .. , aty2 ')' '->' rty"
-      := (@Tfunction cc Ar_Definite rty (cons aty1 .. (cons aty2 nil) ..))
+      := (@Tfunction _ (@FunctionType _ cc Ar_Definite rty (cons aty1 .. (cons aty2 nil) ..)))
          ( in custom CPP_type at level 100
          , cc constr at level 0
          , rty custom CPP_type at level 200
@@ -148,14 +147,14 @@ Module Export TypeNotations.
          , format "'[' extern  cc  ???( '[hv' aty1 ,  '/' .. ,  '/' aty2 ']' )  ->  rty ']'"
          , only printing).
   Notation "'extern' cc '???()(...)' '->' rty"
-      := (@Tfunction cc Ar_Variadic rty nil)
+      := (@Tfunction _ (@FunctionType _ cc Ar_Variadic rty nil))
          ( in custom CPP_type at level 100
          , cc constr at level 0
          , rty custom CPP_type at level 200
          , format "'[' extern  cc  ???()(...)  ->  rty ']'"
          , only printing).
   Notation "'extern' cc '???(' aty1 , .. , aty2 ')(...)' '->' rty"
-      := (@Tfunction cc Ar_Variadic rty (cons aty1 .. (cons aty2 nil) ..))
+      := (@Tfunction _ (@FunctionType _ cc Ar_Variadic rty (cons aty1 .. (cons aty2 nil) ..)))
          ( in custom CPP_type at level 100
          , cc constr at level 0
          , rty custom CPP_type at level 200

@@ -6,7 +6,7 @@
 Require Import iris.bi.lib.fractional.
 Require Import bedrock.lang.proofmode.proofmode.
 Require Import bedrock.lang.bi.errors.
-Require Import bedrock.lang.cpp.ast.
+Require Import bedrock.lang.cpp.syntax.
 Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.bi.spec.frac_splittable.
 Require Import bedrock.lang.bi.spec.nary_classes.
@@ -130,7 +130,7 @@ Module Type Expr__newdelete.
       #[local] Notation wp_args := (wp_args tu ρ).
 
       (* <<std::align_val_t>> *)
-      #[local] Notation Talign_val_t := (Tenum "_ZN3std11align_val_tE") (only parsing).
+      #[local] Notation Talign_val_t := (Tenum $ Nscoped (Nglobal $ Nid "std") (Nid "align_val_t")) (only parsing).
       #[local] Notation Tbyte := Tuchar (only parsing).
 
       Section new.
@@ -396,7 +396,7 @@ Module Type Expr__newdelete.
       match drop_qualifiers ty with
       | Tqualified _ ty => False (* unreachable *)
       | Tnamed cls      =>
-        match tu !! cls with
+        match tu.(types) !! cls with
         | Some (Gstruct s) =>
           if has_virtual_dtor s then
             (* NOTE [has_virtual_dtor] could be derived from the vtable... *)
@@ -413,7 +413,7 @@ Module Type Expr__newdelete.
         end
       | Tarray _ _
       | Tincomplete_array _
-      | Tvariable_array _ =>
+      | Tvariable_array _ _ =>
         Q obj_ptr' (erase_qualifiers ty)
       | Tref r_ty
       | Trv_ref r_ty    =>
@@ -443,7 +443,7 @@ Module Type Expr__newdelete.
     match ty with
     | Tarray _ _ => is_array = true
     | Tincomplete_array _
-    | Tvariable_array _ => False
+    | Tvariable_array _ _ => False
     | _ => is_array = false
     end.
 
@@ -455,7 +455,7 @@ Module Type Expr__newdelete.
       *)
     mlock
     Definition delete_val `{Σ : cpp_logic} {σ : genv} tu (default : obj_name * type) (ty : type) (p : ptr) (Q : mpred) : mpred :=
-      let del_type := Tfunction Tvoid (Tptr Tvoid :: nil) in
+      let del_type := Tfunction $ FunctionType Tvoid (Tptr Tvoid :: nil) in
       let del '(fn, ty) :=
           (letI* p', free := alloc_pointer p in
           |> letI* p := wp_fptr tu.(types) ty (_global fn) (p' :: nil) in
@@ -464,7 +464,7 @@ Module Type Expr__newdelete.
       in
       match erase_qualifiers ty with
       | Tnamed nm =>
-        match tu !! nm with
+        match tu.(types) !! nm with
         | Some (Gstruct s) =>
           del $ from_option (fun x => (x, del_type)) default s.(s_delete)
         | Some (Gunion u) =>

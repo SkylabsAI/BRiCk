@@ -125,6 +125,8 @@ Loc::getLoc() const {
 		return invalid_loc;
 	case Kind::Tal:
 		return u.tal->getSourceRange().getBegin();
+	case Kind::Location:
+		return SourceLocation::getFromRawEncoding(u.location);
 	}
 }
 
@@ -159,6 +161,10 @@ Loc::describe(raw_ostream& os, const ASTContext& context) const {
 	case Kind::Tal:
 		u.tal->getArgument().print(policy, os, true);
 		return os;
+	case Kind::Location:
+		SourceLocation::getFromRawEncoding(u.location)
+			.print(os, context.getSourceManager());
+		return os;
 	default:
 		always_assert(false);
 	}
@@ -188,6 +194,10 @@ Loc::dump(raw_ostream& os, const ASTContext& context) const {
 		return os;
 	case Kind::Tal:
 		u.tal->getArgument().dump(os);
+		return os;
+	case Kind::Location:
+		SourceLocation::getFromRawEncoding(u.location)
+			.print(os, context.getSourceManager());
 		return os;
 	default:
 		always_assert(false);
