@@ -141,3 +141,11 @@ Reserved Notation "'[\/' 'list]' i |-> x ∈ l , P"
 Reserved Notation "'[\/' 'list]' x ∈ l , P"
   (at level 200, l at level 10, x at level 1, right associativity,
    format "'[  ' [\/  list]  x  ∈  l ,  '/' P ']'").
+
+(** ** Comparisons *)
+
+Reserved Infix "?=@{ A }" (at level 70, no associativity).
+Reserved Infix "<@{ A }" (at level 70, no associativity).
+Reserved Infix "<=@{ A }" (at level 70, no associativity).
+Reserved Infix ">@{ A }" (at level 70, no associativity).
+Reserved Infix ">=@{ A }" (at level 70, no associativity).

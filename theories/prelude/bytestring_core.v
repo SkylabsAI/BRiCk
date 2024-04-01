@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2020-2021 BedRock Systems, Inc.
+ * Copyright (c) 2020-2024 BedRock Systems, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -8,6 +8,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.Structures.OrderedType.
 Require Import Coq.micromega.Lia.
 Require Coq.Strings.Byte.
+Require Import bedrock.prelude.base.
 Import ListNotations.
 
 (** Bytestring core definitions. Depends only on the stdlib, and could in
@@ -20,6 +21,7 @@ Definition byte_print (b : Byte.byte) : Byte.byte := b.
 (** comparison *)
 Definition byte_cmp (a b : Byte.byte) : comparison :=
   N.compare (Byte.to_N a) (Byte.to_N b).
+#[global] Instance byte_compare : Compare Byte.byte := byte_cmp.
 
 Delimit Scope byte_scope with byte.
 String Notation Byte.byte byte_parse byte_print : byte_scope.
@@ -256,6 +258,7 @@ Fixpoint bs_cmp (xs ys : bs) : comparison :=
     | x => x
     end
   end%bs.
+#[global] Instance bs_compare : Compare bs := bs_cmp.
 
 Module OT_bs <: OrderedType.OrderedType with Definition t := bs.
   Definition t := bs.
