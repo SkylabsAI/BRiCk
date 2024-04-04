@@ -42,7 +42,7 @@ Class CFracSplittable_0 {PROP : bi} (R : cQp.t → PROP) : Prop := {
   #[global] cfrac_splittable_0_frac_valid :: CFracValid0 R;
 }.
 Section cfrac_0.
-  Context {PROP : bi} (R : cQp.t → PROP) `{!CFracSplittable_0 R}.
+  Context {PROP : bi} (R : cQp.t → PROP) `{!CFractional0 R}.
 
   #[global] Instance cfrac_splittable_0_as_fractional : AsCFractional0 R.
   Proof. solve_as_cfrac. Qed.
@@ -54,7 +54,7 @@ Class CFracSplittable_1 {A} {PROP : bi} (R : cQp.t → A → PROP) : Prop := {
   #[global] cfrac_splittable_1_frac_valid :: CFracValid1 R;
 }.
 Section cfrac_1.
-  Context {A} {PROP : bi} (R : cQp.t → A → PROP) `{!CFracSplittable_1 R}.
+  Context {A} {PROP : bi} (R : cQp.t → A → PROP) `{!CFractional1 R}.
 
   #[global] Instance cfrac_splittable_1_as_fractional : AsCFractional1 R.
   Proof. solve_as_cfrac. Qed.
@@ -66,7 +66,7 @@ Class CFracSplittable_2 {A B} {PROP : bi} (R : cQp.t → A → B → PROP) : Pro
   #[global] cfrac_splittable_2_frac_valid :: CFracValid2 R;
 }.
 Section cfrac_2.
-  Context {A B} {PROP : bi} (R : cQp.t → A → B → PROP) `{!CFracSplittable_2 R}.
+  Context {A B} {PROP : bi} (R : cQp.t → A → B → PROP) `{!CFractional2 R}.
 
   #[global] Instance cfrac_splittable_2_as_fractional : AsCFractional2 R.
   Proof. solve_as_cfrac. Qed.
@@ -79,7 +79,7 @@ Class CFracSplittable_3 {A B C} {PROP : bi}
   #[global] cfrac_splittable_3_frac_valid :: CFracValid3 R;
 }.
 Section cfrac_3.
-  Context {A B C} {PROP : bi} (R : cQp.t → A → B → C → PROP) `{!CFracSplittable_3 R}.
+  Context {A B C} {PROP : bi} (R : cQp.t → A → B → C → PROP) `{!CFractional3 R}.
 
   #[global] Instance cfrac_splittable_3_as_fractional : AsCFractional3 R.
   Proof. solve_as_cfrac. Qed.
@@ -93,7 +93,7 @@ Class CFracSplittable_4 {A B C D} {PROP : bi}
 }.
 Section cfrac_4.
   Context {A B C D} {PROP : bi} (R : cQp.t → A → B → C → D → PROP).
-  Context `{!CFracSplittable_4 R}.
+  Context `{!CFractional4 R}.
 
   #[global] Instance cfrac_splittable_4_as_fractional : AsCFractional4 R.
   Proof. solve_as_cfrac. Qed.
@@ -107,7 +107,7 @@ Class CFracSplittable_5 {A B C D E} {PROP : bi}
 }.
 Section cfrac_5.
   Context {A B C D E} {PROP : bi} (R : cQp.t → A → B → C → D → E → PROP).
-  Context `{!CFracSplittable_5 R}.
+  Context `{!CFractional5 R}.
 
   #[global] Instance cfrac_splittable_5_as_fractional : AsCFractional5 R.
   Proof. solve_as_cfrac. Qed.
