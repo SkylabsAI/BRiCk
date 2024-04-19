@@ -798,6 +798,19 @@ Section with_cpp.
     apply iff_forall => p. by rewrite _at_only_provable.
   Qed.
 
+  Lemma cQp_scale_add_r q q1 q2 :
+    (cQp.scale q (q1 + q2) = cQp.scale q q1 + cQp.scale q q2)%cQp.
+  Proof.
+    case: q1=>b1 f1; case: q2=>b2 f2.
+    by rewrite /cQp.scale/cQp.add/= Qp.mul_add_distr_l.
+  Qed.
+
+  #[global] Instance cfrac_scale:
+    ∀ (A B : Type) (R : cQp.t → A -> B -> Rep) a b (p: Qp),
+      CFractional (λ q : cQp.t, R q a b)
+      → CFractional (λ q : cQp.t, R (cQp.scale p q) a b).
+  Proof. by move=>* ??; rewrite cQp_scale_add_r. Qed.
+
 End with_cpp.
 
 #[global] Typeclasses Opaque pureR as_Rep.
