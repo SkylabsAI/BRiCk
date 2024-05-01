@@ -85,6 +85,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tarch sz _ => bytesN <$> sz
   | Tunsupported _ => None
   | Tdecltype _
+  | Texprtype _
   | Tparam _
   | Tresult_param _
   | Tresult_global _

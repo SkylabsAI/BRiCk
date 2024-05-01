@@ -17,24 +17,6 @@ Require Import bedrock.lang.cpp.syntax.
 
 (* TODO: this should probably be moved to syntax/types *)
 
-(* this function determines whether the type is an aggregate type, i.e.
- * arrays and objects.
- *)
-Fixpoint is_aggregate {lang} (t : type' lang) : bool :=
-  match t with
-  | Tnamed _
-  | Tarray _ _ => true
-  | Tqualified _ t => is_aggregate t
-  | _ => false
-  end.
-
-Fixpoint is_void {lang} (t : type' lang) : bool :=
-  match t with
-  | Tqualified _ t => is_void t
-  | Tvoid => true
-  | _ => false
-  end.
-
 (* this determines whether a type is initializable from a primitive.
  *)
 Fixpoint prim_initializable {lang} (t : type' lang) : bool :=

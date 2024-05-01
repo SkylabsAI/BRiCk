@@ -68,12 +68,14 @@ public:
 		return this->output_ << fmt::tuple_sep;
 	}
 
-	fmt::Formatter& ctor(llvm::StringRef ctor, bool line = true) {
+	template<typename T>
+	fmt::Formatter& ctor(T ctor, bool line = true) {
 		if (line) {
 			this->output_ << fmt::line;
 		}
 		return this->output_ << fmt::lparen << ctor << fmt::nbsp;
 	}
+
 	fmt::Formatter& end_ctor() {
 		return this->output_ << fmt::rparen;
 	}

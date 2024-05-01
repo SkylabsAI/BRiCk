@@ -4,7 +4,9 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 
+Require Export elpi.apps.locker.
 Require Export bedrock.prelude.base.
+Require Export bedrock.prelude.error.
 Require Export bedrock.prelude.option.
 Require Export bedrock.prelude.sum.
 Require Export bedrock.prelude.bytestring.

@@ -89,8 +89,8 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 		std::string s_notation;
 		llvm::raw_string_ostream notation{s_notation};
 		llvm::StringRef def_name = def->getName();
-		if (def_name == "__builtin_va_list" || def_name.startswith("__SV") ||
-			def_name.startswith("__clang_sv"))
+		if (def_name == "__builtin_va_list" || def_name.starts_with("__SV") ||
+			def_name.starts_with("__clang_sv"))
 			return;
 		if (const FieldDecl *fd = dyn_cast<FieldDecl>(def)) {
 			if (not print_path(notation, fd->getParent(), true))

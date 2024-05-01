@@ -114,67 +114,78 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 		return print.output() << "#[local] Open Scope bs_scope." << fmt::line;
 	};
 
-	with_open_file(output_file_, [&](Formatter& fmt) {
-		Cache cache;
-		CoqPrinter print(fmt, /*templates*/ false, structured_keys_, cache);
-		ClangPrinter cprint(compiler_, ctxt, trace_, comment_);
+	with_open_file(
+		output_file_, [&](Formatter& fmt) {
+			Cache cache;
+			CoqPrinter print(fmt, /*templates*/ false, structured_keys_, cache);
+			ClangPrinter cprint(compiler_, ctxt, trace_, comment_);
 
-		parser(print);
-		bytestring(print) << fmt::line;
+			parser(print);
+			bytestring(print) << fmt::line;
 
-		if (sharing) {
-			PRINTER<clang::Type> type_fn = [&](auto prefix, auto num,
-											   auto* type) {
-				print.output()
-					<< "#[local] Definition " << prefix << num << " : type := ";
-				cprint.printType(type, print, loc::of(type));
-				print.output() << "." << fmt::line;
-			};
-			PRINTER<clang::NamedDecl> name_fn = [&](auto prefix, auto num,
-													auto* decl) {
-				print.output()
-					<< "#[local] Definition " << prefix << num << " : name := ";
-				cprint.printName(decl, print, loc::of(decl));
-				print.output() << "." << fmt::line;
-			};
+			if (sharing) {
+				PRINTER<clang::Type> type_fn = [&](auto prefix, auto num,
+												   auto* type) {
+					print.output() << "#[local] Definition " << prefix << num
+								   << " : type := ";
+					cprint.printType(type, print, loc::of(type));
+					print.output() << "." << fmt::line;
+				};
+				PRINTER<clang::NamedDecl> name_fn = [&](auto prefix, auto num,
+														auto* decl) {
+					print.output() << "#[local] Definition " << prefix << num
+								   << " : name := ";
+					cprint.printName(decl, print, loc::of(decl));
+					print.output() << "." << fmt::line;
+				};
 
+				for (auto decl : mod.declarations()) {
+					prePrintDecl(decl, cache, type_fn, name_fn);
+				}
+				for (auto decl : mod.definitions()) {
+					prePrintDecl(decl, cache, type_fn, name_fn);
+				}
+			}
+
+			print.output()
+				<< "Definition module : translation_unit := " << fmt::indent
+				<< fmt::line
+				<< "Eval reduce_translation_unit in translation_unit.decls"
+				<< fmt::nbsp;
+
+			print.begin_list();
 			for (auto decl : mod.declarations()) {
-				prePrintDecl(decl, cache, type_fn, name_fn);
+				printDecl(decl, print, cprint);
 			}
 			for (auto decl : mod.definitions()) {
-				prePrintDecl(decl, cache, type_fn, name_fn);
+				printDecl(decl, print, cprint);
 			}
-		}
+			for (auto decl : mod.asserts()) {
+				printDecl(decl, print, cprint);
+			}
+			print.end_list();
+			print.output() << fmt::nbsp;
+			if (ctxt->getTargetInfo().isBigEndian()) {
+				print.output() << "Big";
+			} else {
+				always_assert(ctxt->getTargetInfo().isLittleEndian());
+				print.output() << "Little";
+			}
 
-		print.output()
-			<< "Definition module : translation_unit := " << fmt::indent
-			<< fmt::line
-			<< "Eval reduce_translation_unit in translation_unit.decls"
-			<< fmt::nbsp;
+			// TODO I still need to generate the initializer
 
-		print.begin_list();
-		for (auto decl : mod.declarations()) {
-			printDecl(decl, print, cprint);
-		}
-		for (auto decl : mod.definitions()) {
-			printDecl(decl, print, cprint);
-		}
-		for (auto decl : mod.asserts()) {
-			printDecl(decl, print, cprint);
-		}
-		print.end_list();
-		print.output() << fmt::nbsp;
-		if (ctxt->getTargetInfo().isBigEndian()) {
-			print.output() << "Big";
-		} else {
-			always_assert(ctxt->getTargetInfo().isLittleEndian());
-			print.output() << "Little";
-		}
+			print.output() << "." << fmt::outdent << fmt::line;
 
-		// TODO I still need to generate the initializer
-
-		print.output() << "." << fmt::outdent << fmt::line;
-	});
+			if (check_types_) {
+				print.output()
+					<< fmt::line << "Require bedrock.lang.cpp.syntax.typed."
+					<< fmt::line
+					<< "Succeed Example well_typed : "
+					   "typed.decltype.check_tu module = trace.Success tt"
+					   " := ltac:(vm_compute; reflexivity)."
+					<< fmt::line;
+			}
+		});
 
 	with_open_file(notations_file_, [&](Formatter& spec_fmt) {
 		auto& ctxt = decl->getASTContext();

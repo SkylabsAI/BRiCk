@@ -9,12 +9,10 @@ Require Import bedrock.prelude.bytestring.
 
 Set Primitive Projections.
 
-Variant SwitchBranch : Set :=
-| Exact (_ : Z)
-| Range (_ _ : Z).
-#[global] Instance: EqDecision SwitchBranch.
-Proof. solve_decision. Defined.
+Export core(Stmt'(..)).
+Export core(VarDecl'(..)).
 
+(*
 Inductive VarDecl' {lang} : Set :=
 | Dvar (name : localname) (_ : type' lang) (init : option (Expr' lang))
 | Ddecompose (_ : Expr' lang) (anon_var : ident) (_ : list VarDecl')
@@ -95,8 +93,12 @@ Proof.
   rewrite -{1}/(EqDecision _) in IHs.
   decide equality; try solve_trivial_decision.
 Defined.
+*)
 Notation Stmt := (Stmt' lang.cpp).
 Notation MStmt := (Stmt' lang.temp).
+
+Notation VarDecl := (VarDecl' lang.cpp).
+Notation MVarDecl := (VarDecl' lang.temp).
 
 Definition Sskip {lang} : Stmt' lang := Sseq nil.
 

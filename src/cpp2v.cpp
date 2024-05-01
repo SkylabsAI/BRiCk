@@ -80,6 +80,11 @@ static cl::opt<std::string> NameTest("name-test",
 									 cl::value_desc("filename"), cl::Optional,
 									 cl::cat(Cpp2V));
 
+static cl::opt<bool> CheckTypes("check-types",
+								cl::desc("check types of translation units"),
+								cl::Optional, cl::ValueOptional,
+								cl::cat(Cpp2V));
+
 static cl::bits<Trace::Bit> TraceBits(
 	"trace", cl::desc("print debug trace on fd 2 (can be repeated)"),
 	cl::ZeroOrMore, cl::CommaSeparated,
@@ -99,7 +104,7 @@ static cl::bits<Trace::Bit> TraceBits(
 	cl::cat(Cpp2V));
 
 static cl::opt<bool> NoSharing("no-sharing", cl::desc("disable sharing"),
-							  cl::Optional, cl::ValueOptional, cl::cat(Cpp2V));
+							   cl::Optional, cl::ValueOptional, cl::cat(Cpp2V));
 
 class ToCoqAction : public clang::ASTFrontendAction {
 public:
@@ -116,10 +121,11 @@ public:
 		llvm::errs() << i << "\n";
 	}
 #endif
-		auto result = new ToCoqConsumer(
-			&Compiler, to_opt(VFileOutput), to_opt(NamesFile),
-			to_opt(Templates), to_opt(NameTest), !MangledKeys,
-			Trace::fromBits(TraceBits.getBits()), Comment, !NoSharing);
+		auto result =
+			new ToCoqConsumer(&Compiler, to_opt(VFileOutput), to_opt(NamesFile),
+							  to_opt(Templates), to_opt(NameTest), !MangledKeys,
+							  Trace::fromBits(TraceBits.getBits()), Comment,
+							  !NoSharing, true /* CheckTypes */);
 		return std::unique_ptr<clang::ASTConsumer>(result);
 	}
 

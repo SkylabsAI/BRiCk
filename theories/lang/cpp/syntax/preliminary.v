@@ -28,13 +28,37 @@ Definition ident : Set := bs.
 Bind Scope bs_scope with ident.
 #[global] Instance ident_eq: EqDecision ident := _.
 
-(* local names
-   TODO: the AST supports some other name types that we might want to use here.
- *)
-Definition localname : Set := ident.
-Bind Scope bs_scope with localname.
-#[global] Instance localname_eq: EqDecision localname := _.
+(** local names
+In a normal C++ program, local names are just identifiers but the internal AST
+contains two other types of names corresponding to compiler-generated names.
+These are:
+- opaque names are used for temporaries, e.g. the location that the result of
+  <<e>> is placed in in the following code <<auto [a,b] = e>>.
+- the names of indicies of array loops, which the AST uses for primitive array
+  copies.
 
+NOTE
+Because these other types of names occur so infrequently, we choose [bs] as
+the underlying type and use a special prefix for the inaccessible variable names.
+ *)
+Module localname.
+  Definition t : Set := ident.
+  #[global] Bind Scope bs_scope with localname.t.
+  #[global] Instance localname_eq: EqDecision t := _.
+
+  (* these are pseudo constructors for making different types
+     of local names. *)
+
+  Definition N_to_bs (n : N) : bs :=
+    if n is 0%N then "0"
+    else BS.of_string $ pretty.pretty_N_go n "".
+
+  Definition arrayloop_index (n : N) : t := "!" ++ N_to_bs n.
+  Definition opaque (n : N) : t := "%" ++ N_to_bs n.
+  Definition anon (n : N) : t := "#" ++ N_to_bs n.
+End localname.
+#[global] Bind Scope bs_scope with localname.t.
+Notation localname := localname.t.
 
 (** * Type Preliminaries *)
 
@@ -560,6 +584,8 @@ Defined.
 
 (** ** The way an operator call is desugared *)
 Module operator_impl.
+  Import UPoly.
+
   Variant t {obj_name type : Set} : Set :=
     | Func (fn_name : obj_name) (fn_type : type)
     | MFunc (fn_name : obj_name) (_ : dispatch_type) (fn_type : type).
@@ -575,11 +601,31 @@ Module operator_impl.
     end.
 
   Definition existsb {name type : Set} (f : name -> bool) (g : type -> bool)
-      (i : operator_impl.t name type) : bool :=
+    (i : operator_impl.t name type) : bool :=
     match i with
     | Func fn ft
     | MFunc fn _ ft => f fn || g ft
     end.
+
+  Definition fmap {name type name' type' : Set} (f : name -> name') (g : type -> type')
+    (i : t name type) : t name' type' :=
+    match i with
+    | Func fn ft => Func (f fn) (g ft)
+    | MFunc fn dt ft => MFunc (f fn) dt (g ft)
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ & _ : assert.
+
+  #[universes(polymorphic)]
+    Definition traverse@{u | } {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}
+    {name type name' type' : Set} (f : name -> F name') (g : type -> F type')
+    (i : t name type) : F (t name' type') :=
+    match i with
+    | Func fn ft => Func <$> f fn <*> g ft
+    | MFunc fn dt ft => (fun fn ft => MFunc fn dt ft) <$> f fn <*> g ft
+    end.
+  #[global] Arguments traverse _ _ _ _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
+
 End operator_impl.
 
 Module new_form.
@@ -601,4 +647,38 @@ Module MethodRef.
     | inl p => f p.1.1 || g p.2
     | inr e => h e
     end.
+
+  Import UPoly.
+
+  Definition fmap {name name' functype functype' Expr Expr' : Set}
+    (f : name -> name') (g : functype -> functype')
+    (h : Expr -> Expr')
+    (m : MethodRef_ name functype Expr) : MethodRef_ name' functype' Expr' :=
+    match m with
+    | inl p => inl (f p.1.1, p.1.2, g p.2)
+    | inr e => inr (h e)
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ _ _ _ & _ : assert.
+
+  (* don't use the notation? *)
+  #[universes(polymorphic)]
+  Definition traverse@{u | } {F : Set -> Type@{u}} `{FM: FMap F, AP : !Ap@{Set u Set Set} F}
+  {name name' functype functype' Expr Expr' : Set}
+  (f : name -> F name') (g : functype -> F functype')
+  (h : Expr -> F Expr')
+  (m : MethodRef_ name functype Expr) : F (MethodRef_ name' functype' Expr') :=
+    let _ : Ap F := AP in
+    match m return F (MethodRef_ name' functype' Expr') with
+    | inl p => ap (Ap:=AP) (UPoly.fmap (FMap:=FM) (fun on t => inl (on, p.1.2, t)) $ f p.1.1) $ g p.2
+    | inr e => UPoly.fmap (FMap:=FM) inr $ h e
+    end.
+  #[global] Arguments traverse _ _ _ _ _ _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
+
 End MethodRef.
+
+Variant SwitchBranch : Set :=
+  | Exact (_ : Z)
+  | Range (_ _ : Z).
+#[global] Instance: EqDecision SwitchBranch.
+Proof. solve_decision. Defined.

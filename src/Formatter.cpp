@@ -33,9 +33,8 @@ Formatter::nobreak() {
 		}
 		blank = false;
 	}
-	while (spaces > 0) {
+	for (; spaces > 0; --spaces) {
 		out << " ";
-		spaces--;
 	}
 	return out;
 }
@@ -111,6 +110,7 @@ const RPAREN* rparen;
 Formatter&
 operator<<(Formatter& out, const RPAREN* _) {
 	out.outdent();
+	out.clear_spaces();
 	out.nobreak() << ")";
 	return out;
 }
