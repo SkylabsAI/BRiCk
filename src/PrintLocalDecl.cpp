@@ -13,13 +13,17 @@
 
 using namespace clang;
 
-class PrintLocalDecl :
-	public ConstDeclVisitorArgs<PrintLocalDecl, bool, CoqPrinter&,
-								ClangPrinter&, OpaqueNames&> {
-private:
-	PrintLocalDecl() {}
+class PrintLocalDecl : public ConstDeclVisitorArgs<PrintLocalDecl, bool> {
+public:
+	PrintLocalDecl(CoqPrinter& print, ClangPrinter& cprint, OpaqueNames& names)
+		: print(print), cprint(cprint), names(names) {}
 
-	static CXXDestructorDecl* get_dtor(QualType qt) {
+private:
+	CoqPrinter& print;
+	ClangPrinter& cprint;
+	OpaqueNames& names;
+
+	CXXDestructorDecl* get_dtor(QualType qt) {
 		if (auto rd = qt->getAsCXXRecordDecl()) {
 			return rd->getDestructor();
 		} else if (auto ary = qt->getAsArrayTypeUnsafe()) {
@@ -29,8 +33,7 @@ private:
 		}
 	}
 
-	static void printDestructor(QualType qt, CoqPrinter& print,
-								ClangPrinter& cprint) {
+	void printDestructor(QualType qt) {
 		// TODO when destructors move to classes, we can change this
 		if (auto dest = get_dtor(qt)) {
 			print.some();
@@ -42,10 +45,7 @@ private:
 	}
 
 public:
-	static PrintLocalDecl printer;
-
-	bool VisitVarDecl(const VarDecl* decl, CoqPrinter& print,
-					  ClangPrinter& cprint, OpaqueNames& names) {
+	bool VisitVarDecl(const VarDecl* decl) {
 		// TODO: The following seems to be unsupported by parser.v
 		if (decl->isStaticLocal()) {
 			bool thread_safe =
@@ -75,8 +75,7 @@ public:
 		return true;
 	}
 
-	bool VisitTypeDecl(const TypeDecl* decl, CoqPrinter&, ClangPrinter& cprint,
-					   OpaqueNames&) {
+	bool VisitTypeDecl(const TypeDecl* decl) {
 		using namespace logging;
 		debug() << "local type declarations are (currently) not well supported "
 				<< decl->getDeclKindName() << " (at "
@@ -84,13 +83,11 @@ public:
 		return false;
 	}
 
-	bool VisitStaticAssertDecl(const StaticAssertDecl* decl, CoqPrinter&,
-							   ClangPrinter&, OpaqueNames&) {
+	bool VisitStaticAssertDecl(const StaticAssertDecl* decl) {
 		return false;
 	}
 
-	bool VisitDecl(const Decl* decl, CoqPrinter& print, ClangPrinter& cprint,
-				   OpaqueNames&) {
+	bool VisitDecl(const Decl* decl) {
 		using namespace logging;
 		debug() << "unexpected local declaration while printing local decl "
 				<< decl->getDeclKindName() << " (at "
@@ -98,21 +95,19 @@ public:
 		return false;
 	}
 
-	bool VisitDecompositionDecl(const DecompositionDecl* decl,
-								CoqPrinter& print, ClangPrinter& cprint,
-								OpaqueNames& on) {
+	bool VisitDecompositionDecl(const DecompositionDecl* decl) {
 		print.ctor("Ddecompose");
 
-		cprint.printExpr(decl->getInit(), print, on);
+		cprint.printExpr(decl->getInit(), print, names);
 
-		int index = on.push_anon(decl);
+		int index = names.push_anon(decl);
 		print.output() << fmt::nbsp << "\"$" << index << "\"";
 
 		print.output() << fmt::nbsp;
 
 		print.list_filter(decl->bindings(), [&](const BindingDecl* b) {
 			if (auto* var = b->getHoldingVar()) {
-				this->Visit(var, print, cprint, on);
+				Visit(var);
 				return true;
 			} else {
 				decl->dump();
@@ -126,33 +121,20 @@ public:
 				// ]]
 				// But in certain instances, [getHoldingVar] returns a
 				// [nullptr]. So we access the data directly from the [BindDecl].
-				/*
-				guard::ctor _(print, "Dvar");
-				print.output()
-					<< "\"" << b->getNameAsString() << "\"" << fmt::nbsp;
-				cprint.printQualType(var->getType(), print, loc::of(b));
-				print.output() << fmt::nbsp;
-				{
-					guard::some _(print, false);
-					cprint.printExpr(var->getInit(), print, on);
-				}
-				*/
 			}
 		});
 
-		on.pop_anon(decl);
+		names.pop_anon(decl);
 
 		print.end_ctor();
 		return true;
 	}
 };
 
-PrintLocalDecl PrintLocalDecl::printer;
-
 bool
 ClangPrinter::printLocalDecl(const clang::Decl* decl, CoqPrinter& print) {
 	if (trace(Trace::Local))
 		trace("printLocalDecl", loc::of(decl));
 	OpaqueNames names;
-	return PrintLocalDecl::printer.Visit(decl, print, *this, names);
+	return PrintLocalDecl{print, *this, names}.Visit(decl);
 }
