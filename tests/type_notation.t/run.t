@@ -93,7 +93,7 @@
   Notation_Tbool = {t: bool}
        : type
   Notation_Tmember_pointer_1 =
-  {t: ptr[Nglobal (Nid "foobarbaz")]<char>}
+  {t: ptr[{t: Nglobal (Nid "foobarbaz")}]<char>}
        : type
   Notation_mut_1 = Qmut ({t: bool})
        : type

@@ -15,15 +15,35 @@ Require Import bedrock.lang.cpp.syntax.stmt.
 #[local] Notation EqDecision4 T := (∀ (A : Set), EqDecision A -> EqDecision3 (T A)) (only parsing).
 #[local] Tactic Notation "solve_decision" := intros; solve_decision.
 
-(* TODO: move to [decl.v] *)
 Variant OrDefault {t : Set} : Set :=
   | Defaulted
   | UserDefined (_ : t).
 Arguments OrDefault : clear implicits.
-
+#[global] Instance OrDefault_inh: forall {T: Set}, Inhabited (OrDefault T).
+Proof. repeat constructor. Qed.
 #[global] Instance OrDefault_eq_dec: forall {T: Set}, EqDecision T -> EqDecision (OrDefault T).
 Proof. solve_decision. Defined.
 
+Module OrDefault.
+  Import UPoly.
+
+  Definition fmap {A B : Set} (f : A -> B) (v : OrDefault A) : OrDefault B :=
+    match v with
+    | Defaulted => Defaulted
+    | UserDefined a => UserDefined (f a)
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+
+  #[universes(polymorphic)]
+    Definition traverse@{u | } {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}
+    {A B : Set} (f : A -> F B) (v : OrDefault A) : F (OrDefault B) :=
+    match v with
+    | Defaulted => mret Defaulted
+    | UserDefined a => UserDefined <$> f a
+    end.
+  #[global] Arguments traverse _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
+End OrDefault.
 
 (** ** Type Declarations *)
 
@@ -205,7 +225,6 @@ Record Initializer' {lang} : Set := Build_Initializer
 Proof. solve_decision. Defined.
 Notation Initializer := (Initializer' lang.cpp).
 
-(** TODO: Rename <<obj_name>> to <<name>> and use it for <<c_class>> *)
 Record Ctor' {lang} : Set := Build_Ctor
 { c_class  : classname' lang
 ; c_params : list (ident * type' lang)
@@ -221,7 +240,6 @@ Notation Ctor := (Ctor' lang.cpp).
 
 (** *** Destructors *)
 
-(** TODO: Rename <<obj_name>> to <<name>> and use it for <<d_class>>; drop <<classname>> *)
 Record Dtor' {lang} : Set := Build_Dtor
 { d_class  : classname' lang
 ; d_cc     : calling_conv

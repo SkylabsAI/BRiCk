@@ -53,14 +53,15 @@ ClangPrinter::printParamName(const ParmVarDecl *decl, CoqPrinter &print) {
 	if (trace(Trace::Name))
 		trace("printParamName", loc::of(decl));
 
-	print.output() << "\"";
 	if (decl->getIdentifier()) {
+		print.output() << "\"";
 		decl->printName(print.output().nobreak());
+		print.output() << "\"";
 	} else {
 		auto d = dyn_cast<ParmVarDecl>(decl);
 		auto i = getParameterNumber(d);
 		if (i.has_value()) {
-			print.output() << "#" << i.value();
+			print.output() << "(localname.anon " << i.value() << ")";
 		} else {
 			auto loc = loc::of(decl);
 			error_prefix(logging::fatal(), loc)
@@ -69,7 +70,7 @@ ClangPrinter::printParamName(const ParmVarDecl *decl, CoqPrinter &print) {
 			logging::die();
 		}
 	}
-	return print.output() << "\"";
+	return print.output();
 }
 
 fmt::Formatter &

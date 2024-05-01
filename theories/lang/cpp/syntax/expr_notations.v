@@ -282,7 +282,37 @@ Module ExprNotations.
 
   (* TODO (JH): Determine which casts we actually want to print something for *)
   Notation "e"
-      := (Ecast _ e _ _)
+      := (Ecast _ e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "( t ) e"
+    := (Eexplicit_cast cast_style.c t e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "t ( e )"
+    := (Eexplicit_cast cast_style.functional t e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "'static_cast<' t '>(' e )"
+    := (Eexplicit_cast cast_style.static t e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "'const_cast<' t '>(' e )"
+    := (Eexplicit_cast cast_style.const t e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "'reinterpret_cast<' t '>(' e )"
+    := (Eexplicit_cast cast_style.reinterpret t e)
+         ( in custom CPP_expr at level 0
+         , e custom CPP_expr at level 200
+         , only printing).
+  Notation "'dynamic_cast<' t '>(' e )"
+    := (Eexplicit_cast cast_style.dynamic t e)
          ( in custom CPP_expr at level 0
          , e custom CPP_expr at level 200
          , only printing).

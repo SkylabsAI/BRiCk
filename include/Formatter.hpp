@@ -34,6 +34,10 @@ public:
 	void indent();
 	void outdent();
 
+	void clear_spaces() {
+		spaces = 0;
+	}
+
 	void ascii(int c);
 
 	template<typename T>

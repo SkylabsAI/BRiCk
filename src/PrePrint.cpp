@@ -173,16 +173,18 @@ struct PrePrint :
 		Visit(decl->getType());
 	}
 	void VisitFunctionDecl(const FunctionDecl* decl) {
-		VisitName(decl);
-		if (decl->getBody())
-			Visit(decl->getBody());
 		for (auto i : decl->parameters()) {
 			Visit(i->getType());
 		}
 		Visit(decl->getReturnType());
+
+		// visit the name after the argument types because the name will reference the argument types
+		VisitName(decl);
+
+		if (decl->getBody())
+			Visit(decl->getBody());
 	}
 	void VisitCXXConstructorDecl(const CXXConstructorDecl* decl) {
-		VisitName(decl);
 		for (auto i : decl->inits())
 			Visit(i->getInit());
 		VisitFunctionDecl(decl);

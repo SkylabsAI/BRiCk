@@ -18,7 +18,7 @@
   
       (* CXXConversion fname::operator int() at $TESTCASE_ROOT/test.cpp:18:5 *) (Nscoped (Nglobal (Nid "fname")) (Nfunction (nil) (Nop_conv Tint) nil)) ::
   
-      (* Function operator""_lit(unsigned long long) at $TESTCASE_ROOT/test.cpp:20:1 *) (Nglobal (Nfunction (nil) (Nop_lit "_lit" ) (Tulonglong :: nil))) ::
+      (* Function operator""_lit(unsigned long long) at $TESTCASE_ROOT/test.cpp:20:1 *) (Nglobal (Nfunction (nil) (Nop_lit "_lit") (Tulonglong :: nil))) ::
   
       (* CXXDestructor extra::~extra() at $TESTCASE_ROOT/test.cpp:26:5 *) (Nscoped (Nglobal (Nid "extra")) (Nfunction (nil) Ndtor nil)) ::
   

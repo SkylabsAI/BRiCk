@@ -147,6 +147,7 @@ Section with_cpp.
       | Tresult_call _ _ | Tresult_member_call _ _ _
       | Tresult_member _ _
       | Tdecltype _
+      | Texprtype _
       | Tresult_parenlist _ _ => False
       end%I.
 

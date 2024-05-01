@@ -46,9 +46,25 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module function_type.
+  Import UPoly.
   Definition existsb {decltype : Set} (f : decltype -> bool)
       (ft : function_type_ decltype) : bool :=
     f ft.(ft_return) || existsb f ft.(ft_params).
+
+  Definition fmap {decltype decltype' : Set} (f : decltype -> decltype')
+    (ft : function_type_ decltype) : function_type_ decltype' :=
+    @FunctionType _ ft.(ft_cc) ft.(ft_arity) (f ft.(ft_return)) (f <$> ft.(ft_params)).
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  #[universes(polymorphic)]
+  Definition traverse@{u | } {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}
+  {decltype decltype' : Set} (f : decltype -> F decltype')
+  (ft : function_type_ decltype) : F (function_type_ decltype') :=
+    @FunctionType _ ft.(ft_cc) ft.(ft_arity)
+                                    <$> f ft.(ft_return) <*> traverse (T:=eta list) f ft.(ft_params).
+  #[global] Arguments traverse _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
 End function_type.
 
 (** ** Templates *)
@@ -64,8 +80,39 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module temp_param.
+  Import UPoly.
   Definition existsb {type : Set} (f : type -> bool) (p : temp_param_ type) : bool :=
     if p is Pvalue _ t then f t else false.
+
+  Definition fmap {type type' : Set} (f : type -> type')
+    (p : temp_param_ type) : temp_param_ type' :=
+    match p with
+    | Ptype id => Ptype id
+    | Pvalue id t => Pvalue id (f t)
+    | Punsupported msg => Punsupported msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+
+    Definition traverse (f : type -> F type') (p : temp_param_ type)
+      : F (temp_param_ type') :=
+      match p with
+      | Ptype id => mret $ Ptype id
+      | Pvalue id t => Pvalue id <$> f t
+      | Punsupported msg => mret $ Punsupported msg
+      end.
+    #[global] Arguments traverse _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End temp_param.
 
 Variant temp_arg_ {decltype Expr : Set} : Set :=
@@ -79,6 +126,7 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module temp_arg.
+  Import UPoly.
   Definition existsb {type Expr : Set} (f : type -> bool) (g : Expr -> bool)
       (a : temp_arg_ type Expr) : bool :=
     match a with
@@ -86,6 +134,37 @@ Module temp_arg.
     | Avalue e => g e
     | Aunsupported _ => false
     end.
+
+  Definition fmap {type type' Expr Expr' : Set}
+    (f : type -> type') (g : Expr -> Expr')
+    (a : temp_arg_ type Expr) : temp_arg_ type' Expr' :=
+    match a with
+    | Atype t => Atype (f t)
+    | Avalue e => Avalue (g e)
+    | Aunsupported msg => Aunsupported msg
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ & _ : assert.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' Expr Expr' : Set}.
+
+    Definition traverse (f : type -> F type')
+      (g : Expr -> F Expr')
+      (a : temp_arg_ type Expr) : F (temp_arg_ type' Expr') :=
+      match a with
+      | Atype t => Atype <$> f t
+      | Avalue e => Avalue <$> g e
+      | Aunsupported msg => mret $ Aunsupported msg
+      end.
+    #[global] Arguments traverse _ _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End temp_arg.
 
 (** ** Function names and qualifiers *)
@@ -104,8 +183,47 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module function_name.
+  Import UPoly.
+
   Definition existsb {type : Set} (f : type -> bool) (n : function_name_ type) : bool :=
     if n is Nop_conv t then f t else false.
+
+  Definition fmap {type type' : Set} (f : type -> type') (n : function_name_ type) : function_name_ type' :=
+    match n in function_name_ _ with
+    | Nf id => Nf id
+    | Nctor => Nctor
+    | Ndtor => Ndtor
+    | Nop oo => Nop oo
+    | Nop_conv t => Nop_conv (f t)
+    | Nop_lit s => Nop_lit s
+    | Nunsupported_function msg => Nunsupported_function msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+
+    Definition traverse (f : type -> F type')
+        (n : function_name_ type) : F (function_name_ type') :=
+      match n with
+      | Nf id => mret $ Nf id
+      | Nctor => mret Nctor
+      | Ndtor => mret Ndtor
+      | Nop oo => mret $ Nop oo
+      | Nop_conv t => Nop_conv <$> f t
+      | Nop_lit s => mret $ Nop_lit s
+      | Nunsupported_function msg => mret $ Nunsupported_function msg
+      end.
+    #[global] Arguments traverse _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End function_name.
 
 Variant function_qualifier : Set :=
@@ -167,21 +285,57 @@ Module atomic_name.
     | Nanon _
     | Nunsupported_atomic _ => false
     end.
+
+  Import UPoly.
+
+  Definition fmap {type type' : Set} (f : type -> type')
+      (c : atomic_name_ type) : atomic_name_ type' :=
+    match c with
+    | Nid id => Nid id
+    | Nfunction qs n ts => Nfunction qs (function_name.fmap f n) (f <$> ts)
+    | Nclosure ts => Nclosure (f <$> ts)
+    | Nanon n => Nanon n
+    | Nunsupported_atomic msg => Nunsupported_atomic msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+    Context (f : type -> F type').
+
+    #[local] Notation list_traverse := (UPoly.traverse (T:=eta list)).
+    Definition traverse (c : atomic_name_ type) : F (atomic_name_ type') :=
+      match c with
+      | Nid id => mret $ Nid id
+      | Nfunction qs n ts => Nfunction qs <$> function_name.traverse f n <*> list_traverse f ts
+      | Nclosure ts => Nclosure <$> list_traverse f ts
+      | Nanon n => mret $ Nanon n
+      | Nunsupported_atomic msg => mret $ Nunsupported_atomic msg
+      end.
+    #[global] Arguments traverse & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End atomic_name.
 
 (** ** Casts
     Proposal: make [Cast] part of the recursive bundle.
  *)
-Inductive Cast_ {classname obj_name type : Set} : Set :=
-| Cdependent (* this doesn't have any semantics *)
-| Cbitcast	(** TODO (FM-3431): This explicit cast expression could carry the type as written *)
-| Clvaluebitcast	(** TODO (FM-3431): Drop this constructor? *)
-| Cl2r
-| Cnoop
-| Carray2ptr
-| Cfun2ptr
-| Cint2ptr
-| Cptr2int
+Variant Cast_ {classname type : Set} : Set :=
+| Cdependent (_ : type)
+| Cbitcast (_ : type)
+| Clvaluebitcast	(_ : type) (** TODO (FM-3431): Drop this constructor? *)
+| Cl2r (_ : type) (* OPTIMIZABLE *)
+| Cnoop (_ : type)
+| Carray2ptr (_ : type) (* OPTIMIZABLE *)
+| Cfun2ptr (_ : type) (* OPTIMIZABLE *)
+| Cint2ptr (_ : type) (* OPTIMIZABLE *)
+| Cptr2int (_ : type)
 | Cptr2bool
   (* in [Cderived2base] and [Cbase2derived], the list is a tree
      from (top..bottom], i.e. **in both cases** the most derived
@@ -197,59 +351,72 @@ Inductive Cast_ {classname obj_name type : Set} : Set :=
      A cast from `A` to `C` will be [Cbase2derived ["::B";"::A"]] and
        the "::C" comes form the type of the expression.
    *)
-| Cderived2base (_ : list classname)
-| Cbase2derived (_ : list classname)
-| Cintegral
+| Cintegral (_ : type)
 | Cint2bool
-| Cfloat2int
-| Cnull2ptr
-| Cbuiltin2fun
-| Cctor
+| Cfloat2int (_ : type)
+| Cnull2ptr (_ : type)
+| Cnull2memberptr (_ : type)
+| Cbuiltin2fun (_ : type) (* OPTIMIZABLE? *)
 | C2void
-| Cuser        (conversion_function : obj_name)	(** TODO (FM-3431): Consider just emitting the method call *)
-| Creinterpret (_ : type)
-| Cstatic      (_ : Cast_)
-| Cdynamic     (from to : classname)
-| Cconst       (_ : type).
+
+  (* These are just annotations on the underlying expression *)
+| Cctor (_ : type)
+| Cuser (* this is an annotation, the actual member call is the child node *)
+| Cdynamic     (to : type)
+| Cderived2base (_ : list classname) (_ : type)
+| Cbase2derived (_ : list classname) (_ : type)
+.
 #[global] Arguments Cast_ : clear implicits.
 (**
 TODO (FM-3431): For the explicit casts, we could embed the type as
 written and compute the value category (rather than annote `Ecast`
 with a value category).
 *)
-#[global] Instance Cast__eq_dec : EqDecision3 Cast_.
+#[global] Instance Cast__eq_dec : EqDecision2 Cast_.
 Proof. solve_decision. Defined.
 Module Cast.
-  Definition existsb {classname obj_name type : Set}
-      (GN : classname -> bool) (ON : obj_name -> bool) (T : type -> bool) :=
-    fix existsb (c : Cast_ classname obj_name type) : bool :=
+  Definition existsb {classname type : Set}
+      (GN : classname -> bool) (T : type -> bool)
+      (c : Cast_ classname type) : bool :=
     match c with
-    | Cdependent
-    | Cbitcast
-    | Clvaluebitcast
-    | Cl2r
-    | Cnoop
-    | Carray2ptr
-    | Cfun2ptr
-    | Cint2ptr
-    | Cptr2int
+    | Cdependent t
+    | Cbitcast t
+    | Clvaluebitcast t
+    | Cl2r t
+    | Cnoop t
+    | Carray2ptr t
+    | Cfun2ptr t
+    | Cint2ptr t
+    | Cptr2int t => T t
     | Cptr2bool => false
-    | Cderived2base path
-    | Cbase2derived path => List.existsb GN path
-    | Cintegral
-    | Cint2bool
-    | Cfloat2int
-    | Cnull2ptr
-    | Cbuiltin2fun
-    | Cctor
+    | Cderived2base path t
+    | Cbase2derived path t => List.existsb GN path || T t
+    | Cintegral t => T t
+    | Cint2bool => false
+    | Cfloat2int t
+    | Cnull2ptr t
+    | Cnull2memberptr t
+    | Cbuiltin2fun t
+    | Cctor t => T t
     | C2void => false
-    | Cuser on => ON on
-    | Creinterpret t => T t
-    | Cstatic c => existsb c
-    | Cdynamic gn1 gn2 => GN gn1 || GN gn2
-    | Cconst t => T t
+    | Cuser => false
+    | Cdynamic t => T t
     end.
+
 End Cast.
+
+Module cast_style.
+  Variant t : Set :=
+  | functional
+  | c
+  | static | dynamic | reinterpret | const.
+
+  #[global] Instance t_eq_dec : EqDecision t.
+  Proof. solve_decision. Defined.
+  #[global] Instance t_inhabited : Inhabited t.
+  Proof. repeat constructor. Qed.
+End cast_style.
+
 
 (** ** Structured names *)
 Inductive name' {lang : lang.t} : Set :=
@@ -295,12 +462,19 @@ with type' {lang : lang.t} : Set :=
 (**
 TODO: this should be [gn : classname lang]
 *)
-| Tmember_pointer (gn : name') (t : type')
+| Tmember_pointer (gn : (* classname' *)type') (t : type')
 | Tfloat_ (_ : float_type.t)
 | Tqualified (q : type_qualifiers) (t : type')
 | Tnullptr
 | Tarch (osz : option bitsize) (name : bs)
 | Tdecltype (_ : Expr')
+  (* ^^ this is <<decltype(e)>> when <<e>> is an expression, including a parenthesized expression.
+     (2) in <https://en.cppreference.com/w/cpp/language/decltype>
+   *)
+| Texprtype (_ : Expr')
+  (* ^^ this is <<decltype(e)>> when <<e>> is a variable reference
+     (1) in <https://en.cppreference.com/w/cpp/language/decltype>
+   *)
 | Tunsupported (_ : bs)
 
 (** ** Expressions *)
@@ -334,6 +508,14 @@ a few constructors (by carrying <<Expr ≈ Eparam + Eglobal>> instead of
 | Evar (_ : localname) (_ : type')
 | Eenum_const (gn : name') (_ : ident)
 | Eglobal (on : name') (_ : type')
+(**
+[Eglobal_member gn t] represents <<&gn>> where <<gn>>
+is a non-static member of a class, e.g. a field or method.
+We distinguish this from [Eaddrof (Eglobal gn)] because,
+when [gn] refers to a member, <<&gn>> is not a well-formed
+program because, in part, C++ has no type for references to members.
+*)
+| Eglobal_member (gn : name') (ty : type')
 
 | Echar (c : N) (t : type')
 | Estring (s : list N) (t : type')
@@ -353,17 +535,15 @@ a few constructors (by carrying <<Expr ≈ Eparam + Eglobal>> instead of
 | Eseqor (e1 e2 : Expr')
 | Ecomma (e1 e2 : Expr')
 | Ecall (f : Expr') (es : list Expr')
-(**
-TODO (FM-4320): <<Cdependent>> may require care
-*)
-(* TODO: this use of [Cast_] should really use [classname] as its first argument, but
-   we can not use that without a [match] which Coq rejects as not being strictly positive.
-   GM: the only way I see to solve this problem is to make [lang] and index rather than
+| Eexplicit_cast (c : cast_style.t) (_ : type') (e : Expr')
+| Ecast (c : Cast_ type' type') (e : Expr')
+  (* TODO: this use of [Cast_] should really use [classname] as its first argument, but
+     we can not use that without a [match] which Coq rejects as not being strictly positive.
+     GM: the only way I see to solve this problem is to make [lang] and index rather than
        a parameter. Doing that would allow for two different constructors for [Ecast]
- *)
-| Ecast (c : Cast_ type' name' type') (e : Expr') (vc : ValCat) (t : type')
-| Emember (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
-| Emember_call (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
+   *)
+| Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
+| Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
 | Esubscript (e1 : Expr') (e2 : Expr') (t : type')
 | Esizeof (_ : type' + Expr') (t : type')
@@ -377,8 +557,8 @@ Should be [gn : classname]
 | Econstructor (on : name') (args : list Expr') (t : type')
 | Eimplicit (e : Expr')
 | Eimplicit_init (t : type')
-| Eif (e1 e2 e3 : Expr') (vc : ValCat) (t : type')
-| Eif2  (n : N) (common cond thn els : Expr') (_ : ValCat) (_ : type')
+| Eif (e1 e2 e3 : Expr') (t : type')
+| Eif2  (n : N) (common cond thn els : Expr') (_ : type')
 | Ethis (t : type')
 | Enull
 | Einitlist (args : list Expr') (default : option Expr') (t : type')
@@ -388,14 +568,20 @@ Should be [gn : classname]
   (arg : Expr') (deleted_type : type')
 | Eandclean (e : Expr')
 | Ematerialize_temp (e : Expr') (vc : ValCat)
+  (* ^^ [Ematerialize_temp] is can be an lvalue in the following program:
+     <<
+     int x[10];
+     static_cast<int*const&>(x);
+     >>
+     (this is true at least in c++11)
+   *)
 | Eatomic (op : AtomicOp) (args : list Expr') (t : type')
+| Estmt (_ : Stmt') (_ : type')
 | Eva_arg (e : Expr') (t : type')
   (**
   TODO: We may have to adjust cpp2v: Either [Eva_arg] should carry a
   decltype, or [valcat_of] in cpp2v-core and [decltype.of_expr] here
   are unnecessarily complicated.
-
-  See [valcat_of] in cpp2v-core.
 
   TODO: [Eva_arg _ Tdependent]
 
@@ -405,12 +591,49 @@ Should be [gn : classname]
 | Epseudo_destructor (is_arrow : bool) (t : type') (e : Expr')
 | Earrayloop_init (oname : N) (src : Expr') (level : N) (length : N) (init : Expr') (t : type')
 | Earrayloop_index (level : N) (t : type')
-| Eopaque_ref (name : N) (vc : ValCat) (t : type')
-| Eunsupported (s : bs) (vc : ValCat) (t : type').
+| Eopaque_ref (name : N) (t : type')
+| Eunsupported (s : bs) (t : type')
+with Stmt' {lang : lang.t} : Set :=
+| Sseq    (_ : list Stmt')
+| Sdecl   (_ : list VarDecl')
+
+| Sif     (_ : option VarDecl') (_ : Expr') (_ _ : Stmt')
+| Swhile  (_ : option VarDecl') (_ : Expr') (_ : Stmt')
+| Sfor    (_ : option Stmt') (_ : option Expr') (_ : option Expr') (_ : Stmt')
+| Sdo     (_ : Stmt') (_ : Expr')
+
+| Sswitch (_ : option VarDecl') (_ : Expr') (_ : Stmt')
+| Scase   (_ : SwitchBranch)
+| Sdefault
+
+| Sbreak
+| Scontinue
+
+| Sreturn (_ : option Expr')
+
+| Sexpr   (_ : Expr')
+
+| Sattr (_ : list ident) (_ : Stmt')
+
+| Sasm (_ : bs) (volatile : bool)
+       (inputs : list (ident * Expr'))
+       (outputs : list (ident * Expr'))
+       (clobbers : list ident)
+
+| Slabeled (_ : ident) (_ : Stmt')
+| Sgoto (_ : ident)
+| Sunsupported (_ : bs)
+with VarDecl' {lang : lang.t} : Set :=
+| Dvar (name : localname) (_ : type') (init : option Expr')
+| Ddecompose (_ : Expr') (anon_var : ident) (_ : list VarDecl')
+  (* initialization of a function-local [static]. See https://eel.is/c++draft/stmt.dcl#3 *)
+| Dinit (thread_safe : bool) (name : name') (_ : type') (init : option Expr').
 
 #[global] Arguments name' : clear implicits.
 #[global] Arguments type' : clear implicits.
 #[global] Arguments Expr' : clear implicits.
+#[global] Arguments VarDecl' : clear implicits.
+#[global] Arguments Stmt' : clear implicits.
 
 #[global] Instance type_inhabited {lang} : Inhabited (type' lang).
 Proof. solve_inhabited. Qed.
@@ -418,6 +641,11 @@ Proof. solve_inhabited. Qed.
 Proof. solve_inhabited. Qed.
 #[global] Instance name_inhabited {lang} : Inhabited (name' lang).
 Proof. apply populate, Nglobal, inhabitant. Qed.
+#[global] Instance VarDecl_inhabited {lang} : Inhabited (VarDecl' lang).
+Proof. solve_inhabited. Qed.
+#[global] Instance Stmt_inhabited {lang} : Inhabited (Stmt' lang).
+Proof. apply populate, Sseq, nil. Qed.
+
 
 Section eq_dec.
   Context {lang : lang.t}.
@@ -425,18 +653,24 @@ Section eq_dec.
 
   Lemma name_eq_dec' : EQ_DEC (name' lang)
   with type_eq_dec' : EQ_DEC (type' lang)
-  with Expr_eq_dec' : EQ_DEC (Expr' lang).
+  with Expr_eq_dec' : EQ_DEC (Expr' lang)
+  with VarDecl_eq_dec' : EQ_DEC (VarDecl' lang)
+  with Stmt_eq_dec' : EQ_DEC (Stmt' lang).
   Proof.
     all: intros x y.
     all: pose (name_eq_dec' : EqDecision _).
     all: pose (type_eq_dec' : EqDecision _).
     all: pose (Expr_eq_dec' : EqDecision _).
+    all: pose (VarDecl_eq_dec' : EqDecision _).
+    all: pose (Stmt_eq_dec' : EqDecision _).
     all:unfold Decision; decide equality; solve_decision.
   Defined.
 
   #[global] Instance name_eq_dec : EqDecision _ := name_eq_dec'.
   #[global] Instance type_eq_dec : EqDecision _ := type_eq_dec'.
   #[global] Instance Expr_eq_dec : EqDecision _ := Expr_eq_dec'.
+  #[global] Instance VarDecl_eq_dec : EqDecision _ := VarDecl_eq_dec'.
+  #[global] Instance Stmt_eq_dec : EqDecision _ := Stmt_eq_dec'.
 End eq_dec.
 
 
@@ -507,7 +741,7 @@ Notation function_type' lang := (function_type_ (decltype' lang)).
 Notation function_name' lang := (function_name_ (decltype' lang)).
 Notation temp_param' lang := (temp_param_ (type' lang)).
 Notation temp_arg' lang := (temp_arg_ (decltype' lang) (Expr' lang)).
-Notation Cast' lang := (Cast_ (classname' lang) (obj_name' lang) (type' lang)).
+Notation Cast' lang := (Cast_ (classname' lang) (type' lang)).
 (** TODO (FM-3431): Should be [decltype]                          ^^^^^*)
 Notation atomic_name' lang := (atomic_name_ (type' lang)).
 
@@ -689,12 +923,13 @@ with is_dependentT {lang} (t : type' lang) : bool :=
   | Tenum n => is_dependentN n
   | Tfunction ft => function_type.existsb is_dependentT ft
   | Tbool => false
-  | Tmember_pointer gn t => is_dependentN gn || is_dependentT t
+  | Tmember_pointer gn t => is_dependentT gn || is_dependentT t
   | Tfloat_ _ => false
   | Tqualified _ t => is_dependentT t
   | Tnullptr
   | Tarch _ _ => false
   | Tdecltype e => is_dependentE e
+  | Texprtype e => is_dependentE e
   | Tunsupported _ => false
   end
 
@@ -711,6 +946,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Evar _ t => is_dependentT t
   | Eenum_const n _ => is_dependentN n
   | Eglobal n t => is_dependentN n || is_dependentT t
+  | Eglobal_member n t => is_dependentN n || is_dependentT t
   | Echar _ t
   | Estring _ t
   | Eint _ t => is_dependentT t
@@ -729,9 +965,10 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eseqor e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecomma e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecall e es => is_dependentE e || existsb is_dependentE es
-  | Ecast c e _ t => Cast.existsb is_dependentT is_dependentN is_dependentT c || is_dependentE e || is_dependentT t
-  | Emember e _ _ t => is_dependentE e || is_dependentT t
-  | Emember_call m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
+  | Eexplicit_cast _ t e => is_dependentE e || is_dependentT t
+  | Ecast c e => Cast.existsb is_dependentT is_dependentT c || is_dependentE e
+  | Emember _ e _ _ t => is_dependentE e || is_dependentT t
+  | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es
   | Esubscript e1 e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t
   | Esizeof te t
@@ -740,8 +977,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Econstructor n es t => is_dependentN n || existsb is_dependentE es || is_dependentT t
   | Eimplicit e => is_dependentE e
   | Eimplicit_init t => is_dependentT t
-  | Eif e1 e2 e3 _ t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentT t
-  | Eif2 _ e1 e2 e3 e4 _ t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentE e4 || is_dependentT t
+  | Eif e1 e2 e3 t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentT t
+  | Eif2 _ e1 e2 e3 e4 t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentE e4 || is_dependentT t
   | Ethis t => is_dependentT t
   | Enull => false
   | Einitlist es eo t => existsb is_dependentE es || option.existsb is_dependentE eo || is_dependentT t
@@ -750,10 +987,45 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eandclean e => is_dependentE e
   | Ematerialize_temp e _ => is_dependentE e
   | Eatomic _ es t => existsb is_dependentE es || is_dependentT t
+  | Estmt s t => is_dependentS s || is_dependentT t
   | Eva_arg e t => is_dependentE e || is_dependentT t
   | Epseudo_destructor _ t e => is_dependentT t || is_dependentE e
   | Earrayloop_init _ e1 _ _ e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t
   | Earrayloop_index _ t => is_dependentT t
-  | Eopaque_ref _ _ t => is_dependentT t
-  | Eunsupported _ _ t => is_dependentT t
+  | Eopaque_ref _ t => is_dependentT t
+  | Eunsupported _ t => is_dependentT t
+  end
+
+with is_dependentVD {lang} (vd : VarDecl' lang) : bool :=
+  match vd with
+  | Dvar _ t oe => is_dependentT t || option.existsb is_dependentE oe
+  | Ddecompose e _ lvd => is_dependentE e || List.existsb is_dependentVD lvd
+  | Dinit _ n t oe => is_dependentN n || is_dependentT t || option.existsb is_dependentE oe
+  end
+
+with is_dependentS {lang} (s : Stmt' lang) : bool :=
+  match s with
+  | Sseq ss => List.existsb is_dependentS ss
+  | Sdecl ds => List.existsb is_dependentVD ds
+  | Sif ovd e thn els =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS thn || is_dependentS els
+  | Swhile ovd e b =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS b
+  | Sfor os oe1 oe2 s =>
+      option.existsb is_dependentS os || option.existsb is_dependentE oe1 || option.existsb is_dependentE oe2 || is_dependentS s
+  | Sdo b t => is_dependentS b || is_dependentE t
+  | Sswitch ovd e s =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS s
+  | Scase _
+  | Sdefault
+  | Sbreak
+  | Scontinue => false
+  | Sreturn oe => option.existsb is_dependentE oe
+  | Sexpr e => is_dependentE e
+  | Sattr _ s => is_dependentS s
+  | Sasm _ _ ins outs _ =>
+      List.existsb (is_dependentE ∘ snd) ins || List.existsb (is_dependentE ∘ snd) outs
+  | Slabeled _ s => is_dependentS s
+  | Sgoto _ => false
+  | Sunsupported _ => false
   end.

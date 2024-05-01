@@ -73,6 +73,7 @@ theories/prelude/named_binder.v
 
 theories/prelude/base.v
 theories/prelude/option.v
+theories/prelude/error.v
 theories/prelude/sum.v
 theories/prelude/addr.v
 theories/prelude/numbers.v

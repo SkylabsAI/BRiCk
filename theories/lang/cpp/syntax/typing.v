@@ -100,6 +100,32 @@ Module decltype.
     Section fixpoint.
       Context (of_expr : Expr -> M decltype).
 
+      Definition of_cast (base : decltype) (c : Cast_ (type' lang) (type' lang)) : M decltype :=
+        match c with
+        | Cdependent t
+        | Cbitcast t
+        | Clvaluebitcast t
+        | Cl2r t
+        | Cnoop t
+        | Carray2ptr t
+        | Cfun2ptr t
+        | Cint2ptr t
+        | Cptr2int t => mret t
+        | Cptr2bool => mret Tbool
+        | Cderived2base _ ty
+        | Cbase2derived _ ty => mret ty
+        | Cintegral t => mret t
+        | Cint2bool => mret Tbool
+        | Cfloat2int t
+        | Cnull2ptr t
+        | Cnull2memberptr t
+        | Cbuiltin2fun t
+        | Cctor t => mret t
+        | C2void => mret Tvoid
+        | Cuser => mret base
+        | Cdynamic to => mret to
+        end.
+
       Definition of_binop (op : BinOp) (l : Expr) (t : exprtype) : M decltype :=
         match op with
         | Bdotp =>
@@ -115,11 +141,13 @@ Module decltype.
 
           https://www.eel.is/c++draft/expr.mptr.oper#6
           *)
-          match l with
-          | Ematerialize_temp _ _ => mret $ Trv_ref t
+          let* lt := to_exprtype <$> of_expr l in
+          match lt.1 with
+          | Lvalue => mret $ tref QM t
+          | Xvalue => mret $ trv_ref QM t
           | _ => mfail
           end
-        | Bdotip => mret $ Tref t	(* derived from [Bdotp] *)
+        | Bdotip => mret $ tref QM t	(* derived from [Bdotp] *)
         | _ => mret t
         end.
 
@@ -136,57 +164,62 @@ Module decltype.
         | _ => mfail
         end.
 
-      Definition of_member (e : Expr) (mut : bool) (t : decltype) : M decltype :=
+      Definition of_member (arrow : bool) (e : Expr) (mut : bool) (t : decltype) : M decltype :=
         let '(ref, et) := to_exprtype t in
         match ref with
         | Lvalue | Xvalue => mret $ Tref et
         | Prvalue =>
-          let* '(oref, oty) := to_exprtype <$> of_expr e in
+          let* '(lval, oty) :=
+            let* et := to_exprtype <$> of_expr e in
+            if arrow then
+              match et.1 , et.2 with
+              | Prvalue , Tptr t => mret (true, t)
+              | _ , _ => mfail
+              end
+            else
+              match et.1 with
+              | Lvalue => mret (true, et.2)
+              | Xvalue => mret (false, et.2)
+              | _ => mfail
+              end
+          in
           let qual :=
             let '(ocv, _) := decompose_type oty in
             CV (if mut then false else q_const ocv) (q_volatile ocv)
           in
           let ty := tqualified qual et in
-          match oref with
-          | Lvalue => mret $ Tref ty
-          | Xvalue => mret $ Trv_ref ty
-          | _ => mfail
-          end
+          mret $ if lval : bool then Tref ty else Trv_ref ty
         end.
 
       Definition of_member_call (f : MethodRef' lang) : M decltype :=
         match f with
-        | inl (_, _, ft)
-        | inr (Ecast Cl2r _  _ (Tmember_pointer _ ft)) => from_functype ft
-        | _ => mfail
+        | inl (_, _, ft) =>
+            from_functype ft
+        | inr e =>
+            let* et := of_expr e in
+            match et with
+            | Tmember_pointer cls ft => from_functype ft
+            | _ => mfail
+            end
         end.
 
       Definition from_operator_impl (f : operator_impl' lang) : M decltype :=
         from_functype $ operator_impl.functype f.
 
       Definition of_subscript (e1 e2 : Expr) (t : exprtype) : M decltype :=
-        (**
-        Neither operand ever has type [Tarray _ _] due to implicitly
-        inserted array-to-pointer conversions. To compute the right
-        value category, we skip over such conversions.
-        *)
-        let of_array (ar : Expr) : M decltype :=
-          let* array_type := of_expr ar in
-          match to_valcat array_type with
-          | Lvalue => mret $ Tref t
-          | Prvalue | Xvalue => mret $ Trv_ref t
-          end
-        in
-        let of_base (ei : Expr) : M decltype :=
-          match ei with
-          | Ecast Carray2ptr ar _ _ => of_array ar
-          | _ => mret $ Tref t
-          end
-        in
         let* t1 := of_expr e1 in
-        match drop_qualifiers t1 with
-        | Tptr _ => of_base e1
-        | _ => of_base e2
+        let* t2 := of_expr e2 in
+        (* we need to handle arrays and pointers.
+           Arrays can be lvalues or xvalues.
+         *)
+        match t1 , t2 with
+        | Tref aty , Tnum _ _ => Tref <$> array_type aty
+        | Trv_ref aty , Tnum _ _ => Trv_ref <$> array_type aty
+        | Tptr ety , Tnum _ _ => mret $ Tref ety
+        | Tnum _ _ , Tref aty => Tref <$> array_type aty
+        | Tnum _ _ , Trv_ref aty => Trv_ref <$> array_type aty
+        | Tnum _ _ , Tptr ety => mret $ Tref ety
+        | _ , _ => mfail
         end.
 
       (**
@@ -201,6 +234,17 @@ Module decltype.
         mret $ of_exprtype vc t.
 
       #[local] Notation traverse_list := mapM.
+
+      Definition cast_result : decltype -> decltype :=
+        qual_norm (fun cv t =>
+          match t with
+          | Tnamed _
+          | Tarray _ _
+          | Tincomplete_array _
+          | Tvariable_array _ _
+          | Tenum _ => tqualified cv t
+          | _ => t
+          end).
 
       Definition of_expr_body (e : Expr) : M decltype :=
         match e return M decltype with
@@ -217,7 +261,12 @@ Module decltype.
 
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
-        | Eglobal _ t => mret t
+        | Eglobal _ t => mret $ tref QM t
+        | Eglobal_member nm t =>
+            match nm with
+            | Nscoped cls _ => mret $ Tmember_pointer (Tnamed cls) t
+            | _ => mfail
+            end
 
         | Echar _ t => mret t
         | Estring chars t =>
@@ -238,9 +287,11 @@ Module decltype.
         | Eseqor _ _ => mret Tbool
         | Ecomma _ e2 => of_expr e2
         | Ecall f _ => of_call f
-        | Ecast _ _ vc et => mret $ of_exprtype vc et
-        | Emember e _ mut t => of_member e mut t
-        | Emember_call f _ _ => of_member_call f
+        | Eexplicit_cast _ t e =>
+            mret (cast_result t)
+        | Ecast c e => of_expr e >>= fun t => of_cast t c
+        | Emember arrow e _ mut t => of_member arrow e mut t
+        | Emember_call _ f _ _ => of_member_call f
         | Eoperator_call _ f _ => from_operator_impl f
         | Esubscript e1 e2 t => of_subscript e1 e2 t
         | Esizeof _ t
@@ -255,8 +306,8 @@ Module decltype.
           https://en.cppreference.com/w/cpp/language/value_initialization
           *)
           mret t
-        | Eif _ _ _ vc t
-        | Eif2 _ _ _ _ _ vc t => mret $ of_exprtype vc t
+        | Eif _ _ _ t
+        | Eif2 _ _ _ _ _ t => mret t
         | Ethis t => mret t
         | Enull => mret Tnullptr
         | Einitlist _ _ t => mret t
@@ -265,12 +316,13 @@ Module decltype.
         | Eandclean e => of_expr e
         | Ematerialize_temp e vc => of_materialize_temp e vc
         | Eatomic _ _ t => mret t
+        | Estmt _ t => mret t
         | Eva_arg _ t => mret $ normalize t
         | Epseudo_destructor _ _ _ => mret Tvoid
         | Earrayloop_init _ _ _ _ _ t
         | Earrayloop_index _ t => mret t
-        | Eopaque_ref _ vc t
-        | Eunsupported _ vc t => mret $ of_exprtype vc t
+        | Eopaque_ref _ t
+        | Eunsupported _ t => mret t
         end.
     End fixpoint.
   End with_lang.

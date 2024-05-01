@@ -9,7 +9,6 @@ Require Import Coq.Strings.Ascii.
 Require Import stdpp.gmap.
 
 Require Import bedrock.prelude.base.
-Require Import bedrock.prelude.addr.
 Require Import bedrock.prelude.option.
 Require Import bedrock.prelude.numbers.
 
@@ -87,7 +86,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
   | Vptr (_ : ptr)
   | Vraw (_ : raw_byte)
   | Vundef
-  .
+  | Vmember_ptr (_ : name) (_ : option atomic_name).
   #[global] Notation Vref := Vptr (only parsing).
 
   (* TODO Maybe this should be removed *)
@@ -123,6 +122,7 @@ Module Type VAL_MIXIN (Import P : PTRS) (Import R : RAW_BYTES).
     | Vptr p => Some (bool_decide (p <> nullptr))
     | Vchar n => Some (bool_decide (n <> 0%N))
     | Vundef | Vraw _ => None
+    | Vmember_ptr _ p => Some (bool_decide (p <> None))
     end.
   #[global] Arguments is_true !_.
 
