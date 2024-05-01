@@ -173,6 +173,13 @@ Module Type Expr.
           read_decl (_global x) ty (fun p => Q p FreeTemps.id)
       |-- wp_lval (Eglobal x ty) Q.
 
+    (* [Eglobal_member (Nscoped cls nm)] represents a member pointer
+       on class [cls] to member [nm]. It is always a pr-value.
+     *)
+    Axiom wp_operand_global_member : forall ty cls nm Q,
+          Q (Vmember_ptr cls $ Some nm) FreeTemps.id
+      |-- wp_operand (Eglobal_member (Nscoped cls nm) ty) Q.
+
     (* [Emember a f mut ty] is an lvalue by default except when
      * - where [m] is a member enumerator or a non-static member function, or
      * - where [a] is an rvalue and [m] is a non-static data member of non-reference type
@@ -627,6 +634,11 @@ Module Type Expr.
         is_pointer ty ->
             wp_operand e Q (* note: [has_type v Tnullptr |-- has_type v (Tptr ty)] *)
         |-- wp_operand (Ecast Cnull2ptr e Prvalue ty) Q.
+
+    Axiom wp_operand_cast_null2memberptr : forall e ty Q,
+        type_of e = Tnullptr ->
+            wp_operand e (fun _ free => Q (Vmember_ptr cls None) free)
+        |-- wp_operand (Ecast Cnull2memberptr e Prvalue (Tmember_ptr cls ty)) Q.
 
     (* Determine if a 0-constant of this type can be used as a pseudonym for <<nullptr>> *)
     Definition can_represent_null (ty : type) : bool :=

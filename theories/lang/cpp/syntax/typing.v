@@ -218,6 +218,11 @@ Module decltype.
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
         | Eglobal _ t => mret $ tref QM t
+        | Eglobal_member nm t =>
+            match nm with
+            | Nscoped cls _ => mret $ Tmember_pointer cls t
+            | _ => mfail
+            end
 
         | Echar _ t => mret t
         | Estring chars t =>

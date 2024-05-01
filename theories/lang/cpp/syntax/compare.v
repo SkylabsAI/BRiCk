@@ -402,10 +402,10 @@ Module Cast.
     Definition car (t : positive) : Set :=
       match t with
       | 11 | 12 => list classname
-      | 20 => name
-      | 21 | 24 => type
-      | 22 => Cast
-      | 23 => box_Cdynamic
+      | 21 => name
+      | 22 | 25 => type
+      | 23 => Cast
+      | 24 => box_Cdynamic
       | _ => unit
       end.
     Definition data (c : Cast) : car (TAG c) :=
@@ -421,10 +421,10 @@ Module Cast.
         (t : positive) : car t -> car t -> comparison :=
       match t with
       | 11 | 12 => List.compare compareGN
-      | 20 => compareN
-      | 21 | 24 => compareT
-      | 22 => Cast_compare
-      | 23 => box_Cdynamic_compare
+      | 21 => compareN
+      | 22 | 25 => compareT
+      | 23 => Cast_compare
+      | 24 => box_Cdynamic_compare
       | _ => fun _ _ => Eq
       end.
 
@@ -449,6 +449,7 @@ Module Cast.
       | Cint2bool => compare_tag (Reduce (TAG Cint2bool))
       | Cfloat2int => compare_tag (Reduce (TAG Cfloat2int))
       | Cnull2ptr => compare_tag (Reduce (TAG Cnull2ptr))
+      | Cnull2memberptr => compare_tag (Reduce (TAG Cnull2memberptr))
       | Cbuiltin2fun => compare_tag (Reduce (TAG Cbuiltin2fun))
       | Cctor => compare_tag (Reduce (TAG Cctor))
       | C2void => compare_tag (Reduce (TAG C2void))
@@ -1697,7 +1698,8 @@ Module Expr.
       | Earrayloop_init _ _ _ _ _ _ => 53
       | Earrayloop_index _ _ => 54
       | Eopaque_ref _ _ _ => 55
-      | Eunsupported _ _ _ => 56
+      | Eglobal_member _ _ => 56
+      | Eunsupported _ _ _ => 57
       end.
     Definition car (t : positive) : Set :=
       match t with
@@ -1750,6 +1752,7 @@ Module Expr.
       | 53 => box_Earrayloop_init
       | 54 => box_Echar
       | 55 => box_Eopaque_ref
+      | 56 => box_Eglobal
       | _ => box_Eunsupported
       end.
     Definition data (e : Expr) : car (tag e) :=
@@ -1765,6 +1768,7 @@ Module Expr.
       | Evar n t => Box_Evar n t
       | Eenum_const gn id => Box_Eenum_const gn id
       | Eglobal on t => Box_Eglobal on t
+      | Eglobal_member on t => Box_Eglobal on t
       | Echar c t => Box_Echar c t
       | Estring s t => Box_Estring s t
       | Eint n t => Box_Eint n t
@@ -1862,6 +1866,7 @@ Module Expr.
       | 53 => box_Earrayloop_init_compare
       | 54 => box_Echar_compare
       | 55 => box_Eopaque_ref_compare
+      | 56 => box_Eglobal_compare
       | _ => box_Eunsupported_compare
       end.
 
@@ -1883,6 +1888,8 @@ Module Expr.
 
       | Eenum_const gn id => compare_ctor (Reduce (tag (Eenum_const gn id))) (fun _ => Reduce (data (Eenum_const gn id)))
       | Eglobal on t => compare_ctor (Reduce (tag (Eglobal on t))) (fun _ => Reduce (data (Eglobal on t)))
+      | Eglobal_member on t => compare_ctor (Reduce (tag (Eglobal_member on t))) (fun _ => Reduce (data (Eglobal_member on t)))
+
       | Echar c t => compare_ctor (Reduce (tag (Echar c t))) (fun _ => Reduce (data (Echar c t)))
       | Estring s t => compare_ctor (Reduce (tag (Estring s t))) (fun _ => Reduce (data (Estring s t)))
       | Eint n t => compare_ctor (Reduce (tag (Eint n t))) (fun _ => Reduce (data (Eint n t)))

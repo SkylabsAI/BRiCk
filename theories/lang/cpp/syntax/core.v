@@ -203,6 +203,7 @@ Inductive Cast_ {classname obj_name type : Set} : Set :=
 | Cint2bool
 | Cfloat2int
 | Cnull2ptr
+| Cnull2memberptr
 | Cbuiltin2fun
 | Cctor
 | C2void
@@ -240,6 +241,7 @@ Module Cast.
     | Cint2bool
     | Cfloat2int
     | Cnull2ptr
+    | Cnull2memberptr
     | Cbuiltin2fun
     | Cctor
     | C2void => false
@@ -334,6 +336,14 @@ a few constructors (by carrying <<Expr ≈ Eparam + Eglobal>> instead of
 | Evar (_ : localname) (_ : type')
 | Eenum_const (gn : name') (_ : ident)
 | Eglobal (on : name') (_ : type')
+(**
+[Eglobal_member gn t] represents <<&gn>> where <<gn>>
+is a non-static member of a class, e.g. a field or method.
+We distinguish this from [Eaddrof (Eglobal gn)] because,
+when [gn] refers to a member, <<&gn>> is not a well-formed
+program because, in part, C++ has no type for references to members.
+*)
+| Eglobal_member (gn : name') (ty : type')
 
 | Echar (c : N) (t : type')
 | Estring (s : list N) (t : type')
@@ -711,6 +721,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Evar _ t => is_dependentT t
   | Eenum_const n _ => is_dependentN n
   | Eglobal n t => is_dependentN n || is_dependentT t
+  | Eglobal_member n t => is_dependentN n || is_dependentT t
   | Echar _ t
   | Estring _ t
   | Eint _ t => is_dependentT t

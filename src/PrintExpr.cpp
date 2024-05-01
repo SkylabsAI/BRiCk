@@ -123,6 +123,22 @@ is_dependent(const Expr* expr) {
 							 ExprDependence::TypeValueInstantiation);
 }
 
+bool
+is_static_member(ValueDecl* decl) {
+	if (auto field = dyn_cast<FieldDecl>(decl)) {
+		return not field->isCXXInstanceMember();
+	} else if (auto meth = dyn_cast<CXXMethodDecl>(decl)) {
+		return meth->isStatic();
+	} else if (auto vd = dyn_cast<VarDecl>(decl)) {
+		return true; // vd->isStaticLocal();
+	} else {
+		decl->dump();
+		llvm::errs().flush();
+		always_assert(false && "unsupported [is_static_member]");
+		return false;
+	}
+}
+
 // todo(gmm): this is duplicated!
 bool
 is_builtin(const Decl* d) {
@@ -544,11 +560,23 @@ public:
 							ClangPrinter& cprint, const ASTContext&,
 							OpaqueNames& li) {
 		switch (expr->getOpcode()) {
-		case UnaryOperatorKind::UO_AddrOf:
+		case UnaryOperatorKind::UO_AddrOf: {
+			auto e = expr->getSubExpr();
+			if (auto dre = dyn_cast<DeclRefExpr>(e)) {
+				auto decl = dre->getDecl();
+				if (not is_static_member(decl)) {
+					guard::ctor _(print, "Eglobal_member");
+					cprint.printName(decl, print, loc::of(expr));
+					print.output() << fmt::nbsp;
+					cprint.printQualType(decl->getType(), print, loc::of(expr));
+					return;
+				}
+			}
 			print.ctor("Eaddrof");
-			cprint.printExpr(expr->getSubExpr(), print, li);
+			cprint.printExpr(e, print, li);
 			print.end_ctor(); // elide type
 			return;
+		}
 		case UnaryOperatorKind::UO_Deref:
 			print.ctor("Ederef");
 			break;

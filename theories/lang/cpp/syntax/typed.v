@@ -128,6 +128,13 @@ Module decltype.
       | Tfunction ft => mret ft
       | _ => mfail
       end.
+    Definition require_mfunctype (t : decltype) : M (decltype * function_type) :=
+      match t with
+      | Tmember_pointer nm ft =>
+          pair (Tnamed nm) <$> require_functype ft
+      | _ => mfail
+      end.
+
 
     Definition with_var (_ : atomic_name) (t : decltype) {T} (m : M T) : M T := m.
 
@@ -203,9 +210,6 @@ Module decltype.
         | inr (Ecast Cl2r _  _ (Tmember_pointer _ ft)) => from_functype ft
         | _ => mfail
         end.
-
-      Definition from_operator_impl (f : operator_impl' lang) : M decltype :=
-        from_functype $ operator_impl.functype f.
 
       Definition of_subscript (e1 e2 : Expr) (t : exprtype) : M decltype :=
         (**
@@ -322,6 +326,12 @@ Module decltype.
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
         | Eglobal nm ty => mret $ tref QM ty
+        | Eglobal_member nm ty =>
+            match nm with
+            | Nscoped cls _ =>
+              mret $ Tmember_pointer cls ty
+            | _ => mfail
+            end
 
         | Echar _ t =>
             match t with
@@ -349,7 +359,7 @@ Module decltype.
             let* _ := guard (t = t') in
             mret $ Tref t
         | Eaddrof e =>
-            let* t := of_expr e >=> requireGL in
+            let* t := of_expr e >>= requireGL in
             mret $ Tptr t
         | Eassign le re t =>
             let* lt := of_expr le >>= requireL in
@@ -402,8 +412,46 @@ Module decltype.
             let* edt := of_expr e in
             let* _ := requireGL edt in
             of_member e mut t
-        | Emember_call f _ _ => of_member_call f
-        | Eoperator_call _ f _ => from_operator_impl f
+        | Emember_call f obj es =>
+            let* objT := of_expr obj in
+            let* tes := traverse (T:=eta list) of_expr es in
+            let* ft :=
+              match f with
+              | inl (_, _, ft) => require_functype ft
+              | inr e =>
+                  let* ft := of_expr e in
+                  match ft with
+                  | Tmember_pointer cls (Tfunction ft) =>
+                      mret ft
+                  | _ => mfail
+                  end
+              end
+            in
+            let* _ := check_args ft.(ft_arity) ft.(ft_params) tes in
+            mret ft.(ft_return)
+
+        | Eoperator_call _ f es =>
+            let* tes := traverse (T:=eta list) of_expr es in
+            let* '(result, fargs) :=
+              match f with
+              | operator_impl.Func _ ft =>
+                  let* ft := require_functype ft in
+                  mret (ft.(ft_return), ft.(ft_params))
+              | operator_impl.MFunc _ _ ft =>
+                  (* TODO: the type of the member function does not currently
+                     contain the [Tmember_pointer] type *)
+                  let* objT :=
+                    match tes with
+                    | obj :: _ => mret [obj]
+                    | _ => mret []
+                    end
+                  in
+                  let* ft := require_functype ft in
+                  mret (ft.(ft_return), objT ++ ft.(ft_params))
+              end
+            in
+            let* _ := check_args Ar_Definite fargs tes in
+            mret result
         | Esubscript e1 e2 t => of_subscript e1 e2 t
         | Esizeof te t
         | Ealignof te t =>
