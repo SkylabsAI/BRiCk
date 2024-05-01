@@ -120,11 +120,12 @@ public:
 			// [nullptr]. So we access the data directly from the [BindDecl].
 			print.ctor("Dvar")
 				<< "\"" << b->getNameAsString() << "\"" << fmt::nbsp;
-			cprint.printQualType(decl->getType(), print, loc::of(b));
+			cprint.printQualType(b->getType(), print, loc::of(b));
 			print.output() << fmt::nbsp;
-			print.some();
-			cprint.printExpr(b->getBinding(), print, on);
-			print.end_ctor(); //Some
+			{
+				guard::some _(print, false);
+				cprint.printExpr(b->getHoldingVar()->getInit(), print, on);
+			}
 
 			print.end_ctor(); //Dvar
 #if 0
