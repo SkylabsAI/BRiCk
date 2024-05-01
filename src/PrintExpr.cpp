@@ -652,7 +652,7 @@ public:
 				<< fmt::BOOL(pd->isArrow()) << fmt::nbsp;
 			cprint.printQualType(pd->getDestroyedType(), print, loc::of(pd));
 			print.output() << fmt::nbsp;
-			cprint.printExpr(pd->getBase(), print);
+			cprint.printExpr(pd->getBase(), print, li);
 			print.end_ctor();
 		} else {
 			print.ctor("Ecall");
@@ -962,10 +962,10 @@ public:
 	void
 	VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr* expr,
 									 CoqPrinter& print, ClangPrinter& cprint,
-									 const ASTContext&, OpaqueNames&) {
+									 const ASTContext&, OpaqueNames& on) {
 		print.ctor("Eunresolved_member");
 		print.boolean(expr->isArrow()) << fmt::nbsp;
-		cprint.printExpr(expr->getBase(), print);
+		cprint.printExpr(expr->getBase(), print, on);
 		print.output() << fmt::nbsp;
 		print.str(expr->getMember().getAsString());
 		print.end_ctor();
@@ -1506,11 +1506,11 @@ public:
 
 	void VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr* expr,
 									  CoqPrinter& print, ClangPrinter& cprint,
-									  const ASTContext& ctxt, OpaqueNames&) {
+									  const ASTContext& ctxt, OpaqueNames& on) {
 		print.ctor("Epseudo_destructor");
 		cprint.printQualType(expr->getDestroyedType(), print, loc::of(expr));
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getBase(), print);
+		cprint.printExpr(expr->getBase(), print, on);
 		print.end_ctor();
 	}
 
