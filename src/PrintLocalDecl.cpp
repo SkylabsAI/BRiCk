@@ -110,27 +110,34 @@ public:
 
 		print.output() << fmt::nbsp;
 
-		print.list(decl->bindings(), [&](const BindingDecl* b) {
-			// NOTE: this code is copied from [VisitVarDecl].
-			// We previously did:
-			// [[
-			//   this->Visit(b->getHoldingVar(), print, cprint, on);
-			// ]]
-			// But in certain instances, [getHoldingVar] returns a
-			// [nullptr]. So we access the data directly from the [BindDecl].
-			print.ctor("Dvar")
-				<< "\"" << b->getNameAsString() << "\"" << fmt::nbsp;
-			cprint.printQualType(b->getType(), print, loc::of(b));
-			print.output() << fmt::nbsp;
-			{
-				guard::some _(print, false);
-				cprint.printExpr(b->getHoldingVar()->getInit(), print, on);
+		print.list_filter(decl->bindings(), [&](const BindingDecl* b) {
+			if (auto* var = b->getHoldingVar()) {
+				this->Visit(var, print, cprint, on);
+				return true;
+			} else {
+				decl->dump();
+				llvm::errs().flush();
+				always_assert(false && "no HoldingVar for declaration");
+				return false;
+				// NOTE: this code is copied from [VisitVarDecl].
+				// We previously did:
+				// [[
+				//   this->Visit(b->getHoldingVar(), print, cprint, on);
+				// ]]
+				// But in certain instances, [getHoldingVar] returns a
+				// [nullptr]. So we access the data directly from the [BindDecl].
+				/*
+				guard::ctor _(print, "Dvar");
+				print.output()
+					<< "\"" << b->getNameAsString() << "\"" << fmt::nbsp;
+				cprint.printQualType(var->getType(), print, loc::of(b));
+				print.output() << fmt::nbsp;
+				{
+					guard::some _(print, false);
+					cprint.printExpr(var->getInit(), print, on);
+				}
+				*/
 			}
-
-			print.end_ctor(); //Dvar
-#if 0
-	this->Visit(b->getHoldingVar(), print, cprint, on);
-#endif
 		});
 
 		on.pop_anon(decl);
