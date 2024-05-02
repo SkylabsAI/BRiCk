@@ -32,24 +32,21 @@ Module ParserExpr (Import Lang : PARSER_LANG).
   Definition Ebuiltin (nm : obj_name) (ty : type) : Expr :=
     Ecast Cbuiltin2fun (Eglobal nm ty) Prvalue (Tptr ty).
 
-  Definition Emember (arrow : bool) (e : Expr) (f : ident + name) (mut : bool) (ty : decltype) : force_some Expr :=
+  Definition Emember (arrow : bool) (e_orig : Expr) (f : ident + name) (mut : bool) (ty : decltype) : force_some Expr :=
     option.get_some $
-    let e :=
-      if arrow then
-        match drop_qualifiers $ type_of e with
-        | Tptr t => Some (Ederef e t)
-        | _ => None
-        end
-      else
-        Some e
-    in
-    let k (e : Expr) : Expr :=
       match f with
-      | inr on => Ecomma e (Eglobal on ty)
-      | inl f => Emember e f mut ty
-      end
-    in
-    k <$> e.
+      | inl f => Some $ Emember arrow e_orig f mut ty
+      | inr on =>
+          let e :=
+            if arrow then
+              match drop_qualifiers $ type_of e_orig with
+              | Tptr t => Some (Ederef e_orig t)
+              | _ => None
+              end
+            else
+              Some e_orig
+          in (fun e => Ecomma e (Eglobal on ty)) <$> e
+      end.
 
   Definition Edefault_init_expr (e : Expr) : Expr := e.
 

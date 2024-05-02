@@ -180,14 +180,36 @@ Module Type Expr.
           Q (Vmember_ptr cls $ Some nm) FreeTemps.id
       |-- wp_operand (Eglobal_member (Nscoped cls nm) ty) Q.
 
+    Definition read_arrow (arrow : bool) (e : Expr) (Q : ptr -> FreeTemps.t -> mpred) : mpred :=
+      (if arrow then
+         letI* base, free := wp_operand e in
+           match base with
+           | Vptr p => Q p free
+           | _ => False
+           end
+       else
+         wp_glval e Q)%I.
+
+    Lemma read_arrow_frame arrow e Q Q' :
+      Forall p free, Q p free -* Q' p free
+      |-- read_arrow arrow e Q -* read_arrow arrow e Q'.
+    Proof.
+      rewrite /read_arrow.
+      iIntros "K".
+      case_match.
+      { iApply wp_operand_frame. reflexivity.
+        iIntros (??); case_match; eauto. }
+      { iApply wp_glval_frame; eauto. reflexivity. }
+    Qed.
+
     (* [Emember a f mut ty] is an lvalue by default except when
      * - where [m] is a member enumerator or a non-static member function, or
      * - where [a] is an rvalue and [m] is a non-static data member of non-reference type
      *)
-    Axiom wp_lval_member : forall ty a m mut Q,
+    Axiom wp_lval_member : forall arrow ty a m mut Q,
         match valcat_of a , drop_qualifiers (type_of a) with
         | Lvalue , Tnamed nm =>
-          letI* base, free := wp_lval a in
+          letI* base, free := read_arrow arrow a in
           letI* p := read_decl (base ,, _field (Field nm (Nid m))) ty in
           Q p free
         | _ , _ => False
@@ -195,7 +217,7 @@ Module Type Expr.
              temporary. Being conservative is sensible in our semantic style.
           *)
         end
-      |-- wp_lval (Emember a m mut ty) Q.
+      |-- wp_lval (Emember arrow a m mut ty) Q.
 
     (* [Emember a m mut ty] is an xvalue if
      * - [a] is an rvalue and [m] is a non-static data member of non-reference type
@@ -210,7 +232,8 @@ Module Type Expr.
           (* This does not occur because our AST explicitly contains [Cl2r] casts.
            *)
         end%I
-      |-- wp_xval (Emember a m mut ty) Q.
+      |-- wp_xval (Emember false a m mut ty) Q.
+    (* <<e->f>> is never an xvalue because <<e>> must be a pointer *)
 
     (* [Esubscript e i _ _] when one operand is an array lvalue
      *   (in clang's syntax tree, this value is converted to an rvalue via
@@ -635,10 +658,10 @@ Module Type Expr.
             wp_operand e Q (* note: [has_type v Tnullptr |-- has_type v (Tptr ty)] *)
         |-- wp_operand (Ecast Cnull2ptr e Prvalue ty) Q.
 
-    Axiom wp_operand_cast_null2memberptr : forall e ty Q,
+    Axiom wp_operand_cast_null2memberptr : forall cls e ty Q,
         type_of e = Tnullptr ->
             wp_operand e (fun _ free => Q (Vmember_ptr cls None) free)
-        |-- wp_operand (Ecast Cnull2memberptr e Prvalue (Tmember_ptr cls ty)) Q.
+        |-- wp_operand (Ecast Cnull2memberptr e Prvalue (Tmember_pointer cls ty)) Q.
 
     (* Determine if a 0-constant of this type can be used as a pseudonym for <<nullptr>> *)
     Definition can_represent_null (ty : type) : bool :=
@@ -1070,13 +1093,13 @@ Module Type Expr.
              int]). the issue with type-level qualifiers is addressed through
              the use of [normalize_type] below. *)
 
-    Definition wp_mcall (invoke : ptr -> list ptr -> (ptr -> epred) -> mpred)
+    Definition wp_mcall (arrow : bool) (invoke : ptr -> list ptr -> (ptr -> epred) -> mpred)
       ooe (obj : Expr) (fty : functype) (es : list Expr)
       (Q : ptr -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
       match arg_types fty with
       | Some targs =>
-        letI* this, args, ifree, free := wp_args ooe [wp_glval obj] targs es in
+        letI* this, args, ifree, free := wp_args ooe [read_arrow arrow obj] targs es in
         match this with
         | [this] => invoke this args (fun v => interp ifree $ Q v free)
         | _ => False
@@ -1084,42 +1107,42 @@ Module Type Expr.
       | _ => False
       end.
 
-    Lemma wp_mcall_frame f this this_type fty es Q Q' :
+    Lemma wp_mcall_frame arrow f this this_type fty es Q Q' :
       Forall p free, Q p free -* Q' p free
       |-- (Forall p ps Q Q', (Forall p, Q p -* Q' p) -* f p ps Q -* f p ps Q') -*
-          wp_mcall f this this_type fty es Q -* wp_mcall f this this_type fty es Q'.
+          wp_mcall arrow f this this_type fty es Q -* wp_mcall arrow f this this_type fty es Q'.
     Proof.
       rewrite /wp_mcall.
       case_match; eauto.
       iIntros "Q f".
       iApply wp_args_frame.
       { simpl. iSplitL; eauto. rewrite /wp.WPE.Mframe.
-        iIntros (??) "X". iApply wp_glval_frame. reflexivity. eauto. }
+        iIntros (??) "X". iApply read_arrow_frame. eauto. }
       iIntros (????).
       case_match; try iIntros "[]".
       case_match; try iIntros "[]".
       iApply "f". iIntros (?); iApply interp_frame; iApply "Q".
     Qed.
 
-    Axiom wp_lval_member_call : forall ct fty f obj es Q (ty := type_of $ Emember_call (inl (f, ct, fty)) obj es),
-        wp_mcall (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
+    Axiom wp_lval_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
+        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
            lval_receive ty res $ fun v => Q v free)
-        |-- wp_lval (Emember_call (inl (f, ct, fty)) obj es) Q.
+        |-- wp_lval (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_xval_member_call : forall ct fty f obj es Q (ty := type_of $ Emember_call (inl (f, ct, fty)) obj es),
-        wp_mcall (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
+    Axiom wp_xval_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
+        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
            xval_receive ty res $ fun v => Q v free)
-        |-- wp_xval (Emember_call (inl (f, ct, fty)) obj es) Q.
+        |-- wp_xval (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_operand_member_call : forall ct fty f obj es Q (ty := type_of $ Emember_call (inl (f, ct, fty)) obj es),
-        wp_mcall (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
+    Axiom wp_operand_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
+        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
            operand_receive ty res $ fun v => Q v free)
-        |-- wp_operand (Emember_call (inl (f, ct, fty)) obj es) Q.
+        |-- wp_operand (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_init_member_call : forall ct f fty es (addr : ptr) obj Q (ty := type_of $ Emember_call (inl (f, ct, fty)) obj es),
-        (letI* res, free := wp_mcall (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es in
+    Axiom wp_init_member_call : forall arrow ct f fty es (addr : ptr) obj Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
+        (letI* res, free := wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es in
            init_receive addr res $ Q free)
-        |-- wp_init ty addr (Emember_call (inl (f, ct, fty)) obj es) Q.
+        |-- wp_init ty addr (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
     (** * Operator Calls
         These are calls or member calls that are written as operators and
@@ -1139,7 +1162,7 @@ Module Type Expr.
        | operator_impl.MFunc fn ct fty =>
            match es with
            | eobj :: es =>
-               wp_mcall (dispatch ct fty fn (type_of eobj)) (evaluation_order.order_of oo) eobj fty es Q
+               wp_mcall false (dispatch ct fty fn (type_of eobj)) (evaluation_order.order_of oo) eobj fty es Q
            | _ => False
            end
       end%I.

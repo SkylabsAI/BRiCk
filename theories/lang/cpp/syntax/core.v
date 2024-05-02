@@ -372,8 +372,8 @@ TODO (FM-4320): <<Cdependent>> may require care
        a parameter. Doing that would allow for two different constructors for [Ecast]
  *)
 | Ecast (c : Cast_ type' name' type') (e : Expr') (vc : ValCat) (t : type')
-| Emember (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
-| Emember_call (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
+| Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
+| Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
 | Esubscript (e1 : Expr') (e2 : Expr') (t : type')
 | Esizeof (_ : type' + Expr') (t : type')
@@ -741,8 +741,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Ecomma e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecall e es => is_dependentE e || existsb is_dependentE es
   | Ecast c e _ t => Cast.existsb is_dependentT is_dependentN is_dependentT c || is_dependentE e || is_dependentT t
-  | Emember e _ _ t => is_dependentE e || is_dependentT t
-  | Emember_call m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
+  | Emember _ e _ _ t => is_dependentE e || is_dependentT t
+  | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es
   | Esubscript e1 e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t
   | Esizeof te t

@@ -1056,6 +1056,8 @@ public:
 		auto callee = expr->getCallee()->IgnoreParens();
 		auto method = expr->getMethodDecl();
 		if (auto me = dyn_cast<MemberExpr>(callee)) {
+			print.output() << fmt::BOOL(me->isArrow()) << fmt::nbsp;
+
 			print.ctor("inl") << fmt::lparen;
 			cprint.printName(method, print, loc::of(expr));
 			print.output() << "," << fmt::nbsp;
@@ -1078,47 +1080,19 @@ public:
 			print.end_ctor();
 
 			print.output() << fmt::nbsp;
-			if (me->isArrow()) {
-				// NOTE: the C++ standard states that a `*` is always an `lvalue`.
-				print.ctor("Ederef");
-				cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-				print.output() << fmt::nbsp;
-				cprint.printQualType(expr->getImplicitObjectArgument()
-										 ->getType()
-										 ->getPointeeType(),
-									 print, loc::of(expr));
-				print.end_ctor();
-			} else {
-				cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-			}
+			cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
 		} else if (auto bo = dyn_cast<BinaryOperator>(callee)) {
-			if (ClangPrinter::warn_well_known) {
-				cprint.error_prefix(logging::unsupported(), loc::of(bo))
-					<< "warning: member pointers are currently not supported\n";
-			}
+			always_assert(bo->getOpcode() == BinaryOperatorKind::BO_PtrMemD ||
+						  bo->getOpcode() == BinaryOperatorKind::BO_PtrMemI);
+			print.output() << fmt::BOOL(bo->getOpcode() ==
+										BinaryOperatorKind::BO_PtrMemI)
+						   << fmt::nbsp;
+
 			print.ctor("inr");
 			cprint.printExpr(bo->getRHS(), print, li);
 			print.end_ctor() << fmt::nbsp;
 
-			switch (bo->getOpcode()) {
-			case BinaryOperatorKind::BO_PtrMemI:
-				print.output() << "Lvalue";
-				print.ctor("Ederef");
-				cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-				print.output() << fmt::nbsp;
-				cprint.printQualType(expr->getImplicitObjectArgument()
-										 ->getType()
-										 ->getPointeeType(),
-									 print, loc::of(expr));
-				print.end_ctor();
-				break;
-			case BinaryOperatorKind::BO_PtrMemD:
-				cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
-				break;
-			default:
-				always_assert(false &&
-							  "pointer to member function should be a pointer");
-			}
+			cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
 		} else {
 			always_assert(false && "no method and not a binary operator");
 		}

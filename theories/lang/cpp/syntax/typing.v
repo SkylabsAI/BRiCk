@@ -115,11 +115,13 @@ Module decltype.
 
           https://www.eel.is/c++draft/expr.mptr.oper#6
           *)
-          match l with
-          | Ematerialize_temp _ _ => mret $ Trv_ref t
+          let* lt := to_exprtype <$> of_expr l in
+          match lt.1 with
+          | Lvalue => mret $ tref QM t
+          | Xvalue => mret $ trv_ref QM t
           | _ => mfail
           end
-        | Bdotip => mret $ Tref t	(* derived from [Bdotp] *)
+        | Bdotip => mret $ tref QM t	(* derived from [Bdotp] *)
         | _ => mret t
         end.
 
@@ -136,29 +138,43 @@ Module decltype.
         | _ => mfail
         end.
 
-      Definition of_member (e : Expr) (mut : bool) (t : decltype) : M decltype :=
+      Definition of_member (arrow : bool) (e : Expr) (mut : bool) (t : decltype) : M decltype :=
         let '(ref, et) := to_exprtype t in
         match ref with
         | Lvalue | Xvalue => mret $ Tref et
         | Prvalue =>
-          let* '(oref, oty) := to_exprtype <$> of_expr e in
+          let* '(lval, oty) :=
+            let* et := to_exprtype <$> of_expr e in
+            if arrow then
+              match et.1 , et.2 with
+              | Prvalue , Tptr t => mret (true, t)
+              | _ , _ => mfail
+              end
+            else
+              match et.1 with
+              | Lvalue => mret (true, et.2)
+              | Xvalue => mret (false, et.2)
+              | _ => mfail
+              end
+          in
           let qual :=
             let '(ocv, _) := decompose_type oty in
             CV (if mut then false else q_const ocv) (q_volatile ocv)
           in
           let ty := tqualified qual et in
-          match oref with
-          | Lvalue => mret $ Tref ty
-          | Xvalue => mret $ Trv_ref ty
-          | _ => mfail
-          end
+          mret $ if lval : bool then Tref ty else Trv_ref ty
         end.
 
       Definition of_member_call (f : MethodRef' lang) : M decltype :=
         match f with
-        | inl (_, _, ft)
-        | inr (Ecast Cl2r _  _ (Tmember_pointer _ ft)) => from_functype ft
-        | _ => mfail
+        | inl (_, _, ft) =>
+            from_functype ft
+        | inr e =>
+            let* et := of_expr e in
+            match et with
+            | Tmember_pointer cls ft => from_functype ft
+            | _ => mfail
+            end
         end.
 
       Definition from_operator_impl (f : operator_impl' lang) : M decltype :=
@@ -244,8 +260,8 @@ Module decltype.
         | Ecomma _ e2 => of_expr e2
         | Ecall f _ => of_call f
         | Ecast _ _ vc et => mret $ of_exprtype vc et
-        | Emember e _ mut t => of_member e mut t
-        | Emember_call f _ _ => of_member_call f
+        | Emember arrow e _ mut t => of_member arrow e mut t
+        | Emember_call _ f _ _ => of_member_call f
         | Eoperator_call _ f _ => from_operator_impl f
         | Esubscript e1 e2 t => of_subscript e1 e2 t
         | Esizeof _ t

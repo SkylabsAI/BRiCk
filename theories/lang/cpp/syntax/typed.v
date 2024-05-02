@@ -33,7 +33,6 @@ mlock Definition breadcrumb {t : Set} (_ : t) : Error.t := inhabitant.
 mlock Definition Bad_allocation_function_args {lang : lang.t} (_ : list (type' lang)) : Error.t := inhabitant.
 mlock Definition Can_initialize {lang : lang.t} (dt it : decltype' lang) : Error.t := inhabitant.
 
-
 Module decltype.
 
   (**
@@ -186,22 +185,18 @@ Module decltype.
         | _ => mfail
         end.
 
-      Definition of_member (e : Expr) (mut : bool) (t : decltype) : M decltype :=
+      Definition of_member (Et : bool * exprtype) (mut : bool) (t : decltype) : M decltype :=
         let '(ref, et) := to_exprtype t in
         match ref with
         | Lvalue | Xvalue => mret $ Tref et
         | Prvalue =>
-          let* '(oref, oty) := to_exprtype <$> of_expr e in
+          let oty := Et.2 in
           let qual :=
             let '(ocv, _) := decompose_type oty in
             CV (if mut then false else q_const ocv) (q_volatile ocv)
           in
           let ty := tqualified qual et in
-          match oref with
-          | Lvalue => mret $ Tref ty
-          | Xvalue => mret $ Trv_ref ty
-          | _ => mfail
-          end
+          if Et.1 then mret $ Trv_ref ty else mret $ Tref ty
         end.
 
       Definition of_member_call (f : MethodRef' lang) : M decltype :=
@@ -252,6 +247,12 @@ Module decltype.
         | Tref t => mret t
         | _ => mfail
         end.
+      Definition requireGL_get (t : decltype) : M (bool * exprtype) :=
+        match t with
+        | Tref t => mret (false, t)
+        | Trv_ref t => mret (true, t)
+        | _ => mfail
+        end.
       Definition requireGL (t : decltype) : M exprtype :=
         match t with
         | Tref t | Trv_ref t => mret t
@@ -288,6 +289,12 @@ Module decltype.
         | _ => mfail
         end.
 
+      Definition arrow_deref (arrow : bool) : decltype -> M exprtype :=
+        if arrow then require_ptr else requireGL.
+      Definition arrow_deref_get (arrow : bool) : decltype -> M (bool * exprtype) :=
+        if arrow then fun t => pair false <$> require_ptr t else requireGL_get.
+
+
       Notation "a >=> b" := (a >>= b) (at level 61, left associativity).
 
       Definition can_initialize (dt : decltype) (t : decltype) : M unit :=
@@ -311,7 +318,8 @@ Module decltype.
         end.
 
       Definition of_expr_body (e : Expr) : M decltype :=
-        trace (breadcrumb e)
+        trace (breadcrumb e) $
+        let* result :=
         match e return M decltype with
         | Eparam X => mret $ Tresult_param X
         | Eunresolved_global on => mret $ Tresult_global on
@@ -408,12 +416,11 @@ Module decltype.
         | Ecast _ e vc et =>
             let* _ := of_expr e in
             mret $ of_exprtype vc et
-        | Emember e _ mut t =>
-            let* edt := of_expr e in
-            let* _ := requireGL edt in
-            of_member e mut t
-        | Emember_call f obj es =>
-            let* objT := of_expr obj in
+        | Emember arrow e _ mut t =>
+            let* edt := of_expr e >>= arrow_deref_get arrow in
+            of_member edt mut t
+        | Emember_call arrow f obj es =>
+            let* objT := of_expr obj >>= arrow_deref arrow in
             let* tes := traverse (T:=eta list) of_expr es in
             let* ft :=
               match f with
