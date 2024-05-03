@@ -399,6 +399,7 @@ Should be [gn : classname]
 | Eandclean (e : Expr')
 | Ematerialize_temp (e : Expr') (vc : ValCat)
 | Eatomic (op : AtomicOp) (args : list Expr') (t : type')
+| Estmt (_ : Stmt') (_ : type')
 | Eva_arg (e : Expr') (t : type')
   (**
   TODO: We may have to adjust cpp2v: Either [Eva_arg] should carry a
@@ -416,11 +417,48 @@ Should be [gn : classname]
 | Earrayloop_init (oname : N) (src : Expr') (level : N) (length : N) (init : Expr') (t : type')
 | Earrayloop_index (level : N) (t : type')
 | Eopaque_ref (name : N) (vc : ValCat) (t : type')
-| Eunsupported (s : bs) (vc : ValCat) (t : type').
+| Eunsupported (s : bs) (vc : ValCat) (t : type')
+with Stmt' {lang : lang.t} : Set :=
+| Sseq    (_ : list Stmt')
+| Sdecl   (_ : list VarDecl')
+
+| Sif     (_ : option VarDecl') (_ : Expr') (_ _ : Stmt')
+| Swhile  (_ : option VarDecl') (_ : Expr') (_ : Stmt')
+| Sfor    (_ : option Stmt') (_ : option Expr') (_ : option Expr') (_ : Stmt')
+| Sdo     (_ : Stmt') (_ : Expr')
+
+| Sswitch (_ : option VarDecl') (_ : Expr') (_ : Stmt')
+| Scase   (_ : SwitchBranch)
+| Sdefault
+
+| Sbreak
+| Scontinue
+
+| Sreturn (_ : option Expr')
+
+| Sexpr   (_ : Expr')
+
+| Sattr (_ : list ident) (_ : Stmt')
+
+| Sasm (_ : bs) (volatile : bool)
+       (inputs : list (ident * Expr'))
+       (outputs : list (ident * Expr'))
+       (clobbers : list ident)
+
+| Slabeled (_ : ident) (_ : Stmt')
+| Sgoto (_ : ident)
+| Sunsupported (_ : bs)
+with VarDecl' {lang : lang.t} : Set :=
+| Dvar (name : localname) (_ : type') (init : option Expr')
+| Ddecompose (_ : Expr') (anon_var : ident) (_ : list VarDecl')
+  (* initialization of a function-local [static]. See https://eel.is/c++draft/stmt.dcl#3 *)
+| Dinit (thread_safe : bool) (name : name') (_ : type') (init : option Expr').
 
 #[global] Arguments name' : clear implicits.
 #[global] Arguments type' : clear implicits.
 #[global] Arguments Expr' : clear implicits.
+#[global] Arguments VarDecl' : clear implicits.
+#[global] Arguments Stmt' : clear implicits.
 
 #[global] Instance type_inhabited {lang} : Inhabited (type' lang).
 Proof. solve_inhabited. Qed.
@@ -428,6 +466,11 @@ Proof. solve_inhabited. Qed.
 Proof. solve_inhabited. Qed.
 #[global] Instance name_inhabited {lang} : Inhabited (name' lang).
 Proof. apply populate, Nglobal, inhabitant. Qed.
+#[global] Instance VarDecl_inhabited {lang} : Inhabited (VarDecl' lang).
+Proof. solve_inhabited. Qed.
+#[global] Instance Stmt_inhabited {lang} : Inhabited (Stmt' lang).
+Proof. apply populate, Sseq, nil. Qed.
+
 
 Section eq_dec.
   Context {lang : lang.t}.
@@ -435,18 +478,24 @@ Section eq_dec.
 
   Lemma name_eq_dec' : EQ_DEC (name' lang)
   with type_eq_dec' : EQ_DEC (type' lang)
-  with Expr_eq_dec' : EQ_DEC (Expr' lang).
+  with Expr_eq_dec' : EQ_DEC (Expr' lang)
+  with VarDecl_eq_dec' : EQ_DEC (VarDecl' lang)
+  with Stmt_eq_dec' : EQ_DEC (Stmt' lang).
   Proof.
     all: intros x y.
     all: pose (name_eq_dec' : EqDecision _).
     all: pose (type_eq_dec' : EqDecision _).
     all: pose (Expr_eq_dec' : EqDecision _).
+    all: pose (VarDecl_eq_dec' : EqDecision _).
+    all: pose (Stmt_eq_dec' : EqDecision _).
     all:unfold Decision; decide equality; solve_decision.
   Defined.
 
   #[global] Instance name_eq_dec : EqDecision _ := name_eq_dec'.
   #[global] Instance type_eq_dec : EqDecision _ := type_eq_dec'.
   #[global] Instance Expr_eq_dec : EqDecision _ := Expr_eq_dec'.
+  #[global] Instance VarDecl_eq_dec : EqDecision _ := VarDecl_eq_dec'.
+  #[global] Instance Stmt_eq_dec : EqDecision _ := Stmt_eq_dec'.
 End eq_dec.
 
 
@@ -761,10 +810,45 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eandclean e => is_dependentE e
   | Ematerialize_temp e _ => is_dependentE e
   | Eatomic _ es t => existsb is_dependentE es || is_dependentT t
+  | Estmt s t => is_dependentS s || is_dependentT t
   | Eva_arg e t => is_dependentE e || is_dependentT t
   | Epseudo_destructor _ t e => is_dependentT t || is_dependentE e
   | Earrayloop_init _ e1 _ _ e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t
   | Earrayloop_index _ t => is_dependentT t
   | Eopaque_ref _ _ t => is_dependentT t
   | Eunsupported _ _ t => is_dependentT t
+  end
+
+with is_dependentVD {lang} (vd : VarDecl' lang) : bool :=
+  match vd with
+  | Dvar _ t oe => is_dependentT t || option.existsb is_dependentE oe
+  | Ddecompose e _ lvd => is_dependentE e || List.existsb is_dependentVD lvd
+  | Dinit _ n t oe => is_dependentN n || is_dependentT t || option.existsb is_dependentE oe
+  end
+
+with is_dependentS {lang} (s : Stmt' lang) : bool :=
+  match s with
+  | Sseq ss => List.existsb is_dependentS ss
+  | Sdecl ds => List.existsb is_dependentVD ds
+  | Sif ovd e thn els =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS thn || is_dependentS els
+  | Swhile ovd e b =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS b
+  | Sfor os oe1 oe2 s =>
+      option.existsb is_dependentS os || option.existsb is_dependentE oe1 || option.existsb is_dependentE oe2 || is_dependentS s
+  | Sdo b t => is_dependentS b || is_dependentE t
+  | Sswitch ovd e s =>
+      option.existsb is_dependentVD ovd || is_dependentE e || is_dependentS s
+  | Scase _
+  | Sdefault
+  | Sbreak
+  | Scontinue => false
+  | Sreturn oe => option.existsb is_dependentE oe
+  | Sexpr e => is_dependentE e
+  | Sattr _ s => is_dependentS s
+  | Sasm _ _ ins outs _ =>
+      List.existsb (is_dependentE ∘ snd) ins || List.existsb (is_dependentE ∘ snd) outs
+  | Slabeled _ s => is_dependentS s
+  | Sgoto _ => false
+  | Sunsupported _ => false
   end.

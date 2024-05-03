@@ -1013,6 +1013,7 @@ Module type.
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
 
+
     Record box_Tresult_unop : Set := Box_Tresult_unop {
       box_Tresult_unop_0 : RUnOp;
       box_Tresult_unop_1 : type;
@@ -1275,9 +1276,11 @@ Module Expr.
     #[local] Notation name := (name' lang).
     #[local] Notation type := (type' lang).
     #[local] Notation Expr := (Expr' lang).
+    #[local] Notation Stmt := (Stmt' lang).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
+    Context (compareS : Stmt -> Stmt -> comparison).
 
     Record box_Eunresolved_unop : Set := Box_Eunresolved_unop {
       box_Eunresolved_unop_0 : RUnOp;
@@ -1645,6 +1648,14 @@ Module Expr.
       compare_lex (ValCat.compare b1.(box_Eunsupported_1) b2.(box_Eunsupported_1)) $ fun _ =>
       compareT b1.(box_Eunsupported_2) b2.(box_Eunsupported_2).
 
+    Record box_Estmt : Set := Box_Estmt {
+      box_Estmt_0 : Stmt;
+      box_Estmt_1 : type
+    }.
+    Definition box_Estmt_compare (b1 b2 : box_Estmt) : comparison :=
+      compare_lex (compareS b1.(box_Estmt_0) b2.(box_Estmt_0)) $ fun _ =>
+      compareT b1.(box_Estmt_1) b2.(box_Estmt_1).
+
     Definition tag (e : Expr) : positive :=
       match e with
       | Eparam _ => 1
@@ -1704,6 +1715,7 @@ Module Expr.
       | Eopaque_ref _ _ _ => 55
       | Eglobal_member _ _ => 56
       | Eunsupported _ _ _ => 57
+      | Estmt _ _ => 58
       end.
     Definition car (t : positive) : Set :=
       match t with
@@ -1757,6 +1769,7 @@ Module Expr.
       | 54 => box_Echar
       | 55 => box_Eopaque_ref
       | 56 => box_Eglobal
+      | 58 => box_Estmt
       | _ => box_Eunsupported
       end.
     Definition data (e : Expr) : car (tag e) :=
@@ -1812,6 +1825,7 @@ Module Expr.
       | Eandclean e => e
       | Ematerialize_temp e vc => Box_Ematerialize_temp e vc
       | Eatomic op es t => Box_Eatomic op es t
+      | Estmt s t => Box_Estmt s t
       | Eva_arg e t => Box_Ederef e t
       | Epseudo_destructor a t e => Box_Epseudo_destructor a t e
       | Earrayloop_init on s lev len i t => Box_Earrayloop_init on s lev len i t
@@ -1871,6 +1885,7 @@ Module Expr.
       | 54 => box_Echar_compare
       | 55 => box_Eopaque_ref_compare
       | 56 => box_Eglobal_compare
+      | 58 => box_Estmt_compare
       | _ => box_Eunsupported_compare
       end.
 
@@ -1948,15 +1963,271 @@ Module Expr.
 
       | Eopaque_ref n vc t => compare_ctor (Reduce (tag (Eopaque_ref n vc t))) (fun _ => Reduce (data (Eopaque_ref n vc t)))
       | Eunsupported msg vc t => compare_ctor (Reduce (tag (Eunsupported msg vc t))) (fun _ => Reduce (data (Eunsupported msg vc t)))
+      | Estmt s t => compare_ctor (Reduce (tag $ Estmt s t)) (fun _ => Reduce (data $ Estmt s t))
       end.
   End compare_body.
 End Expr.
+
+  Structure comparator :=
+    { _car : Set
+    ; #[canonical=no] compare : _car -> _car -> comparison
+    }.
+  Arguments compare {_} _ _.
+  Canonical unit_comparator :=
+    {| _car := unit
+    ; compare := fun _ _ => Eq |}.
+
+  Canonical pair_comparator (C1 C2 : comparator) :=
+    {| _car := C1.(_car) * C2.(_car)
+    ; compare := fun '(a,b) '(c,d) => compare_lex (C1.(compare) a c) $ fun _ => C2.(compare) b d |}.
+  Canonical option_comparator (C1 : comparator) :=
+    {| _car := option C1.(_car)
+    ; compare := option.compare C1.(compare) |}.
+  Canonical list_comparator (C1 : comparator) :=
+    {| _car := list C1.(_car)
+    ; compare := List.compare C1.(compare) |}.
+  Canonical bs_comparator :=
+    {| _car := bs
+    ; compare := bs_compare |}.
+  Canonical localname_comparator :=
+    {| _car := localname
+     ; compare := bs_compare |}.
+  Canonical ident_comparator :=
+    {| _car := ident
+    ; compare := bs_compare |}.
+  Canonical bool_comparator :=
+    {| _car := bool
+    ; compare := Bool.compare |}.
+  Definition SwitchBranch_compare (a b : SwitchBranch) : comparison :=
+    match a , b with
+    | Exact a , Exact b => Z.compare a b
+    | Exact _ , Range _ _ => Lt
+    | Range _ _ , Exact _ => Gt
+    | Range a b , Range c d => compare_lex (Z.compare a c) $ fun _ => Z.compare b d
+    end.
+  #[local] Canonical SwitchBranch_comparator :=
+    {| _car := SwitchBranch
+    ; compare := SwitchBranch_compare |}.
+
+
+Module VarDecl.
+  Section compare_body.
+    Context {lang : lang.t}.
+    #[local] Notation name := (name' lang).
+    #[local] Notation type := (type' lang).
+    #[local] Notation Expr := (Expr' lang).
+    #[local] Notation VarDecl := (VarDecl' lang).
+    #[local] Notation Stmt := (Stmt' lang).
+    Context (compareN : name -> name -> comparison).
+    Context (compareT : type -> type -> comparison).
+    Context (compareE : Expr -> Expr -> comparison).
+    Context (compareVD : VarDecl -> VarDecl -> comparison).
+    Context (compareS : Stmt -> Stmt -> comparison).
+
+    #[local] Canonical name_comparator :=
+      {| _car := name
+      ; compare := compareN |}.
+    #[local] Canonical type_comparator :=
+      {| _car := type
+       ; compare := compareT |}.
+    #[local] Canonical expr_comparator :=
+      {| _car := Expr
+      ; compare := compareE |}.
+    #[local] Canonical VarDecl_comparator :=
+      {| _car := VarDecl
+      ; compare := compareVD |}.
+
+    Definition tag (vd : VarDecl) : positive :=
+      match vd with
+      | Dvar _ _ _ => 1
+      | Ddecompose _ _ _ => 2
+      | Dinit _ _ _ _ => 3
+      end.
+    Definition car (vd : positive) : Set :=
+      match vd return Set with
+      | 1 => localname * type * option Expr
+      | 2 => Expr * ident * list VarDecl
+      | _ => bool * name * type * option Expr
+      end%type.
+    Definition data (vd : VarDecl) : car (tag vd) :=
+      match vd with
+      | Dvar a b c => (a, b, c)
+      | Ddecompose a b c => (a, b, c)
+      | Dinit a b c d => (a, b, c, d)
+      end.
+    Definition compare_data (k : positive) : car k -> car k -> comparison :=
+      match k as k return car k -> car k -> comparison with
+      | 1 => compare
+      | 2 => compare
+      | _ => compare
+      end.
+
+    #[local] Notation compare_ctor X := (compare_ctor tag car data compare_data (Reduce (tag X)) (fun _ => Reduce (data X))) (only parsing).
+    Definition compare_body (vd : VarDecl) : VarDecl -> comparison :=
+      match vd with
+      | Dvar a b c => compare_ctor (Dvar a b c)
+      | Ddecompose a b c => compare_ctor (Ddecompose a b c)
+      | Dinit a b c d => compare_ctor (Dinit a b c d)
+      end.
+  End compare_body.
+End VarDecl.
+
+Module Stmt.
+  Section compare_body.
+    Context {lang : lang.t}.
+    #[local] Notation name := (name' lang).
+    #[local] Notation type := (type' lang).
+    #[local] Notation Expr := (Expr' lang).
+    #[local] Notation VarDecl := (VarDecl' lang).
+    #[local] Notation Stmt := (Stmt' lang).
+    Context (compareN : name -> name -> comparison).
+    Context (compareT : type -> type -> comparison).
+    Context (compareE : Expr -> Expr -> comparison).
+    Context (compareVD : VarDecl -> VarDecl -> comparison).
+    Context (compareS : Stmt -> Stmt -> comparison).
+
+    #[local] Canonical name_comparator :=
+      {| _car := name
+      ; compare := compareN |}.
+    #[local] Canonical type_comparator :=
+      {| _car := type
+       ; compare := compareT |}.
+    #[local] Canonical expr_comparator :=
+      {| _car := Expr
+      ; compare := compareE |}.
+    #[local] Canonical VarDecl_comparator :=
+      {| _car := VarDecl
+      ; compare := compareVD |}.
+    #[local] Canonical Stmt_comparator :=
+      {| _car := _
+      ; compare := compareS |}.
+
+    Definition tag (s : Stmt) : positive :=
+      match s with
+      | Sseq _ => 1
+      | Sdecl _ => 2
+      | Sif _ _ _ _ => 3
+      | Swhile _ _ _ => 4
+      | Sfor _ _ _ _ => 5
+      | Sdo _ _ => 6
+      | Sswitch _ _ _ => 7
+      | Scase _ => 8
+      | Sdefault => 9
+      | Sbreak => 10
+      | Scontinue => 11
+      | Sreturn _ => 12
+      | Sexpr _ => 13
+      | Sattr _ _ => 14
+      | Sasm _ _ _ _ _ => 15
+      | Slabeled _ _ => 16
+      | Sgoto _ => 17
+      | Sunsupported _ => 18
+      end.
+    Definition car (k : positive) : Set :=
+      match k with
+      | 1 => list Stmt
+      | 2 => list VarDecl
+      | 3 => option VarDecl * Expr * Stmt * Stmt
+      | 4 => option VarDecl * Expr * Stmt
+      | 5 => option Stmt * option Expr * option Expr * Stmt
+      | 6 => Stmt * Expr
+      | 7 => option VarDecl * Expr * Stmt
+      | 8 => SwitchBranch
+      | 9 => unit
+      | 10 => unit
+      | 11 => unit
+      | 12 => option Expr
+      | 13 => Expr
+      | 14 => list ident * Stmt
+      | 15 => bs * bool * list (ident * Expr) * list (ident * Expr) * list ident
+      | 16 => ident * Stmt
+      | 17 => ident
+      | _ => bs
+      end.
+    Definition data (s : Stmt) : car (tag s) :=
+      match s with
+      | Sseq a => a
+      | Sdecl a => a
+      | Sif a b c d => (a,b,c,d)
+      | Swhile a b c => (a,b,c)
+      | Sfor a b c d => (a,b,c,d)
+      | Sdo a b => (a,b)
+      | Sswitch a b c => (a,b,c)
+      | Scase a => a
+      | Sdefault => tt
+      | Sbreak => ()
+      | Scontinue => ()
+      | Sreturn a => a
+      | Sexpr a => a
+      | Sattr a b => (a,b)
+      | Sasm a b c d e => (a,b,c,d,e)
+      | Slabeled a b => (a,b)
+      | Sgoto a => a
+      | Sunsupported a => a
+      end.
+
+    Definition compare_data  (k : positive) : car k -> car k -> comparison :=
+      match k as k return car k -> car k -> comparison with
+      | 1 => compare
+      | 2 => compare
+      | 3 => compare
+      | 4 => compare
+      | 5 => compare
+      | 6 => compare
+      | 7 => compare
+      | 8 => compare
+      | 9 => compare
+      | 10 => compare
+      | 11 => compare
+      | 12 => compare
+      | 13 => compare
+      | 14 => compare
+      | 15 => compare
+      | 16 => compare
+      | 17 => compare
+      | _ => compare
+      end.
+
+    #[local] Notation compare_ctor X := (compare_ctor tag car data compare_data (Reduce (tag X)) (fun _ => Reduce (data X))) (only parsing).
+    Definition compare_body (s : Stmt) : Stmt -> comparison :=
+      match s with
+      | Sseq a => compare_ctor (Sseq a)
+      | Sdecl a => compare_ctor (Sdecl a)
+      | Sif a b c d => compare_ctor (Sif a b c d)
+      | Swhile a b c => compare_ctor (Swhile a b c)
+      | Sfor a b c d => compare_ctor (Sfor a b c d)
+      | Sdo a b => compare_ctor (Sdo a b)
+      | Sswitch a b c => compare_ctor (Sswitch a b c)
+      | Scase a => compare_ctor (Scase (lang:=lang) a)
+      | Sdefault => compare_ctor (Sdefault (lang:=lang))
+      | Sbreak => compare_ctor (Sbreak (lang:=lang))
+      | Scontinue => compare_ctor (Scontinue (lang:=lang))
+      | Sreturn a => compare_ctor (Sreturn a)
+      | Sexpr a => compare_ctor (Sexpr a)
+      | Sattr a b => compare_ctor (Sattr a b)
+      | Sasm a b c d e => compare_ctor (Sasm a b c d e)
+      | Slabeled a b => compare_ctor (Slabeled a b)
+      | Sgoto a => compare_ctor (Sgoto (lang:=lang) a)
+      | Sunsupported a => compare_ctor (Sunsupported (lang:=lang) a)
+      end.
+
+  End compare_body.
+End Stmt.
+
+
+(* This is needed to speed up compilation on the guardedness check on the
+   following [compare{N,T,E,VD,S}] functions. Without this, the termination
+   checker *does succeed* but it takes ~800s.
+ *)
+#[local] Unset Guard Checking.
 
 Section compare.
   Context {lang : lang.t}.
   #[local] Notation name := (name' lang).
   #[local] Notation type := (type' lang).
   #[local] Notation Expr := (Expr' lang).
+  #[local] Notation VarDecl := (VarDecl' lang).
+  #[local] Notation Stmt := (Stmt' lang).
 
   Fixpoint compareN (n : name) : name -> comparison :=
     name.compare_body compareN compareT compareE n
@@ -1965,10 +2236,77 @@ Section compare.
     type.compare_body compareN compareT compareE t
 
   with compareE (e : Expr) : Expr -> comparison :=
-    Expr.compare_body compareN compareT compareE e.
+    Expr.compare_body compareN compareT compareE compareS e
+
+  with compareVD (vd : VarDecl) : VarDecl -> comparison :=
+    VarDecl.compare_body compareN compareT compareE compareVD vd
+
+  with compareS (s : Stmt) : Stmt -> comparison :=
+    Stmt.compare_body compareE compareVD compareS s
+  .
+
+End compare.
+
+#[local] Set Guard Checking.
+
+Section compare_instances.
+  Context {lang : lang.t}.
+  #[local] Notation name := (name' lang).
+  #[local] Notation type := (type' lang).
+  #[local] Notation Expr := (Expr' lang).
+  #[local] Notation VarDecl := (VarDecl' lang).
+  #[local] Notation Stmt := (Stmt' lang).
 
   #[global] Instance name_compare : Compare name := compareN.
   #[global] Instance type_compare : Compare type := compareT.
   #[global] Instance Expr_compare : Compare Expr := compareE.
+  #[global] Instance VarDecl_compare : Compare VarDecl := compareVD.
+  #[global] Instance Stmt_compare : Compare Stmt := compareS.
 
-End compare.
+End compare_instances.
+
+(** ** Name maps *)
+
+#[global] Declare Instance name_comparison {lang} :
+  Comparison (compareN (lang:=lang)).	(** TODO *)
+
+Require Import Coq.Structures.OrderedTypeAlt.
+Require Import Coq.FSets.FMapAVL.
+Require Import bedrock.prelude.avl.
+
+Module Type LANG.
+  Parameter Inline lang : lang.t.
+End LANG.
+
+Module NameMap (Lang : LANG).
+  Module Compare.
+    Definition t : Type := name' Lang.lang.
+    #[local] Definition compare : t -> t -> comparison := compareN.
+    #[local] Infix "?=" := compare.
+    #[local] Lemma compare_sym x y : (y ?= x) = CompOpp (x ?= y).
+    Proof. exact: compare_antisym. Qed.
+    #[local] Lemma compare_trans c x y z : (x ?= y) = c -> (y ?= z) = c -> (x ?= z) = c.
+    Proof. exact: base.compare_trans. Qed.
+  End Compare.
+  Module Key := OrderedType_from_Alt Compare.
+  Lemma eqL : forall a b, Key.eq a b -> @eq _ a b.
+  Proof. Admitted.
+  Include FMapAVL.Make Key.
+  Include FMapExtra.MIXIN Key.
+  Include FMapExtra.MIXIN_LEIBNIZ Key.
+End NameMap.
+
+Module NM.
+  #[local] Definition lang := lang.cpp.
+  Include NameMap.
+End NM.
+
+Module TM.
+  #[local] Definition lang := lang.temp.
+  Include NameMap.
+End TM.
+
+Definition table : Type := NM.t N.
+Definition Dnum (n : name) (v : N) : table -> table :=
+  <[ n := v ]>.
+Definition test : table := Dnum (Nglobal $ Nid "cats") 3 ∅.

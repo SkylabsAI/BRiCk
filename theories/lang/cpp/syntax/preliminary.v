@@ -602,3 +602,9 @@ Module MethodRef.
     | inr e => h e
     end.
 End MethodRef.
+
+Variant SwitchBranch : Set :=
+  | Exact (_ : Z)
+  | Range (_ _ : Z).
+#[global] Instance: EqDecision SwitchBranch.
+Proof. solve_decision. Defined.

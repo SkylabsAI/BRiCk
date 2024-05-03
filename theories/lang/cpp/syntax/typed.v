@@ -100,6 +100,8 @@ Module decltype.
     #[local] Notation exprtype := (exprtype' lang).
     #[local] Notation function_type := (function_type' lang).
     #[local] Notation functype := (functype' lang).
+    #[local] Notation Stmt := (Stmt' lang).
+
 (*
     Variable lookup : name' lang -> option decltype.
     Variable locals : list (bs * type).
@@ -139,6 +141,7 @@ Module decltype.
 
     Section fixpoint.
       Context (of_expr : Expr -> M decltype).
+      Context (of_stmt : Stmt -> M (option decltype)).
 
       Definition of_unop (op : UnOp) (t : exprtype) : M decltype :=
         match op with
@@ -269,7 +272,7 @@ Module decltype.
         | _ => mret t
         end.
       Definition require_eq {T : Set} {_ : EqDecision T} (l : T) (r : T) : M unit :=
-        let* _ := guard (l = r) in mret tt.
+        const () <$> guard (l = r).
 
       (* determine if this type can be used in an <<if>> *)
       Definition require_testable (t : exprtype) : M unit :=
@@ -279,7 +282,7 @@ Module decltype.
         | Tbool
         | Tnullptr
         | Tchar_ _
-        | Tfloat_ _ => mret tt
+        | Tfloat_ _ => mret ()
         | _ => mfail
         end.
 
@@ -304,14 +307,14 @@ Module decltype.
 
       Fixpoint check_args (ar : function_arity) (ts : list decltype) (tes : list decltype) : M unit :=
         match ts , tes with
-        | nil , nil => mret tt
+        | nil , nil => mret ()
         | t :: ts , te :: tes =>
             (* toplevel qualifiers on arguments are ignored *)
             let* _ := can_initialize t te in
             check_args ar ts tes
         | nil , te :: tes =>
             match ar with
-            | Ar_Variadic => mret tt (* TODO: should check that all arguments can be passed as variadic arguments *)
+            | Ar_Variadic => mret () (* TODO: should check that all arguments can be passed as variadic arguments *)
             | _ => mfail
             end
         | _ , _ => mfail
@@ -464,12 +467,11 @@ Module decltype.
         | Ealignof te t =>
             let* _ :=
               match te with
-              | inl t => mret tt
-              | inr e => let* _ := of_expr e in mret tt
+              | inl t => mret ()
+              | inr e => const () <$> of_expr e
               end
             in
-            let* _ := guard (t = Tsize_t) in
-            mret Tsize_t
+            const Tsize_t <$> guard (t = Tsize_t)
         | Eoffsetof _ _ t => mret t
         | Econstructor f es t =>
             (* TODO: check the type of the constructor [f] *)
@@ -562,6 +564,10 @@ Module decltype.
         | Eatomic _ es t =>
             let* tes := traverse (T:=eta list) of_expr es in
             mret t
+        | Estmt s t =>
+            let* st := of_stmt s in
+            let* _ := require_eq st (Some t) in
+            mret t
         | Eva_arg _ t => mret $ normalize t
         | Epseudo_destructor _ _ _ => mret Tvoid
         | Earrayloop_init _ _ _ _ _ t
@@ -577,148 +583,159 @@ Module decltype.
         mret result.
     End fixpoint.
 
-    Fixpoint of_expr e := of_expr_body of_expr e.
+    Record bindings : Set := { _bindings : list (atomic_name * decltype) }.
+    Instance bindings_empty : Empty bindings := {| _bindings := nil |}.
+    Definition with_bindings (b : bindings) {T} (m : M T) : M T := m.
+    Instance bindings_monoid : monoid.Monoid bindings :=
+      {| monoid.monoid_unit := bindings_empty ; monoid.monoid_op a b := {| _bindings := a.(_bindings) ++ b.(_bindings) |} |}.
 
-    Fixpoint check_decl {T} (d : VarDecl' lang) (m : M T) : M T :=
-      trace (breadcrumb d)
-      match d with
-      | Dvar lname ty oinit =>
-(*          let* _ := check_type ty in *)
-          let* _ :=
-            match oinit with
-            | None => mret tt
-            | Some init =>
-                let* _ := of_expr init >>= can_initialize ty in
-                mret tt
-            end
-          in
-          with_var (Nid lname) ty m
-      | Ddecompose e v ds =>
-          (* TODO: this is wrong, it requires a more subtle binding form because [e] is bound during the
-             evaluation of the declarations, but is unbound afterwards *)
-          let* _ := of_expr e in
-          let* _ := traverse (T:=eta list) (fun d => check_decl d $ mret tt) ds in
-          m
-      | Dinit _ nm ty oinit =>
-          let* _ :=
-            match oinit with
-            | None => mret tt
-            | Some init =>
-                let* _ := of_expr init >>= can_initialize ty in
-                mret tt
-            end
-          in
-          m
-      end.
+    Definition big_op `{Mon : monoid.Monoid m} `{Traverse T} (ls : T m) : m :=
+      writer.value $ traverse (F:=writer.M m) (T:=T) (writer.tell) ls.
 
-    Fixpoint check_decls (ds : list (VarDecl' lang)) {T} (m : M T) : M T :=
-      match ds with
-      | nil => m
-      | d :: ds => check_decl d $ check_decls ds m
-      end.
+    Section var_decl.
+      Context (of_expr : Expr -> M decltype).
 
-    Fixpoint check_stmt (s : Stmt' lang) {T} (m : M T) : M T :=
-      trace (breadcrumb s)
-      match s with
-      | Sgoto _ => m
-      | Slabeled _ s => check_stmt s m
-      | Sexpr e =>
-          let* _ := of_expr e in m
-      | Sdefault | Scase _ | Sbreak | Scontinue => m
-      | Sseq ss =>
-          fold_right (fun s k => check_stmt s k) m ss
-      | Sif vd tst thn els =>
-          let k :=
-            let* _ := of_expr tst >>= require_testable in
-            let* _ := check_stmt thn $ mret tt in
-            let* _ := check_stmt els $ mret tt in
-            mret tt
-          in
-          let* _ :=
-            match vd with
-            | None => k
-            | Some vd => check_decl vd k
-            end
-          in m
-      | Sswitch vd tst b =>
-          let k :=
-            let* _ := of_expr tst >>= require_eq Tint in (* TODO: BAD *)
-            check_stmt b $ mret tt
-          in
-          let* _ :=
-            match vd with
-            | None => k
-            | Some vd => check_decl vd k
-            end
-          in m
-      | Swhile vd tst body =>
-          let k :=
-            let* _ := of_expr tst >>= require_testable in
-            let* _ := check_stmt body $ mret tt in
-            mret tt
-          in
-          let* _ :=
-            match vd with
-            | None => k
-            | Some vd => check_decl vd k
-            end
-          in m
-      | Sdo s tst =>
-          let* _ := check_stmt s $ mret tt in
-          let* _ := of_expr tst >>= require_testable in (* TODO *)
-          m
-      | Sfor vd otst oincr body =>
-          let k :=
-            let* _ := from_option (fun e => of_expr e >>= require_testable) (mret tt) $ otst in
-            let* _ := from_option (fun e => let* _ := of_expr e in mret tt) (mret tt) $ oincr in
-            let* _ := check_stmt body $ mret tt in
-            m
-          in match vd with
-             | None => k
-             | Some init =>
-                 let* _ := check_stmt init k in
-                 m
-             end
-      | Sdecl ds =>
-          check_decls ds m
-      | Sreturn None => m
-      | Sreturn (Some e) =>
-          let* _ := of_expr e in
-          m
-      | Sattr _ s =>
-          check_stmt s m (* TODO: confirm scope *)
-      | Sasm _ _ ins outs args =>
-          let* _ := traverse (T:=eta list) (fun ab => of_expr ab.2) $ ins ++ outs in
-          m
-      | Sunsupported _ => mfail
-      end.
+      Fixpoint check_decl (d : VarDecl' lang) : M bindings :=
+        trace (breadcrumb d)
+        match d with
+        | Dvar lname ty oinit =>
+  (*          let* _ := check_type ty in *)
+            let* _ :=
+              match oinit with
+              | None => mret tt
+              | Some init =>
+                  let* _ := of_expr init >>= can_initialize ty in
+                  mret tt
+              end
+            in
+            mret ({| _bindings := [(Nid lname, ty)] |})
+        | Ddecompose e v ds =>
+            (* TODO: this is wrong, it requires a more subtle binding form because [e] is bound during the
+              evaluation of the declarations, but is unbound afterwards *)
+            let* _ := of_expr e in
+            let* (bindings : list bindings) := traverse (T:=eta list) check_decl ds in
+            mret $ big_op bindings
+        | Dinit _ nm ty oinit =>
+            let* _ :=
+              match oinit with
+              | None => mret tt
+              | Some init =>
+                  let* _ := of_expr init >>= can_initialize ty in
+                  mret tt
+              end
+            in
+            mret monoid.monoid_unit
+        end.
+
+    End var_decl.
+
+    Section stmt.
+      Context (of_expr : Expr -> M decltype).
+
+      Notation check_decl := (check_decl of_expr) (only parsing).
+
+      Definition check_decls (ds : list (VarDecl' lang)) : M bindings :=
+        big_op (T:=eta list) <$> traverse (F:=M) (T:=eta list) check_decl ds.
+
+      Fixpoint check_stmt_body (s : Stmt' lang) : M (bindings * option decltype) :=
+        let check_stmt := check_stmt_body in
+        trace (breadcrumb s)
+        match s with
+        | Sgoto _ => mret (∅, None)
+        | Slabeled _ s => check_stmt s
+        | Sexpr e =>
+            pair monoid.monoid_unit ∘ Some <$> of_expr e
+        | Sdefault | Scase _ | Sbreak | Scontinue => mret (∅, None)
+        | Sseq ss =>
+            (fix block ss :=
+               match ss with
+               | nil => mret (∅, None)
+               | s :: ss =>
+                   let* '(b,d) := check_stmt s in
+                   with_bindings b $ block ss
+               end) ss
+        | Sif vd tst thn els =>
+            let* ds := from_option check_decl (mret monoid.monoid_unit) vd in
+            let* _ :=
+              with_bindings ds $
+                let* _ := of_expr tst >>= require_testable in
+                let* _ := check_stmt thn in
+                check_stmt els
+            in mret (∅, None)
+        | Sswitch vd tst b =>
+            let* ds := from_option check_decl (mret monoid.monoid_unit) vd in
+            let _ :=
+              with_bindings ds $
+                let* _ := of_expr tst >>= require_eq Tint in (* TODO: BAD *)
+                check_stmt b
+            in mret (∅, None)
+        | Swhile vd tst body =>
+            let* ds := from_option check_decl (mret monoid.monoid_unit) vd in
+            let k :=
+              with_bindings ds $
+                let* _ := of_expr tst >>= require_testable in
+                check_stmt body
+            in mret (∅, None)
+        | Sdo s tst =>
+            let* _ := check_stmt s in
+            let* _ := of_expr tst >>= require_testable in (* TODO *)
+            mret (∅, None)
+        | Sfor vd otst oincr body =>
+            let* '(ds, _) := from_option check_stmt (mret (monoid.monoid_unit, None)) vd in
+            let* _ :=
+              with_bindings ds $
+                let* _ := from_option (fun e => of_expr e >>= require_testable) (mret tt) $ otst in
+                let* _ := from_option (fun e => let* _ := of_expr e in mret tt) (mret tt) $ oincr in
+                check_stmt body
+            in mret (∅, None)
+        | Sdecl ds =>
+            let* b := check_decls ds in
+            mret (b, None)
+        | Sreturn None => mret (∅, None)
+        | Sreturn (Some e) =>
+            let* _ := of_expr e in
+            mret (∅, None)
+        | Sattr _ s =>
+            check_stmt s (* TODO: confirm scope *)
+        | Sasm _ _ ins outs args =>
+            let* _ := traverse (T:=eta list) (fun ab => of_expr ab.2) ins in
+            let* _ := traverse (T:=eta list) (fun ab => of_expr ab.2) outs in
+            mret (∅, None)
+        | Sunsupported _ => mfail
+        end.
+    End stmt.
+
+    Fixpoint of_expr (e : Expr) : M decltype :=
+      of_expr_body of_expr check_stmt e
+    with check_stmt (s : Stmt) : M (option decltype) :=
+      snd <$> check_stmt_body of_expr s.
 
     Definition check_func (f : Func' lang) : M unit :=
       match f.(f_body) with
-      | None => mret tt
-      | Some (Impl body) => check_stmt body $ mret tt
-      | Some (Builtin _) => mret tt
+      | None => mret ()
+      | Some (Impl body) => const () <$> check_stmt body
+      | Some (Builtin _) => mret ()
       end.
 
     Definition check_method (m : Method' lang) : M unit :=
       match m.(m_body) with
-      | Some (UserDefined s) => check_stmt s $ mret tt
-      | _ => mret tt
+      | Some (UserDefined s) => const () <$> check_stmt s
+      | _ => mret ()
       end.
 
     Definition check_ctor (c : Ctor' lang) : M unit :=
       match c.(c_body) with
       | Some (UserDefined (inits, body)) =>
           let* _ := traverse (T:=eta list) (fun init => of_expr init.(init_init)) inits in
-          check_stmt body $ mret tt
-      | _ => mret tt
+          const () <$> check_stmt body
+      | _ => mret ()
       end.
 
     Definition check_dtor (d : Dtor' lang) : M unit :=
       match d.(d_body) with
       | Some (UserDefined body) =>
-          check_stmt body $ mret tt
-      | _ => mret tt
+          const () <$> check_stmt body
+      | _ => mret ()
       end.
 
     Definition check_obj_value (o : ObjValue' lang) : M unit :=

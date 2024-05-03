@@ -286,6 +286,7 @@ Module decltype.
         | Eandclean e => of_expr e
         | Ematerialize_temp e vc => of_materialize_temp e vc
         | Eatomic _ _ t => mret t
+        | Estmt _ t => mret t
         | Eva_arg _ t => mret $ normalize t
         | Epseudo_destructor _ _ _ => mret Tvoid
         | Earrayloop_init _ _ _ _ _ t
