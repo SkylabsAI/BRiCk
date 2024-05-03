@@ -63,7 +63,12 @@ Module Type Stmt.
             interp frees (k (Rbind x addr ρ) (FreeTemps.delete ty addr))
         in
         match init with
-        | Some init => wp_initialize ρ ty addr init finish
+        | Some init =>
+            (* In C++ (and in C) the scope of the name begins immediately after
+               the name is declared, before it is initialized.
+               See <https://eel.is/c++draft/basic.scope.pdecl#1>
+             *)
+            wp_initialize (Rbind x addr ρ) ty addr init finish
         | None => default_initialize ty addr finish
         end.
 
@@ -86,7 +91,8 @@ Module Type Stmt.
       (ρ : region) (k : region -> FreeTemps -> epred) (free : FreeTemps) {struct ds} : mpred :=
       match ds with
       | nil => k ρ free
-      | Dvar x _ (Some init) :: ds => wp_glval tu ρ_init init (fun p free' => wp_destructure ρ_init ds (Rbind x p ρ) k (free' >*> free)%free)
+      | Dvar x _ (Some init) :: ds =>
+          wp_glval tu ρ_init init (fun p free' => wp_destructure ρ_init ds (Rbind x p ρ) k (free' >*> free)%free)
       | decl :: _ => UNSUPPORTED (destructuring_declaration decl) (* unsupported *)
       end.
 
@@ -135,6 +141,10 @@ Module Type Stmt.
       | Ddecompose init x ds =>
         let common_type := type_of init in
         Forall common_p : ptr,
+        (* unlike for variables (see [wp_decl_var]), the variables in a structured binding
+           are not available in the initializer.
+           See <https://eel.is/c++draft/dcl.struct.bind#2>
+         *)
         wp_initialize ρ common_type common_p init (fun free =>
            (* NOTE: [free] is used to deallocate temporaries generated in the execution of [init].
               It should not matter if it is destroyed immediately or after the destructuring occurs.
