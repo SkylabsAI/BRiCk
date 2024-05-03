@@ -217,7 +217,7 @@ Module decltype.
 
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
-        | Eglobal _ t => mret t
+        | Eglobal _ t => mret $ tref QM t
 
         | Echar _ t => mret t
         | Estring chars t =>
