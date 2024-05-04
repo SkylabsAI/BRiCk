@@ -564,8 +564,13 @@ Module decltype.
             let* st := of_stmt s in
             let* _ := require_eq st (Some t) in
             mret t
-        | Eva_arg _ t => mret $ normalize t
-        | Epseudo_destructor _ _ _ => mret Tvoid
+        | Eva_arg e t =>
+            let* _ := of_expr e in (* TODO: what type should this have? *)
+            mret $ normalize t
+        | Epseudo_destructor arr t e =>
+            let* et := of_expr e >>= arrow_deref arr in
+            let* _ := require_eq t (drop_qualifiers et) in
+            mret Tvoid
         | Earrayloop_init n e level _ e2 t =>
             let* _ := of_expr e in
             let* _ :=
