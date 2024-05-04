@@ -1625,33 +1625,21 @@ Module Type Expr.
        [2] https://clang.llvm.org/doxygen/classclang_1_1ArrayInitIndexExpr.html#details
      *)
 
-    (* A very simple mangling of numbers to strings. Soundness only requires this to be
-       injective and we don't expect the [N] to be very large in practice so we pick
-       a very naive encoding.
-     *)
-    Definition N_to_bs (n : N) : bs :=
-      N.peano_rect (fun _ => bs)
-                   BS.EmptyString
-                   (fun _ x => BS.String "1" x) n.
-
-    Definition arrayloop_loop_index (n : N) : bs := "!loop_index" ++ N_to_bs n.
-    Definition opaque_val (n : N) : bs := "%opaque" ++ N_to_bs n.
-
     (* Maybe we can `Rbind (opaque n) p`, and then add `_opaque` to encapsulate looking this up in the region;
        the new premise would be (after Loc:=ptr goes in) `Q _opaque` *)
 
     Axiom wp_lval_opaque_ref : forall n ρ ty Q,
-          wp_lval tu ρ (Evar (opaque_val n) ty) Q
+          wp_lval tu ρ (Evar (localname.opaque n) ty) Q
       |-- wp_lval tu ρ (Eopaque_ref n Lvalue ty) Q.
 
     Axiom wp_xval_opaque_ref : forall n ρ ty Q,
-          wp_lval tu ρ (Evar (opaque_val n) ty) Q
+          wp_lval tu ρ (Evar (localname.opaque n) ty) Q
       |-- wp_xval tu ρ (Eopaque_ref n Xvalue ty) Q.
 
     (* Maybe do something similar to what was suggested for `wp_lval_opaque_ref` above. *)
     Axiom wp_operand_arrayloop_index : forall ρ level ty Q,
           Exists v,
-            ((Exists q, _local ρ (arrayloop_loop_index level)
+            ((Exists q, _local ρ (localname.arrayloop_index level)
                                |-> primR (erase_qualifiers ty) q v) **
               True) //\\ Q v FreeTemps.id
       |-- wp_operand tu ρ (Earrayloop_index level ty) Q.
@@ -1690,7 +1678,7 @@ Module Type Expr.
                 *)
                (sz : N) (idx : N)
       : mpred :=
-      let loop_index := _local ρ (arrayloop_loop_index level) in
+      let loop_index := _local ρ (localname.arrayloop_index level) in
       N.peano_rect (fun _ : N => N -> mpred)
                    (fun _ => Q)
                    (fun _ rest idx =>
@@ -1711,8 +1699,8 @@ Module Type Expr.
                    (fun p free =>
                       Forall idxp,
                       trg |-> validR -*
-                      _arrayloop_init (Rbind (opaque_val oname) p
-                                             (Rbind (arrayloop_loop_index level) idxp ρ))
+                      _arrayloop_init (Rbind (localname.opaque oname) p
+                                             (Rbind (localname.arrayloop_index level) idxp ρ))
                                       level trg init ety
                                       (trg |-> type_ptrR (Tarray ety sz) -* Q free)
                                       sz 0)
@@ -1729,7 +1717,7 @@ Module Type Expr.
       forall tu ρ n ty common tst th el (Q : T -> FreeTemps -> mpred),
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
-           let ρ' := Rbind (opaque_val n) p ρ in
+           let ρ' := Rbind (localname.anon n) p ρ in
            wp_test tu ρ' tst (fun c free'' =>
              let free := (free'' >*> FreeTemps.delete ty p >*> free)%free in
              if c
@@ -1759,7 +1747,7 @@ Module Type Expr.
     Axiom wp_init_condition2 : forall tu ρ n ty common tst th el vc p Q,
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
-           let ρ' := Rbind (opaque_val n) p ρ in
+           let ρ' := Rbind (localname.opaque n) p ρ in
            wp_test tu ρ' tst (fun c free'' =>
              let free := (free'' >*> FreeTemps.delete ty p >*> free)%free in
              if c

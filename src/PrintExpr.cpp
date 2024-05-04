@@ -217,7 +217,7 @@ ClangPrinter::printValueDeclExpr(const ValueDecl* decl, CoqPrinter& print,
 	};
 	auto t = on.find_anon(decl);
 	if (t != -1) {
-		print.ctor("Evar", false) << "\"$" << t << "\"";
+		print.ctor("Evar", false) << "(localname.anon " << t << ")";
 	} else if (decl->getDeclContext()->isFunctionOrMethod() and
 			   not(isa<FunctionDecl>(decl) or check_static_local(decl))) {
 		print.ctor("Evar", false);
@@ -1039,7 +1039,7 @@ public:
 		auto idx = 0;
 		print.list(ctor->parameters(), [&](auto i) {
 			print.ctor("Evar", false);
-			print.output() << "\"#" << idx << "\"";
+			print.output() << "(localname.anon " << idx << ")";
 			print.output() << fmt::nbsp;
 			cprint.printQualType(i->getType(), print, loc::of(i));
 			print.end_ctor();

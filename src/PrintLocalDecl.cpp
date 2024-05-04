@@ -101,7 +101,7 @@ public:
 		cprint.printExpr(decl->getInit(), print, names);
 
 		int index = names.push_anon(decl);
-		print.output() << fmt::nbsp << "\"$" << index << "\"";
+		print.output() << fmt::nbsp << "(localname.anon " << index << ")";
 
 		print.output() << fmt::nbsp;
 

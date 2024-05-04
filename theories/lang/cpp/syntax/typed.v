@@ -4,7 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.upoly.upoly.
-Require Import bedrock.upoly.trace.
+Require bedrock.upoly.trace.
 Require Import bedrock.lang.cpp.syntax.prelude.
 Require Import bedrock.lang.cpp.syntax.core.
 Require Import bedrock.lang.cpp.syntax.types.
@@ -19,14 +19,6 @@ Require Import bedrock.prelude.error.
 
 
 Import UPoly.
-#[local] Definition M : Set -> Set := (trace.M Error.t).
-#[local] Instance M_Ret : MRet M := _.
-#[local] Instance M_Ap : Ap M := _.
-#[local] Instance M_Bind : MBind M := _.
-#[local] Instance M_Fail : MFail M := _.
-#[local] Instance M_Throw : Trace Error.t M := _.
-#[local] Hint Opaque M : typeclass_instances.
-
 
 (* a little "sloppy" with the errors *)
 mlock Definition breadcrumb {t : Set} (_ : t) : Error.t := inhabitant.
@@ -102,10 +94,35 @@ Module decltype.
     #[local] Notation functype := (functype' lang).
     #[local] Notation Stmt := (Stmt' lang).
 
+    #[local] Definition M : Set -> Set := (readerT.M (list (localname * decltype)) (trace.M Error.t)).
+    #[local] Instance M_Ret : MRet M := _.
+    #[local] Instance M_Ap : Ap M := _.
+    #[local] Instance M_Bind : MBind M := _.
+    #[local] Instance M_Fail : MFail M := _.
+    #[local] Instance M_Throw : Trace Error.t M := _.
+    #[local] Hint Opaque M : typeclass_instances.
+
+    (* Bindings *)
+    Record bindings : Set := { _bindings : list (localname * decltype) }.
+    Instance bindings_empty : Empty bindings := {| _bindings := nil |}.
+    Definition with_var {T} (x : localname) (t : decltype) : M T -> M T :=
+      readerT.local (cons (x,t)).
+    Definition with_bindings {T} (b : bindings) (m : M T) : M T :=
+      fold_right (fun xt => with_var xt.1 xt.2) m b.(_bindings).
+    #[local] Instance bindings_monoid : monoid.Monoid bindings :=
+      {| monoid.monoid_unit := bindings_empty
+       ; monoid.monoid_op a b := {| _bindings := a.(_bindings) ++ b.(_bindings) |} |}.
 (*
     Variable lookup : name' lang -> option decltype.
     Variable locals : list (bs * type).
  *)
+
+    Definition var_type (n : localname) : M decltype :=
+      let* vars := readerT.ask in
+      match List.find (fun x => bool_decide (x.1 = n)) vars with
+      | None => trace (breadcrumb ("failed to find variable "%bs, n, " in "%bs, vars)) $ mfail
+      | Some t => mret t.2
+      end.
 
     (**
     The declaration type of an explicit cast to type [t] or a call to
@@ -135,9 +152,6 @@ Module decltype.
           pair (Tnamed nm) <$> require_functype ft
       | _ => mfail
       end.
-
-
-    Definition with_var (_ : atomic_name) (t : decltype) {T} (m : M T) : M T := m.
 
     Section fixpoint.
       Context (of_expr : Expr -> M decltype).
@@ -334,7 +348,10 @@ Module decltype.
         | Eunresolved_parenlist None _ => mfail
         | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
 
-        | Evar _ t => mret $ tref QM t
+        | Evar ln t =>
+            let* vt := var_type ln in
+            let* _ := require_eq t vt in
+            mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
         | Eglobal nm ty => mret $ tref QM ty
         | Eglobal_member nm ty =>
@@ -501,7 +518,7 @@ Module decltype.
             mret rt
         | Eif2 x lete tst thn els vc t =>
             let* lt := of_expr lete in
-            with_var (Nanon x) lt $
+            with_var (localname.opaque x) lt $
               let* _ := of_expr tst >>= require_testable in
               let* tthn := of_expr thn in
               let* _ := of_expr els >>= require_eq tthn in
@@ -583,12 +600,6 @@ Module decltype.
         mret result.
     End fixpoint.
 
-    Record bindings : Set := { _bindings : list (atomic_name * decltype) }.
-    Instance bindings_empty : Empty bindings := {| _bindings := nil |}.
-    Definition with_bindings (b : bindings) {T} (m : M T) : M T := m.
-    Instance bindings_monoid : monoid.Monoid bindings :=
-      {| monoid.monoid_unit := bindings_empty ; monoid.monoid_op a b := {| _bindings := a.(_bindings) ++ b.(_bindings) |} |}.
-
     Definition big_op `{Mon : monoid.Monoid m} `{Traverse T} (ls : T m) : m :=
       writer.value $ traverse (F:=writer.M m) (T:=T) (writer.tell) ls.
 
@@ -599,21 +610,20 @@ Module decltype.
         trace (breadcrumb d)
         match d with
         | Dvar lname ty oinit =>
-  (*          let* _ := check_type ty in *)
             let* _ :=
               match oinit with
               | None => mret tt
               | Some init =>
-                  let* _ := of_expr init >>= can_initialize ty in
+                  let* _ := with_var lname ty $ of_expr init >>= can_initialize ty in
                   mret tt
               end
             in
-            mret ({| _bindings := [(Nid lname, ty)] |})
+            mret ({| _bindings := [(lname, ty)] |})
         | Ddecompose e v ds =>
             (* TODO: this is wrong, it requires a more subtle binding form because [e] is bound during the
               evaluation of the declarations, but is unbound afterwards *)
-            let* _ := of_expr e in
-            let* (bindings : list bindings) := traverse (T:=eta list) check_decl ds in
+            let* t := of_expr e in
+            let* (bindings : list bindings) := with_var v t $ traverse (T:=eta list) check_decl ds in
             mret $ big_op bindings
         | Dinit _ nm ty oinit =>
             let* _ :=
@@ -710,41 +720,48 @@ Module decltype.
     with check_stmt (s : Stmt) : M (option decltype) :=
       snd <$> check_stmt_body of_expr s.
 
-    Definition check_func (f : Func' lang) : M unit :=
+
+    Definition Merr : Set -> Set := trace.M Error.t.
+
+    Definition check_func (f : Func' lang) : Merr unit :=
       match f.(f_body) with
       | None => mret ()
-      | Some (Impl body) => const () <$> check_stmt body
+      | Some (Impl body) =>
+          const () <$> readerT.run (with_bindings {| _bindings := f.(f_params) |} $ check_stmt body) []
       | Some (Builtin _) => mret ()
       end.
 
-    Definition check_method (m : Method' lang) : M unit :=
+    Definition check_method (m : Method' lang) : Merr unit :=
       match m.(m_body) with
-      | Some (UserDefined s) => const () <$> check_stmt s
+      | Some (UserDefined s) =>
+          const () <$> readerT.run (with_bindings {| _bindings := m.(m_params) |} $ check_stmt s) []
       | _ => mret ()
       end.
 
-    Definition check_ctor (c : Ctor' lang) : M unit :=
+    Definition check_ctor (c : Ctor' lang) : Merr unit :=
       match c.(c_body) with
       | Some (UserDefined (inits, body)) =>
-          let* _ := traverse (T:=eta list) (fun init => of_expr init.(init_init)) inits in
-          const () <$> check_stmt body
+          readerT.run (with_bindings {| _bindings := c.(c_params) |} $
+                         let* _ := traverse (T:=eta list) (fun init => of_expr init.(init_init)) inits in
+                         const () <$> check_stmt body) []
       | _ => mret ()
       end.
 
-    Definition check_dtor (d : Dtor' lang) : M unit :=
+    Definition check_dtor (d : Dtor' lang) : Merr unit :=
       match d.(d_body) with
       | Some (UserDefined body) =>
-          const () <$> check_stmt body
+          readerT.run (const () <$> check_stmt body) []
       | _ => mret ()
       end.
 
-    Definition check_obj_value (o : ObjValue' lang) : M unit :=
+    Definition check_obj_value (o : ObjValue' lang) : Merr unit :=
+      trace (breadcrumb o)
       match o with
       | Ovar _ oinit =>
           match oinit with
           | None => mret tt
           | Some init =>
-              let* _ := of_expr init in mret tt
+              const () <$> readerT.run (of_expr init) []
           end
       | Ofunction f => check_func f
       | Omethod m => check_method m
@@ -756,16 +773,16 @@ Module decltype.
 
   End internal.
 
-  Definition of_expr {lang} (tu : translation_unit) (e : Expr' lang) : M (decltype' lang) :=
+  Definition of_expr {lang} (tu : translation_unit) (e : Expr' lang) : trace.M Error.t (decltype' lang) :=
     let lookup :=
       match lang as lang return _ with
       | lang.cpp => fun nm => fmap (M:=fun t => option t) type_of_value $ tu.(symbols) !! nm
       | lang.temp => fun _ => None
       end
     in
-    internal.of_expr e.
+    readerT.run (internal.of_expr e) [].
 
-  Definition check_tu (tu : translation_unit) : M unit :=
+  Definition check_tu (tu : translation_unit) : trace.M Error.t unit :=
     let fn (nm_v : name * ObjValue) :=
       trace (breadcrumb nm_v.1) $ internal.check_obj_value nm_v.2
     in
@@ -777,14 +794,14 @@ Module exprtype.
 Section exprtype.
   Context {lang : lang.t} (tu : translation_unit).
 
-  Definition of_expr (e : Expr' lang) : M (ValCat * exprtype' lang) :=
-    decltype.to_exprtype <$> decltype.of_expr tu e.
+  Definition of_expr (e : Expr' lang) : option (ValCat * exprtype' lang) :=
+    trace.runO $ decltype.to_exprtype <$> decltype.of_expr tu e.
 
-  Definition of_expr_drop (e : Expr' lang) : M (exprtype' lang) :=
-    drop_reference <$> decltype.of_expr tu e.
+  Definition of_expr_drop (e : Expr' lang) : option (exprtype' lang) :=
+    trace.runO $ drop_reference <$> decltype.of_expr tu e.
 
   Definition of_expr_check (P : ValCat -> Prop) `{!∀ vc, Decision (P vc)}
-      (e : Expr' lang) : M (exprtype' lang) :=
+      (e : Expr' lang) : option (exprtype' lang) :=
     of_expr e >>= fun p => guard (P p.1) ;; mret p.2.
 
 End exprtype.

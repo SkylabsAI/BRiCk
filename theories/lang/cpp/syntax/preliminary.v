@@ -28,13 +28,37 @@ Definition ident : Set := bs.
 Bind Scope bs_scope with ident.
 #[global] Instance ident_eq: EqDecision ident := _.
 
-(* local names
-   TODO: the AST supports some other name types that we might want to use here.
- *)
-Definition localname : Set := ident.
-Bind Scope bs_scope with localname.
-#[global] Instance localname_eq: EqDecision localname := _.
+(** local names
+In a normal C++ program, local names are just identifiers but the internal AST
+contains two other types of names corresponding to compiler-generated names.
+These are:
+- opaque names are used for temporaries, e.g. the location that the result of
+  <<e>> is placed in in the following code <<auto [a,b] = e>>.
+- the names of indicies of array loops, which the AST uses for primitive array
+  copies.
 
+NOTE
+Because these other types of names occur so infrequently, we choose [bs] as
+the underlying type and use a special prefix for the inaccessible variable names.
+ *)
+Module localname.
+  Definition t : Set := ident.
+  #[global] Bind Scope bs_scope with localname.t.
+  #[global] Instance localname_eq: EqDecision t := _.
+
+  (* these are pseudo constructors for making different types
+     of local names. *)
+
+  Definition N_to_bs (n : N) : bs :=
+    if n is 0%N then "0"
+    else BS.of_string $ pretty.pretty_N_go n "".
+
+  Definition arrayloop_index (n : N) : t := "!" ++ N_to_bs n.
+  Definition opaque (n : N) : t := "%" ++ N_to_bs n.
+  Definition anon (n : N) : t := "#" ++ N_to_bs n.
+End localname.
+#[global] Bind Scope bs_scope with localname.t.
+Notation localname := localname.t.
 
 (** * Type Preliminaries *)
 
