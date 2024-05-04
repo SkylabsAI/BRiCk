@@ -248,17 +248,6 @@ Module decltype.
         | _ => of_base e2
         end.
 
-      (**
-      TODO: Does [Ematerialize_temp] ever have a value category other
-      than [Xvalue]? In the preceeding definition of [of_binop] we
-      seem to assume "no". If we are indeed making that assumption,
-      and if that assumption is correct, we should simplify the AST.
-      *)
-      Definition of_materialize_temp (e : Expr) (vc : ValCat) : M decltype :=
-        let* t := of_expr e in
-        let t := drop_reference t in
-        mret $ of_exprtype vc t.
-
       Definition requireL (t : decltype) : M exprtype :=
         match t with
         | Tref t => mret t
@@ -286,6 +275,7 @@ Module decltype.
         | _ => mret t
         end.
       Definition require_eq {T : Set} {_ : EqDecision T} (l : T) (r : T) : M unit :=
+        trace (breadcrumb ("require equal "%bs, l, " = "%bs, r)) $
         const () <$> guard (l = r).
 
       (* determine if this type can be used in an <<if>> *)
@@ -518,7 +508,7 @@ Module decltype.
             mret rt
         | Eif2 x lete tst thn els vc t =>
             let* lt := of_expr lete in
-            with_var (localname.opaque x) lt $
+            with_var (localname.anon x) lt $
               let* _ := of_expr tst >>= require_testable in
               let* tthn := of_expr thn in
               let* _ := of_expr els >>= require_eq tthn in
@@ -577,7 +567,9 @@ Module decltype.
             let* _ := guard (ty = et) in (* TODO: constness check? *)
             mret Tvoid
         | Eandclean e => of_expr e
-        | Ematerialize_temp e vc => of_materialize_temp e vc
+        | Ematerialize_temp e vc =>
+            let* _ := guard (vc <> Prvalue) in
+            of_exprtype vc <$> (of_expr e >>= requirePR)
         | Eatomic _ es t =>
             let* tes := traverse (T:=eta list) of_expr es in
             mret t
@@ -587,9 +579,22 @@ Module decltype.
             mret t
         | Eva_arg _ t => mret $ normalize t
         | Epseudo_destructor _ _ _ => mret Tvoid
-        | Earrayloop_init _ _ _ _ _ t
-        | Earrayloop_index _ t => mret t (* always pr-values? *)
-        | Eopaque_ref _ vc t
+        | Earrayloop_init n e level _ e2 t =>
+            let* _ := of_expr e in
+            let* _ :=
+              with_var (localname.arrayloop_index level) Tsize_t $
+                       with_var (localname.opaque n) t $
+                of_expr e2 in
+            mret t
+        | Earrayloop_index n t =>
+            let* _ := var_type (localname.arrayloop_index n) >>= require_eq t in
+            mret t (* always pr-values? *)
+        | Eopaque_ref n vc t =>
+            let* vt := var_type (localname.opaque n) in
+            let* _ := can_initialize vt t in
+            (* ^^ in practice, the type and the recorded variable type
+               differ by <<const>> qualifiers in instance-specific ways *)
+            mret $ of_exprtype vc t
         | Eunsupported _ vc t => mret $ of_exprtype vc t
         end
         in

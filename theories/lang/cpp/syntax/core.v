@@ -398,6 +398,13 @@ Should be [gn : classname]
   (arg : Expr') (deleted_type : type')
 | Eandclean (e : Expr')
 | Ematerialize_temp (e : Expr') (vc : ValCat)
+  (* ^^ [Ematerialize_temp] is can be an lvalue in the following program:
+     <<
+     int x[10];
+     static_cast<int*const&>(x);
+     >>
+     (this is true at least in c++11)
+   *)
 | Eatomic (op : AtomicOp) (args : list Expr') (t : type')
 | Estmt (_ : Stmt') (_ : type')
 | Eva_arg (e : Expr') (t : type')
