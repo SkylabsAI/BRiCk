@@ -99,7 +99,7 @@ Definition Denum_constant (n : globname)
   _types $ insert n $
   let v := match v with inl n => Echar n ut | inr z => Eint z ut end in
   let t := Tenum gn in
-  Gconstant t $ Some $ Ecast Cintegral v Prvalue t.
+  Gconstant t $ Some $ Ecast Cintegral v t.
 
 Definition Dtypedef (n : globname) (t : type) : K :=
   _aliases <[n := t]>.

@@ -27,11 +27,24 @@ enum Done : unsigned {
 	T = 2,
 	O = 4,
 	VT = V | T,
+	DT = 8,
 };
 
 static fmt::Formatter&
 done(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
 	 Done want = Done::T) {
+	if (want == Done::DT) {
+		if (expr->isLValue()) {
+			guard::ctor _(print, "Tref", false);
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		} else if (expr->isXValue()) {
+			guard::ctor _(print, "Trv_ref", false);
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		} else {
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		}
+		return print.end_ctor();
+	}
 	if (want & Done::V) {
 		print.output() << fmt::nbsp;
 		cprint.printValCat(expr, print);
@@ -763,14 +776,14 @@ public:
 
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getSubExpr(), print, li);
-			done(expr, print, cprint, Done::VT);
+			done(expr, print, cprint, Done::DT);
 		} else {
 			print.ctor("Ecast");
 			printCast(expr, print, cprint);
 
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getSubExpr(), print, li);
-			done(expr, print, cprint, Done::VT);
+			done(expr, print, cprint, Done::DT);
 		}
 	}
 
@@ -834,7 +847,7 @@ public:
 		}
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getSubExpr(), print, li);
-		done(expr, print, cprint, Done::VT);
+		done(expr, print, cprint, Done::DT);
 	}
 
 	void VisitIntegerLiteral(const IntegerLiteral* lit, CoqPrinter& print,
@@ -1227,8 +1240,8 @@ public:
 	void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr* expr,
 									CoqPrinter& print, ClangPrinter& cprint,
 									const ASTContext&, OpaqueNames&) {
-		print.output()
-			<< "Enull"; // note(gmm): null has a special "nullptr_t" type
+		// <<nullptr>> has a special type
+		print.output() << "Enull" << fmt::nbsp;
 	}
 
 	void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr* expr,

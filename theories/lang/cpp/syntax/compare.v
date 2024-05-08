@@ -1441,14 +1441,12 @@ Module Expr.
     Record box_Ecast : Set := Box_Ecast {
       box_Ecast_0 : Cast_ type name type;
       box_Ecast_1 : Expr;
-      box_Ecast_2 : ValCat;
-      box_Ecast_3 : type;
+      box_Ecast_2 : type;
     }.
     Definition box_Ecast_compare (b1 b2 : box_Ecast) : comparison :=
       compare_lex (Cast.compare compareT compareN compareT b1.(box_Ecast_0) b2.(box_Ecast_0)) $ fun _ =>
       compare_lex (compareE b1.(box_Ecast_1) b2.(box_Ecast_1)) $ fun _ =>
-      compare_lex (ValCat.compare b1.(box_Ecast_2) b2.(box_Ecast_2)) $ fun _ =>
-      compareT b1.(box_Ecast_3) b2.(box_Ecast_3).
+      compareT b1.(box_Ecast_2) b2.(box_Ecast_2).
 
     Record box_Emember : Set := Box_Emember {
       box_Emember_0 : bool ;
@@ -1687,7 +1685,7 @@ Module Expr.
       | Eseqor _ _ => 27
       | Ecomma _ _ => 28
       | Ecall _ _ => 29
-      | Ecast _ _ _ _ => 30
+      | Ecast _ _ _ => 30
       | Emember _ _ _ _ _ => 31
       | Emember_call _ _ _ _ => 32
       | Eoperator_call _ _ _ => 33
@@ -1804,7 +1802,7 @@ Module Expr.
       | Eseqor l r
       | Ecomma l r => Box_Eseqand l r
       | Ecall e es => Box_Ecall e es
-      | Ecast c e vc t => Box_Ecast c e vc t
+      | Ecast c e t => Box_Ecast c e t
       | Emember arrow e x b t => Box_Emember arrow e x b t
       | Emember_call arrow m e es => Box_Emember_call arrow m e es
       | Eoperator_call oo oi es => Box_Eoperator_call oo oi es
@@ -1931,7 +1929,7 @@ Module Expr.
       | Ecomma l r => compare_ctor (Reduce (tag (Ecomma l r))) (fun _ => Reduce (data (Ecomma l r)))
       | Ecall e es => compare_ctor (Reduce (tag (Ecall e es))) (fun _ => Reduce (data (Ecall e es)))
 
-      | Ecast c e vc t => compare_ctor (Reduce (tag (Ecast c e vc t))) (fun _ => Reduce (data (Ecast c e vc t)))
+      | Ecast c e t => compare_ctor (Reduce (tag (Ecast c e t))) (fun _ => Reduce (data (Ecast c e t)))
       | Emember arr e x b t => compare_ctor (Reduce (tag (Emember arr e x b t))) (fun _ => Reduce (data (Emember arr e x b t)))
       | Emember_call arr m e es => compare_ctor (Reduce (tag (Emember_call arr m e es))) (fun _ => Reduce (data (Emember_call arr m e es)))
       | Eoperator_call oo oi es => compare_ctor (Reduce (tag (Eoperator_call oo oi es))) (fun _ => Reduce (data (Eoperator_call oo oi es)))

@@ -223,7 +223,7 @@ Module decltype.
         in
         let of_base (ei : Expr) : M decltype :=
           match ei with
-          | Ecast Carray2ptr ar _ _ => of_array ar
+          | Ecast Carray2ptr ar _ => of_array ar
           | _ => mret $ Tref t
           end
         in
@@ -402,14 +402,13 @@ Module decltype.
             let* ts := traverse (T:=eta list) of_expr es in
             let* _ := check_args ft.(ft_arity) ft.(ft_params) ts in
             mret ft.(ft_return)
-        | Ecast Cl2r e vc et =>
-            let* t := of_expr e >=> requireGL in
-            let* _ := guard (vc = Prvalue) in
-            let* _ := guard (drop_qualifiers t = et) in
-            mret $ of_exprtype vc et
-        | Ecast _ e vc et =>
+        | Ecast Cl2r e dt =>
+            let* et := of_expr e >=> requireGL in
+            let* _ := requirePR dt >>= require_eq (drop_qualifiers et) in
+            mret dt
+        | Ecast _ e dt =>
             let* _ := of_expr e in
-            mret $ of_exprtype vc et
+            mret dt
         | Emember arrow e _ mut t =>
             let* edt := of_expr e >>= arrow_deref_get arrow in
             of_member edt mut t

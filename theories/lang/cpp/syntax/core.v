@@ -371,7 +371,7 @@ TODO (FM-4320): <<Cdependent>> may require care
    GM: the only way I see to solve this problem is to make [lang] and index rather than
        a parameter. Doing that would allow for two different constructors for [Ecast]
  *)
-| Ecast (c : Cast_ type' name' type') (e : Expr') (vc : ValCat) (t : type')
+| Ecast (c : Cast_ type' name' type') (e : Expr') (t : (* decltype' *)type')
 | Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
 | Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
@@ -796,7 +796,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eseqor e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecomma e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecall e es => is_dependentE e || existsb is_dependentE es
-  | Ecast c e _ t => Cast.existsb is_dependentT is_dependentN is_dependentT c || is_dependentE e || is_dependentT t
+  | Ecast c e t => Cast.existsb is_dependentT is_dependentN is_dependentT c || is_dependentE e || is_dependentT t
   | Emember _ e _ _ t => is_dependentE e || is_dependentT t
   | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es

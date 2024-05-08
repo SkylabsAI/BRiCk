@@ -27,10 +27,10 @@ Module ParserExpr (Import Lang : PARSER_LANG).
     Eoperator_call oo (operator_impl.Func f ft) es.
 
   Definition Eenum_const_at (gn : name) (c : ident) (ty : exprtype) : Expr :=
-    Ecast Cintegral (Eenum_const gn c) Prvalue ty.
+    Ecast Cintegral (Eenum_const gn c) ty.
 
   Definition Ebuiltin (nm : obj_name) (ty : type) : Expr :=
-    Ecast Cbuiltin2fun (Eglobal nm ty) Prvalue (Tptr ty).
+    Ecast Cbuiltin2fun (Eglobal nm ty) (Tptr ty).
 
   Definition Emember (arrow : bool) (e_orig : Expr) (f : ident + name) (mut : bool) (ty : decltype) : force_some Expr :=
     option.get_some $

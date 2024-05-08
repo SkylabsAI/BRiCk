@@ -195,7 +195,7 @@ Module decltype.
         in
         let of_base (ei : Expr) : M decltype :=
           match ei with
-          | Ecast Carray2ptr ar _ _ => of_array ar
+          | Ecast Carray2ptr ar _ => of_array ar
           | _ => mret $ Tref t
           end
         in
@@ -259,7 +259,7 @@ Module decltype.
         | Eseqor _ _ => mret Tbool
         | Ecomma _ e2 => of_expr e2
         | Ecall f _ => of_call f
-        | Ecast _ _ vc et => mret $ of_exprtype vc et
+        | Ecast _ _ t => mret t
         | Emember arrow e _ mut t => of_member arrow e mut t
         | Emember_call _ f _ _ => of_member_call f
         | Eoperator_call _ f _ => from_operator_impl f
