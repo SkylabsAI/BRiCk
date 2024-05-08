@@ -121,10 +121,6 @@ Module decltype.
     #[local] Instance bindings_monoid : monoid.Monoid bindings :=
       {| monoid.monoid_unit := bindings_empty
        ; monoid.monoid_op a b := {| _bindings := a.(_bindings) ++ b.(_bindings) |} |}.
-(*
-    Variable lookup : name' lang -> option decltype.
-    Variable locals : list (bs * type).
- *)
 
     Definition var_type (n : localname) : M decltype :=
       let* vars := readerT.asks (fun '(_,_,vars) => vars) in
@@ -198,19 +194,6 @@ Module decltype.
         | _ => mret t
         end.
 
-      Definition of_addrof (e : Expr) : M decltype :=
-        let* t := of_expr e in
-        let '(vc, et) := to_exprtype t in
-        let* _ := guard (vc <> Prvalue) in
-        mret $ Tptr et.
-
-      Definition of_call (f : Expr) : M decltype :=
-        let* '(_, t) := to_exprtype <$> of_expr f in
-        match t with
-        | Tptr ft => from_functype ft
-        | _ => mfail
-        end.
-
       Definition of_member (Et : bool * exprtype) (mut : bool) (t : decltype) : M decltype :=
         let '(ref, et) := to_exprtype t in
         match ref with
@@ -223,13 +206,6 @@ Module decltype.
           in
           let ty := tqualified qual et in
           if Et.1 then mret $ Trv_ref ty else mret $ Tref ty
-        end.
-
-      Definition of_member_call (f : MethodRef' lang) : M decltype :=
-        match f with
-        | inl (_, _, ft)
-        | inr (Ecast Cl2r _  _ (Tmember_pointer _ ft)) => from_functype ft
-        | _ => mfail
         end.
 
       Definition of_subscript (e1 e2 : Expr) (t : exprtype) : M decltype :=
@@ -398,7 +374,6 @@ Module decltype.
             (* TODO: i still need to check that the operation is permitted at this type *)
             let* lt := of_expr le >>= requireL in
             let* rt := of_expr re >>= requireR in
-            let* _ := guard (lt = rt) in
             let* _ := guard (lt = t) in
             mret $ Tref lt
         | Epreinc e t
@@ -834,127 +809,3 @@ Section exprtype.
 End exprtype.
 End exprtype.
 
-(*
-(**
-Convenience functions
-*)
-Section convenience.
-  Context {lang : lang.t} (tu : translation_unit).
-
-  Definition decltype_of_expr (e : Expr' lang) : decltype' lang :=
-    default (Tunsupported "decltype_of_expr: cannot determine declaration type") $
-    decltype.of_expr tu e.
-  Definition exprtype_of_expr (e : Expr' lang) : ValCat * exprtype' lang :=
-    decltype.to_exprtype $ decltype_of_expr e.
-  Definition valcat_of (e : Expr' lang) : ValCat := (exprtype_of_expr e).1.
-  Definition type_of (e : Expr' lang) : exprtype' lang := (exprtype_of_expr e).2.
-End convenience.
-*)
-
-
-(**
-Module exprtype.
-
-  Section fixpoint.
-    #[local] Notation traverse_list := mapM.
-
-    Definition to_decltype (vc_t : ValCat * exprtype) : decltype :=
-      match vc_t.1 with
-      | Lvalue => Tref vc_t.2
-      | Xvalue => Trv_ref vc_t.2
-      | Prvalue => vc_t.2
-      end.
-
-    Definition requireL (vc_t : ValCat * exprtype) : M exprtype :=
-      match vc_t.1 with
-      | Lvalue => mret vc_t.2
-      | _ => mfail
-      end.
-    Definition requireGL (vc_t : ValCat * exprtype) : M exprtype :=
-      match vc_t.1 with
-      | Lvalue | Xvalue => mret vc_t.2
-      | _ => mfail
-      end.
-
-    Fixpoint of_expr (e : Expr) : M (ValCat * exprtype) :=
-
-        match e return M decltype with
-        | Eparam X => mret (Prvalue, Tresult_param X)
-        | Eunresolved_global on => mret (Prvalue, Tresult_global on)
-        | Eunresolved_unop o e => pair Prvalue ∘ Tresult_unop o <$> to_decltype (of_expr e)
-        | Eunresolved_binop o l r => Tresult_binop o <$> of_expr l <*> of_expr r
-        | Eunresolved_call on es => Tresult_call on <$> traverse_list of_expr es
-        | Eunresolved_member_call on obj es => Tresult_member_call on <$> of_expr obj <*> traverse_list of_expr es
-        | Eunresolved_parenlist (Some t) es => Tresult_parenlist t <$> traverse_list of_expr es
-        | Eunresolved_parenlist None _ => mfail
-        | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
-
-        | Evar _ t => mret $ tref QM t
-        | Eenum_const n _ => mret $ Tenum n
-        | Eglobal nm ty => mret ty (* TODO *)
-
-        | Echar _ t => mret t
-        | Estring chars t =>
-            mret $ Tref $ Tarray (Qconst t) (1 + list_numbers.lengthN chars)
-        | Eint _ t => mret t
-        | Ebool _ => mret Tbool
-        | Eunop _ _ t => mret t
-        | Ebinop op le re t => of_binop op l t
-        | Ederef e t =>
-            let* et := of_expr e in
-            match et with
-            | Tptr t' =>
-                let* _ := guard (t = t') in
-                mret $ Tref t
-            | _ => mfail
-            end
-        | Eaddrof e => of_addrof e
-        | Eassign le re t =>
-            let* lt := of_expr le in
-            let* _ := valcat_of le >>= fun vc => guard (vc = Lvalue) in
-            let* rt := of_expr re in
-            _
-        | Eassign_op _ _ _ t
-        | Epreinc _ t => mret $ Tref t
-        | Epostinc _ t => mret t
-        | Epredec _ t => mret $ Tref t
-        | Epostdec _ t => mret t
-        | Eseqand _ _
-        | Eseqor _ _ => mret Tbool
-        | Ecomma _ e2 => of_expr e2
-        | Ecall f _ => of_call f
-        | Ecast _ _ vc et => mret $ of_exprtype vc et
-        | Emember e _ mut t => of_member e mut t
-        | Emember_call f _ _ => of_member_call f
-        | Eoperator_call _ f _ => from_operator_impl f
-        | Esubscript e1 e2 t => of_subscript e1 e2 t
-        | Esizeof _ t
-        | Ealignof _ t
-        | Eoffsetof _ _ t
-        | Econstructor _ _ t => mret t
-        | Eimplicit e => of_expr e
-        | Eimplicit_init t =>
-          (**
-          "References cannot be value-initialized".
-
-          https://en.cppreference.com/w/cpp/language/value_initialization
-          *)
-          mret t
-        | Eif _ _ _ vc t
-        | Eif2 _ _ _ _ _ vc t => mret $ of_exprtype vc t
-        | Ethis t => mret t
-        | Enull => mret Tnullptr
-        | Einitlist _ _ t => mret t
-        | Enew _ _ _ aty _ _ => mret $ Tptr aty
-        | Edelete _ _ _ _ => mret Tvoid
-        | Eandclean e => of_expr e
-        | Ematerialize_temp e vc => of_materialize_temp e vc
-        | Eatomic _ _ t => mret t
-        | Eva_arg _ t => mret $ normalize t
-        | Epseudo_destructor _ _ _ => mret Tvoid
-        | Earrayloop_init _ _ _ _ _ t
-        | Earrayloop_index _ t => mret t
-        | Eopaque_ref _ vc t
-        | Eunsupported _ vc t => mret $ of_exprtype vc t
-        end
-**)
