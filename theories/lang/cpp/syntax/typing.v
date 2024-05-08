@@ -230,6 +230,7 @@ Module decltype.
         | Eunresolved_parenlist (Some t) es => Tresult_parenlist t <$> traverse_list of_expr es
         | Eunresolved_parenlist None _ => mfail
         | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
+        | Edependent_cast _ t => mret t
 
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n

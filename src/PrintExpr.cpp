@@ -172,7 +172,6 @@ printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
 		break;
 
 		CASE(LValueToRValue, Cl2r)
-		CASE(Dependent, Cdependent)
 		CASE(FunctionToPointerDecay, Cfun2ptr)
 		CASE(NoOp, Cnoop)
 		CASE(BitCast, Cbitcast)
@@ -758,11 +757,30 @@ public:
 		done(expr, print, cprint, Done::NONE);
 	}
 
+	void VisitExplicitCastExpr(const ExplicitCastExpr* expr, CoqPrinter& print,
+							   ClangPrinter& cprint, const ASTContext& ctxt,
+							   OpaqueNames& li) {
+		switch (auto kind = expr->getCastKind()) {
+		case CastKind::CK_Dependent: {
+			print.ctor("Edependent_cast");
+			cprint.printExpr(expr->getSubExpr(), print, li);
+			print.output() << fmt::nbsp;
+			cprint.printQualType(expr->getTypeAsWritten(), print,
+								 loc::of(expr));
+			print.end_ctor();
+			break;
+		}
+		default:
+			VisitCastExpr(expr, print, cprint, ctxt, li);
+		}
+	}
+
 	void VisitCastExpr(const CastExpr* expr, CoqPrinter& print,
 					   ClangPrinter& cprint, const ASTContext&,
 					   OpaqueNames& li) {
-		if (expr->getCastKind() == CastKind::CK_ConstructorConversion ||
-			expr->getCastKind() == CastKind::CK_UserDefinedConversion) {
+		switch (expr->getCastKind()) {
+		case CastKind::CK_ConstructorConversion:
+		case CastKind::CK_UserDefinedConversion: {
 			auto cf = expr->getConversionFunction();
 			always_assert(
 				cf && "UserDefinedConversion must have a ConversionFunction");
@@ -777,7 +795,13 @@ public:
 			print.output() << fmt::nbsp;
 			cprint.printExpr(expr->getSubExpr(), print, li);
 			done(expr, print, cprint, Done::DT);
-		} else {
+			break;
+		}
+		case CastKind::CK_Dependent: {
+			expr->dump();
+			always_assert(false && "non-explicit cast is dependent");
+		}
+		default:
 			print.ctor("Ecast");
 			printCast(expr, print, cprint);
 
@@ -969,10 +993,10 @@ public:
 			print.output() << ")" << fmt::nbsp;
 			print.boolean(fd->isMutable());
 		} else if (auto vd = dyn_cast<VarDecl>(member)) {
-			always_assert(
-				vd->isStaticDataMember() &&
-				"variable referenced through member must be a static data "
-				"member");
+			always_assert(vd->isStaticDataMember() &&
+						  "variable referenced through member must be "
+						  "a static data "
+						  "member");
 			print.output() << "(inr ";
 			cprint.printName(*vd, print);
 			print.output() << ")" << fmt::nbsp;

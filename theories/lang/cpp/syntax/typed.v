@@ -322,6 +322,9 @@ Module decltype.
         | Eunresolved_parenlist (Some t) es => Tresult_parenlist t <$> traverse (T:=eta list) of_expr es
         | Eunresolved_parenlist None _ => mfail
         | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
+        | Edependent_cast e t =>
+            let* _ := of_expr e in
+            mret t
 
         | Evar ln t =>
             let* vt := var_type ln in

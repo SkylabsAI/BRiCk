@@ -173,7 +173,6 @@ End atomic_name.
     Proposal: make [Cast] part of the recursive bundle.
  *)
 Inductive Cast_ {classname obj_name type : Set} : Set :=
-| Cdependent (* this doesn't have any semantics *)
 | Cbitcast	(** TODO (FM-3431): This explicit cast expression could carry the type as written *)
 | Clvaluebitcast	(** TODO (FM-3431): Drop this constructor? *)
 | Cl2r
@@ -225,7 +224,6 @@ Module Cast.
       (GN : classname -> bool) (ON : obj_name -> bool) (T : type -> bool) :=
     fix existsb (c : Cast_ classname obj_name type) : bool :=
     match c with
-    | Cdependent
     | Cbitcast
     | Clvaluebitcast
     | Cl2r
@@ -326,6 +324,7 @@ simplifies cpp2v---we set it from context in ../mparser.v.
 *)
 | Eunresolved_parenlist (_ : option type') (_ : list Expr')
 | Eunresolved_member (_ : Expr') (_ : ident)
+| Edependent_cast (_ : Expr') (_ : type')
 
 (**
 NOTE: We might need to support template parameters as object names in
@@ -773,7 +772,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eunresolved_call _ _
   | Eunresolved_member_call _ _ _
   | Eunresolved_parenlist _ _
-  | Eunresolved_member _ _ => true
+  | Eunresolved_member _ _
+  | Edependent_cast _ _ => true
   | Evar _ t => is_dependentT t
   | Eenum_const n _ => is_dependentN n
   | Eglobal n t => is_dependentN n || is_dependentT t

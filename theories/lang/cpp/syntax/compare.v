@@ -401,11 +401,11 @@ Module Cast.
 
     Definition car (t : positive) : Set :=
       match t with
-      | 11 | 12 => list classname
-      | 21 => name
-      | 22 | 25 => type
-      | 23 => Cast
-      | 24 => box_Cdynamic
+      | 10 | 11 => list classname
+      | 20 => name
+      | 21 | 24 => type
+      | 22 => Cast
+      | 23 => box_Cdynamic
       | _ => unit
       end.
     Definition data (c : Cast) : car (TAG c) :=
@@ -420,11 +420,11 @@ Module Cast.
     Definition compare_data (Cast_compare : Cast -> Cast -> comparison)
         (t : positive) : car t -> car t -> comparison :=
       match t with
-      | 11 | 12 => List.compare compareGN
-      | 21 => compareN
-      | 22 | 25 => compareT
-      | 23 => Cast_compare
-      | 24 => box_Cdynamic_compare
+      | 10 | 11 => List.compare compareGN
+      | 20 => compareN
+      | 21 | 24 => compareT
+      | 22 => Cast_compare
+      | 23 => box_Cdynamic_compare
       | _ => fun _ _ => Eq
       end.
 
@@ -433,7 +433,6 @@ Module Cast.
 
     Fixpoint compare (c : Cast) : Cast -> comparison :=
       match c with
-      | Cdependent => compare_tag (Reduce (TAG Cdependent))
       | Cbitcast => compare_tag (Reduce (TAG Cbitcast))
       | Clvaluebitcast => compare_tag (Reduce (TAG Clvaluebitcast))
       | Cl2r => compare_tag (Reduce (TAG Cl2r))
@@ -1448,6 +1447,14 @@ Module Expr.
       compare_lex (compareE b1.(box_Ecast_1) b2.(box_Ecast_1)) $ fun _ =>
       compareT b1.(box_Ecast_2) b2.(box_Ecast_2).
 
+    Record box_Edependent_cast : Set := Box_Edependent_cast {
+      box_Edependent_cast_0 : Expr ;
+      box_Edependent_cast_1 : type;
+    }.
+    Definition box_Edependent_cast_compare (b1 b2 : box_Edependent_cast) : comparison :=
+      compare_lex (compareE b1.(box_Edependent_cast_0) b2.(box_Edependent_cast_0)) $ fun _ =>
+      compareT b1.(box_Edependent_cast_1) b2.(box_Edependent_cast_1).
+
     Record box_Emember : Set := Box_Emember {
       box_Emember_0 : bool ;
       box_Emember_1 : Expr;
@@ -1664,6 +1671,7 @@ Module Expr.
       | Eunresolved_member_call _ _ _ => 6
       | Eunresolved_parenlist _ _ => 7
       | Eunresolved_member _ _ => 8
+      | Edependent_cast _ _ => 59
       | Evar _ _ => 9
       | Eenum_const _ _ => 10
       | Eglobal _ _ => 11
@@ -1768,6 +1776,7 @@ Module Expr.
       | 55 => box_Eopaque_ref
       | 56 => box_Eglobal
       | 58 => box_Estmt
+      | 59 => box_Edependent_cast
       | _ => box_Eunsupported
       end.
     Definition data (e : Expr) : car (tag e) :=
@@ -1780,6 +1789,7 @@ Module Expr.
       | Eunresolved_member_call on e es => Box_Eunresolved_member_call on e es
       | Eunresolved_parenlist e es => Box_Eunresolved_parenlist e es
       | Eunresolved_member e f => Box_Eunresolved_member e f
+      | Edependent_cast e t => Box_Edependent_cast e t
       | Evar n t => Box_Evar n t
       | Eenum_const gn id => Box_Eenum_const gn id
       | Eglobal on t => Box_Eglobal on t
@@ -1884,11 +1894,14 @@ Module Expr.
       | 55 => box_Eopaque_ref_compare
       | 56 => box_Eglobal_compare
       | 58 => box_Estmt_compare
+      | 59 => box_Edependent_cast_compare
       | _ => box_Eunsupported_compare
       end.
 
     #[local] Notation compare_ctor := (compare_ctor tag car data compare_data).
     #[local] Notation compare_tag := (compare_tag tag).
+
+    #[local] Notation COMP e := (compare_ctor (Reduce (tag e)) (fun _ => Reduce (data e))) (only parsing).
 
     Definition compare_body (e : Expr) : Expr -> comparison :=
       match e with
@@ -1901,6 +1914,8 @@ Module Expr.
       | Eunresolved_member_call on e es => compare_ctor (Reduce (tag (Eunresolved_member_call on e es))) (fun _ => Reduce (data (Eunresolved_member_call on e es)))
       | Eunresolved_parenlist e es => compare_ctor (Reduce (tag (Eunresolved_parenlist e es))) (fun _ => Reduce (data (Eunresolved_parenlist e es)))
       | Eunresolved_member e f => compare_ctor (Reduce (tag (Eunresolved_member e f))) (fun _ => Reduce (data (Eunresolved_member e f)))
+      | Edependent_cast e t => COMP (Edependent_cast e t)
+
       | Evar n t => compare_ctor (Reduce (tag (Evar n t))) (fun _ => Reduce (data (Evar n t)))
 
       | Eenum_const gn id => compare_ctor (Reduce (tag (Eenum_const gn id))) (fun _ => Reduce (data (Eenum_const gn id)))
