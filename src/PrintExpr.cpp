@@ -31,56 +31,39 @@ enum Done : unsigned {
 };
 
 static fmt::Formatter&
+printDeclType(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint) {
+	if (expr->isLValue()) {
+		guard::ctor _(print, "Tref", false);
+		cprint.printQualType(expr->getType(), print, loc::of(expr));
+	} else if (expr->isXValue()) {
+		guard::ctor _(print, "Trv_ref", false);
+		cprint.printQualType(expr->getType(), print, loc::of(expr));
+	} else {
+		cprint.printQualType(expr->getType(), print, loc::of(expr));
+	}
+	return print.output();
+}
+
+static fmt::Formatter&
 done(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
 	 Done want = Done::T) {
 	if (want == Done::DT) {
-		if (expr->isLValue()) {
-			guard::ctor _(print, "Tref", false);
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-		} else if (expr->isXValue()) {
-			guard::ctor _(print, "Trv_ref", false);
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-		} else {
+		printDeclType(expr, print, cprint);
+	} else {
+		if (want & Done::V) {
+			print.output() << fmt::nbsp;
+			cprint.printValCat(expr, print);
+		}
+		if (want & Done::T) {
+			print.output() << fmt::nbsp;
 			cprint.printQualType(expr->getType(), print, loc::of(expr));
 		}
-		return print.end_ctor();
-	}
-	if (want & Done::V) {
-		print.output() << fmt::nbsp;
-		cprint.printValCat(expr, print);
-	}
-	if (want & Done::T) {
-		print.output() << fmt::nbsp;
-		cprint.printQualType(expr->getType(), print, loc::of(expr));
-	}
-	if (want & Done::O) {
-		print.output() << fmt::nbsp;
-		cprint.printQualTypeOption(expr->getType(), print, loc::of(expr));
+		if (want & Done::O) {
+			print.output() << fmt::nbsp;
+			cprint.printQualTypeOption(expr->getType(), print, loc::of(expr));
+		}
 	}
 	return print.end_ctor();
-}
-
-static void
-unsupported_expr(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
-				 std::optional<StringRef> msg = std::nullopt,
-				 bool well_known = false) {
-	auto loc = loc::of(expr);
-	if (!well_known || ClangPrinter::warn_well_known) {
-		auto fullmsg = Twine("unsupported expression");
-		if (msg) {
-			fullmsg.concat(Twine(": "));
-			fullmsg.concat(Twine(*msg));
-		}
-		cprint.error_prefix(logging::unsupported(), loc)
-			<< "warning: " << fullmsg << "\n";
-		cprint.debug_dump(loc);
-	}
-	print.ctor("Eunsupported");
-	std::string coqmsg;
-	llvm::raw_string_ostream os{coqmsg};
-	os << loc::describe(loc, cprint.getContext());
-	print.str(coqmsg);
-	done(expr, print, cprint, Done::VT);
 }
 
 fmt::Formatter&
@@ -364,31 +347,54 @@ private:
 /**
  * This class prints an expression (of Coq type [Expr] or [MExpr])
  */
-class PrintExpr :
-	public ConstStmtVisitor<PrintExpr, void, CoqPrinter&, ClangPrinter&,
-							const ASTContext&, OpaqueNames&> {
+class PrintExpr : public ConstStmtVisitor<PrintExpr, void> {
 private:
-public:
-	static PrintExpr printer;
+	CoqPrinter& print;
+	ClangPrinter& cprint;
+	const ASTContext& ctxt;
+	OpaqueNames& names;
 
-	void VisitStmt(const Stmt* stmt, CoqPrinter& print, ClangPrinter& cprint,
-				   const ASTContext&, OpaqueNames&) {
+public:
+	PrintExpr(CoqPrinter& print, ClangPrinter& cprint, OpaqueNames& names)
+		: print(print), cprint(cprint), ctxt(cprint.getContext()),
+		  names(names) {}
+
+	void VisitStmt(const Stmt* stmt) {
 		logging::fatal() << "Error: while printing an expr, got a statement '"
 						 << stmt->getStmtClassName() << " at "
 						 << cprint.sourceRange(stmt->getSourceRange()) << "'\n";
 		logging::die();
 	}
 
-	void VisitExpr(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
-				   const ASTContext& ctxt, OpaqueNames&) {
-		unsupported_expr(expr, print, cprint);
+	void unsupported_expr(const Expr* expr,
+						  std::optional<StringRef> msg = std::nullopt,
+						  bool well_known = false) {
+		auto loc = loc::of(expr);
+		if (!well_known || ClangPrinter::warn_well_known) {
+			auto fullmsg = Twine("unsupported expression");
+			if (msg) {
+				fullmsg.concat(Twine(": "));
+				fullmsg.concat(Twine(*msg));
+			}
+			cprint.error_prefix(logging::unsupported(), loc)
+				<< "warning: " << fullmsg << "\n";
+			cprint.debug_dump(loc);
+		}
+		print.ctor("Eunsupported");
+		std::string coqmsg;
+		llvm::raw_string_ostream os{coqmsg};
+		os << loc::describe(loc, cprint.getContext());
+		print.str(coqmsg);
+		done(expr, print, cprint, Done::VT);
+	}
+
+	void VisitExpr(const Expr* expr) {
+		unsupported_expr(expr);
 	}
 
 #define IGNORE(E)                                                              \
-	void Visit##E(const E* expr, CoqPrinter& print, ClangPrinter& cprint,      \
-				  const ASTContext&, OpaqueNames&) {                           \
-		unsupported_expr(expr, print, cprint, std::nullopt,                    \
-						 /*well_known*/ true);                                 \
+	void Visit##E(const E* expr) {                                             \
+		unsupported_expr(expr, std::nullopt, /*well_known*/ true);             \
 	}
 
 	IGNORE(StmtExpr) // a GNU extension used in BHV
@@ -400,29 +406,23 @@ public:
 	IGNORE(CXXUnresolvedConstructExpr)
 	IGNORE(SizeOfPackExpr) // used in BHV
 
-	void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr* expr,
-										CoqPrinter& print, ClangPrinter& cprint,
-										const ASTContext&, OpaqueNames&) {
+	void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr* expr) {
 		if (!print.templates())
-			return unsupported_expr(expr, print, cprint);
+			return unsupported_expr(expr);
 
 		guard::ctor _(print, "Eunresolved_global");
 		PrintDependentName{print, cprint}.Visit(expr);
 	}
 
-	void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr,
-								   CoqPrinter& print, ClangPrinter& cprint,
-								   const ASTContext&, OpaqueNames&) {
+	void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* expr) {
 		if (!print.templates())
-			return unsupported_expr(expr, print, cprint);
+			return unsupported_expr(expr);
 
 		guard::ctor _(print, "Eunresolved_global");
 		PrintDependentName{print, cprint}.Visit(expr);
 	}
 
-	void VisitRecoveryExpr(const RecoveryExpr* expr, CoqPrinter& print,
-						   ClangPrinter& cprint, const ASTContext&,
-						   OpaqueNames&) {
+	void VisitRecoveryExpr(const RecoveryExpr* expr) {
 		using namespace logging;
 		unsupported() << "Error detected when typechecking C++ code at "
 					  << cprint.sourceRange(expr->getSourceRange()) << "\n"
@@ -432,8 +432,7 @@ public:
 		done(expr, print, cprint, Done::VT);
 	}
 
-	void printBinaryOperator(const BinaryOperator* expr, CoqPrinter& print,
-							 ClangPrinter& cprint, const ASTContext& ctxt) {
+	void printBinaryOperator(const BinaryOperator* expr) {
 		switch (expr->getOpcode()) {
 #define CASE(k, s)                                                             \
 	case BinaryOperatorKind::BO_##k:                                           \
@@ -470,14 +469,11 @@ public:
 		}
 	}
 
-	void VisitBinaryOperator(const BinaryOperator* expr, CoqPrinter& print,
-							 ClangPrinter& cprint, const ASTContext& ctxt,
-							 OpaqueNames& li) {
+	void VisitBinaryOperator(const BinaryOperator* expr) {
 #define ACASE(k, v)                                                            \
 	case BinaryOperatorKind::BO_##k##Assign:                                   \
 		print.ctor("Eassign_op") << #v << fmt::nbsp;                           \
 		break;
-
 		[[maybe_unused]] auto dependent =
 			print.templates() && expr->getType()->isDependentType();
 		switch (expr->getOpcode()) {
@@ -529,19 +525,18 @@ public:
 			ACASE(Xor, Bxor)
 		default:
 			print.ctor("Ebinop");
-			printBinaryOperator(expr, print, cprint, ctxt);
+			printBinaryOperator(expr);
 			print.output() << fmt::nbsp;
 			break;
 		}
 #undef ACASE
-		cprint.printExpr(expr->getLHS(), print, li);
+		cprint.printExpr(expr->getLHS(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getRHS(), print, li);
+		cprint.printExpr(expr->getRHS(), print, names);
 		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
 	}
 
-	void printUnaryOperator(const UnaryOperator* expr, CoqPrinter& print,
-							ClangPrinter& cprint) {
+	void printUnaryOperator(const UnaryOperator* expr) {
 		switch (expr->getOpcode()) {
 #define CASE(k, s)                                                             \
 	case UnaryOperatorKind::UO_##k:                                            \
@@ -568,9 +563,7 @@ public:
 		}
 	}
 
-	void VisitUnaryOperator(const UnaryOperator* expr, CoqPrinter& print,
-							ClangPrinter& cprint, const ASTContext&,
-							OpaqueNames& li) {
+	void VisitUnaryOperator(const UnaryOperator* expr) {
 		switch (expr->getOpcode()) {
 		case UnaryOperatorKind::UO_AddrOf: {
 			auto e = expr->getSubExpr();
@@ -585,7 +578,7 @@ public:
 				}
 			}
 			print.ctor("Eaddrof");
-			cprint.printExpr(e, print, li);
+			cprint.printExpr(e, print, names);
 			print.end_ctor(); // elide type
 			return;
 		}
@@ -606,16 +599,14 @@ public:
 			break;
 		default:
 			print.ctor("Eunop");
-			printUnaryOperator(expr, print, cprint);
+			printUnaryOperator(expr);
 			print.output() << fmt::nbsp;
 		}
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
 	}
 
-	void VisitDeclRefExpr(const DeclRefExpr* expr, CoqPrinter& print,
-						  ClangPrinter& cprint, const ASTContext& ctxt,
-						  OpaqueNames& on) {
+	void VisitDeclRefExpr(const DeclRefExpr* expr) {
 		auto d = expr->getDecl();
 		if (!d) {
 			cprint.error_prefix(logging::fatal(), loc::of(expr))
@@ -663,17 +654,15 @@ public:
 				guard::ctor _(print, "Eparam");
 				cprint.printUnqualifiedName(*param, print);
 			} else {
-				unsupported_expr(expr, print, cprint, std::nullopt,
+				unsupported_expr(expr, std::nullopt,
 								 /*well_known*/ true);
 			}
 		} else {
-			cprint.printValueDeclExpr(d, print, on);
+			cprint.printValueDeclExpr(d, print, names);
 		}
 	}
 
-	void VisitCallExpr(const CallExpr* expr, CoqPrinter& print,
-					   ClangPrinter& cprint, const ASTContext&,
-					   OpaqueNames& li) {
+	void VisitCallExpr(const CallExpr* expr) {
 		auto callee = expr->getCallee();
 		if (is_dependent(expr)) {
 			/*
@@ -683,7 +672,7 @@ public:
 			PrintDependentName{print, cprint}.Visit(callee);
 			print.output() << fmt::nbsp;
 			print.list(expr->arguments(),
-					   [&](auto i) { cprint.printExpr(i, print, li); });
+					   [&](auto i) { cprint.printExpr(i, print, names); });
 		} else if (auto pd = dyn_cast<CXXPseudoDestructorExpr>(callee)) {
 			// in the clang AST, pseudo destructors are represented as calls
 			// but in the BRiCk AST, they are their own construct.
@@ -692,21 +681,19 @@ public:
 				<< fmt::BOOL(pd->isArrow()) << fmt::nbsp;
 			cprint.printQualType(pd->getDestroyedType(), print, loc::of(pd));
 			print.output() << fmt::nbsp;
-			cprint.printExpr(pd->getBase(), print, li);
+			cprint.printExpr(pd->getBase(), print, names);
 			print.end_ctor();
 		} else {
 			print.ctor("Ecall");
-			cprint.printExpr(expr->getCallee(), print, li);
+			cprint.printExpr(expr->getCallee(), print, names);
 			print.output() << fmt::line;
 			print.list(expr->arguments(),
-					   [&](auto i) { cprint.printExpr(i, print, li); });
+					   [&](auto i) { cprint.printExpr(i, print, names); });
 			done(expr, print, cprint, Done::NONE);
 		}
 	}
 
-	void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr* expr,
-								  CoqPrinter& print, ClangPrinter& cprint,
-								  const ASTContext& ctxt, OpaqueNames& li) {
+	void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr* expr) {
 		// TODO operator calls sometimes have stricter order of evaluation
 		// than regular function calls. Because our semantics overapproximates
 		// the possible behaviors, it is sound for us to directly desugar them.
@@ -730,12 +717,13 @@ public:
 			cprint.printQualType(method->getType(), print, loc::of(method));
 			print.output() << fmt::nbsp;
 
-			cprint.printExpr(expr->getArg(0), print, li);
+			cprint.printExpr(expr->getArg(0), print, names);
 
 			print.output() << fmt::nbsp;
 			// note skip the first parameter because it is the object.
-			print.list_range(expr->arg_begin() + 1, expr->arg_end(),
-							 [&](auto i) { cprint.printExpr(i, print, li); });
+			print.list_range(
+				expr->arg_begin() + 1, expr->arg_end(),
+				[&](auto i) { cprint.printExpr(i, print, names); });
 
 		} else if (auto function = dyn_cast<FunctionDecl>(callee)) {
 			print.ctor("Eoperator_call");
@@ -748,7 +736,7 @@ public:
 			cprint.printQualType(function->getType(), print, loc::of(function));
 			print.output() << fmt::nbsp;
 			print.list(expr->arguments(),
-					   [&](auto i) { cprint.printExpr(i, print, li); });
+					   [&](auto i) { cprint.printExpr(i, print, names); });
 		} else {
 			logging::unsupported() << "unsupported operator call";
 			logging::die();
@@ -757,13 +745,11 @@ public:
 		done(expr, print, cprint, Done::NONE);
 	}
 
-	void VisitExplicitCastExpr(const ExplicitCastExpr* expr, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext& ctxt,
-							   OpaqueNames& li) {
+	void VisitExplicitCastExpr(const ExplicitCastExpr* expr) {
 		switch (auto kind = expr->getCastKind()) {
 		case CastKind::CK_Dependent: {
 			print.ctor("Edependent_cast");
-			cprint.printExpr(expr->getSubExpr(), print, li);
+			cprint.printExpr(expr->getSubExpr(), print, names);
 			print.output() << fmt::nbsp;
 			cprint.printQualType(expr->getTypeAsWritten(), print,
 								 loc::of(expr));
@@ -771,13 +757,11 @@ public:
 			break;
 		}
 		default:
-			VisitCastExpr(expr, print, cprint, ctxt, li);
+			VisitCastExpr(expr);
 		}
 	}
 
-	void VisitCastExpr(const CastExpr* expr, CoqPrinter& print,
-					   ClangPrinter& cprint, const ASTContext&,
-					   OpaqueNames& li) {
+	void VisitCastExpr(const CastExpr* expr) {
 		switch (expr->getCastKind()) {
 		case CastKind::CK_ConstructorConversion:
 		case CastKind::CK_UserDefinedConversion: {
@@ -793,7 +777,7 @@ public:
 			print.end_ctor();
 
 			print.output() << fmt::nbsp;
-			cprint.printExpr(expr->getSubExpr(), print, li);
+			cprint.printExpr(expr->getSubExpr(), print, names);
 			done(expr, print, cprint, Done::DT);
 			break;
 		}
@@ -806,14 +790,12 @@ public:
 			printCast(expr, print, cprint);
 
 			print.output() << fmt::nbsp;
-			cprint.printExpr(expr->getSubExpr(), print, li);
+			cprint.printExpr(expr->getSubExpr(), print, names);
 			done(expr, print, cprint, Done::DT);
 		}
 	}
 
-	void VisitImplicitCastExpr(const ImplicitCastExpr* expr, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext& ctxt,
-							   OpaqueNames& li) {
+	void VisitImplicitCastExpr(const ImplicitCastExpr* expr) {
 		// todo(gmm): this is a complete hack because there is no way that i know of
 		// to get the type of a builtin. what this does is get the type of the expression
 		// that contains the builtin.
@@ -834,12 +816,10 @@ public:
 			print.end_ctor();
 			return;
 		}
-		VisitCastExpr(expr, print, cprint, ctxt, li);
+		VisitCastExpr(expr);
 	}
 
-	void VisitCXXNamedCastExpr(const CXXNamedCastExpr* expr, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext& ctxt,
-							   OpaqueNames& li) {
+	void VisitCXXNamedCastExpr(const CXXNamedCastExpr* expr) {
 		print.ctor("Ecast");
 		if (isa<CXXReinterpretCastExpr>(expr)) {
 			print.ctor("Creinterpret", false);
@@ -870,13 +850,11 @@ public:
 			die();
 		}
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 		done(expr, print, cprint, Done::DT);
 	}
 
-	void VisitIntegerLiteral(const IntegerLiteral* lit, CoqPrinter& print,
-							 ClangPrinter& cprint, const ASTContext&,
-							 OpaqueNames&) {
+	void VisitIntegerLiteral(const IntegerLiteral* lit) {
 		print.ctor("Eint", false);
 		SmallString<32> s;
 		if (lit->getType()->isSignedIntegerOrEnumerationType()) {
@@ -888,9 +866,7 @@ public:
 		done(lit, print, cprint);
 	}
 
-	void VisitCharacterLiteral(const CharacterLiteral* lit, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext&,
-							   OpaqueNames&) {
+	void VisitCharacterLiteral(const CharacterLiteral* lit) {
 		print.ctor("Echar", false) << lit->getValue() << "%N";
 		done(lit, print, cprint);
 	}
@@ -906,9 +882,7 @@ public:
 		}
 	}
 
-	void VisitStringLiteral(const StringLiteral* lit, CoqPrinter& print,
-							ClangPrinter& cprint, const ASTContext& ctxt,
-							OpaqueNames&) {
+	void VisitStringLiteral(const StringLiteral* lit) {
 		print.ctor("Estring", false);
 		// We get the string literal in bytes, but we need to encode it
 		// as unsigned characters (not necessarily `char`) using the
@@ -944,9 +918,7 @@ public:
 		print.end_ctor();
 	}
 
-	void VisitPredefinedExpr(const PredefinedExpr* expr, CoqPrinter& print,
-							 ClangPrinter& cprint, const ASTContext&,
-							 OpaqueNames&) {
+	void VisitPredefinedExpr(const PredefinedExpr* expr) {
 		// [PredefinedExpr] constructs a [string] which is always ascii
 		print.ctor("Estring");
 		print.ctor("BS.string_to_bytes");
@@ -956,9 +928,7 @@ public:
 		print.end_ctor();
 	}
 
-	void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr* lit,
-								 CoqPrinter& print, ClangPrinter& cprint,
-								 const ASTContext&, OpaqueNames&) {
+	void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr* lit) {
 		if (lit->getValue()) {
 			print.output() << "(Ebool true)";
 		} else {
@@ -966,25 +936,21 @@ public:
 		}
 	}
 
-	void VisitFloatingLiteral(const FloatingLiteral* lit, CoqPrinter& print,
-							  ClangPrinter& cprint, const ASTContext&,
-							  OpaqueNames&) {
+	void VisitFloatingLiteral(const FloatingLiteral* lit) {
 		print.ctor("Eunsupported") << fmt::nbsp << "float: \"";
 		lit->getValue().print(print.output().nobreak());
 		print.output() << "\"";
 		done(lit, print, cprint, Done::VT);
 	}
 
-	void VisitMemberExpr(const MemberExpr* expr, CoqPrinter& print,
-						 ClangPrinter& cprint, const ASTContext&,
-						 OpaqueNames& li) {
+	void VisitMemberExpr(const MemberExpr* expr) {
 		auto member = expr->getMemberDecl();
 
 		print.ctor("Emember");
 		print.boolean(expr->isArrow()) << fmt::nbsp;
 
 		auto base = expr->getBase();
-		cprint.printExpr(base, print, li);
+		cprint.printExpr(base, print, names);
 		print.output() << fmt::nbsp;
 		if (auto fd = dyn_cast<FieldDecl>(member)) {
 			//print.str(expr->getMemberDecl()->getNameAsString());
@@ -1025,43 +991,35 @@ public:
 	}
 
 	void
-	VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr* expr,
-									 CoqPrinter& print, ClangPrinter& cprint,
-									 const ASTContext&, OpaqueNames& on) {
+	VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr* expr) {
 		print.ctor("Eunresolved_member");
 		print.boolean(expr->isArrow()) << fmt::nbsp;
-		cprint.printExpr(expr->getBase(), print, on);
+		cprint.printExpr(expr->getBase(), print, names);
 		print.output() << fmt::nbsp;
 		print.str(expr->getMember().getAsString());
 		print.end_ctor();
 	}
 
-	void VisitArraySubscriptExpr(const ArraySubscriptExpr* expr,
-								 CoqPrinter& print, ClangPrinter& cprint,
-								 const ASTContext&, OpaqueNames& li) {
+	void VisitArraySubscriptExpr(const ArraySubscriptExpr* expr) {
 		print.ctor("Esubscript");
-		cprint.printExpr(expr->getLHS(), print, li);
+		cprint.printExpr(expr->getLHS(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getRHS(), print, li);
+		cprint.printExpr(expr->getRHS(), print, names);
 		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
 	}
 
-	void VisitCXXConstructExpr(const CXXConstructExpr* expr, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext&,
-							   OpaqueNames& li) {
+	void VisitCXXConstructExpr(const CXXConstructExpr* expr) {
 		print.ctor("Econstructor");
 		// print.output() << expr->isElidable() << fmt::nbsp;
 		cprint.printName(expr->getConstructor(), print, loc::of(expr));
 		print.output() << fmt::nbsp;
 		print.list(expr->arguments(),
-				   [&](auto i) { cprint.printExpr(i, print, li); });
+				   [&](auto i) { cprint.printExpr(i, print, names); });
 		//print.output() << fmt::nbsp << expr->isElidable();
 		done(expr, print, cprint);
 	}
 
-	void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr* expr,
-									   CoqPrinter& print, ClangPrinter& cprint,
-									   const ASTContext&, OpaqueNames& li) {
+	void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr* expr) {
 		print.ctor("Econstructor");
 		// print.output() << expr->isElidable() << fmt::nbsp;
 		auto ctor = expr->getConstructor();
@@ -1086,9 +1044,7 @@ public:
 		done(expr, print, cprint);
 	}
 
-	void VisitCXXMemberCallExpr(const CXXMemberCallExpr* expr,
-								CoqPrinter& print, ClangPrinter& cprint,
-								const ASTContext&, OpaqueNames& li) {
+	void VisitCXXMemberCallExpr(const CXXMemberCallExpr* expr) {
 		print.ctor("Emember_call");
 		auto callee = expr->getCallee()->IgnoreParens();
 		auto method = expr->getMethodDecl();
@@ -1117,7 +1073,7 @@ public:
 			print.end_ctor();
 
 			print.output() << fmt::nbsp;
-			cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
+			cprint.printExpr(expr->getImplicitObjectArgument(), print, names);
 		} else if (auto bo = dyn_cast<BinaryOperator>(callee)) {
 			always_assert(bo->getOpcode() == BinaryOperatorKind::BO_PtrMemD ||
 						  bo->getOpcode() == BinaryOperatorKind::BO_PtrMemI);
@@ -1126,20 +1082,20 @@ public:
 						   << fmt::nbsp;
 
 			print.ctor("inr");
-			cprint.printExpr(bo->getRHS(), print, li);
+			cprint.printExpr(bo->getRHS(), print, names);
 			print.end_ctor() << fmt::nbsp;
 
-			cprint.printExpr(expr->getImplicitObjectArgument(), print, li);
+			cprint.printExpr(expr->getImplicitObjectArgument(), print, names);
 		} else {
 			always_assert(false && "no method and not a binary operator");
 		}
 		print.output() << fmt::nbsp;
 		print.list(expr->arguments(),
-				   [&](auto i) { cprint.printExpr(i, print, li); });
+				   [&](auto i) { cprint.printExpr(i, print, names); });
 #if 0
 	print.output() << fmt::nbsp << fmt::lparen;
 	for (auto i : expr->arguments()) {
-		cprint.printExpr(i, print, li);
+		cprint.printExpr(i, print, names);
 		print.cons();
 	}
 	print.end_list();
@@ -1147,61 +1103,49 @@ public:
 		done(expr, print, cprint, Done::NONE);
 	}
 
-	void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr* expr,
-								CoqPrinter& print, ClangPrinter& cprint,
-								const ASTContext&, OpaqueNames& li) {
+	void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr* expr) {
 		print.ctor("Eimplicit");
-		cprint.printExpr(expr->getExpr(), print, li);
+		cprint.printExpr(expr->getExpr(), print, names);
 		print.end_ctor();
 	}
 
-	void VisitConditionalOperator(const ConditionalOperator* expr,
-								  CoqPrinter& print, ClangPrinter& cprint,
-								  const ASTContext&, OpaqueNames& li) {
+	void VisitConditionalOperator(const ConditionalOperator* expr) {
 		print.ctor("Eif");
-		cprint.printExpr(expr->getCond(), print, li);
+		cprint.printExpr(expr->getCond(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getTrueExpr(), print, li);
+		cprint.printExpr(expr->getTrueExpr(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getFalseExpr(), print, li);
+		cprint.printExpr(expr->getFalseExpr(), print, names);
 		done(expr, print, cprint, Done::VT);
 	}
 
-	void VisitBinaryConditionalOperator(const BinaryConditionalOperator* expr,
-										CoqPrinter& print, ClangPrinter& cprint,
-										const ASTContext&, OpaqueNames& li) {
+	void VisitBinaryConditionalOperator(const BinaryConditionalOperator* expr) {
 		print.ctor("Eif2");
-		auto index = li.fresh(expr->getOpaqueValue());
+		auto index = names.fresh(expr->getOpaqueValue());
 		print.output() << index << fmt::nbsp;
-		cprint.printExpr(expr->getCommon(), print, li);
-		li.inc_index_count();
+		cprint.printExpr(expr->getCommon(), print, names);
+		names.inc_index_count();
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getCond(), print, li);
+		cprint.printExpr(expr->getCond(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getTrueExpr(), print, li);
+		cprint.printExpr(expr->getTrueExpr(), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getFalseExpr(), print, li);
-		li.dec_index_count();
+		cprint.printExpr(expr->getFalseExpr(), print, names);
+		names.dec_index_count();
 		done(expr, print, cprint, Done::VT);
 	}
 
-	void VisitConstantExpr(const ConstantExpr* expr, CoqPrinter& print,
-						   ClangPrinter& cprint, const ASTContext& ctxt,
-						   OpaqueNames& li) {
-		this->Visit(expr->getSubExpr(), print, cprint, ctxt, li);
+	void VisitConstantExpr(const ConstantExpr* expr) {
+		this->Visit(expr->getSubExpr());
 	}
 
-	void VisitParenExpr(const ParenExpr* e, CoqPrinter& print,
-						ClangPrinter& cprint, const ASTContext& ctxt,
-						OpaqueNames& li) {
-		this->Visit(e->getSubExpr(), print, cprint, ctxt, li);
+	void VisitParenExpr(const ParenExpr* e) {
+		this->Visit(e->getSubExpr());
 	}
 
-	void VisitParenListExpr(const ParenListExpr* expr, CoqPrinter& print,
-							ClangPrinter& cprint, const ASTContext& ctxt,
-							OpaqueNames& names) {
+	void VisitParenListExpr(const ParenListExpr* expr) {
 		if (!print.templates())
-			return unsupported_expr(expr, print, cprint);
+			return unsupported_expr(expr);
 		always_assert(is_dependent(expr));
 
 		print.ctor("Eunresolved_parenlist");
@@ -1227,24 +1171,22 @@ public:
 		print.end_ctor();
 	}
 
-	void VisitInitListExpr(const InitListExpr* expr, CoqPrinter& print,
-						   ClangPrinter& cprint, const ASTContext&,
-						   OpaqueNames& li) {
+	void VisitInitListExpr(const InitListExpr* expr) {
 		if (expr->isTransparent()) {
 			// "transparent" intializer lists are no-ops in the semantics
 			// and are retained in the clang AST only for printing purposes.
 			always_assert(expr->inits().size() == 1);
-			cprint.printExpr(expr->getInit(0), print, li);
+			cprint.printExpr(expr->getInit(0), print, names);
 		} else {
 			print.ctor("Einitlist");
 
 			print.list(expr->inits(), [&](auto i) {
-				cprint.printExpr(i, print, li);
+				cprint.printExpr(i, print, names);
 			}) << fmt::nbsp;
 
 			if (expr->getArrayFiller()) {
 				print.some();
-				cprint.printExpr(expr->getArrayFiller(), print, li);
+				cprint.printExpr(expr->getArrayFiller(), print, names);
 				print.end_ctor();
 			} else {
 				print.none();
@@ -1254,25 +1196,18 @@ public:
 		}
 	}
 
-	void VisitCXXThisExpr(const CXXThisExpr* expr, CoqPrinter& print,
-						  ClangPrinter& cprint, const ASTContext&,
-						  OpaqueNames&) {
+	void VisitCXXThisExpr(const CXXThisExpr* expr) {
 		print.ctor("Ethis", false);
 		done(expr, print, cprint);
 	}
 
-	void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr* expr,
-									CoqPrinter& print, ClangPrinter& cprint,
-									const ASTContext&, OpaqueNames&) {
+	void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr* expr) {
 		// <<nullptr>> has a special type
 		print.output() << "Enull" << fmt::nbsp;
 	}
 
-	void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr* expr,
-									   CoqPrinter& print, ClangPrinter& cprint,
-									   const ASTContext& ctxt,
-									   OpaqueNames& li) {
-		auto do_arg = [&print, &cprint, &li, expr]() {
+	void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr* expr) {
+		auto do_arg = [&]() {
 			if (expr->isArgumentType()) {
 				print.ctor("inl", false);
 				cprint.printQualType(expr->getArgumentType(), print,
@@ -1280,7 +1215,7 @@ public:
 				print.output() << fmt::rparen;
 			} else if (expr->getArgumentExpr()) {
 				print.ctor("inr", false);
-				cprint.printExpr(expr->getArgumentExpr(), print, li);
+				cprint.printExpr(expr->getArgumentExpr(), print, names);
 				print.output() << fmt::rparen;
 			} else {
 				always_assert(false);
@@ -1307,11 +1242,9 @@ public:
 		}
 	}
 
-	void VisitOffsetOfExpr(const OffsetOfExpr* expr, CoqPrinter& print,
-						   ClangPrinter& cprint, const ASTContext& ctxt,
-						   OpaqueNames&) {
+	void VisitOffsetOfExpr(const OffsetOfExpr* expr) {
 		auto unsupported = [&](const std::string what) {
-			unsupported_expr(expr, print, cprint, what);
+			unsupported_expr(expr, what);
 		};
 		if (expr->getNumComponents() != 1)
 			return unsupported(
@@ -1337,16 +1270,12 @@ public:
 		}
 	}
 
-	void
-	VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr* expr,
-									  CoqPrinter& print, ClangPrinter& cprint,
-									  const ASTContext& ctxt, OpaqueNames& li) {
-		this->Visit(expr->getReplacement(), print, cprint, ctxt, li);
+	void VisitSubstNonTypeTemplateParmExpr(
+		const SubstNonTypeTemplateParmExpr* expr) {
+		this->Visit(expr->getReplacement());
 	}
 
-	void VisitCXXNewExpr(const CXXNewExpr* expr, CoqPrinter& print,
-						 ClangPrinter& cprint, const ASTContext&,
-						 OpaqueNames& li) {
+	void VisitCXXNewExpr(const CXXNewExpr* expr) {
 		auto new_fn = expr->getOperatorNew();
 		if (not new_fn) {
 			logging::fatal() << "missing operator [new]\n";
@@ -1362,7 +1291,7 @@ public:
 		print.end_tuple() << fmt::nbsp;
 
 		print.list(expr->placement_arguments(), [&](auto arg) {
-			cprint.printExpr(arg, print, li);
+			cprint.printExpr(arg, print, names);
 		}) << fmt::nbsp;
 
 		if (new_fn->isReservedGlobalPlacementOperator()) {
@@ -1385,18 +1314,16 @@ public:
 		// None even if it is an array new, but I have not found a
 		// way to trigger that.
 		always_assert(expr->isArray() == (bool)expr->getArraySize());
-		printOptionalExpr(expr->getArraySize(), print, cprint, li);
+		printOptionalExpr(expr->getArraySize(), print, cprint, names);
 
 		print.output() << fmt::nbsp;
 
-		printOptionalExpr(expr->getInitializer(), print, cprint, li);
+		printOptionalExpr(expr->getInitializer(), print, cprint, names);
 
 		print.end_ctor();
 	}
 
-	void VisitCXXDeleteExpr(const CXXDeleteExpr* expr, CoqPrinter& print,
-							ClangPrinter& cprint, const ASTContext&,
-							OpaqueNames& li) {
+	void VisitCXXDeleteExpr(const CXXDeleteExpr* expr) {
 		print.ctor("Edelete");
 		print.output() << fmt::BOOL(expr->isArrayForm()) << fmt::nbsp;
 
@@ -1416,7 +1343,7 @@ public:
 		}
 		print.output() << fmt::nbsp;
 
-		cprint.printExpr(expr->getArgument(), print, li);
+		cprint.printExpr(expr->getArgument(), print, names);
 
 		print.output() << fmt::nbsp;
 
@@ -1426,9 +1353,7 @@ public:
 		print.end_ctor();
 	}
 
-	void VisitExprWithCleanups(const ExprWithCleanups* expr, CoqPrinter& print,
-							   ClangPrinter& cprint, const ASTContext&,
-							   OpaqueNames& li) {
+	void VisitExprWithCleanups(const ExprWithCleanups* expr) {
 		// NOTE candidate for removal
 		// our semantics cleans everything, so we don't need to
 		// mark this explicitly.
@@ -1440,14 +1365,11 @@ public:
 				os << i.getOpaqueValue() << "\n";
 			}
 		}
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 		print.end_ctor();
 	}
 
-	void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr* expr,
-									   CoqPrinter& print, ClangPrinter& cprint,
-									   const ASTContext& ctxt,
-									   OpaqueNames& li) {
+	void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr* expr) {
 		if (expr->getExtendingDecl() != nullptr) {
 			using namespace logging;
 			fatal() << "Error: binding a reference to a temporary is not "
@@ -1460,13 +1382,11 @@ public:
 		}
 
 		print.ctor("Ematerialize_temp");
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 		done(expr, print, cprint, Done::V);
 	}
 
-	void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr* expr,
-								   CoqPrinter& print, ClangPrinter& cprint,
-								   const ASTContext&, OpaqueNames& li) {
+	void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr* expr) {
 		// According to [clang docs](https://clang.llvm.org/doxygen/classclang_1_1CXXBindTemporaryExpr.html),
 		// a CXXBindTemporary node "represents binding an expression to a temporary.
 		// This ensures the destructor is called for the temporary.
@@ -1476,19 +1396,15 @@ public:
 		// essentially implicitly has a [BindTemporary] node around all automatic
 		// storage duration aggregates.
 
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 	}
 
-	void VisitOpaqueValueExpr(const OpaqueValueExpr* expr, CoqPrinter& print,
-							  ClangPrinter& cprint, const ASTContext&,
-							  OpaqueNames& li) {
-		print.ctor("Eopaque_ref") << li.find(expr);
+	void VisitOpaqueValueExpr(const OpaqueValueExpr* expr) {
+		print.ctor("Eopaque_ref") << names.find(expr);
 		done(expr, print, cprint, Done::VT);
 	}
 
-	void VisitAtomicExpr(const clang::AtomicExpr* expr, CoqPrinter& print,
-						 ClangPrinter& cprint, const ASTContext&,
-						 OpaqueNames& li) {
+	void VisitAtomicExpr(const clang::AtomicExpr* expr) {
 		print.ctor("Eatomic");
 
 		switch (expr->getOp()) {
@@ -1504,7 +1420,7 @@ public:
 
 		print.begin_list();
 		for (unsigned i = 0; i < expr->getNumSubExprs(); ++i) {
-			cprint.printExpr(expr->getSubExprs()[i], print, li);
+			cprint.printExpr(expr->getSubExprs()[i], print, names);
 			print.cons();
 		}
 		print.end_list();
@@ -1512,105 +1428,84 @@ public:
 		done(expr, print, cprint);
 	}
 
-	void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr* expr,
-								 CoqPrinter& print, ClangPrinter& cprint,
-								 const ASTContext&, OpaqueNames& li) {
+	void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr* expr) {
 		print.ctor("Edefault_init_expr");
-		cprint.printExpr(expr->getExpr(), print, li);
+		cprint.printExpr(expr->getExpr(), print, names);
 		print.end_ctor();
 	}
 
-	void VisitVAArgExpr(const VAArgExpr* expr, CoqPrinter& print,
-						ClangPrinter& cprint, const ASTContext&,
-						OpaqueNames& li) {
+	void VisitVAArgExpr(const VAArgExpr* expr) {
 		print.ctor("Eva_arg");
-		cprint.printExpr(expr->getSubExpr(), print, li);
+		cprint.printExpr(expr->getSubExpr(), print, names);
 		done(expr, print, cprint);
 	}
 
-	void VisitLambdaExpr(const LambdaExpr* expr, CoqPrinter& print,
-						 ClangPrinter& cprint, const ASTContext&,
-						 OpaqueNames&) {
+	void VisitLambdaExpr(const LambdaExpr* expr) {
 		print.ctor("Eunsupported");
 		print.str("lambda");
 		done(expr, print, cprint, Done::VT);
 	}
 
-	void VisitImplicitValueInitExpr(const ImplicitValueInitExpr* expr,
-									CoqPrinter& print, ClangPrinter& cprint,
-									const ASTContext& ctxt, OpaqueNames&) {
+	void VisitImplicitValueInitExpr(const ImplicitValueInitExpr* expr) {
 		print.ctor("Eimplicit_init");
 		done(expr, print, cprint);
 	}
 
-	void VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr* expr,
-									  CoqPrinter& print, ClangPrinter& cprint,
-									  const ASTContext& ctxt, OpaqueNames& on) {
+	void VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr* expr) {
 		print.ctor("Epseudo_destructor");
 		cprint.printQualType(expr->getDestroyedType(), print, loc::of(expr));
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getBase(), print, on);
+		cprint.printExpr(expr->getBase(), print, names);
 		print.end_ctor();
 	}
 
-	void VisitCXXNoexceptExpr(const CXXNoexceptExpr* expr, CoqPrinter& print,
-							  ClangPrinter& cprint, const ASTContext&,
-							  OpaqueNames&) {
+	void VisitCXXNoexceptExpr(const CXXNoexceptExpr* expr) {
 		// note: i should record the fact that this is a noexcept expression
 		print.ctor("Ebool");
 		print.boolean(expr->getValue());
 		print.end_ctor();
 	}
 
-	void VisitTypeTraitExpr(const TypeTraitExpr* expr, CoqPrinter& print,
-							ClangPrinter& cprint, const ASTContext&,
-							OpaqueNames&) {
+	void VisitTypeTraitExpr(const TypeTraitExpr* expr) {
 		// note: i should record the fact that this is a noexcept expression
 		print.ctor("Ebool");
 		print.boolean(expr->getValue());
 		print.end_ctor();
 	}
 
-	void VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr* expr,
-									 CoqPrinter& print, ClangPrinter& cprint,
-									 const ASTContext&, OpaqueNames&) {
+	void VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr* expr) {
 		print.ctor("Eimplicit_init");
 		cprint.printQualType(expr->getType(), print, loc::of(expr));
 		print.end_ctor();
 	}
 
-	void VisitArrayInitLoopExpr(const ArrayInitLoopExpr* expr,
-								CoqPrinter& print, ClangPrinter& cprint,
-								const ASTContext&, OpaqueNames& li) {
+	void VisitArrayInitLoopExpr(const ArrayInitLoopExpr* expr) {
 		print.ctor("Earrayloop_init");
 
-		auto index = li.fresh(expr->getCommonExpr());
+		auto index = names.fresh(expr->getCommonExpr());
 		print.output() << index << fmt::nbsp;
 
 		// this is the source array which we are initializing
 		auto src = expr->getCommonExpr()->getSourceExpr();
-		cprint.printExpr(src, print, li);
+		cprint.printExpr(src, print, names);
 
 		// this is the expression that is evaluated
-		li.inc_index_count();
-		print.output() << li.index_count() << fmt::nbsp << expr->getArraySize()
-					   << fmt::nbsp;
-		cprint.printExpr(expr->getSubExpr(), print, li);
-		li.dec_index_count();
-		li.free(expr->getCommonExpr()); // index goes out of scope at this point
+		names.inc_index_count();
+		print.output() << names.index_count() << fmt::nbsp
+					   << expr->getArraySize() << fmt::nbsp;
+		cprint.printExpr(expr->getSubExpr(), print, names);
+		names.dec_index_count();
+		names.free(
+			expr->getCommonExpr()); // index goes out of scope at this point
 
 		done(expr, print, cprint);
 	}
 
-	void VisitArrayInitIndexExpr(const ArrayInitIndexExpr* expr,
-								 CoqPrinter& print, ClangPrinter& cprint,
-								 const ASTContext&, OpaqueNames& li) {
-		print.ctor("Earrayloop_index") << li.index_count() << fmt::nbsp;
+	void VisitArrayInitIndexExpr(const ArrayInitIndexExpr* expr) {
+		print.ctor("Earrayloop_index") << names.index_count() << fmt::nbsp;
 		done(expr, print, cprint);
 	}
 };
-
-PrintExpr PrintExpr::printer;
 
 fmt::Formatter&
 ClangPrinter::printExpr(const clang::Expr* expr, CoqPrinter& print,
@@ -1619,11 +1514,12 @@ ClangPrinter::printExpr(const clang::Expr* expr, CoqPrinter& print,
 		trace("printExpr", loc::of(expr));
 
 	auto depth = print.output().get_depth();
-	PrintExpr::printer.Visit(expr, print, *this, *this->context_, li);
+	PrintExpr{print, *this, li}.Visit(expr);
 	if (depth != print.output().get_depth()) {
 		using namespace logging;
 		fatal() << "Error: BUG indentation bug in during: "
-				<< expr->getStmtClassName() << "\n";
+				<< expr->getStmtClassName() << " start = " << depth
+				<< ", end = " << print.output().get_depth() << "\n";
 		always_assert(false);
 	}
 	return print.output();
