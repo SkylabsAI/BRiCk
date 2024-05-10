@@ -249,6 +249,17 @@ Module decltype.
 
       #[local] Notation traverse_list := mapM.
 
+      Definition cast_result : decltype -> decltype :=
+        qual_norm (fun cv t =>
+          match t with
+          | Tnamed _
+          | Tarray _ _
+          | Tincomplete_array _
+          | Tvariable_array _ _
+          | Tenum _ => tqualified cv t
+          | _ => t
+          end).
+
       Definition of_expr_body (e : Expr) : M decltype :=
         match e return M decltype with
 
@@ -290,7 +301,8 @@ Module decltype.
         | Eseqor _ _ => mret Tbool
         | Ecomma _ e2 => of_expr e2
         | Ecall f _ => of_call f
-        | Eexplicit_cast _ t e => mret t (* of_expr e >>= fun t => of_cast t c (* TODO *) *)
+        | Eexplicit_cast _ t e =>
+            mret (cast_result t)
         | Ecast c e => of_expr e >>= fun t => of_cast t c
         | Emember arrow e _ mut t => of_member arrow e mut t
         | Emember_call _ f _ _ => of_member_call f

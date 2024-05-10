@@ -451,10 +451,21 @@ Module decltype.
             let* _ := check_args ft.(ft_arity) ft.(ft_params) ts in
             mret ft.(ft_return)
         | Eexplicit_cast _ t e =>
+            let cast_result :=
+              qual_norm (fun cv t =>
+                           match t with
+                           | Tnamed _
+                           | Tarray _ _
+                           | Tincomplete_array _
+                           | Tvariable_array _ _
+                           | Tenum _ => tqualified cv t
+                           | _ => t
+                           end)
+            in
             let* ct := of_expr e in
-            let* _ := require_eq ct (drop_qualifiers t) in
+            let* _ := require_eq ct (cast_result t) in
             (* ^^ in the case of pr-values, type qualifiers do not need to match *)
-            mret t
+            mret $ cast_result t
             (*   ^ we return [t] to match the shallow checker, but we would
                  probably prefer dropping qualifiers *)
         | Ecast c e => of_expr e >>= of_cast c
