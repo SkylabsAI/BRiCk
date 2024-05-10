@@ -1015,11 +1015,11 @@ public:
 			print.ctor("inl") << fmt::lparen;
 			cprint.printName(method, print, loc::of(expr));
 			print.output() << "," << fmt::nbsp;
-			if (me->hasQualifier() or not method->isVirtual()) {
-				// not virtual call
-				print.output() << "Direct";
-			} else {
+			if (method->isVirtual() &&
+				me->performsVirtualDispatch(ctxt.getLangOpts())) {
 				print.output() << "Virtual";
+			} else {
+				print.output() << "Direct";
 			}
 			print.output() << "," << fmt::nbsp;
 
