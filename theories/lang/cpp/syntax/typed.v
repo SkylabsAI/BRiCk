@@ -223,7 +223,7 @@ Module decltype.
         in
         let of_base (ei : Expr) : M decltype :=
           match ei with
-          | Ecast Carray2ptr ar _ => of_array ar
+          | Ecast (Carray2ptr _) ar => of_array ar
           | _ => mret $ Tref t
           end
         in
@@ -309,6 +309,54 @@ Module decltype.
         | _ , _ => mfail
         end.
 
+      Definition of_cast (c : Cast_ (type' lang) (type' lang)) (base : decltype) : M decltype :=
+        match c with
+        | Cdependent t
+        | Cbitcast t
+        | Clvaluebitcast t => mret t
+        | Cl2r dt =>
+            let* et := requireGL base in
+            let* _ := requirePR dt >>= require_eq (drop_qualifiers et) in
+            mret dt
+        | Cnoop t => mret t
+        | Carray2ptr t =>
+            let k cv base :=
+              match base with
+              | Tarray ty _
+              | Tincomplete_array ty
+              | Tvariable_array ty _ =>
+                  let res := Tptr $ tqualified cv ty in
+                  let* _ := require_eq t res in
+                  mret res
+              | _ => mfail
+              end
+            in
+            requireGL base >>= qual_norm k
+        | Cfun2ptr t =>
+            let* base := requireL base in
+            let* _ := require_functype base in
+            let* _ := require_eq t (Tptr base) in
+            mret $ Tptr base
+        | Cint2ptr t
+        | Cptr2int t => mret t
+        | Cptr2bool => mret Tbool
+        | Cderived2base [] _
+        | Cbase2derived [] _ => mfail (* empty lists are not supported *)
+        | Cderived2base (l :: ls) t => mret t (* TODO *)
+        | Cbase2derived (l :: ls) t => mret t (* TODO *)
+
+        | Cintegral t => mret t
+        | Cint2bool => mret Tbool
+        | Cfloat2int t
+        | Cnull2ptr t
+        | Cnull2memberptr t
+        | Cbuiltin2fun t
+        | Cctor t => mret t
+        | C2void => mret Tvoid
+        | Cuser => mret base
+        | Cdynamic to => mret to
+        end.
+
       Definition of_expr_body (e : Expr) : M decltype :=
         trace (breadcrumb e) $
         let* result :=
@@ -322,9 +370,6 @@ Module decltype.
         | Eunresolved_parenlist (Some t) es => Tresult_parenlist t <$> traverse (T:=eta list) of_expr es
         | Eunresolved_parenlist None _ => mfail
         | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
-        | Edependent_cast e t =>
-            let* _ := of_expr e in
-            mret t
 
         | Evar ln t =>
             let* vt := var_type ln in
@@ -405,13 +450,14 @@ Module decltype.
             let* ts := traverse (T:=eta list) of_expr es in
             let* _ := check_args ft.(ft_arity) ft.(ft_params) ts in
             mret ft.(ft_return)
-        | Ecast Cl2r e dt =>
-            let* et := of_expr e >=> requireGL in
-            let* _ := requirePR dt >>= require_eq (drop_qualifiers et) in
-            mret dt
-        | Ecast _ e dt =>
-            let* _ := of_expr e in
-            mret dt
+        | Eexplicit_cast _ t e =>
+            let* ct := of_expr e in
+            let* _ := require_eq ct (drop_qualifiers t) in
+            (* ^^ in the case of pr-values, type qualifiers do not need to match *)
+            mret t
+            (*   ^ we return [t] to match the shallow checker, but we would
+                 probably prefer dropping qualifiers *)
+        | Ecast c e => of_expr e >>= of_cast c
         | Emember arrow e _ mut t =>
             let* edt := of_expr e >>= arrow_deref_get arrow in
             of_member edt mut t

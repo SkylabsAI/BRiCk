@@ -474,7 +474,7 @@ Module Type Expr.
           Exists v,
           (Exists q, a |-> tptsto_fuzzyR (erase_qualifiers ty) q v ** True) //\\
           Q v free
-        ) |-- wp_operand (Ecast Cl2r e ty) Q.
+        ) |-- wp_operand (Ecast (Cl2r ty) e) Q.
 
     Lemma wp_operand_cast_l2r_prim ty e Q :
         (
@@ -482,7 +482,7 @@ Module Type Expr.
           Exists v,
           (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\
           Q v free
-        ) |-- wp_operand (Ecast Cl2r e ty) Q.
+        ) |-- wp_operand (Ecast (Cl2r ty) e) Q.
     Proof.
       intros. rewrite -wp_operand_cast_l2r. iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "?".
@@ -495,7 +495,7 @@ Module Type Expr.
           Exists r,
           (Exists q, a |-> rawR q r ** True) //\\
           Q (Vraw r) free
-        ) |-- wp_operand (Ecast Cl2r e Tu8) Q.
+        ) |-- wp_operand (Ecast (Cl2r Tu8) e) Q.
     Proof.
       intros. rewrite -wp_operand_cast_l2r /=. iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "(%r & ?)".
@@ -544,20 +544,20 @@ Module Type Expr.
               end)
         | None => UNSUPPORTED (unsupported_init_noop_cast e from ty)
         end)
-      |-- wp_init ty p (Ecast Cnoop e ty) Q.
+      |-- wp_init ty p (Ecast (Cnoop ty) e) Q.
     Axiom wp_operand_cast_noop : forall ty e Q,
             wp_operand e (fun v free => has_type v ty ** Q v free)
-        |-- wp_operand (Ecast Cnoop e ty) Q.
+        |-- wp_operand (Ecast (Cnoop ty) e) Q.
 
     Axiom wp_lval_cast_noop : forall ty e Q,
           (letI* p, free := wp_glval e in
            reference_to ty p ** Q p free)
-      |-- wp_lval (Ecast Cnoop e (Tref ty)) Q.
+      |-- wp_lval (Ecast (Cnoop $ Tref ty) e) Q.
 
     Axiom wp_xval_cast_noop : forall ty e Q,
           (letI* p, free := wp_glval e in
            reference_to ty p ** Q p free)
-      |-- wp_xval (Ecast Cnoop e (Trv_ref ty)) Q.
+      |-- wp_xval (Ecast (Cnoop $ Trv_ref ty) e) Q.
 
     (*
     Lemma wp_lval_cast_noop ty e Q :
@@ -591,24 +591,24 @@ Module Type Expr.
     Definition int2bool_not_num (v : val) : Set.
     Proof. exact unit. Qed.
 
-    Axiom wp_operand_cast_int2bool : forall ty e Q,
+    Axiom wp_operand_cast_int2bool : forall e Q,
          (letI* v, free := wp_operand e in
           match v with
           | Vint n => Q (Vbool (bool_decide (n <> 0))) free
           | _ => ERROR (int2bool_not_num v)
           end)
-      |-- wp_operand (Ecast Cint2bool e ty) Q.
+      |-- wp_operand (Ecast Cint2bool e) Q.
 
     Definition ptr2bool_not_ptr (v : val) : Set.
     Proof. exact unit. Qed.
 
-    Axiom wp_operand_cast_ptr2bool : forall ty e Q,
+    Axiom wp_operand_cast_ptr2bool : forall e Q,
          (letI* v, free := wp_operand e in
           match v with
           | Vptr p => Q (Vbool (bool_decide (p <> nullptr))) free
           | _ => ERROR (ptr2bool_not_ptr v)
           end)
-      |-- wp_operand (Ecast Cptr2bool e ty) Q.
+      |-- wp_operand (Ecast Cptr2bool e) Q.
 
     (** [Cfun2ptr] is a cast from a function to a pointer.
 
@@ -623,7 +623,7 @@ Module Type Expr.
         let ty := Tfunction $ FunctionType (ft_cc:=cc) (ft_arity:=ar) ret args in
         let e := Eglobal g ty in
             wp_lval e (fun v => Q (Vptr v))
-        |-- wp_operand (Ecast Cfun2ptr e (Tptr ty)) Q.
+        |-- wp_operand (Ecast (Cfun2ptr $ Tptr ty) e) Q.
 
     (** [Cbuiltin2ptr] is a cast from a builtin to a pointer.
      *)
@@ -631,7 +631,7 @@ Module Type Expr.
         let ty := Tfunction $ FunctionType (ft_cc:=cc) (ft_arity:=ar) ret args in
         let e := Eglobal g ty in
             wp_lval e (fun v => Q (Vptr v))
-        |-- wp_operand (Ecast Cbuiltin2fun e (Tptr ty)) Q.
+        |-- wp_operand (Ecast (Cbuiltin2fun $ Tptr ty) e) Q.
 
     (** Known places that bitcasts occur
         - casting between [void*] and [T*] for some [T].
@@ -639,7 +639,7 @@ Module Type Expr.
     Axiom wp_operand_cast_bitcast : forall e ty Q,
            (letI* v, free := wp_operand e in
              has_type v ty ** Q v free)
-        |-- wp_operand (Ecast Cbitcast e ty) Q.
+        |-- wp_operand (Ecast (Cbitcast ty) e) Q.
 
     (** [Cintegral] casts represent casts between integral types, e.g.
         - [int] -> [short]
@@ -650,18 +650,18 @@ Module Type Expr.
     Axiom wp_operand_cast_integral : forall e t Q,
         wp_operand e (fun v free =>
            Exists v', [| conv_int tu (type_of e) t v v' |] ** Q v' free)
-        |-- wp_operand (Ecast Cintegral e t) Q.
+        |-- wp_operand (Ecast (Cintegral t) e) Q.
 
     Axiom wp_operand_cast_null : forall e ty Q,
         type_of e = Tnullptr ->
         is_pointer ty ->
             wp_operand e Q (* note: [has_type v Tnullptr |-- has_type v (Tptr ty)] *)
-        |-- wp_operand (Ecast Cnull2ptr e ty) Q.
+        |-- wp_operand (Ecast (Cnull2ptr ty) e) Q.
 
     Axiom wp_operand_cast_null2memberptr : forall cls e ty Q,
         type_of e = Tnullptr ->
             wp_operand e (fun _ free => Q (Vmember_ptr cls None) free)
-        |-- wp_operand (Ecast Cnull2memberptr e (Tmember_pointer cls ty)) Q.
+        |-- wp_operand (Ecast (Cnull2memberptr $ Tmember_pointer cls ty) e) Q.
 
     (* Determine if a 0-constant of this type can be used as a pseudonym for <<nullptr>> *)
     Definition can_represent_null (ty : type) : bool :=
@@ -683,24 +683,25 @@ Module Type Expr.
         is_pointer ty ->
             (letI* v, free := wp_operand e in
              [| v = Vint 0 |] ** Q (Vptr nullptr) free)
-        |-- wp_operand (Ecast Cnull2ptr e ty) Q.
+        |-- wp_operand (Ecast (Cnull2ptr ty) e) Q.
 
     (* note(gmm): in the clang AST, the subexpression is the call.
      * in essence, [Ecast (Cuser ..)] is a syntax annotation.
      *)
-    Axiom wp_init_cast_user : forall e p ty Z Q,
+    Axiom wp_init_cast_user : forall e p ty Q,
         type_of e = ty ->
             wp_init ty p e Q
-        |-- wp_init ty p (Ecast (Cuser Z) e ty) Q.
+        |-- wp_init ty p (Ecast Cuser e) Q.
 
-    Axiom wp_operand_cast_user : forall e ty Z Q,
+    Axiom wp_operand_cast_user : forall e ty Q,
         type_of e = ty ->
             wp_operand e Q
-        |-- wp_operand (Ecast (Cuser Z) e ty) Q.
+        |-- wp_operand (Ecast Cuser e) Q.
 
     Definition UNSUPPORTED_reinterpret_cast (ty1 ty2 : type) : mpred.
     Proof. exact False%I. Qed.
 
+    (*
     (** https://eel.is/c++draft/expr.reinterpret.cast
 
         NOTE there is a lot of subtlety around [reinterpret_cast]
@@ -712,14 +713,14 @@ Module Type Expr.
              A pointer can be explicitly converted to any integral type large
              enough to hold all values of its type. The mapping function is
              implementation-defined. *)
-          wp_operand (Ecast Cptr2int e ty) Q
+          wp_operand (Ecast (Cptr2int ty) e) Q
         | Tnum _ _ , Tptr _ =>
           (* A value of integral type or enumeration type can be explicitly
              converted to a pointer. A pointer converted to an integer of sufficient
              size (if any such exists on the implementation) and back to the same
              pointer type will have its original value; mappings between pointers
              and integers are otherwise implementation-defined. *)
-          wp_operand (Ecast Cint2ptr e ty) Q
+          wp_operand (Ecast (Cint2ptr ty) e) Q
         | Tnullptr , Tnum _ _ =>
           (* A value of type [std​::​nullptr_t] can be converted to an integral type;
              the conversion has the same meaning and validity as a conversion of
@@ -735,32 +736,33 @@ Module Type Expr.
             wp_operand e Q
         | ty1 , ty2 => UNSUPPORTED_reinterpret_cast ty1 ty2
         end
-        |-- wp_operand (Ecast (Creinterpret qt) e ty) Q.
+        |-- wp_operand (Ecast (Creinterpret qt) e) Q.
+    *)
 
     (** [Cstatic c] represents a use of `static_cast` to perform the underlying
         cast.
      *)
-    Axiom wp_operand_static_cast : forall c e ty Q,
-          wp_operand (Ecast c e ty) Q
-      |-- wp_operand (Ecast (Cstatic c) e ty) Q.
+    Axiom wp_operand_static_cast : forall s t e Q,
+          wp_operand e Q
+      |-- wp_operand (Eexplicit_cast s t e) Q.
 
-    Axiom wp_lval_static_cast : forall c e ty Q,
-          wp_lval (Ecast c e (Tref ty)) Q
-      |-- wp_lval (Ecast (Cstatic c) e (Tref ty)) Q.
+    Axiom wp_lval_static_cast : forall s t e Q,
+          wp_lval e Q
+      |-- wp_lval (Eexplicit_cast s t e) Q.
 
-    Axiom wp_xval_static_cast : forall c e ty Q,
-          wp_xval (Ecast c e (Trv_ref ty)) Q
-      |-- wp_xval (Ecast (Cstatic c) e (Trv_ref ty)) Q.
+    Axiom wp_xval_static_cast : forall s t e Q,
+          wp_xval e Q
+      |-- wp_xval (Eexplicit_cast s t e) Q.
 
     (** You can cast anything to void, but an expression of type
         [void] can only be a pr_value *)
     Axiom wp_operand_cast_tovoid : forall e Q,
           wp_discard e (fun free => Q Vundef free)
-      |-- wp_operand (Ecast C2void e Tvoid) Q.
+      |-- wp_operand (Ecast C2void e) Q.
 
     Axiom wp_operand_cast_array2ptr : forall e t Q,
         wp_glval e (fun p => Q (Vptr p))
-        |-- wp_operand (Ecast Carray2ptr e t) Q.
+        |-- wp_operand (Ecast (Carray2ptr t) e) Q.
 
     (** [Cptr2int] exposes the pointer, which is expressed with [pinned_ptr]
      *)
@@ -774,7 +776,7 @@ Module Type Expr.
                                                     end (Z.of_N va))) free))
         | _ , _ => False
         end
-        |-- wp_operand (Ecast Cptr2int e ty) Q.
+        |-- wp_operand (Ecast (Cptr2int ty) e) Q.
 
     (** [Cint2ptr] uses "angelic non-determinism" to allow the developer to
         pick any pointer that was previously exposed as the given integer.
@@ -791,7 +793,7 @@ Module Type Expr.
               ([| va = 0%N |] ** Q (Vptr nullptr) free)))
         | _ => False
         end
-        |-- wp_operand (Ecast Cint2ptr e ty) Q.
+        |-- wp_operand (Ecast (Cint2ptr ty) e) Q.
 
     (** * [Cderived2base]
         casts from a derived class to a base class. Casting is only permitted
@@ -818,7 +820,7 @@ Module Type Expr.
           end
       | _, _ => False
       end
-      |-- wp_lval (Ecast (Cderived2base path) e (Tref ty)) Q.
+      |-- wp_lval (Ecast (Cderived2base path (Tref ty)) e) Q.
 
     Axiom wp_xval_cast_derived2base : forall e ty path Q,
       match drop_qualifiers (type_of e), drop_qualifiers ty with
@@ -832,7 +834,7 @@ Module Type Expr.
           end
       | _, _ => False
       end
-      |-- wp_xval (Ecast (Cderived2base path) e (Trv_ref ty)) Q.
+      |-- wp_xval (Ecast (Cderived2base path (Trv_ref ty)) e) Q.
 
     Axiom wp_operand_cast_derived2base : forall e ty path Q,
       match drop_qualifiers <$> unptr (type_of e), drop_qualifiers ty with
@@ -846,7 +848,7 @@ Module Type Expr.
           end
       | _, _ => False
       end
-      |-- wp_operand (Ecast (Cderived2base path) e (Tptr ty)) Q.
+      |-- wp_operand (Ecast (Cderived2base path (Tptr ty)) e) Q.
 
     (* [Cbase2derived] casts from a base class to a derived class.
      *)
@@ -862,7 +864,7 @@ Module Type Expr.
           end
       | _, _ => False
       end
-      |-- wp_lval (Ecast (Cbase2derived path) e (Tref ty)) Q.
+      |-- wp_lval (Ecast (Cbase2derived path (Tref ty)) e) Q.
 
     Axiom wp_xval_cast_base2derived : forall e ty path Q,
       match drop_qualifiers (type_of e), drop_qualifiers ty with
@@ -876,7 +878,7 @@ Module Type Expr.
           end
       | _, _ => False
       end
-      |-- wp_xval (Ecast (Cbase2derived path) e (Trv_ref ty)) Q.
+      |-- wp_xval (Ecast (Cbase2derived path (Trv_ref ty)) e) Q.
 
     Axiom wp_operand_cast_base2derived : forall e ty path Q,
          match drop_qualifiers <$> unptr (type_of e), drop_qualifiers ty with
@@ -890,7 +892,7 @@ Module Type Expr.
              end
          | _, _ => False
         end
-      |-- wp_operand (Ecast (Cbase2derived path) e (Tptr ty)) Q.
+      |-- wp_operand (Ecast (Cbase2derived path (Tptr ty)) e) Q.
 
     (** the ternary operator [_ ? _ : _] has the value category
      * of the "then" and "else" expressions (which must be the same).
@@ -1761,4 +1763,5 @@ End Expr.
 Declare Module E : Expr.
 
 Export E.
+
 Export cfrac.

@@ -19,6 +19,49 @@ Module ParserExpr (Import Lang : PARSER_LANG).
   #[local] Notation exprtype := (exprtype' parser_lang).
   #[local] Notation decltype := (decltype' parser_lang).
   #[local] Notation Expr := (Expr' parser_lang).
+  #[local] Notation Cast := (Cast_ type type).
+
+  Definition Ecstyle_cast (c : Cast) (t : type) (e : Expr) : Expr :=
+    Eexplicit_cast cast_style.c t (Ecast c e).
+  Definition Efunctional_cast (c : Cast) (t : type) (e : Expr) : Expr :=
+    Eexplicit_cast cast_style.functional t (Ecast c e).
+
+  Definition fuse_dependent_cast (s : cast_style.t) (c : Cast) (t : type) (e : Expr) : Expr :=
+    Eexplicit_cast s t (Ecast c e).
+(*
+    match c with
+    | Cdependent t' =>
+        if bool_decide (t = t') then
+          Eexplicit_cast s t e
+        else
+          Eexplicit_cast s t (Ecast c e)
+    (* TODO: use [Eunsupported] *)
+    | _ =>
+        Eexplicit_cast s t (Ecast c e)
+    end.
+*)
+
+  (* Keeping [Eexplicit_cast] as an annotation (with a no-op semantics) makes it easy
+     to give it semantics.
+     Alternatively, we could fuse these symbols, but then we would need to give
+     separate rules for each type of cast at each WP.
+   *)
+  Definition Edynamic_cast (c : Cast) (t : type) (e : Expr) : Expr :=
+    Eexplicit_cast cast_style.dynamic t (Ecast c e).
+
+    (*
+    match c with
+    | Cdynamic t' =>
+        if bool_decide (t = t') then
+          Eexplicit_cast cast_style.dynamic t e
+        else
+          Eexplicit_cast cast_style.dynamic t (Ecast c e)
+    | _ =>
+        fuse_dependent_cast cast_style.dynamic c t e
+    end. *)
+  Definition Estatic_cast := fuse_dependent_cast cast_style.static.
+  Definition Econst_cast := fuse_dependent_cast cast_style.const.
+  Definition Ereinterpret_cast := fuse_dependent_cast cast_style.reinterpret.
 
   Definition Eoperator_member_call (oo : OverloadableOperator) (nm : obj_name) (ct : dispatch_type) (ft : type) (obj : Expr) (es : list Expr) : Expr :=
     Eoperator_call oo (operator_impl.MFunc nm ct ft) (obj :: es).
@@ -27,10 +70,10 @@ Module ParserExpr (Import Lang : PARSER_LANG).
     Eoperator_call oo (operator_impl.Func f ft) es.
 
   Definition Eenum_const_at (gn : name) (c : ident) (ty : exprtype) : Expr :=
-    Ecast Cintegral (Eenum_const gn c) ty.
+    Ecast (Cintegral ty) (Eenum_const gn c).
 
   Definition Ebuiltin (nm : obj_name) (ty : type) : Expr :=
-    Ecast Cbuiltin2fun (Eglobal nm ty) (Tptr ty).
+    Ecast (Cbuiltin2fun $ Tptr ty) (Eglobal nm ty).
 
   Definition Emember (arrow : bool) (e_orig : Expr) (f : ident + name) (mut : bool) (ty : decltype) : force_some Expr :=
     option.get_some $

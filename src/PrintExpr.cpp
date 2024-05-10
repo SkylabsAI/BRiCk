@@ -148,28 +148,50 @@ is_builtin(const Decl* d) {
 
 void
 printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
-	switch (ce->getCastKind()) {
-#define CASE(a, b)                                                             \
-	case CastKind::CK_##a:                                                     \
-		print.output() << #b;                                                  \
-		break;
+	auto with_type = [&](const char* c) {
+		guard::ctor _(print, c, false);
+		printDeclType(ce, print, cprint);
+	};
+	auto without_type = [&](const char* c) { print.output() << c; };
 
-		CASE(LValueToRValue, Cl2r)
-		CASE(FunctionToPointerDecay, Cfun2ptr)
-		CASE(NoOp, Cnoop)
-		CASE(BitCast, Cbitcast)
-		CASE(IntegralCast, Cintegral)
-		CASE(IntegralToBoolean, Cint2bool)
-		CASE(PointerToBoolean, Cptr2bool)
-		CASE(PointerToIntegral, Cptr2int)
-		CASE(IntegralToPointer, Cint2ptr)
-		CASE(ArrayToPointerDecay, Carray2ptr)
-		CASE(ConstructorConversion, Cctor)
-		CASE(BuiltinFnToFnPtr, Cbuiltin2fun)
-		CASE(NullToPointer, Cnull2ptr)
-		CASE(ToVoid, C2void)
-		CASE(FloatingToIntegral, Cfloat2int)
-#undef CASE
+	switch (ce->getCastKind()) {
+#define CASE_NO_TYPE(a, b)                                                     \
+	case CastKind::CK_##a:                                                     \
+		without_type(#b);                                                      \
+		break;
+#define CASE_WITH_TYPE(a, b)                                                   \
+	case CastKind::CK_##a:                                                     \
+		with_type(#b);                                                         \
+		break;
+		CASE_WITH_TYPE(BitCast, Cbitcast)
+		CASE_WITH_TYPE(LValueBitCast, Clvaluebitcast)
+		CASE_WITH_TYPE(LValueToRValue, Cl2r)
+		CASE_WITH_TYPE(NoOp, Cnoop)
+		CASE_WITH_TYPE(ArrayToPointerDecay, Carray2ptr)
+		CASE_WITH_TYPE(FunctionToPointerDecay, Cfun2ptr)
+		CASE_WITH_TYPE(IntegralToPointer, Cint2ptr)
+		CASE_WITH_TYPE(PointerToIntegral, Cptr2int)
+
+		CASE_NO_TYPE(PointerToBoolean, Cptr2bool)
+		CASE_WITH_TYPE(IntegralCast, Cintegral)
+		CASE_NO_TYPE(IntegralToBoolean, Cint2bool)
+
+		CASE_WITH_TYPE(NullToPointer, Cnull2ptr)
+		CASE_WITH_TYPE(NullToMemberPointer, Cnull2memberptr)
+
+		CASE_WITH_TYPE(BuiltinFnToFnPtr, Cbuiltin2fun)
+
+		CASE_WITH_TYPE(ConstructorConversion, Cctor)
+		CASE_NO_TYPE(UserDefinedConversion, Cuser)
+
+		CASE_NO_TYPE(ToVoid, C2void)
+
+		// floating point casts
+		CASE_WITH_TYPE(FloatingToIntegral, Cfloat2int)
+
+		CASE_WITH_TYPE(Dependent, Cdependent)
+#undef CASE_NO_TYPE
+#undef CASE_WITH_TYPE
 
 	case CastKind::CK_DerivedToBase:
 	case CastKind::CK_UncheckedDerivedToBase: {
@@ -180,7 +202,7 @@ printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
 			always_assert(t && "Cderived2base without type");
 			cprint.printType(*t, print, loc::of(ce));
 		});
-		print.end_ctor();
+		done(ce, print, cprint, Done::DT);
 		break;
 	}
 	case CastKind::CK_BaseToDerived:
@@ -191,7 +213,7 @@ printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
 			always_assert(t && "Cbase2derived without type");
 			cprint.printType(*t, print, loc::of(ce));
 		});
-		print.end_ctor();
+		done(ce, print, cprint, Done::DT);
 		break;
 	default:
 		logging::unsupported()
@@ -746,53 +768,22 @@ public:
 	}
 
 	void VisitExplicitCastExpr(const ExplicitCastExpr* expr) {
-		switch (auto kind = expr->getCastKind()) {
-		case CastKind::CK_Dependent: {
-			print.ctor("Edependent_cast");
-			cprint.printExpr(expr->getSubExpr(), print, names);
-			print.output() << fmt::nbsp;
-			cprint.printQualType(expr->getTypeAsWritten(), print,
-								 loc::of(expr));
-			print.end_ctor();
-			break;
+		if (isa<CStyleCastExpr>(expr)) {
+			print.ctor("Ecstyle_cast");
+		} else if (auto nc = dyn_cast<CXXNamedCastExpr>(expr)) {
+			print.ctor(llvm::Twine("E") + nc->getCastName());
+		} else if (isa<CXXFunctionalCastExpr>(expr)) {
+			print.ctor("Efunctional_cast");
+		} else {
+			return unsupported_expr(expr, std::nullopt, false);
 		}
-		default:
-			VisitCastExpr(expr);
-		}
-	}
 
-	void VisitCastExpr(const CastExpr* expr) {
-		switch (expr->getCastKind()) {
-		case CastKind::CK_ConstructorConversion:
-		case CastKind::CK_UserDefinedConversion: {
-			auto cf = expr->getConversionFunction();
-			always_assert(
-				cf && "UserDefinedConversion must have a ConversionFunction");
-			// desugar user casts to function calls
-			auto vd = dyn_cast<ValueDecl>(cf);
-			always_assert(vd && "conversion function must be a [ValueDecl]");
-			print.ctor("Ecast");
-			print.ctor("Cuser");
-			cprint.printName(*vd, print);
-			print.end_ctor();
-
-			print.output() << fmt::nbsp;
-			cprint.printExpr(expr->getSubExpr(), print, names);
-			done(expr, print, cprint, Done::DT);
-			break;
-		}
-		case CastKind::CK_Dependent: {
-			expr->dump();
-			always_assert(false && "non-explicit cast is dependent");
-		}
-		default:
-			print.ctor("Ecast");
-			printCast(expr, print, cprint);
-
-			print.output() << fmt::nbsp;
-			cprint.printExpr(expr->getSubExpr(), print, names);
-			done(expr, print, cprint, Done::DT);
-		}
+		printCast(expr, print, cprint);
+		print.output() << fmt::nbsp;
+		cprint.printQualType(expr->getTypeAsWritten(), print, loc::of(expr));
+		print.output() << fmt::nbsp;
+		cprint.printExpr(expr->getSubExpr(), print, names);
+		print.end_ctor();
 	}
 
 	void VisitImplicitCastExpr(const ImplicitCastExpr* expr) {
@@ -816,42 +807,15 @@ public:
 			print.end_ctor();
 			return;
 		}
-		VisitCastExpr(expr);
-	}
 
-	void VisitCXXNamedCastExpr(const CXXNamedCastExpr* expr) {
-		print.ctor("Ecast");
-		if (isa<CXXReinterpretCastExpr>(expr)) {
-			print.ctor("Creinterpret", false);
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-			print.end_ctor();
-		} else if (isa<CXXConstCastExpr>(expr)) {
-			print.ctor("Cconst", false);
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-			print.end_ctor();
-		} else if (isa<CXXStaticCastExpr>(expr)) {
-			print.ctor("Cstatic", false);
-			printCast(expr, print, cprint);
-			print.end_ctor();
-		} else if (isa<CXXDynamicCastExpr>(expr)) {
-			print.ctor("Cdynamic", false);
-			cprint.printQualType(expr->getSubExpr()->getType(), print,
-								 loc::of(expr));
-			print.output() << fmt::nbsp;
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-			print.end_ctor();
-		} else {
-			using namespace logging;
-			fatal() << "Error: unknown named cast" << expr->getCastKindName()
-					<< " (at "
-					<< expr->getSourceRange().printToString(
-						   ctxt.getSourceManager())
-					<< ")\n";
-			die();
-		}
+		guard::ctor _(print, "Ecast");
+		printCast(expr, print, cprint);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getSubExpr(), print, names);
-		done(expr, print, cprint, Done::DT);
+	}
+
+	void VisitCastExpr(const CastExpr* expr) {
+		always_assert(false && "Cast expression should be unreachable");
 	}
 
 	void VisitIntegerLiteral(const IntegerLiteral* lit) {

@@ -100,6 +100,37 @@ Module decltype.
     Section fixpoint.
       Context (of_expr : Expr -> M decltype).
 
+      Definition of_cast (base : decltype) (c : Cast_ (type' lang) (type' lang)) : M decltype :=
+        match c with
+        | Cdependent t
+        | Cbitcast t
+        | Clvaluebitcast t
+        | Cl2r t
+        | Cnoop t
+        | Carray2ptr t
+        | Cfun2ptr t
+        | Cint2ptr t
+        | Cptr2int t => mret t
+        | Cptr2bool => mret Tbool
+        | Cderived2base _ ty
+        | Cbase2derived _ ty => mret ty
+(*
+        | Cderived2base (l :: ls) => mret base (* TODO *)
+        | Cbase2derived (l :: ls) => mret base (* TODO *)
+*)
+
+        | Cintegral t => mret t
+        | Cint2bool => mret Tbool
+        | Cfloat2int t
+        | Cnull2ptr t
+        | Cnull2memberptr t
+        | Cbuiltin2fun t
+        | Cctor t => mret t
+        | C2void => mret Tvoid
+        | Cuser => mret Tvoid (* TODO *)
+        | Cdynamic to => mret to
+        end.
+
       Definition of_binop (op : BinOp) (l : Expr) (t : exprtype) : M decltype :=
         match op with
         | Bdotp =>
@@ -195,7 +226,7 @@ Module decltype.
         in
         let of_base (ei : Expr) : M decltype :=
           match ei with
-          | Ecast Carray2ptr ar _ => of_array ar
+          | Ecast (Carray2ptr _) ar => of_array ar
           | _ => mret $ Tref t
           end
         in
@@ -230,7 +261,6 @@ Module decltype.
         | Eunresolved_parenlist (Some t) es => Tresult_parenlist t <$> traverse_list of_expr es
         | Eunresolved_parenlist None _ => mfail
         | Eunresolved_member obj fld => Tresult_member <$> of_expr obj <*> mret fld
-        | Edependent_cast _ t => mret t
 
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
@@ -260,7 +290,8 @@ Module decltype.
         | Eseqor _ _ => mret Tbool
         | Ecomma _ e2 => of_expr e2
         | Ecall f _ => of_call f
-        | Ecast _ _ t => mret t
+        | Eexplicit_cast _ t e => mret t (* of_expr e >>= fun t => of_cast t c (* TODO *) *)
+        | Ecast c e => of_expr e >>= fun t => of_cast t c
         | Emember arrow e _ mut t => of_member arrow e mut t
         | Emember_call _ f _ _ => of_member_call f
         | Eoperator_call _ f _ => from_operator_impl f

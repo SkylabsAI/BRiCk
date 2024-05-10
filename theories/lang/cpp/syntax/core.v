@@ -172,15 +172,16 @@ End atomic_name.
 (** ** Casts
     Proposal: make [Cast] part of the recursive bundle.
  *)
-Inductive Cast_ {classname obj_name type : Set} : Set :=
-| Cbitcast	(** TODO (FM-3431): This explicit cast expression could carry the type as written *)
-| Clvaluebitcast	(** TODO (FM-3431): Drop this constructor? *)
-| Cl2r
-| Cnoop
-| Carray2ptr
-| Cfun2ptr
-| Cint2ptr
-| Cptr2int
+Variant Cast_ {classname type : Set} : Set :=
+| Cdependent (_ : type)
+| Cbitcast (_ : type)
+| Clvaluebitcast	(_ : type) (** TODO (FM-3431): Drop this constructor? *)
+| Cl2r (_ : type) (* OPTIMIZABLE *)
+| Cnoop (_ : type)
+| Carray2ptr (_ : type) (* OPTIMIZABLE *)
+| Cfun2ptr (_ : type) (* OPTIMIZABLE *)
+| Cint2ptr (_ : type) (* OPTIMIZABLE *)
+| Cptr2int (_ : type)
 | Cptr2bool
   (* in [Cderived2base] and [Cbase2derived], the list is a tree
      from (top..bottom], i.e. **in both cases** the most derived
@@ -196,60 +197,72 @@ Inductive Cast_ {classname obj_name type : Set} : Set :=
      A cast from `A` to `C` will be [Cbase2derived ["::B";"::A"]] and
        the "::C" comes form the type of the expression.
    *)
-| Cderived2base (_ : list classname)
-| Cbase2derived (_ : list classname)
-| Cintegral
+| Cintegral (_ : type)
 | Cint2bool
-| Cfloat2int
-| Cnull2ptr
-| Cnull2memberptr
-| Cbuiltin2fun
-| Cctor
+| Cfloat2int (_ : type)
+| Cnull2ptr (_ : type)
+| Cnull2memberptr (_ : type)
+| Cbuiltin2fun (_ : type) (* OPTIMIZABLE? *)
 | C2void
-| Cuser        (conversion_function : obj_name)	(** TODO (FM-3431): Consider just emitting the method call *)
-| Creinterpret (_ : type)
-| Cstatic      (_ : Cast_)
-| Cdynamic     (from to : classname)
-| Cconst       (_ : type).
+
+  (* These are just annotations on the underlying expression *)
+| Cctor (_ : type)
+| Cuser (* this is an annotation, the actual member call is the child node *)
+| Cdynamic     (to : type)
+| Cderived2base (_ : list classname) (_ : type)
+| Cbase2derived (_ : list classname) (_ : type)
+.
 #[global] Arguments Cast_ : clear implicits.
 (**
 TODO (FM-3431): For the explicit casts, we could embed the type as
 written and compute the value category (rather than annote `Ecast`
 with a value category).
 *)
-#[global] Instance Cast__eq_dec : EqDecision3 Cast_.
+#[global] Instance Cast__eq_dec : EqDecision2 Cast_.
 Proof. solve_decision. Defined.
 Module Cast.
-  Definition existsb {classname obj_name type : Set}
-      (GN : classname -> bool) (ON : obj_name -> bool) (T : type -> bool) :=
-    fix existsb (c : Cast_ classname obj_name type) : bool :=
+  Definition existsb {classname type : Set}
+      (GN : classname -> bool) (T : type -> bool)
+      (c : Cast_ classname type) : bool :=
     match c with
-    | Cbitcast
-    | Clvaluebitcast
-    | Cl2r
-    | Cnoop
-    | Carray2ptr
-    | Cfun2ptr
-    | Cint2ptr
-    | Cptr2int
+    | Cdependent t
+    | Cbitcast t
+    | Clvaluebitcast t
+    | Cl2r t
+    | Cnoop t
+    | Carray2ptr t
+    | Cfun2ptr t
+    | Cint2ptr t
+    | Cptr2int t => T t
     | Cptr2bool => false
-    | Cderived2base path
-    | Cbase2derived path => List.existsb GN path
-    | Cintegral
-    | Cint2bool
-    | Cfloat2int
-    | Cnull2ptr
-    | Cnull2memberptr
-    | Cbuiltin2fun
-    | Cctor
+    | Cderived2base path t
+    | Cbase2derived path t => List.existsb GN path || T t
+    | Cintegral t => T t
+    | Cint2bool => false
+    | Cfloat2int t
+    | Cnull2ptr t
+    | Cnull2memberptr t
+    | Cbuiltin2fun t
+    | Cctor t => T t
     | C2void => false
-    | Cuser on => ON on
-    | Creinterpret t => T t
-    | Cstatic c => existsb c
-    | Cdynamic gn1 gn2 => GN gn1 || GN gn2
-    | Cconst t => T t
+    | Cuser => false
+    | Cdynamic t => T t
     end.
+
 End Cast.
+
+Module cast_style.
+  Variant t : Set :=
+  | functional
+  | c
+  | static | dynamic | reinterpret | const.
+
+  #[global] Instance t_eq_dec : EqDecision t.
+  Proof. solve_decision. Defined.
+  #[global] Instance t_inhabited : Inhabited t.
+  Proof. repeat constructor. Qed.
+End cast_style.
+
 
 (** ** Structured names *)
 Inductive name' {lang : lang.t} : Set :=
@@ -324,7 +337,6 @@ simplifies cpp2v---we set it from context in ../mparser.v.
 *)
 | Eunresolved_parenlist (_ : option type') (_ : list Expr')
 | Eunresolved_member (_ : Expr') (_ : ident)
-| Edependent_cast (_ : Expr') (_ : type')
 
 (**
 NOTE: We might need to support template parameters as object names in
@@ -370,7 +382,8 @@ TODO (FM-4320): <<Cdependent>> may require care
    GM: the only way I see to solve this problem is to make [lang] and index rather than
        a parameter. Doing that would allow for two different constructors for [Ecast]
  *)
-| Ecast (c : Cast_ type' name' type') (e : Expr') (t : (* decltype' *)type')
+| Eexplicit_cast (c : cast_style.t) (_ : type') (e : Expr')
+| Ecast (c : Cast_ type' type') (e : Expr')
 | Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
 | Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
@@ -386,8 +399,8 @@ Should be [gn : classname]
 | Econstructor (on : name') (args : list Expr') (t : type')
 | Eimplicit (e : Expr')
 | Eimplicit_init (t : type')
-| Eif (e1 e2 e3 : Expr') (vc : ValCat) (t : type')
-| Eif2  (n : N) (common cond thn els : Expr') (_ : ValCat) (_ : type')
+| Eif (e1 e2 e3 : Expr') (vc : ValCat) (t : type') (* TODO: is [vc : ValCat] needed? *)
+| Eif2  (n : N) (common cond thn els : Expr') (_ : ValCat) (_ : type') (* TODO: is [vc : ValCat] needed? *)
 | Ethis (t : type')
 | Enull
 | Einitlist (args : list Expr') (default : option Expr') (t : type')
@@ -422,8 +435,8 @@ Should be [gn : classname]
 | Epseudo_destructor (is_arrow : bool) (t : type') (e : Expr')
 | Earrayloop_init (oname : N) (src : Expr') (level : N) (length : N) (init : Expr') (t : type')
 | Earrayloop_index (level : N) (t : type')
-| Eopaque_ref (name : N) (vc : ValCat) (t : type')
-| Eunsupported (s : bs) (vc : ValCat) (t : type')
+| Eopaque_ref (name : N) (vc : ValCat) (t : type') (* TODO: use decltype *)
+| Eunsupported (s : bs) (vc : ValCat) (t : type') (* TODO: use decltype *)
 with Stmt' {lang : lang.t} : Set :=
 | Sseq    (_ : list Stmt')
 | Sdecl   (_ : list VarDecl')
@@ -772,8 +785,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eunresolved_call _ _
   | Eunresolved_member_call _ _ _
   | Eunresolved_parenlist _ _
-  | Eunresolved_member _ _
-  | Edependent_cast _ _ => true
+  | Eunresolved_member _ _ => true
   | Evar _ t => is_dependentT t
   | Eenum_const n _ => is_dependentN n
   | Eglobal n t => is_dependentN n || is_dependentT t
@@ -796,7 +808,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Eseqor e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecomma e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecall e es => is_dependentE e || existsb is_dependentE es
-  | Ecast c e t => Cast.existsb is_dependentT is_dependentN is_dependentT c || is_dependentE e || is_dependentT t
+  | Eexplicit_cast _ t e => is_dependentE e || is_dependentT t
+  | Ecast c e => Cast.existsb is_dependentT is_dependentT c || is_dependentE e
   | Emember _ e _ _ t => is_dependentE e || is_dependentT t
   | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es

@@ -199,7 +199,7 @@ Module Type Expr__newdelete.
              values are representable in their respective types *)
           [Eint sz Tsize_t] ++
             if pass_align
-            then [Ecast Cintegral (Eint al Tsize_t) Talign_val_t]
+            then [Ecast (Cintegral Talign_val_t) (Eint al Tsize_t)]
             else [].
 
         Axiom wp_operand_new :

@@ -28,7 +28,7 @@ Variant Error :=
 
 Fixpoint check_expr (e : Expr) :=
   match e with
-  | Ecomma (Ecast C2void e _) (Esizeof (inl t) _) =>
+  | Ecomma (Eexplicit_cast cast_style.c Tvoid (Ecast C2void e)) (Esizeof (inl t) _) =>
     (*
     [e] is the expression,
     [t] is `decltype((e))`

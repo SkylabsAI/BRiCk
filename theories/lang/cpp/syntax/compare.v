@@ -17,6 +17,62 @@ Require Import bedrock.lang.cpp.syntax.decl.
 #[local] Set Primitive Projections.
 #[local] Open Scope positive_scope.
 
+(* BEGIN: temporary infrastructure *)
+  Structure comparator :=
+    { _car : Set
+    ; #[canonical=no] _compare : _car -> _car -> comparison
+    }.
+  Arguments _compare {_} _ _.
+  Canonical unit_comparator :=
+    {| _car := unit
+    ; _compare := fun _ _ => Eq |}.
+
+  Canonical pair_comparator (C1 C2 : comparator) :=
+    {| _car := C1.(_car) * C2.(_car)
+    ; _compare := fun '(a,b) '(c,d) => compare_lex (C1.(_compare) a c) $ fun _ => C2.(_compare) b d |}.
+  Canonical bs_comparator :=
+    {| _car := bs
+    ; _compare := bs_compare |}.
+  Canonical localname_comparator :=
+    {| _car := localname
+     ; _compare := bs_compare |}.
+  Canonical ident_comparator :=
+    {| _car := ident
+    ; _compare := bs_compare |}.
+  Canonical bool_comparator :=
+    {| _car := bool
+    ; _compare := Bool.compare |}.
+  Definition SwitchBranch_compare (a b : SwitchBranch) : comparison :=
+    match a , b with
+    | Exact a , Exact b => Z.compare a b
+    | Exact _ , Range _ _ => Lt
+    | Range _ _ , Exact _ => Gt
+    | Range a b , Range c d => compare_lex (Z.compare a c) $ fun _ => Z.compare b d
+    end.
+  #[local] Canonical SwitchBranch_comparator :=
+    {| _car := SwitchBranch
+     ; _compare := SwitchBranch_compare |}.
+(* END: temporary infrastructure *)
+
+Module cast_style.
+  Definition tag (c : cast_style.t) : positive :=
+    match c with
+    | cast_style.c => 1
+    | cast_style.functional => 2
+    | cast_style.static => 3
+    | cast_style.reinterpret => 4
+    | cast_style.const => 5
+    | cast_style.dynamic => 6
+    end.
+  Definition compare (a b : cast_style.t) : comparison :=
+    Pos.compare (tag a) (tag b).
+End cast_style.
+
+Canonical cast_style_comparator :=
+  {| _car := cast_style.t
+  ; _compare := cast_style.compare |}.
+
+
 Module sum.
   Section compare.
     Context {A B : Type}.
@@ -156,6 +212,15 @@ Module List.
   End compare.
 End List.
 #[global] Instance list_compare `{!Compare A} : Compare (list A) := List.compare compare.
+
+Canonical option_comparator (C1 : comparator) :=
+  {| _car := option C1.(_car)
+  ; _compare := option.compare C1.(_compare) |}.
+Canonical list_comparator (C1 : comparator) :=
+  {| _car := list C1.(_car)
+  ; _compare := List.compare C1.(_compare) |}.
+
+
 
 Module ValCat.
   #[prefix="", only(tag)] derive ValCat.
@@ -381,87 +446,106 @@ Module type_qualifiers.
 End type_qualifiers.
 #[global] Instance type_qualifiers_compare : Compare type_qualifiers := type_qualifiers.compare.
 
+Definition compare_unit (a b : unit) : comparison := Eq.
+
 Module Cast.
   #[prefix="", only(tag)] derive Cast_.
   Section compare.
-    Context {classname name type : Set}.
+    Context {classname type : Set}.
     Context (compareGN : classname -> classname -> comparison).
-    Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
-    #[local] Notation Cast := (Cast_ classname name type).
-    #[local] Notation TAG := (tag classname name type).
+    #[local] Notation Cast := (Cast_ classname type).
+    #[local] Notation TAG := (tag classname type).
 
-    Record box_Cdynamic : Set := Box_Cdynamic {
-      box_Cdynamic_0 : classname;
-      box_Cdynamic_1 : classname;
-    }.
-    Definition box_Cdynamic_compare (b1 b2 : box_Cdynamic) : comparison :=
-      compare_lex (compareGN b1.(box_Cdynamic_0) b2.(box_Cdynamic_0)) $ fun _ =>
-      compareGN b1.(box_Cdynamic_1) b2.(box_Cdynamic_1).
+    #[local] Canonical classname_comparator :=
+      {| _car := classname
+      ; _compare := compareGN |}.
+    #[local] Canonical type_comparator :=
+      {| _car := type
+      ; _compare := compareT |}.
 
     Definition car (t : positive) : Set :=
       match t with
-      | 10 | 11 => list classname
-      | 20 => name
-      | 21 | 24 => type
-      | 22 => Cast
-      | 23 => box_Cdynamic
+      | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => type
+      | 10 | 12 => unit
+      | 11 | 13 | 14 | 15 | 16 => type
+      | 17 => unit
+      | 18 => type
+      | 19 => unit
+      | 20 => type
+      | 21 | 22 => list classname * type
       | _ => unit
       end.
     Definition data (c : Cast) : car (TAG c) :=
       match c with
-      | Cderived2base ns | Cbase2derived ns => ns
-      | Cuser n => n
-      | Creinterpret t | Cconst t => t
-      | Cstatic c => c
-      | Cdynamic n1 n2 => Box_Cdynamic n1 n2
+      | Cdependent t
+      | Cbitcast t
+      | Clvaluebitcast t
+      | Cl2r t
+      | Cnoop t
+      | Carray2ptr t
+      | Cfun2ptr t
+      | Cint2ptr t
+      | Cptr2int t => t
+      | Cptr2bool => ()
+      | Cderived2base ns t | Cbase2derived ns t => (ns, t)
+      | Cintegral t => t
+      | Cint2bool => ()
+      | Cfloat2int t
+      | Cnull2ptr t
+      | Cnull2memberptr t
+      | Cbuiltin2fun t
+      | Cctor t => t
+      | Cuser => tt
+      | Cdynamic t => t
       | _ => ()
       end.
-    Definition compare_data (Cast_compare : Cast -> Cast -> comparison)
-        (t : positive) : car t -> car t -> comparison :=
-      match t with
-      | 10 | 11 => List.compare compareGN
-      | 20 => compareN
-      | 21 | 24 => compareT
-      | 22 => Cast_compare
-      | 23 => box_Cdynamic_compare
-      | _ => fun _ _ => Eq
+    Definition compare_data (t : positive) : car t -> car t -> comparison :=
+      match t as t return car t -> car t -> comparison with
+      | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => compareT
+      | 10 | 12 => compare_unit
+      | 11 | 13 | 14 | 15 | 16 => compareT
+      | 17 => compare_unit
+      | 18 => compareT
+      | 19 => compare_unit
+      | 20 => compareT
+      | 21 => _compare | 22 => _compare
+      | _ => compare_unit
       end.
 
     #[local] Notation compare_ctor := (compare_ctor TAG car data).
     #[local] Notation compare_tag := (compare_tag TAG).
-
-    Fixpoint compare (c : Cast) : Cast -> comparison :=
+    #[local] Notation COMP X :=
+      (compare_ctor compare_data (Reduce (TAG X)) (fun _ => Reduce (data X))) (only parsing).
+    Definition compare (c : Cast) : Cast -> comparison :=
       match c with
-      | Cbitcast => compare_tag (Reduce (TAG Cbitcast))
-      | Clvaluebitcast => compare_tag (Reduce (TAG Clvaluebitcast))
-      | Cl2r => compare_tag (Reduce (TAG Cl2r))
-      | Cnoop => compare_tag (Reduce (TAG Cnoop))
-      | Carray2ptr => compare_tag (Reduce (TAG Carray2ptr))
-      | Cfun2ptr => compare_tag (Reduce (TAG Cfun2ptr))
-      | Cint2ptr => compare_tag (Reduce (TAG Cint2ptr))
-      | Cptr2int => compare_tag (Reduce (TAG Cptr2int))
+      | Cdependent t => COMP (Cdependent t : Cast)
+      | Cbitcast t => COMP (Cbitcast t : Cast)
+      | Clvaluebitcast t => COMP (Clvaluebitcast t : Cast)
+      | Cl2r t => COMP (Cl2r t : Cast)
+      | Cnoop t => COMP (Cnoop t : Cast)
+      | Carray2ptr t => COMP (Carray2ptr t : Cast)
+      | Cfun2ptr t => COMP (Cfun2ptr t : Cast)
+      | Cint2ptr t => COMP (Cint2ptr t : Cast)
+      | Cptr2int t => COMP (Cptr2int t : Cast)
       | Cptr2bool => compare_tag (Reduce (TAG Cptr2bool))
-      | Cderived2base ns => compare_ctor (compare_data compare) (Reduce (TAG (Cderived2base ns))) (fun _ => Reduce (data (Cderived2base ns)))
-      | Cbase2derived ns => compare_ctor (compare_data compare) (Reduce (TAG (Cderived2base ns))) (fun _ => Reduce (data (Cbase2derived ns)))
-      | Cintegral => compare_tag (Reduce (TAG Cintegral))
+      | Cderived2base ns t => COMP (Cderived2base ns t : Cast)
+      | Cbase2derived ns t => COMP (Cderived2base ns t : Cast)
+      | Cintegral t => COMP (Cintegral t : Cast)
       | Cint2bool => compare_tag (Reduce (TAG Cint2bool))
-      | Cfloat2int => compare_tag (Reduce (TAG Cfloat2int))
-      | Cnull2ptr => compare_tag (Reduce (TAG Cnull2ptr))
-      | Cnull2memberptr => compare_tag (Reduce (TAG Cnull2memberptr))
-      | Cbuiltin2fun => compare_tag (Reduce (TAG Cbuiltin2fun))
-      | Cctor => compare_tag (Reduce (TAG Cctor))
+      | Cfloat2int t => COMP (Cfloat2int t : Cast)
+      | Cnull2ptr t => COMP (Cnull2ptr t : Cast)
+      | Cnull2memberptr t => COMP (Cnull2memberptr t : Cast)
+      | Cbuiltin2fun t => COMP (Cbuiltin2fun t : Cast)
+      | Cctor t => COMP (Cctor t : Cast)
       | C2void => compare_tag (Reduce (TAG C2void))
-      | Cuser n => compare_ctor (compare_data compare) (Reduce (TAG (Cuser n))) (fun _ => Reduce (data (Cuser n)))
-      | Creinterpret t => compare_ctor (compare_data compare) (Reduce (TAG (Creinterpret t))) (fun _ => Reduce (data (Creinterpret t)))
-      | Cstatic c => compare_ctor (compare_data compare) (Reduce (TAG (Cstatic c))) (fun _ => Reduce (data (Cstatic c)))
-      | Cdynamic cls1 cls2 => compare_ctor (compare_data compare) (Reduce (TAG (Cdynamic cls1 cls2))) (fun _ => Reduce (data (Cdynamic cls1 cls2)))
-      | Cconst t => compare_ctor (compare_data compare) (Reduce (TAG (Cconst t))) (fun _ => Reduce (data (Cconst t)))
+      | Cuser => COMP (Cuser : Cast)
+      | Cdynamic cls => COMP (Cdynamic cls : Cast)
       end.
   End compare.
 
 End Cast.
-#[global] Instance Cast_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (Cast_ A B C) := Cast.compare compare compare compare.
+#[global] Instance Cast_compare {A B : Set} `{!Compare A, !Compare B} : Compare (Cast_ A B) := Cast.compare compare compare.
 
 
 Module dispatch_type.
@@ -1437,15 +1521,23 @@ Module Expr.
       compare_lex (compareE b1.(box_Ecall_0) b2.(box_Ecall_0)) $ fun _ =>
       List.compare compareE b1.(box_Ecall_1) b2.(box_Ecall_1).
 
+    Record box_Eexplicit_cast : Set := Box_Eexplicit_cast {
+      box_Eexplicit_cast_0 : cast_style.t;
+      box_Eexplicit_cast_1 : type;
+      box_Eexplicit_cast_2 : Expr;
+    }.
+    Definition box_Eexplicit_cast_compare (b1 b2 : box_Eexplicit_cast) : comparison :=
+      compare_lex (_compare b1.(box_Eexplicit_cast_0) b2.(box_Eexplicit_cast_0)) $ fun _ =>
+      compare_lex (compareT b1.(box_Eexplicit_cast_1) b2.(box_Eexplicit_cast_1)) $ fun _ =>
+      compareE b1.(box_Eexplicit_cast_2) b2.(box_Eexplicit_cast_2).
+
     Record box_Ecast : Set := Box_Ecast {
-      box_Ecast_0 : Cast_ type name type;
+      box_Ecast_0 : Cast_ type type;
       box_Ecast_1 : Expr;
-      box_Ecast_2 : type;
     }.
     Definition box_Ecast_compare (b1 b2 : box_Ecast) : comparison :=
-      compare_lex (Cast.compare compareT compareN compareT b1.(box_Ecast_0) b2.(box_Ecast_0)) $ fun _ =>
-      compare_lex (compareE b1.(box_Ecast_1) b2.(box_Ecast_1)) $ fun _ =>
-      compareT b1.(box_Ecast_2) b2.(box_Ecast_2).
+      compare_lex (Cast.compare compareT compareT b1.(box_Ecast_0) b2.(box_Ecast_0)) $ fun _ =>
+      compareE b1.(box_Ecast_1) b2.(box_Ecast_1).
 
     Record box_Edependent_cast : Set := Box_Edependent_cast {
       box_Edependent_cast_0 : Expr ;
@@ -1671,7 +1763,6 @@ Module Expr.
       | Eunresolved_member_call _ _ _ => 6
       | Eunresolved_parenlist _ _ => 7
       | Eunresolved_member _ _ => 8
-      | Edependent_cast _ _ => 59
       | Evar _ _ => 9
       | Eenum_const _ _ => 10
       | Eglobal _ _ => 11
@@ -1693,7 +1784,8 @@ Module Expr.
       | Eseqor _ _ => 27
       | Ecomma _ _ => 28
       | Ecall _ _ => 29
-      | Ecast _ _ _ => 30
+      | Eexplicit_cast _ _ _ => 59
+      | Ecast _ _ => 30
       | Emember _ _ _ _ _ => 31
       | Emember_call _ _ _ _ => 32
       | Eoperator_call _ _ _ => 33
@@ -1776,11 +1868,11 @@ Module Expr.
       | 55 => box_Eopaque_ref
       | 56 => box_Eglobal
       | 58 => box_Estmt
-      | 59 => box_Edependent_cast
+      | 59 => box_Eexplicit_cast
       | _ => box_Eunsupported
       end.
     Definition data (e : Expr) : car (tag e) :=
-      match e with
+      match e as e return car (tag e) with
       | Eparam X => X
       | Eunresolved_global on => on
       | Eunresolved_unop op e => Box_Eunresolved_unop op e
@@ -1789,7 +1881,7 @@ Module Expr.
       | Eunresolved_member_call on e es => Box_Eunresolved_member_call on e es
       | Eunresolved_parenlist e es => Box_Eunresolved_parenlist e es
       | Eunresolved_member e f => Box_Eunresolved_member e f
-      | Edependent_cast e t => Box_Edependent_cast e t
+      | Eexplicit_cast s t e => Box_Eexplicit_cast s t e
       | Evar n t => Box_Evar n t
       | Eenum_const gn id => Box_Eenum_const gn id
       | Eglobal on t => Box_Eglobal on t
@@ -1812,7 +1904,7 @@ Module Expr.
       | Eseqor l r
       | Ecomma l r => Box_Eseqand l r
       | Ecall e es => Box_Ecall e es
-      | Ecast c e t => Box_Ecast c e t
+      | Ecast c e => Box_Ecast c e
       | Emember arrow e x b t => Box_Emember arrow e x b t
       | Emember_call arrow m e es => Box_Emember_call arrow m e es
       | Eoperator_call oo oi es => Box_Eoperator_call oo oi es
@@ -1894,7 +1986,7 @@ Module Expr.
       | 55 => box_Eopaque_ref_compare
       | 56 => box_Eglobal_compare
       | 58 => box_Estmt_compare
-      | 59 => box_Edependent_cast_compare
+      | 59 => box_Eexplicit_cast_compare
       | _ => box_Eunsupported_compare
       end.
 
@@ -1914,7 +2006,7 @@ Module Expr.
       | Eunresolved_member_call on e es => compare_ctor (Reduce (tag (Eunresolved_member_call on e es))) (fun _ => Reduce (data (Eunresolved_member_call on e es)))
       | Eunresolved_parenlist e es => compare_ctor (Reduce (tag (Eunresolved_parenlist e es))) (fun _ => Reduce (data (Eunresolved_parenlist e es)))
       | Eunresolved_member e f => compare_ctor (Reduce (tag (Eunresolved_member e f))) (fun _ => Reduce (data (Eunresolved_member e f)))
-      | Edependent_cast e t => COMP (Edependent_cast e t)
+      | Eexplicit_cast s e t => COMP (Eexplicit_cast s e t)
 
       | Evar n t => compare_ctor (Reduce (tag (Evar n t))) (fun _ => Reduce (data (Evar n t)))
 
@@ -1944,7 +2036,7 @@ Module Expr.
       | Ecomma l r => compare_ctor (Reduce (tag (Ecomma l r))) (fun _ => Reduce (data (Ecomma l r)))
       | Ecall e es => compare_ctor (Reduce (tag (Ecall e es))) (fun _ => Reduce (data (Ecall e es)))
 
-      | Ecast c e t => compare_ctor (Reduce (tag (Ecast c e t))) (fun _ => Reduce (data (Ecast c e t)))
+      | Ecast c e => compare_ctor (Reduce (tag (Ecast c e))) (fun _ => Reduce (data (Ecast c e)))
       | Emember arr e x b t => compare_ctor (Reduce (tag (Emember arr e x b t))) (fun _ => Reduce (data (Emember arr e x b t)))
       | Emember_call arr m e es => compare_ctor (Reduce (tag (Emember_call arr m e es))) (fun _ => Reduce (data (Emember_call arr m e es)))
       | Eoperator_call oo oi es => compare_ctor (Reduce (tag (Eoperator_call oo oi es))) (fun _ => Reduce (data (Eoperator_call oo oi es)))
@@ -1981,48 +2073,6 @@ Module Expr.
   End compare_body.
 End Expr.
 
-  Structure comparator :=
-    { _car : Set
-    ; #[canonical=no] compare : _car -> _car -> comparison
-    }.
-  Arguments compare {_} _ _.
-  Canonical unit_comparator :=
-    {| _car := unit
-    ; compare := fun _ _ => Eq |}.
-
-  Canonical pair_comparator (C1 C2 : comparator) :=
-    {| _car := C1.(_car) * C2.(_car)
-    ; compare := fun '(a,b) '(c,d) => compare_lex (C1.(compare) a c) $ fun _ => C2.(compare) b d |}.
-  Canonical option_comparator (C1 : comparator) :=
-    {| _car := option C1.(_car)
-    ; compare := option.compare C1.(compare) |}.
-  Canonical list_comparator (C1 : comparator) :=
-    {| _car := list C1.(_car)
-    ; compare := List.compare C1.(compare) |}.
-  Canonical bs_comparator :=
-    {| _car := bs
-    ; compare := bs_compare |}.
-  Canonical localname_comparator :=
-    {| _car := localname
-     ; compare := bs_compare |}.
-  Canonical ident_comparator :=
-    {| _car := ident
-    ; compare := bs_compare |}.
-  Canonical bool_comparator :=
-    {| _car := bool
-    ; compare := Bool.compare |}.
-  Definition SwitchBranch_compare (a b : SwitchBranch) : comparison :=
-    match a , b with
-    | Exact a , Exact b => Z.compare a b
-    | Exact _ , Range _ _ => Lt
-    | Range _ _ , Exact _ => Gt
-    | Range a b , Range c d => compare_lex (Z.compare a c) $ fun _ => Z.compare b d
-    end.
-  #[local] Canonical SwitchBranch_comparator :=
-    {| _car := SwitchBranch
-    ; compare := SwitchBranch_compare |}.
-
-
 Module VarDecl.
   Section compare_body.
     Context {lang : lang.t}.
@@ -2039,16 +2089,16 @@ Module VarDecl.
 
     #[local] Canonical name_comparator :=
       {| _car := name
-      ; compare := compareN |}.
+      ; _compare := compareN |}.
     #[local] Canonical type_comparator :=
       {| _car := type
-       ; compare := compareT |}.
+       ; _compare := compareT |}.
     #[local] Canonical expr_comparator :=
       {| _car := Expr
-      ; compare := compareE |}.
+      ; _compare := compareE |}.
     #[local] Canonical VarDecl_comparator :=
       {| _car := VarDecl
-      ; compare := compareVD |}.
+      ; _compare := compareVD |}.
 
     Definition tag (vd : VarDecl) : positive :=
       match vd with
@@ -2070,9 +2120,9 @@ Module VarDecl.
       end.
     Definition compare_data (k : positive) : car k -> car k -> comparison :=
       match k as k return car k -> car k -> comparison with
-      | 1 => compare
-      | 2 => compare
-      | _ => compare
+      | 1 => _compare
+      | 2 => _compare
+      | _ => _compare
       end.
 
     #[local] Notation compare_ctor X := (compare_ctor tag car data compare_data (Reduce (tag X)) (fun _ => Reduce (data X))) (only parsing).
@@ -2101,19 +2151,19 @@ Module Stmt.
 
     #[local] Canonical name_comparator :=
       {| _car := name
-      ; compare := compareN |}.
+      ; _compare := compareN |}.
     #[local] Canonical type_comparator :=
       {| _car := type
-       ; compare := compareT |}.
+       ; _compare := compareT |}.
     #[local] Canonical expr_comparator :=
       {| _car := Expr
-      ; compare := compareE |}.
+      ; _compare := compareE |}.
     #[local] Canonical VarDecl_comparator :=
       {| _car := VarDecl
-      ; compare := compareVD |}.
+      ; _compare := compareVD |}.
     #[local] Canonical Stmt_comparator :=
       {| _car := _
-      ; compare := compareS |}.
+      ; _compare := compareS |}.
 
     Definition tag (s : Stmt) : positive :=
       match s with
@@ -2181,24 +2231,24 @@ Module Stmt.
 
     Definition compare_data  (k : positive) : car k -> car k -> comparison :=
       match k as k return car k -> car k -> comparison with
-      | 1 => compare
-      | 2 => compare
-      | 3 => compare
-      | 4 => compare
-      | 5 => compare
-      | 6 => compare
-      | 7 => compare
-      | 8 => compare
-      | 9 => compare
-      | 10 => compare
-      | 11 => compare
-      | 12 => compare
-      | 13 => compare
-      | 14 => compare
-      | 15 => compare
-      | 16 => compare
-      | 17 => compare
-      | _ => compare
+      | 1 => _compare
+      | 2 => _compare
+      | 3 => _compare
+      | 4 => _compare
+      | 5 => _compare
+      | 6 => _compare
+      | 7 => _compare
+      | 8 => _compare
+      | 9 => _compare
+      | 10 => _compare
+      | 11 => _compare
+      | 12 => _compare
+      | 13 => _compare
+      | 14 => _compare
+      | 15 => _compare
+      | 16 => _compare
+      | 17 => _compare
+      | _ => _compare
       end.
 
     #[local] Notation compare_ctor X := (compare_ctor tag car data compare_data (Reduce (tag X)) (fun _ => Reduce (data X))) (only parsing).
@@ -2227,7 +2277,6 @@ Module Stmt.
   End compare_body.
 End Stmt.
 
-
 (* This is needed to speed up compilation on the guardedness check on the
    following [compare{N,T,E,VD,S}] functions. Without this, the termination
    checker *does succeed* but it takes ~800s.
@@ -2241,6 +2290,8 @@ Section compare.
   #[local] Notation Expr := (Expr' lang).
   #[local] Notation VarDecl := (VarDecl' lang).
   #[local] Notation Stmt := (Stmt' lang).
+
+  Parameter FIXME : forall {T}, T.
 
   Fixpoint compareN (n : name) : name -> comparison :=
     name.compare_body compareN compareT compareE n
