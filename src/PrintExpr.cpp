@@ -30,42 +30,6 @@ enum Done : unsigned {
 	DT = 8,
 };
 
-static fmt::Formatter&
-printDeclType(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint) {
-	if (expr->isLValue()) {
-		guard::ctor _(print, "Tref", false);
-		cprint.printQualType(expr->getType(), print, loc::of(expr));
-	} else if (expr->isXValue()) {
-		guard::ctor _(print, "Trv_ref", false);
-		cprint.printQualType(expr->getType(), print, loc::of(expr));
-	} else {
-		cprint.printQualType(expr->getType(), print, loc::of(expr));
-	}
-	return print.output();
-}
-
-static fmt::Formatter&
-done(const Expr* expr, CoqPrinter& print, ClangPrinter& cprint,
-	 Done want = Done::T) {
-	if (want == Done::DT) {
-		printDeclType(expr, print, cprint);
-	} else {
-		if (want & Done::V) {
-			print.output() << fmt::nbsp;
-			cprint.printValCat(expr, print);
-		}
-		if (want & Done::T) {
-			print.output() << fmt::nbsp;
-			cprint.printQualType(expr->getType(), print, loc::of(expr));
-		}
-		if (want & Done::O) {
-			print.output() << fmt::nbsp;
-			cprint.printQualTypeOption(expr->getType(), print, loc::of(expr));
-		}
-	}
-	return print.end_ctor();
-}
-
 fmt::Formatter&
 ClangPrinter::printOverloadableOperator(clang::OverloadedOperatorKind oo,
 										CoqPrinter& print, loc::loc loc) {
@@ -144,83 +108,6 @@ is_builtin(const Decl* d) {
 		}
 	}
 	return false;
-}
-
-void
-printCast(const CastExpr* ce, CoqPrinter& print, ClangPrinter& cprint) {
-	auto with_type = [&](const char* c) {
-		guard::ctor _(print, c, false);
-		printDeclType(ce, print, cprint);
-	};
-	auto without_type = [&](const char* c) { print.output() << c; };
-
-	switch (ce->getCastKind()) {
-#define CASE_NO_TYPE(a, b)                                                     \
-	case CastKind::CK_##a:                                                     \
-		without_type(#b);                                                      \
-		break;
-#define CASE_WITH_TYPE(a, b)                                                   \
-	case CastKind::CK_##a:                                                     \
-		with_type(#b);                                                         \
-		break;
-		CASE_WITH_TYPE(BitCast, Cbitcast)
-		CASE_WITH_TYPE(LValueBitCast, Clvaluebitcast)
-		CASE_WITH_TYPE(LValueToRValue, Cl2r)
-		CASE_WITH_TYPE(NoOp, Cnoop)
-		CASE_WITH_TYPE(ArrayToPointerDecay, Carray2ptr)
-		CASE_WITH_TYPE(FunctionToPointerDecay, Cfun2ptr)
-		CASE_WITH_TYPE(IntegralToPointer, Cint2ptr)
-		CASE_WITH_TYPE(PointerToIntegral, Cptr2int)
-
-		CASE_NO_TYPE(PointerToBoolean, Cptr2bool)
-		CASE_WITH_TYPE(IntegralCast, Cintegral)
-		CASE_NO_TYPE(IntegralToBoolean, Cint2bool)
-
-		CASE_WITH_TYPE(NullToPointer, Cnull2ptr)
-		CASE_WITH_TYPE(NullToMemberPointer, Cnull2memberptr)
-
-		CASE_WITH_TYPE(BuiltinFnToFnPtr, Cbuiltin2fun)
-
-		CASE_WITH_TYPE(ConstructorConversion, Cctor)
-		CASE_NO_TYPE(UserDefinedConversion, Cuser)
-
-		CASE_NO_TYPE(ToVoid, C2void)
-
-		// floating point casts
-		CASE_WITH_TYPE(FloatingToIntegral, Cfloat2int)
-
-		CASE_WITH_TYPE(Dependent, Cdependent)
-#undef CASE_NO_TYPE
-#undef CASE_WITH_TYPE
-
-	case CastKind::CK_DerivedToBase:
-	case CastKind::CK_UncheckedDerivedToBase: {
-		print.ctor("Cderived2base");
-		// note that [path] does *not* include the type of the argument
-		print.list(ce->path(), [&](auto i) {
-			auto t = i->getType().getTypePtrOrNull();
-			always_assert(t && "Cderived2base without type");
-			cprint.printType(*t, print, loc::of(ce));
-		});
-		done(ce, print, cprint, Done::DT);
-		break;
-	}
-	case CastKind::CK_BaseToDerived:
-		print.ctor("Cbase2derived");
-		// note that [path] does *not* include the type of the argument
-		print.list(ce->path(), [&](auto i) {
-			auto t = i->getType().getTypePtrOrNull();
-			always_assert(t && "Cbase2derived without type");
-			cprint.printType(*t, print, loc::of(ce));
-		});
-		done(ce, print, cprint, Done::DT);
-		break;
-	default:
-		logging::unsupported()
-			<< "unsupported cast kind \"" << ce->getCastKindName() << "\""
-			<< " (at " << cprint.sourceRange(ce->getSourceRange()) << ")\n";
-		print.output() << "Cunsupported";
-	}
 }
 
 fmt::Formatter&
@@ -376,6 +263,40 @@ private:
 	const ASTContext& ctxt;
 	OpaqueNames& names;
 
+	fmt::Formatter& printDeclType(const Expr* expr) {
+		if (expr->isLValue()) {
+			guard::ctor _(print, "Tref", false);
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		} else if (expr->isXValue()) {
+			guard::ctor _(print, "Trv_ref", false);
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		} else {
+			cprint.printQualType(expr->getType(), print, loc::of(expr));
+		}
+		return print.output();
+	}
+
+	fmt::Formatter& done(const Expr* expr, Done want = Done::T) {
+		if (want == Done::DT) {
+			printDeclType(expr);
+		} else {
+			if (want & Done::V) {
+				print.output() << fmt::nbsp;
+				cprint.printValCat(expr, print);
+			}
+			if (want & Done::T) {
+				print.output() << fmt::nbsp;
+				cprint.printQualType(expr->getType(), print, loc::of(expr));
+			}
+			if (want & Done::O) {
+				print.output() << fmt::nbsp;
+				cprint.printQualTypeOption(expr->getType(), print,
+										   loc::of(expr));
+			}
+		}
+		return print.end_ctor();
+	}
+
 public:
 	PrintExpr(CoqPrinter& print, ClangPrinter& cprint, OpaqueNames& names)
 		: print(print), cprint(cprint), ctxt(cprint.getContext()),
@@ -407,7 +328,7 @@ public:
 		llvm::raw_string_ostream os{coqmsg};
 		os << loc::describe(loc, cprint.getContext());
 		print.str(coqmsg);
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void VisitExpr(const Expr* expr) {
@@ -451,7 +372,7 @@ public:
 					  << "Try fixing earlier errors\n";
 		print.ctor("Eunsupported");
 		print.str(expr->getStmtClassName());
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void printBinaryOperator(const BinaryOperator* expr) {
@@ -555,7 +476,7 @@ public:
 		cprint.printExpr(expr->getLHS(), print, names);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getRHS(), print, names);
-		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
+		done(expr, print.templates() ? Done::O : Done::T);
 	}
 
 	void printUnaryOperator(const UnaryOperator* expr) {
@@ -625,7 +546,7 @@ public:
 			print.output() << fmt::nbsp;
 		}
 		cprint.printExpr(expr->getSubExpr(), print, names);
-		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
+		done(expr, print.templates() ? Done::O : Done::T);
 	}
 
 	void VisitDeclRefExpr(const DeclRefExpr* expr) {
@@ -668,7 +589,7 @@ public:
 				print.output() << fmt::nbsp;
 				cprint.printUnqualifiedName(*ecd, print);
 				print.output() << fmt::nbsp;
-				done(expr, print, cprint);
+				done(expr);
 			}
 		} else if (auto param = dyn_cast<NonTypeTemplateParmDecl>(d)) {
 			if (print.templates()) {
@@ -711,7 +632,7 @@ public:
 			print.output() << fmt::line;
 			print.list(expr->arguments(),
 					   [&](auto i) { cprint.printExpr(i, print, names); });
-			done(expr, print, cprint, Done::NONE);
+			done(expr, Done::NONE);
 		}
 	}
 
@@ -764,7 +685,83 @@ public:
 			logging::die();
 		}
 
-		done(expr, print, cprint, Done::NONE);
+		done(expr, Done::NONE);
+	}
+
+	void printCast(const CastExpr* ce) {
+		auto with_type = [&](const char* c) {
+			guard::ctor _(print, c, false);
+			printDeclType(ce);
+		};
+		auto without_type = [&](const char* c) { print.output() << c; };
+
+		switch (ce->getCastKind()) {
+#define CASE_NO_TYPE(a, b)                                                     \
+	case CastKind::CK_##a:                                                     \
+		without_type(#b);                                                      \
+		break;
+#define CASE_WITH_TYPE(a, b)                                                   \
+	case CastKind::CK_##a:                                                     \
+		with_type(#b);                                                         \
+		break;
+			CASE_WITH_TYPE(BitCast, Cbitcast)
+			CASE_WITH_TYPE(LValueBitCast, Clvaluebitcast)
+			CASE_WITH_TYPE(LValueToRValue, Cl2r)
+			CASE_WITH_TYPE(NoOp, Cnoop)
+			CASE_WITH_TYPE(ArrayToPointerDecay, Carray2ptr)
+			CASE_WITH_TYPE(FunctionToPointerDecay, Cfun2ptr)
+			CASE_WITH_TYPE(IntegralToPointer, Cint2ptr)
+			CASE_WITH_TYPE(PointerToIntegral, Cptr2int)
+
+			CASE_NO_TYPE(PointerToBoolean, Cptr2bool)
+			CASE_WITH_TYPE(IntegralCast, Cintegral)
+			CASE_NO_TYPE(IntegralToBoolean, Cint2bool)
+
+			CASE_WITH_TYPE(NullToPointer, Cnull2ptr)
+			CASE_WITH_TYPE(NullToMemberPointer, Cnull2memberptr)
+
+			CASE_WITH_TYPE(BuiltinFnToFnPtr, Cbuiltin2fun)
+
+			CASE_WITH_TYPE(ConstructorConversion, Cctor)
+			CASE_NO_TYPE(UserDefinedConversion, Cuser)
+
+			CASE_NO_TYPE(ToVoid, C2void)
+
+			// floating point casts
+			CASE_WITH_TYPE(FloatingToIntegral, Cfloat2int)
+
+			CASE_WITH_TYPE(Dependent, Cdependent)
+#undef CASE_NO_TYPE
+#undef CASE_WITH_TYPE
+
+		case CastKind::CK_DerivedToBase:
+		case CastKind::CK_UncheckedDerivedToBase: {
+			print.ctor("Cderived2base");
+			// note that [path] does *not* include the type of the argument
+			print.list(ce->path(), [&](auto i) {
+				auto t = i->getType().getTypePtrOrNull();
+				always_assert(t && "Cderived2base without type");
+				cprint.printType(*t, print, loc::of(ce));
+			});
+			done(ce, Done::DT);
+			break;
+		}
+		case CastKind::CK_BaseToDerived:
+			print.ctor("Cbase2derived");
+			// note that [path] does *not* include the type of the argument
+			print.list(ce->path(), [&](auto i) {
+				auto t = i->getType().getTypePtrOrNull();
+				always_assert(t && "Cbase2derived without type");
+				cprint.printType(*t, print, loc::of(ce));
+			});
+			done(ce, Done::DT);
+			break;
+		default:
+			logging::unsupported()
+				<< "unsupported cast kind \"" << ce->getCastKindName() << "\""
+				<< " (at " << cprint.sourceRange(ce->getSourceRange()) << ")\n";
+			print.output() << "Cunsupported";
+		}
 	}
 
 	void VisitExplicitCastExpr(const ExplicitCastExpr* expr) {
@@ -778,7 +775,7 @@ public:
 			return unsupported_expr(expr, std::nullopt, false);
 		}
 
-		printCast(expr, print, cprint);
+		printCast(expr);
 		print.output() << fmt::nbsp;
 		cprint.printQualType(expr->getTypeAsWritten(), print, loc::of(expr));
 		print.output() << fmt::nbsp;
@@ -809,7 +806,7 @@ public:
 		}
 
 		guard::ctor _(print, "Ecast");
-		printCast(expr, print, cprint);
+		printCast(expr);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getSubExpr(), print, names);
 	}
@@ -827,12 +824,12 @@ public:
 			lit->getValue().toStringUnsigned(s);
 		}
 		print.output() << s << "%Z";
-		done(lit, print, cprint);
+		done(lit);
 	}
 
 	void VisitCharacterLiteral(const CharacterLiteral* lit) {
 		print.ctor("Echar", false) << lit->getValue() << "%N";
-		done(lit, print, cprint);
+		done(lit);
 	}
 
 	static void print_string_type(const Expr* expr, CoqPrinter& print,
@@ -904,7 +901,7 @@ public:
 		print.ctor("Eunsupported") << fmt::nbsp << "float: \"";
 		lit->getValue().print(print.output().nobreak());
 		print.output() << "\"";
-		done(lit, print, cprint, Done::VT);
+		done(lit, Done::VT);
 	}
 
 	void VisitMemberExpr(const MemberExpr* expr) {
@@ -969,7 +966,7 @@ public:
 		cprint.printExpr(expr->getLHS(), print, names);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getRHS(), print, names);
-		done(expr, print, cprint, print.templates() ? Done::O : Done::T);
+		done(expr, print.templates() ? Done::O : Done::T);
 	}
 
 	void VisitCXXConstructExpr(const CXXConstructExpr* expr) {
@@ -980,7 +977,7 @@ public:
 		print.list(expr->arguments(),
 				   [&](auto i) { cprint.printExpr(i, print, names); });
 		//print.output() << fmt::nbsp << expr->isElidable();
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr* expr) {
@@ -1005,7 +1002,7 @@ public:
 			++idx;
 		});
 		//print.output() << fmt::nbsp << expr->isElidable();
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitCXXMemberCallExpr(const CXXMemberCallExpr* expr) {
@@ -1064,7 +1061,7 @@ public:
 	}
 	print.end_list();
 #endif
-		done(expr, print, cprint, Done::NONE);
+		done(expr, Done::NONE);
 	}
 
 	void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr* expr) {
@@ -1080,7 +1077,7 @@ public:
 		cprint.printExpr(expr->getTrueExpr(), print, names);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getFalseExpr(), print, names);
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void VisitBinaryConditionalOperator(const BinaryConditionalOperator* expr) {
@@ -1096,7 +1093,7 @@ public:
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getFalseExpr(), print, names);
 		names.dec_index_count();
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void VisitConstantExpr(const ConstantExpr* expr) {
@@ -1156,13 +1153,13 @@ public:
 				print.none();
 			}
 
-			done(expr, print, cprint);
+			done(expr);
 		}
 	}
 
 	void VisitCXXThisExpr(const CXXThisExpr* expr) {
 		print.ctor("Ethis", false);
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr* expr) {
@@ -1190,11 +1187,11 @@ public:
 		if (expr->getKind() == UnaryExprOrTypeTrait::UETT_AlignOf) {
 			print.ctor("Ealignof", false);
 			do_arg();
-			done(expr, print, cprint);
+			done(expr);
 		} else if (expr->getKind() == UnaryExprOrTypeTrait::UETT_SizeOf) {
 			print.ctor("Esizeof", false);
 			do_arg();
-			done(expr, print, cprint);
+			done(expr);
 		} else {
 			using namespace logging;
 			fatal() << "Error: unsupported expression "
@@ -1225,7 +1222,7 @@ public:
 
 			cprint.printType(*ty, print, loc::of(expr)) << fmt::nbsp;
 			print.str(comm.getField()->getName()) << fmt::nbsp;
-			done(expr, print, cprint);
+			done(expr);
 			return;
 		}
 		default:
@@ -1347,7 +1344,7 @@ public:
 
 		print.ctor("Ematerialize_temp");
 		cprint.printExpr(expr->getSubExpr(), print, names);
-		done(expr, print, cprint, Done::V);
+		done(expr, Done::V);
 	}
 
 	void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr* expr) {
@@ -1365,7 +1362,7 @@ public:
 
 	void VisitOpaqueValueExpr(const OpaqueValueExpr* expr) {
 		print.ctor("Eopaque_ref") << names.find(expr);
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void VisitAtomicExpr(const clang::AtomicExpr* expr) {
@@ -1389,7 +1386,7 @@ public:
 		}
 		print.end_list();
 
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr* expr) {
@@ -1401,18 +1398,18 @@ public:
 	void VisitVAArgExpr(const VAArgExpr* expr) {
 		print.ctor("Eva_arg");
 		cprint.printExpr(expr->getSubExpr(), print, names);
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitLambdaExpr(const LambdaExpr* expr) {
 		print.ctor("Eunsupported");
 		print.str("lambda");
-		done(expr, print, cprint, Done::VT);
+		done(expr, Done::VT);
 	}
 
 	void VisitImplicitValueInitExpr(const ImplicitValueInitExpr* expr) {
 		print.ctor("Eimplicit_init");
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr* expr) {
@@ -1462,12 +1459,12 @@ public:
 		names.free(
 			expr->getCommonExpr()); // index goes out of scope at this point
 
-		done(expr, print, cprint);
+		done(expr);
 	}
 
 	void VisitArrayInitIndexExpr(const ArrayInitIndexExpr* expr) {
 		print.ctor("Earrayloop_index") << names.index_count() << fmt::nbsp;
-		done(expr, print, cprint);
+		done(expr);
 	}
 };
 
