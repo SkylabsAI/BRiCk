@@ -7,7 +7,7 @@
 
 Require Import iris.algebra.agree.
 Require Import bedrock.lang.bi.spec.knowledge.
-Require Import bedrock.lang.cpp.logic.
+Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.own_instances.
 Require Import bedrock.lang.proofmode.own_obs.
 

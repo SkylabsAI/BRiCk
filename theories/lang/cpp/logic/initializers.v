@@ -596,7 +596,7 @@ Section wp_initialize.
   Proof.
     intros Hty ??. rewrite -wp_initialize_unqualified_intro.
     case_match; eauto.
-    destruct ty; try done.
+    destruct ty; try solve [ inversion H0 | eauto ].
     (* void *)
     iIntros "wp /=".
     iApply wp_operand_well_typed.
