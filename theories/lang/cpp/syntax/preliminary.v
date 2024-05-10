@@ -584,6 +584,8 @@ Defined.
 
 (** ** The way an operator call is desugared *)
 Module operator_impl.
+  Import UPoly.
+
   Variant t {obj_name type : Set} : Set :=
     | Func (fn_name : obj_name) (fn_type : type)
     | MFunc (fn_name : obj_name) (_ : dispatch_type) (fn_type : type).
@@ -599,11 +601,31 @@ Module operator_impl.
     end.
 
   Definition existsb {name type : Set} (f : name -> bool) (g : type -> bool)
-      (i : operator_impl.t name type) : bool :=
+    (i : operator_impl.t name type) : bool :=
     match i with
     | Func fn ft
     | MFunc fn _ ft => f fn || g ft
     end.
+
+  Definition fmap {name type name' type' : Set} (f : name -> name') (g : type -> type')
+    (i : t name type) : t name' type' :=
+    match i with
+    | Func fn ft => Func (f fn) (g ft)
+    | MFunc fn dt ft => MFunc (f fn) dt (g ft)
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ & _ : assert.
+
+  #[universes(polymorphic)]
+    Definition traverse@{u | } {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}
+    {name type name' type' : Set} (f : name -> F name') (g : type -> F type')
+    (i : t name type) : F (t name' type') :=
+    match i with
+    | Func fn ft => Func <$> f fn <*> g ft
+    | MFunc fn dt ft => (fun fn ft => MFunc fn dt ft) <$> f fn <*> g ft
+    end.
+  #[global] Arguments traverse _ _ _ _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
+
 End operator_impl.
 
 Module new_form.

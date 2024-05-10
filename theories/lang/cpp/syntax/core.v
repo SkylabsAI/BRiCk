@@ -374,16 +374,13 @@ program because, in part, C++ has no type for references to members.
 | Eseqor (e1 e2 : Expr')
 | Ecomma (e1 e2 : Expr')
 | Ecall (f : Expr') (es : list Expr')
-(**
-TODO (FM-4320): <<Cdependent>> may require care
-*)
-(* TODO: this use of [Cast_] should really use [classname] as its first argument, but
-   we can not use that without a [match] which Coq rejects as not being strictly positive.
-   GM: the only way I see to solve this problem is to make [lang] and index rather than
-       a parameter. Doing that would allow for two different constructors for [Ecast]
- *)
 | Eexplicit_cast (c : cast_style.t) (_ : type') (e : Expr')
 | Ecast (c : Cast_ type' type') (e : Expr')
+  (* TODO: this use of [Cast_] should really use [classname] as its first argument, but
+     we can not use that without a [match] which Coq rejects as not being strictly positive.
+     GM: the only way I see to solve this problem is to make [lang] and index rather than
+       a parameter. Doing that would allow for two different constructors for [Ecast]
+   *)
 | Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
 | Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
@@ -399,8 +396,8 @@ Should be [gn : classname]
 | Econstructor (on : name') (args : list Expr') (t : type')
 | Eimplicit (e : Expr')
 | Eimplicit_init (t : type')
-| Eif (e1 e2 e3 : Expr') (vc : ValCat) (t : type') (* TODO: is [vc : ValCat] needed? *)
-| Eif2  (n : N) (common cond thn els : Expr') (_ : ValCat) (_ : type') (* TODO: is [vc : ValCat] needed? *)
+| Eif (e1 e2 e3 : Expr') (t : type')
+| Eif2  (n : N) (common cond thn els : Expr') (_ : type')
 | Ethis (t : type')
 | Enull
 | Einitlist (args : list Expr') (default : option Expr') (t : type')
@@ -425,8 +422,6 @@ Should be [gn : classname]
   decltype, or [valcat_of] in cpp2v-core and [decltype.of_expr] here
   are unnecessarily complicated.
 
-  See [valcat_of] in cpp2v-core.
-
   TODO: [Eva_arg _ Tdependent]
 
   Docs for <<__builtin_va_arg>>.
@@ -435,8 +430,8 @@ Should be [gn : classname]
 | Epseudo_destructor (is_arrow : bool) (t : type') (e : Expr')
 | Earrayloop_init (oname : N) (src : Expr') (level : N) (length : N) (init : Expr') (t : type')
 | Earrayloop_index (level : N) (t : type')
-| Eopaque_ref (name : N) (vc : ValCat) (t : type') (* TODO: use decltype *)
-| Eunsupported (s : bs) (vc : ValCat) (t : type') (* TODO: use decltype *)
+| Eopaque_ref (name : N) (t : type')
+| Eunsupported (s : bs) (t : type')
 with Stmt' {lang : lang.t} : Set :=
 | Sseq    (_ : list Stmt')
 | Sdecl   (_ : list VarDecl')
@@ -585,7 +580,7 @@ Notation function_type' lang := (function_type_ (decltype' lang)).
 Notation function_name' lang := (function_name_ (decltype' lang)).
 Notation temp_param' lang := (temp_param_ (type' lang)).
 Notation temp_arg' lang := (temp_arg_ (decltype' lang) (Expr' lang)).
-Notation Cast' lang := (Cast_ (classname' lang) (obj_name' lang) (type' lang)).
+Notation Cast' lang := (Cast_ (classname' lang) (type' lang)).
 (** TODO (FM-3431): Should be [decltype]                          ^^^^^*)
 Notation atomic_name' lang := (atomic_name_ (type' lang)).
 
@@ -820,8 +815,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Econstructor n es t => is_dependentN n || existsb is_dependentE es || is_dependentT t
   | Eimplicit e => is_dependentE e
   | Eimplicit_init t => is_dependentT t
-  | Eif e1 e2 e3 _ t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentT t
-  | Eif2 _ e1 e2 e3 e4 _ t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentE e4 || is_dependentT t
+  | Eif e1 e2 e3 t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentT t
+  | Eif2 _ e1 e2 e3 e4 t => is_dependentE e1 || is_dependentE e2 || is_dependentE e3 || is_dependentE e4 || is_dependentT t
   | Ethis t => is_dependentT t
   | Enull => false
   | Einitlist es eo t => existsb is_dependentE es || option.existsb is_dependentE eo || is_dependentT t
@@ -835,8 +830,8 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Epseudo_destructor _ t e => is_dependentT t || is_dependentE e
   | Earrayloop_init _ e1 _ _ e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t
   | Earrayloop_index _ t => is_dependentT t
-  | Eopaque_ref _ _ t => is_dependentT t
-  | Eunsupported _ _ t => is_dependentT t
+  | Eopaque_ref _ t => is_dependentT t
+  | Eunsupported _ t => is_dependentT t
   end
 
 with is_dependentVD {lang} (vd : VarDecl' lang) : bool :=

@@ -742,17 +742,19 @@ Module Type Expr.
     (** [Cstatic c] represents a use of `static_cast` to perform the underlying
         cast.
      *)
-    Axiom wp_operand_static_cast : forall s t e Q,
+    Axiom wp_operand_explicit_cast : forall s t e Q,
           wp_operand e Q
       |-- wp_operand (Eexplicit_cast s t e) Q.
 
-    Axiom wp_lval_static_cast : forall s t e Q,
+    Axiom wp_lval_explicit_cast : forall s t e Q,
           wp_lval e Q
       |-- wp_lval (Eexplicit_cast s t e) Q.
 
-    Axiom wp_xval_static_cast : forall s t e Q,
+    Axiom wp_xval_explicit_cast : forall s t e Q,
           wp_xval e Q
       |-- wp_xval (Eexplicit_cast s t e) Q.
+
+    (* TODO: do I need a [wp_init_explicit_cast]? *)
 
     (** You can cast anything to void, but an expression of type
         [void] can only be a pr_value *)
@@ -899,24 +901,24 @@ Module Type Expr.
      * We express this with 4 rules, one for each of [wp_lval],
      * [wp_operand], [wp_xval], and [wp_init].
      *)
-    Definition wp_cond {T} (vc : ValCat) (wp : Expr -> (T -> FreeTemps.t -> epred) -> mpred) : Prop :=
+    Definition wp_cond {T} (wp : Expr -> (T -> FreeTemps.t -> epred) -> mpred) : Prop :=
       forall ty tst th el (Q : T -> FreeTemps -> mpred),
         Unfold WPE.wp_test (wp_test tst (fun c free =>
            if c
            then wp th (fun v free' => Q v (free' >*> free))
            else wp el (fun v free' => Q v (free' >*> free))))
-        |-- wp (Eif tst th el vc ty) Q.
+        |-- wp (Eif tst th el ty) Q.
 
-    Axiom wp_lval_condition : Reduce (wp_cond Lvalue wp_lval).
-    Axiom wp_xval_condition : Reduce (wp_cond Xvalue wp_xval).
-    Axiom wp_operand_condition : Reduce (wp_cond Prvalue wp_operand).
+    Axiom wp_lval_condition : Reduce (wp_cond wp_lval).
+    Axiom wp_xval_condition : Reduce (wp_cond wp_xval).
+    Axiom wp_operand_condition : Reduce (wp_cond wp_operand).
 
     Axiom wp_init_condition : forall ty addr tst th el Q,
         Unfold WPE.wp_test (wp_test tst (fun c free =>
            if c
            then wp_init ty addr th (fun frees => Q (frees >*> free))
            else wp_init ty addr el (fun frees => Q (frees >*> free))))
-        |-- wp_init ty addr (Eif tst th el Prvalue ty) Q.
+        |-- wp_init ty addr (Eif tst th el ty) Q.
 
     Axiom wp_operand_implicit : forall e Q,
         wp_operand e Q |-- wp_operand (Eimplicit e) Q.
@@ -1632,11 +1634,11 @@ Module Type Expr.
 
     Axiom wp_lval_opaque_ref : forall n ρ ty Q,
           wp_lval tu ρ (Evar (localname.opaque n) ty) Q
-      |-- wp_lval tu ρ (Eopaque_ref n Lvalue ty) Q.
+      |-- wp_lval tu ρ (Eopaque_ref n (Tref ty)) Q.
 
     Axiom wp_xval_opaque_ref : forall n ρ ty Q,
           wp_lval tu ρ (Evar (localname.opaque n) ty) Q
-      |-- wp_xval tu ρ (Eopaque_ref n Xvalue ty) Q.
+      |-- wp_xval tu ρ (Eopaque_ref n (Trv_ref ty)) Q.
 
     (* Maybe do something similar to what was suggested for `wp_lval_opaque_ref` above. *)
     Axiom wp_operand_arrayloop_index : forall ρ level ty Q,
@@ -1715,7 +1717,7 @@ Module Type Expr.
        terms of the opaque value, but, it does not seem possible for the opaque value to
        be used in this expression.
      *)
-    Definition wp_cond2 {T} (vc : ValCat) (wp : translation_unit -> region -> Expr -> (T -> FreeTemps.t -> epred) -> mpred) : Prop :=
+    Definition wp_cond2 {T} (wp : translation_unit -> region -> Expr -> (T -> FreeTemps.t -> epred) -> mpred) : Prop :=
       forall tu ρ n ty common tst th el (Q : T -> FreeTemps -> mpred),
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
@@ -1725,11 +1727,11 @@ Module Type Expr.
              if c
              then wp tu ρ' th (fun v free' => Q v (free' >*> free))
              else wp tu ρ' el (fun v free' => Q v (free' >*> free))))
-        |-- wp tu ρ (Eif2 n common tst th el vc ty) Q.
+        |-- wp tu ρ (Eif2 n common tst th el ty) Q.
 
-    Axiom wp_lval_condition2 : Reduce (wp_cond2 Lvalue wp_lval).
-    Axiom wp_xval_condition2 : Reduce (wp_cond2 Xvalue wp_xval).
-    Axiom wp_operand_condition2 : Reduce (wp_cond2 Prvalue wp_operand).
+    Axiom wp_lval_condition2 : Reduce (wp_cond2 wp_lval).
+    Axiom wp_xval_condition2 : Reduce (wp_cond2 wp_xval).
+    Axiom wp_operand_condition2 : Reduce (wp_cond2 wp_operand).
 
     (* Note: This one is more subtle because the [free] from the [wp_initialize]
        could (in theory) be the [free] for the then branch. This happens if the
@@ -1746,7 +1748,7 @@ Module Type Expr.
        end of the full expression because (in this trace), `C(1)` would be
        constructing a temporary.
      *)
-    Axiom wp_init_condition2 : forall tu ρ n ty common tst th el vc p Q,
+    Axiom wp_init_condition2 : forall tu ρ n ty common tst th el p Q,
         Forall p,
            wp_initialize tu ρ (type_of common) p common (fun free =>
            let ρ' := Rbind (localname.opaque n) p ρ in
@@ -1755,7 +1757,7 @@ Module Type Expr.
              if c
              then wp_init tu ρ' ty p th (fun free' => Q (free' >*> free))
              else wp_init tu ρ' ty p el (fun free' => Q (free' >*> free))))
-        |-- wp_init tu ρ ty p (Eif2 n common tst th el vc ty) Q.
+        |-- wp_init tu ρ ty p (Eif2 n common tst th el ty) Q.
 
   End with_resolve__arrayloop.
 End Expr.

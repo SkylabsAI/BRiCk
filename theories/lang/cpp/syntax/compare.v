@@ -1615,15 +1615,13 @@ Module Expr.
       box_Eif_0 : Expr;
       box_Eif_1 : Expr;
       box_Eif_2 : Expr;
-      box_Eif_3 : ValCat;
-      box_Eif_4 : type;
+      box_Eif_3 : type;
     }.
     Definition box_Eif_compare (b1 b2 : box_Eif) : comparison :=
       compare_lex (compareE b1.(box_Eif_0) b2.(box_Eif_0)) $ fun _ =>
       compare_lex (compareE b1.(box_Eif_1) b2.(box_Eif_1)) $ fun _ =>
       compare_lex (compareE b1.(box_Eif_2) b2.(box_Eif_2)) $ fun _ =>
-      compare_lex (ValCat.compare b1.(box_Eif_3) b2.(box_Eif_3)) $ fun _ =>
-      compareT b1.(box_Eif_4) b2.(box_Eif_4).
+      compareT b1.(box_Eif_3) b2.(box_Eif_3).
 
     Record box_Eif2 : Set := Box_Eif2 {
       box_Eif2_0 : N;
@@ -1631,8 +1629,7 @@ Module Expr.
       box_Eif2_2 : Expr;
       box_Eif2_3 : Expr;
       box_Eif2_4 : Expr;
-      box_Eif2_5 : ValCat;
-      box_Eif2_6 : type;
+      box_Eif2_5 : type;
     }.
     Definition box_Eif2_compare (b1 b2 : box_Eif2) : comparison :=
       compare_lex (N.compare b1.(box_Eif2_0) b2.(box_Eif2_0)) $ fun _ =>
@@ -1640,8 +1637,7 @@ Module Expr.
       compare_lex (compareE b1.(box_Eif2_2) b2.(box_Eif2_2)) $ fun _ =>
       compare_lex (compareE b1.(box_Eif2_3) b2.(box_Eif2_3)) $ fun _ =>
       compare_lex (compareE b1.(box_Eif2_4) b2.(box_Eif2_4)) $ fun _ =>
-      compare_lex (ValCat.compare b1.(box_Eif2_5) b2.(box_Eif2_5)) $ fun _ =>
-      compareT b1.(box_Eif2_6) b2.(box_Eif2_6).
+      compareT b1.(box_Eif2_5) b2.(box_Eif2_5).
 
     Record box_Einitlist : Set := Box_Einitlist {
       box_Einitlist_0 : list Expr;
@@ -1727,23 +1723,19 @@ Module Expr.
 
     Record box_Eopaque_ref : Set := Box_Eopaque_ref {
       box_Eopaque_ref_0 : N;
-      box_Eopaque_ref_1 : ValCat;
-      box_Eopaque_ref_2 : type;
+      box_Eopaque_ref_1 : type;
     }.
     Definition box_Eopaque_ref_compare (b1 b2 : box_Eopaque_ref) : comparison :=
       compare_lex (N.compare b1.(box_Eopaque_ref_0) b2.(box_Eopaque_ref_0)) $ fun _ =>
-      compare_lex (ValCat.compare b1.(box_Eopaque_ref_1) b2.(box_Eopaque_ref_1)) $ fun _ =>
-      compareT b1.(box_Eopaque_ref_2) b2.(box_Eopaque_ref_2).
+      compareT b1.(box_Eopaque_ref_1) b2.(box_Eopaque_ref_1).
 
     Record box_Eunsupported : Set := Box_Eunsupported {
       box_Eunsupported_0 : bs;
-      box_Eunsupported_1 : ValCat;
-      box_Eunsupported_2 : type;
+      box_Eunsupported_1 : type;
     }.
     Definition box_Eunsupported_compare (b1 b2 : box_Eunsupported) : comparison :=
       compare_lex (bs_cmp b1.(box_Eunsupported_0) b2.(box_Eunsupported_0)) $ fun _ =>
-      compare_lex (ValCat.compare b1.(box_Eunsupported_1) b2.(box_Eunsupported_1)) $ fun _ =>
-      compareT b1.(box_Eunsupported_2) b2.(box_Eunsupported_2).
+      compareT b1.(box_Eunsupported_1) b2.(box_Eunsupported_1).
 
     Record box_Estmt : Set := Box_Estmt {
       box_Estmt_0 : Stmt;
@@ -1796,8 +1788,8 @@ Module Expr.
       | Econstructor _ _ _ => 38
       | Eimplicit _ => 39
       | Eimplicit_init _ => 40
-      | Eif _ _ _ _ _ => 41
-      | Eif2 _ _ _ _ _ _ _ => 42
+      | Eif _ _ _ _ => 41
+      | Eif2 _ _ _ _ _ _ => 42
       | Ethis _ => 43
       | Enull => 44
       | Einitlist _ _ _ => 45
@@ -1810,9 +1802,9 @@ Module Expr.
       | Epseudo_destructor _ _ _ => 52
       | Earrayloop_init _ _ _ _ _ _ => 53
       | Earrayloop_index _ _ => 54
-      | Eopaque_ref _ _ _ => 55
+      | Eopaque_ref _ _ => 55
       | Eglobal_member _ _ => 56
-      | Eunsupported _ _ _ => 57
+      | Eunsupported _ _ => 57
       | Estmt _ _ => 58
       end.
     Definition car (t : positive) : Set :=
@@ -1915,8 +1907,8 @@ Module Expr.
       | Econstructor cls es t => Box_Econstructor cls es t
       | Eimplicit e => e
       | Eimplicit_init t => t
-      | Eif c l r vc t => Box_Eif c l r vc t
-      | Eif2 n s c l r vc t => Box_Eif2 n s c l r vc t
+      | Eif c l r t => Box_Eif c l r t
+      | Eif2 n s c l r t => Box_Eif2 n s c l r t
       | Ethis t => t
       | Enull => ()
       | Einitlist es i t => Box_Einitlist es i t
@@ -1930,8 +1922,8 @@ Module Expr.
       | Epseudo_destructor a t e => Box_Epseudo_destructor a t e
       | Earrayloop_init on s lev len i t => Box_Earrayloop_init on s lev len i t
       | Earrayloop_index c t => Box_Echar c t
-      | Eopaque_ref n vc t => Box_Eopaque_ref n vc t
-      | Eunsupported msg vc t => Box_Eunsupported msg vc t
+      | Eopaque_ref n t => Box_Eopaque_ref n t
+      | Eunsupported msg t => Box_Eunsupported msg t
       end.
     Definition compare_data (t : positive) : car t -> car t -> comparison :=
       match t with
@@ -2049,8 +2041,8 @@ Module Expr.
       | Eimplicit e => compare_ctor (Reduce (tag (Eimplicit e))) (fun _ => Reduce (data (Eimplicit e)))
 
       | Eimplicit_init t => compare_ctor (Reduce (tag (Eimplicit_init t))) (fun _ => Reduce (data (Eimplicit_init t)))
-      | Eif c l r vc t => compare_ctor (Reduce (tag (Eif c l r vc t))) (fun _ => Reduce (data (Eif c l r vc t)))
-      | Eif2 n s c l r vc t => compare_ctor (Reduce (tag (Eif2 n s c l r vc t))) (fun _ => Reduce (data (Eif2 n s c l r vc t)))
+      | Eif c l r t => compare_ctor (Reduce (tag (Eif c l r t))) (fun _ => Reduce (data (Eif c l r t)))
+      | Eif2 n s c l r t => compare_ctor (Reduce (tag (Eif2 n s c l r t))) (fun _ => Reduce (data (Eif2 n s c l r t)))
       | Ethis t => compare_ctor (Reduce (tag (Ethis t))) (fun _ => Reduce (data (Ethis t)))
       | Enull => compare_tag (Reduce (tag Enull))
 
@@ -2066,8 +2058,8 @@ Module Expr.
       | Earrayloop_init on s lev len i t => compare_ctor (Reduce (tag (Earrayloop_init on s lev len i t))) (fun _ => Reduce (data (Earrayloop_init on s lev len i t)))
       | Earrayloop_index c t => compare_ctor (Reduce (tag (Earrayloop_index c t))) (fun _ => Reduce (data (Earrayloop_index c t)))
 
-      | Eopaque_ref n vc t => compare_ctor (Reduce (tag (Eopaque_ref n vc t))) (fun _ => Reduce (data (Eopaque_ref n vc t)))
-      | Eunsupported msg vc t => compare_ctor (Reduce (tag (Eunsupported msg vc t))) (fun _ => Reduce (data (Eunsupported msg vc t)))
+      | Eopaque_ref n t => compare_ctor (Reduce (tag (Eopaque_ref n t))) (fun _ => Reduce (data (Eopaque_ref n t)))
+      | Eunsupported msg t => compare_ctor (Reduce (tag (Eunsupported msg t))) (fun _ => Reduce (data (Eunsupported msg t)))
       | Estmt s t => compare_ctor (Reduce (tag $ Estmt s t)) (fun _ => Reduce (data $ Estmt s t))
       end.
   End compare_body.

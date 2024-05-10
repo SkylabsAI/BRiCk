@@ -537,20 +537,19 @@ Module decltype.
 
             let* _ := requirePR t in
             mret t
-        | Eif tst thn els vc t =>
-            let rt := of_exprtype vc t in
+        | Eif tst thn els t =>
             let* _ := of_expr tst >>= require_testable in
-            let* tthn := of_expr thn >>= require_eq rt in
-            let* tels := of_expr els >>= require_eq rt in
-            mret rt
-        | Eif2 x lete tst thn els vc t =>
+            let* tthn := of_expr thn >>= require_eq t in
+            let* tels := of_expr els >>= require_eq t in
+            mret t
+        | Eif2 x lete tst thn els t =>
             let* lt := of_expr lete in
             with_var (localname.anon x) lt $
               let* _ := of_expr tst >>= require_testable in
               let* tthn := of_expr thn in
               let* _ := of_expr els >>= require_eq tthn in
-              let* _ := guard (of_exprtype vc t = tthn) in
-              mret $ of_exprtype vc t
+              let* _ := guard (t = tthn) in
+              mret t
         | Ethis t =>
             let* pt := require_ptr t in
             let* _ := ask_this >>= require_eq pt in
@@ -634,13 +633,13 @@ Module decltype.
         | Earrayloop_index n t =>
             let* _ := var_type (localname.arrayloop_index n) >>= require_eq t in
             mret t (* always pr-values? *)
-        | Eopaque_ref n vc t =>
+        | Eopaque_ref n t =>
             let* vt := var_type (localname.opaque n) in
-            let* _ := can_initialize vt t in
+            let* _ := requireGL t >>= can_initialize vt in
             (* ^^ in practice, the type and the recorded variable type
                differ by <<const>> qualifiers in instance-specific ways *)
-            mret $ of_exprtype vc t
-        | Eunsupported _ vc t => mret $ of_exprtype vc t
+            mret t
+        | Eunsupported _ t => mret t
         end
         in
         let* _ :=

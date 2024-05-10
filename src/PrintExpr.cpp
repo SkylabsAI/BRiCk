@@ -328,7 +328,7 @@ public:
 		llvm::raw_string_ostream os{coqmsg};
 		os << loc::describe(loc, cprint.getContext());
 		print.str(coqmsg);
-		done(expr, Done::VT);
+		done(expr, Done::DT);
 	}
 
 	void VisitExpr(const Expr* expr) {
@@ -1077,7 +1077,7 @@ public:
 		cprint.printExpr(expr->getTrueExpr(), print, names);
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getFalseExpr(), print, names);
-		done(expr, Done::VT);
+		done(expr, Done::DT);
 	}
 
 	void VisitBinaryConditionalOperator(const BinaryConditionalOperator* expr) {
@@ -1093,7 +1093,7 @@ public:
 		print.output() << fmt::nbsp;
 		cprint.printExpr(expr->getFalseExpr(), print, names);
 		names.dec_index_count();
-		done(expr, Done::VT);
+		done(expr, Done::DT);
 	}
 
 	void VisitConstantExpr(const ConstantExpr* expr) {
@@ -1362,7 +1362,7 @@ public:
 
 	void VisitOpaqueValueExpr(const OpaqueValueExpr* expr) {
 		print.ctor("Eopaque_ref") << names.find(expr);
-		done(expr, Done::VT);
+		done(expr, Done::DT);
 	}
 
 	void VisitAtomicExpr(const clang::AtomicExpr* expr) {

@@ -320,8 +320,8 @@ Module decltype.
           https://en.cppreference.com/w/cpp/language/value_initialization
           *)
           mret t
-        | Eif _ _ _ vc t
-        | Eif2 _ _ _ _ _ vc t => mret $ of_exprtype vc t
+        | Eif _ _ _ t
+        | Eif2 _ _ _ _ _ t => mret t
         | Ethis t => mret t
         | Enull => mret Tnullptr
         | Einitlist _ _ t => mret t
@@ -335,8 +335,8 @@ Module decltype.
         | Epseudo_destructor _ _ _ => mret Tvoid
         | Earrayloop_init _ _ _ _ _ t
         | Earrayloop_index _ t => mret t
-        | Eopaque_ref _ vc t
-        | Eunsupported _ vc t => mret $ of_exprtype vc t
+        | Eopaque_ref _ t
+        | Eunsupported _ t => mret t
         end.
     End fixpoint.
   End with_lang.
