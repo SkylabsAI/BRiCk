@@ -538,13 +538,7 @@ Module decltype.
             let* _ := requirePR t in
             mret t
         | Eif tst thn els vc t =>
-            let rt :=
-              match vc with
-              | Prvalue => t
-              | Lvalue => Tref t
-              | Xvalue => Trv_ref t
-              end
-            in
+            let rt := of_exprtype vc t in
             let* _ := of_expr tst >>= require_testable in
             let* tthn := of_expr thn >>= require_eq rt in
             let* tels := of_expr els >>= require_eq rt in
