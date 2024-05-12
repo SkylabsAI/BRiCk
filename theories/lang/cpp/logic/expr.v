@@ -235,34 +235,70 @@ Module Type Expr.
       |-- wp_xval (Emember false a m mut ty) Q.
     (* <<e->f>> is never an xvalue because <<e>> must be a pointer *)
 
-    (* [Esubscript e i _ _] when one operand is an array lvalue
-     *   (in clang's syntax tree, this value is converted to an rvalue via
-     *    an array2pointer cast)
+    (** *** Subscripting
+        The BRiCk semantics *directly* supports subscripting on array types in
+        order to make value category computation composable. Because of this,
+        the "pointer" arguments to [Esubscript] can be any of:
+        - a pointer (of value category Prvalue)
+        - any array type (of value category GLvalue)
      *)
-    Axiom wp_lval_subscript : forall e i t Q,
-      nd_seq (wp_operand e) (wp_operand i) (fun '(ev, iv) free =>
-         let '(base, idx) :=
-           if is_pointer (type_of e) then (ev,iv) else (iv,ev)
-         in
-         Exists i, [| idx = Vint i |] **
-         let addr := _eqv base .[ erase_qualifiers t ! i ] in
-         valid_ptr addr ** Q addr free)
+
+    Definition subscript_scheme (e1 e2 : Expr) : option (bool * ValCat * type) :=
+      let array_type :=
+        qual_norm (fun cv ty =>
+            match ty with
+            | Tarray ety _
+            | Tincomplete_array ety
+            | Tvariable_array ety _ => Some $ tqualified cv ety
+            | _ => mfail
+            end)
+      in
+      match drop_qualifiers $ decltype_of_expr e1 , drop_qualifiers $ decltype_of_expr e2 with
+      | Tref aty , Tnum _ _ => (fun t => (true, Lvalue, t)) <$> array_type aty
+      | Trv_ref aty , Tnum _ _ => (fun t => (true, Xvalue, t)) <$> array_type aty
+      | Tptr ety , Tnum _ _ => Some (true, Prvalue, ety)
+      | Tnum _ _ , Tref aty => (fun t => (false, Lvalue, t)) <$> array_type aty
+      | Tnum _ _ , Trv_ref aty => (fun t => (false, Xvalue, t)) <$> array_type aty
+      | Tnum _ _ , Tptr ety => Some (false, Prvalue, ety)
+      | _ , _ => None
+      end.
+
+    Definition wp_ptr (vc : ValCat) (e : Expr) (Q : ptr -> FreeTemps.t -> epred) : mpred :=
+      match vc with
+      | Prvalue => wp_operand e $ fun v free => Exists p, [| v = Vptr p |] ** Q p free
+      | Lvalue => wp_lval e Q
+      | Xvalue => wp_xval e Q
+      end.
+    Definition wp_int (e : Expr) (Q : Z -> FreeTemps.t -> epred) : mpred :=
+      wp_operand e $ fun v free => Exists z, [| v = Vint z |] ** Q z free.
+
+    (* [Esubscript e i _] when one operand is an array lvalue or pointer.
+     * Technically, [vc] is not permitted to be [Xvalue] in this rule.
+     *)
+    Axiom wp_lval_subscript : forall e side vc i t Q,
+      subscript_scheme e i = Some (side, vc, t) ->
+      (if side then
+         let* '(base, idx), free := nd_seq (wp_ptr vc e) (wp_int i) in
+         let addr := base .[ erase_qualifiers t ! idx ] in
+         reference_to t addr ** Q addr free
+       else
+         let* '(idx, base), free := nd_seq (wp_int e) (wp_ptr vc i) in
+         let addr := base .[ erase_qualifiers t ! idx ] in
+         reference_to t addr ** Q addr free)
       |-- wp_lval (Esubscript e i t) Q.
 
-    (* [Esubscript e i _ _] when one operand is an array xvalue
+    (* [Esubscript e i _] when one operand is an array xvalue
      *)
-    Axiom wp_xval_subscript : forall e i t Q,
-      nd_seq (wp_operand e) (wp_operand i) (fun '(ev, iv) free =>
-         let '(base, idx) :=
-           if is_pointer (type_of e) then (ev,iv) else (iv,ev)
-         in
-          (* TODO: here and elsewhere, consider avoiding locations and switching to *)
-          (* (Exists i basep, [| idx = Vint i /\ base = Vptr basep |] **
-            ((valid_ptr (basep .,, o_sub resolve (erase_qualifiers t) i) ** True) //\\
-            Q (Vptr (basep .,, o_sub resolve (erase_qualifiers t) i)) (free' ** free)))) *)
-          (Exists i, [| idx = Vint i |] **
-           let addr := _eqv base .[ erase_qualifiers t ! i ] in
-           valid_ptr addr ** Q addr free))
+    Axiom wp_xval_subscript : forall e side i t Q,
+        subscript_scheme e i = Some (side, Xvalue, t) ->
+        (if side then
+           let* '(base, idx), free := nd_seq (wp_xval e) (wp_int i) in
+           let addr := base .[ erase_qualifiers t ! idx ] in
+           reference_to t addr ** Q addr free
+         else
+           let* '(idx, base), free := nd_seq (wp_int e) (wp_xval i) in
+           let addr := base .[ erase_qualifiers t ! idx ] in
+           reference_to t addr ** Q addr free)
       |-- wp_xval (Esubscript e i t) Q.
 
     (** * Unary Operators

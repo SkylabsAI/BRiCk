@@ -110,6 +110,11 @@ Module decltype.
       | None => mfail
       | Some ty => mret ty
       end.
+    Definition of_option {T : Set} (o : option T) : M T :=
+      match o with
+      | None => mfail
+      | Some v => mret v
+      end.
 
     (* Bindings *)
     Record bindings : Set := { _bindings : list (localname * decltype) }.
@@ -208,29 +213,18 @@ Module decltype.
           if Et.1 then mret $ Trv_ref ty else mret $ Tref ty
         end.
 
-      Definition of_subscript (e1 e2 : Expr) (t : exprtype) : M decltype :=
-        (**
-        Neither operand ever has type [Tarray _ _] due to implicitly
-        inserted array-to-pointer conversions. To compute the right
-        value category, we skip over such conversions.
-        *)
-        let of_array (ar : Expr) : M decltype :=
-          let* array_type := of_expr ar in
-          match to_valcat array_type with
-          | Lvalue => mret $ Tref t
-          | Prvalue | Xvalue => mret $ Trv_ref t
-          end
-        in
-        let of_base (ei : Expr) : M decltype :=
-          match ei with
-          | Ecast (Carray2ptr _) ar => of_array ar
-          | _ => mret $ Tref t
-          end
-        in
-        let* t1 := of_expr e1 in
-        match drop_qualifiers t1 with
-        | Tptr _ => of_base e1
-        | _ => of_base e2
+      Definition of_subscript (t1 t2 : decltype) (t : exprtype) : M decltype :=
+        (* we need to handle arrays and pointers.
+           Arrays can be lvalues or xvalues.
+         *)
+        match drop_qualifiers t1 , drop_qualifiers t2 with
+        | Tref aty , Tnum _ _ => tref QM <$> of_option (array_type aty)
+        | Trv_ref aty , Tnum _ _ => trv_ref QM <$> of_option (array_type aty)
+        | Tptr ety , Tnum _ _ => mret $ Tref ety
+        | Tnum _ _ , Tref aty => tref QM <$> of_option (array_type aty)
+        | Tnum _ _ , Trv_ref aty => trv_ref QM <$> of_option (array_type aty)
+        | Tnum _ _ , Tptr ety => mret $ Tref ety
+        | _ , _ => mfail
         end.
 
       Definition requireL (t : decltype) : M exprtype :=
@@ -512,7 +506,10 @@ Module decltype.
             in
             let* _ := check_args Ar_Definite fargs tes in
             mret result
-        | Esubscript e1 e2 t => of_subscript e1 e2 t
+        | Esubscript e1 e2 t =>
+            let* t1 := of_expr e1 in
+            let* t2 := of_expr e2 in
+            of_subscript t1 t2 t
         | Esizeof te t
         | Ealignof te t =>
             let* _ :=

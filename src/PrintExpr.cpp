@@ -962,10 +962,23 @@ public:
 	}
 
 	void VisitArraySubscriptExpr(const ArraySubscriptExpr* expr) {
+		// Array-to-pointer casts obscure value category inference because
+		// the resulting pointer is a prvalue regardless of the value category
+		// of the array. To make the typing rules composable, we drop this
+		// cast and generalize the semantics of subscript to directly support
+		// array types.
+		auto under_cast = [](const Expr* expr) {
+			if (auto ce = dyn_cast<ImplicitCastExpr>(expr)) {
+				if (ce->getCastKind() == CastKind::CK_ArrayToPointerDecay)
+					return ce->getSubExpr();
+			}
+			return expr;
+		};
+
 		print.ctor("Esubscript");
-		cprint.printExpr(expr->getLHS(), print, names);
+		cprint.printExpr(under_cast(expr->getLHS()), print, names);
 		print.output() << fmt::nbsp;
-		cprint.printExpr(expr->getRHS(), print, names);
+		cprint.printExpr(under_cast(expr->getRHS()), print, names);
 		done(expr, print.templates() ? Done::O : Done::T);
 	}
 

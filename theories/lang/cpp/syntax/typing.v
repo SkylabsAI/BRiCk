@@ -212,28 +212,19 @@ Module decltype.
         from_functype $ operator_impl.functype f.
 
       Definition of_subscript (e1 e2 : Expr) (t : exprtype) : M decltype :=
-        (**
-        Neither operand ever has type [Tarray _ _] due to implicitly
-        inserted array-to-pointer conversions. To compute the right
-        value category, we skip over such conversions.
-        *)
-        let of_array (ar : Expr) : M decltype :=
-          let* array_type := of_expr ar in
-          match to_valcat array_type with
-          | Lvalue => mret $ Tref t
-          | Prvalue | Xvalue => mret $ Trv_ref t
-          end
-        in
-        let of_base (ei : Expr) : M decltype :=
-          match ei with
-          | Ecast (Carray2ptr _) ar => of_array ar
-          | _ => mret $ Tref t
-          end
-        in
         let* t1 := of_expr e1 in
-        match drop_qualifiers t1 with
-        | Tptr _ => of_base e1
-        | _ => of_base e2
+        let* t2 := of_expr e2 in
+        (* we need to handle arrays and pointers.
+           Arrays can be lvalues or xvalues.
+         *)
+        match t1 , t2 with
+        | Tref aty , Tnum _ _ => Tref <$> array_type aty
+        | Trv_ref aty , Tnum _ _ => Trv_ref <$> array_type aty
+        | Tptr ety , Tnum _ _ => mret $ Tref ety
+        | Tnum _ _ , Tref aty => Tref <$> array_type aty
+        | Tnum _ _ , Trv_ref aty => Trv_ref <$> array_type aty
+        | Tnum _ _ , Tptr ety => mret $ Tref ety
+        | _ , _ => mfail
         end.
 
       (**

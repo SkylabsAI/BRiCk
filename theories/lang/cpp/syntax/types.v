@@ -14,6 +14,8 @@ Set Primitive Projections.
 Section with_lang.
   Context {lang : lang.t}.
   #[local] Notation type := (type' lang).
+  #[local] Notation exprtype := (exprtype' lang).
+  #[local] Notation decltype := (decltype' lang).
 
 (** ** Qualifier normalization *)
 (**
@@ -858,11 +860,21 @@ Proof. rewrite qual_norm_unfold. by destruct t. Qed.
 [unptr t] returns the type of the object that a value of type [t]
 points to or [None] if [t] is not a pointer type.
 *)
-Definition unptr (t : type) : option type :=
+Definition unptr (t : exprtype) : option exprtype :=
   match drop_qualifiers t with
   | Tptr p => Some p
   | _ => None
   end.
+
+(* [array_type t] extracts element type of the array or fails. *)
+Definition array_type : exprtype -> option exprtype :=
+  qual_norm (fun cv ty =>
+               match ty with
+               | Tarray ety _
+               | Tincomplete_array ety
+               | Tvariable_array ety _ => Some $ tqualified cv ety
+               | _ => None
+               end).
 
 (**
 [class_name t] returns the name of the class that this type refers to
