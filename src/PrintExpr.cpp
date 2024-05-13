@@ -1118,10 +1118,13 @@ public:
 	}
 
 	void VisitParenListExpr(const ParenListExpr* expr) {
-		if (!print.templates())
+		if (!print.templates()) {
+			// This node type is purely syntactic.
+			// When the type is known, the expression is represented
+			// as [CXXConstructorExpr] or not represented at all, e.g.
+			// in <<T x(1);>>.
 			return unsupported_expr(expr);
-		always_assert(is_dependent(expr));
-
+		}
 		print.ctor("Eunresolved_parenlist");
 
 		cprint.printQualTypeOption(expr->getType(), print, loc::of(expr));
