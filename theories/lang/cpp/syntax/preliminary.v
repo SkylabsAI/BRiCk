@@ -647,6 +647,34 @@ Module MethodRef.
     | inl p => f p.1.1 || g p.2
     | inr e => h e
     end.
+
+  Import UPoly.
+
+  Definition fmap {name name' functype functype' Expr Expr' : Set}
+    (f : name -> name') (g : functype -> functype')
+    (h : Expr -> Expr')
+    (m : MethodRef_ name functype Expr) : MethodRef_ name' functype' Expr' :=
+    match m with
+    | inl p => inl (f p.1.1, p.1.2, g p.2)
+    | inr e => inr (h e)
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ _ _ _ & _ : assert.
+
+  (* don't use the notation? *)
+  #[universes(polymorphic)]
+  Definition traverse@{u | } {F : Set -> Type@{u}} `{FM: FMap F, AP : !Ap@{Set u Set Set} F}
+  {name name' functype functype' Expr Expr' : Set}
+  (f : name -> F name') (g : functype -> F functype')
+  (h : Expr -> F Expr')
+  (m : MethodRef_ name functype Expr) : F (MethodRef_ name' functype' Expr') :=
+    let _ : Ap F := AP in
+    match m return F (MethodRef_ name' functype' Expr') with
+    | inl p => ap (Ap:=AP) (UPoly.fmap (FMap:=FM) (fun on t => inl (on, p.1.2, t)) $ f p.1.1) $ g p.2
+    | inr e => UPoly.fmap (FMap:=FM) inr $ h e
+    end.
+  #[global] Arguments traverse _ _ _ _ _ _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
+
 End MethodRef.
 
 Variant SwitchBranch : Set :=

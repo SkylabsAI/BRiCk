@@ -46,9 +46,25 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module function_type.
+  Import UPoly.
   Definition existsb {decltype : Set} (f : decltype -> bool)
       (ft : function_type_ decltype) : bool :=
     f ft.(ft_return) || existsb f ft.(ft_params).
+
+  Definition fmap {decltype decltype' : Set} (f : decltype -> decltype')
+    (ft : function_type_ decltype) : function_type_ decltype' :=
+    @FunctionType _ ft.(ft_cc) ft.(ft_arity) (f ft.(ft_return)) (f <$> ft.(ft_params)).
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  #[universes(polymorphic)]
+  Definition traverse@{u | } {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}
+  {decltype decltype' : Set} (f : decltype -> F decltype')
+  (ft : function_type_ decltype) : F (function_type_ decltype') :=
+    @FunctionType _ ft.(ft_cc) ft.(ft_arity)
+                                    <$> f ft.(ft_return) <*> traverse (T:=eta list) f ft.(ft_params).
+  #[global] Arguments traverse _ _ _ _ _ _ & _ _ : assert.
+  #[global] Hint Opaque traverse : typeclass_instances.
 End function_type.
 
 (** ** Templates *)
@@ -64,8 +80,39 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module temp_param.
+  Import UPoly.
   Definition existsb {type : Set} (f : type -> bool) (p : temp_param_ type) : bool :=
     if p is Pvalue _ t then f t else false.
+
+  Definition fmap {type type' : Set} (f : type -> type')
+    (p : temp_param_ type) : temp_param_ type' :=
+    match p with
+    | Ptype id => Ptype id
+    | Pvalue id t => Pvalue id (f t)
+    | Punsupported msg => Punsupported msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+
+    Definition traverse (f : type -> F type') (p : temp_param_ type)
+      : F (temp_param_ type') :=
+      match p with
+      | Ptype id => mret $ Ptype id
+      | Pvalue id t => Pvalue id <$> f t
+      | Punsupported msg => mret $ Punsupported msg
+      end.
+    #[global] Arguments traverse _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End temp_param.
 
 Variant temp_arg_ {decltype Expr : Set} : Set :=
@@ -79,6 +126,7 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module temp_arg.
+  Import UPoly.
   Definition existsb {type Expr : Set} (f : type -> bool) (g : Expr -> bool)
       (a : temp_arg_ type Expr) : bool :=
     match a with
@@ -86,6 +134,37 @@ Module temp_arg.
     | Avalue e => g e
     | Aunsupported _ => false
     end.
+
+  Definition fmap {type type' Expr Expr' : Set}
+    (f : type -> type') (g : Expr -> Expr')
+    (a : temp_arg_ type Expr) : temp_arg_ type' Expr' :=
+    match a with
+    | Atype t => Atype (f t)
+    | Avalue e => Avalue (g e)
+    | Aunsupported msg => Aunsupported msg
+    end.
+  #[global] Arguments fmap _ _ _ _ _ _ & _ : assert.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' Expr Expr' : Set}.
+
+    Definition traverse (f : type -> F type')
+      (g : Expr -> F Expr')
+      (a : temp_arg_ type Expr) : F (temp_arg_ type' Expr') :=
+      match a with
+      | Atype t => Atype <$> f t
+      | Avalue e => Avalue <$> g e
+      | Aunsupported msg => mret $ Aunsupported msg
+      end.
+    #[global] Arguments traverse _ _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End temp_arg.
 
 (** ** Function names and qualifiers *)
@@ -104,8 +183,47 @@ Proof. solve_inhabited. Qed.
 Proof. solve_decision. Defined.
 
 Module function_name.
+  Import UPoly.
+
   Definition existsb {type : Set} (f : type -> bool) (n : function_name_ type) : bool :=
     if n is Nop_conv t then f t else false.
+
+  Definition fmap {type type' : Set} (f : type -> type') (n : function_name_ type) : function_name_ type' :=
+    match n in function_name_ _ with
+    | Nf id => Nf id
+    | Nctor => Nctor
+    | Ndtor => Ndtor
+    | Nop oo => Nop oo
+    | Nop_conv t => Nop_conv (f t)
+    | Nop_lit s => Nop_lit s
+    | Nunsupported_function msg => Nunsupported_function msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+  #[global] Hint Opaque fmap : typeclass_instances.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+
+    Definition traverse (f : type -> F type')
+        (n : function_name_ type) : F (function_name_ type') :=
+      match n with
+      | Nf id => mret $ Nf id
+      | Nctor => mret Nctor
+      | Ndtor => mret Ndtor
+      | Nop oo => mret $ Nop oo
+      | Nop_conv t => Nop_conv <$> f t
+      | Nop_lit s => mret $ Nop_lit s
+      | Nunsupported_function msg => mret $ Nunsupported_function msg
+      end.
+    #[global] Arguments traverse _ & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End function_name.
 
 Variant function_qualifier : Set :=
@@ -167,6 +285,42 @@ Module atomic_name.
     | Nanon _
     | Nunsupported_atomic _ => false
     end.
+
+  Import UPoly.
+
+  Definition fmap {type type' : Set} (f : type -> type')
+      (c : atomic_name_ type) : atomic_name_ type' :=
+    match c with
+    | Nid id => Nid id
+    | Nfunction qs n ts => Nfunction qs (function_name.fmap f n) (f <$> ts)
+    | Nclosure ts => Nclosure (f <$> ts)
+    | Nanon n => Nanon n
+    | Nunsupported_atomic msg => Nunsupported_atomic msg
+    end.
+  #[global] Arguments fmap _ _ _ & _ : assert.
+
+  Section traverse.
+    #[local] Set Universe Polymorphism.
+    #[local] Unset Auto Template Polymorphism.
+    #[local] Unset Universe Minimization ToSet.
+    Universe u.
+    Context {F : Set -> Type@{u}} `{!FMap F, !MRet F, AP : !Ap F}.
+    Context {type type' : Set}.
+    Context (f : type -> F type').
+
+    #[local] Notation list_traverse := (UPoly.traverse (T:=eta list)).
+    Definition traverse (c : atomic_name_ type) : F (atomic_name_ type') :=
+      match c with
+      | Nid id => mret $ Nid id
+      | Nfunction qs n ts => Nfunction qs <$> function_name.traverse f n <*> list_traverse f ts
+      | Nclosure ts => Nclosure <$> list_traverse f ts
+      | Nanon n => mret $ Nanon n
+      | Nunsupported_atomic msg => mret $ Nunsupported_atomic msg
+      end.
+    #[global] Arguments traverse & _ : assert.
+    #[global] Hint Opaque traverse : typeclass_instances.
+  End traverse.
+
 End atomic_name.
 
 (** ** Casts
