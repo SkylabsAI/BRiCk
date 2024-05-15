@@ -114,11 +114,6 @@ Module decltype.
         | Cptr2bool => mret Tbool
         | Cderived2base _ ty
         | Cbase2derived _ ty => mret ty
-(*
-        | Cderived2base (l :: ls) => mret base (* TODO *)
-        | Cbase2derived (l :: ls) => mret base (* TODO *)
-*)
-
         | Cintegral t => mret t
         | Cint2bool => mret Tbool
         | Cfloat2int t
@@ -127,7 +122,7 @@ Module decltype.
         | Cbuiltin2fun t
         | Cctor t => mret t
         | C2void => mret Tvoid
-        | Cuser => mret Tvoid (* TODO *)
+        | Cuser => mret base
         | Cdynamic to => mret to
         end.
 
