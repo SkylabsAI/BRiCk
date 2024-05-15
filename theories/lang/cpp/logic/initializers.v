@@ -126,11 +126,12 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
     else if q_const q then ERROR "default initialize const"
     else default_initialize ty p Q
   | Tunsupported msg => UNSUPPORTED msg
-  | Tdecltype _ => ERROR "default initialization requires a runtime type"
+  | Tdecltype _ => ERROR "default initialization requires a runtime type, got 'decltype(())'"
+  | Texprtype _ => ERROR "default initialization requires a runtime type, got 'decltype()'"
   | Tparam _ | Tresult_param _ | Tresult_global _
   | Tresult_unop _ _ | Tresult_binop _ _ _
   | Tresult_call _ _ | Tresult_member_call _ _ _
-  | Tresult_member _ _ | Tresult_parenlist _ _ => ERROR "default initialization requires a runtime type"
+  | Tresult_member _ _ | Tresult_parenlist _ _ => ERROR "default initialization requires a runtime type, got unresolved type"
   end%bs%I.
 
 mlock
@@ -430,6 +431,7 @@ magic wands.
     | Tarch _ _ => UNSUPPORTED (initializing_type ty init)
     | Tunsupported _ => UNSUPPORTED (initializing_type ty init)
     | Tdecltype _ =>  UNSUPPORTED (initializing_type ty init)
+    | Texprtype _ =>  UNSUPPORTED (initializing_type ty init)
     | Tparam _ | Tresult_param _ | Tresult_global _
     | Tresult_unop _ _ | Tresult_binop _ _ _
     | Tresult_call _ _ | Tresult_member_call _ _ _

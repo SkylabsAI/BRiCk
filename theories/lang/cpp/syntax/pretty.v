@@ -187,7 +187,8 @@ Section with_lang.
     | Tarray t n => printT t ++ "[" ++ showN n ++ "]"
     | Tincomplete_array t => printT t ++ "[]"
     | Tvariable_array t e => printT t ++ "[" ++ printE e ++ "]"
-    | Tdecltype e => "decltype(" ++ printE e ++ ")"
+    | Tdecltype e => "decltype((" ++ printE e ++ "))"
+    | Texprtype e => "decltype(" ++ printE e ++ ")"
     | Tnamed nm | Tenum nm => printN nm
     | Tfunction ft =>
         (parens $ printT ft.(ft_return) ++ "*") ++

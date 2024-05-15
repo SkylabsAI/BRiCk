@@ -1227,7 +1227,8 @@ Module type.
       | Tnullptr => 26
       | Tarch _ _ => 27
       | Tdecltype _ => 28
-      | Tunsupported _ => 29
+      | Texprtype _ => 29
+      | Tunsupported _ => 30
       end.
     Definition car (t : positive) : Set :=
       match t with
@@ -1254,7 +1255,7 @@ Module type.
       | 25 => box_Tqualified
       | 26 => unit
       | 27 => box_Tarch
-      | 28 => Expr
+      | 28 | 29 => Expr
       | _ => bs
       end.
     Definition data (t : type) : car (tag t) :=
@@ -1284,6 +1285,7 @@ Module type.
       | Tnullptr => ()
       | Tarch sz n => Box_Tarch sz n
       | Tdecltype e => e
+      | Texprtype e => e
       | Tunsupported msg => msg
       end.
     Definition compare_data (t : positive) : car t -> car t -> comparison :=
@@ -1311,7 +1313,7 @@ Module type.
       | 25 => box_Tqualified_compare
       | 26 => fun _ _ => Eq
       | 27 => box_Tarch_compare
-      | 28 => compareE
+      | 28 | 29 => compareE
       | _ => bs_cmp
       end.
 
@@ -1348,6 +1350,7 @@ Module type.
       | Tnullptr => compare_tag (Reduce (tag Tnullptr))
       | Tarch sz n => compare_ctor (Reduce (tag (Tarch sz n))) (fun _ => Reduce (data (Tarch sz n)))
       | Tdecltype e => compare_ctor (Reduce (tag (Tdecltype e))) (fun _ => Reduce (data (Tdecltype e)))
+      | Texprtype e => compare_ctor (Reduce (tag (Texprtype e))) (fun _ => Reduce (data (Texprtype e)))
       | Tunsupported msg => compare_ctor (Reduce (tag (Tunsupported msg))) (fun _ => Reduce (data (Tunsupported msg)))
       end.
   End compare_body.

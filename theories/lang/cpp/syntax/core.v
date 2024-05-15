@@ -468,6 +468,13 @@ TODO: this should be [gn : classname lang]
 | Tnullptr
 | Tarch (osz : option bitsize) (name : bs)
 | Tdecltype (_ : Expr')
+  (* ^^ this is <<decltype(e)>> when <<e>> is an expression, including a parenthesized expression.
+     (2) in <https://en.cppreference.com/w/cpp/language/decltype>
+   *)
+| Texprtype (_ : Expr')
+  (* ^^ this is <<decltype(e)>> when <<e>> is a variable reference
+     (1) in <https://en.cppreference.com/w/cpp/language/decltype>
+   *)
 | Tunsupported (_ : bs)
 
 (** ** Expressions *)
@@ -922,6 +929,7 @@ with is_dependentT {lang} (t : type' lang) : bool :=
   | Tnullptr
   | Tarch _ _ => false
   | Tdecltype e => is_dependentE e
+  | Texprtype e => is_dependentE e
   | Tunsupported _ => false
   end
 

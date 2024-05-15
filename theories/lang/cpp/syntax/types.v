@@ -448,6 +448,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tresult_parenlist _ _
   | Tresult_member _ _
   | Tdecltype _ => t (* TODO: it isn't clear what [erase_qualifiers] means on meta types *)
+  | Texprtype _ => t (* TODO: it isn't clear what [erase_qualifiers] means on meta types *)
   end.
 
 Lemma is_qualified_erase_qualifiers ty : ~~ is_qualified (erase_qualifiers ty).
@@ -802,6 +803,7 @@ Fixpoint normalize_type (t : type) : type :=
   | Tresult_parenlist _ _
   | Tresult_member _ _
   | Tdecltype _ => t (* TODO: it isn't clear what [normalize_type] means on meta types *)
+  | Texprtype _ => t (* TODO: it isn't clear what [normalize_type] means on meta types *)
   end.
 
 (*

@@ -419,8 +419,11 @@ public:
 			// The guard ensure the type visitor terminates.
 			cprint.printQualType(type->desugar(), print, loc::of(type));
 		} else if (print.templates()) {
-			cprint.printQualType(type->getUnderlyingType(), print,
-								 loc::of(type));
+			auto which = isa<DeclRefExpr>(type->getUnderlyingExpr()) ?
+							 "Texprtype" :
+							 "Tdecltype";
+			guard::ctor _(print, which);
+			cprint.printExpr(type->getUnderlyingExpr(), print);
 		} else
 			unsupported_type(print, cprint, type, /*well_known*/ true);
 	}
