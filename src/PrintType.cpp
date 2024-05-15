@@ -474,17 +474,7 @@ public:
 	void VisitMemberPointerType(const MemberPointerType* type,
 								CoqPrinter& print, ClangPrinter& cprint) {
 		print.ctor("Tmember_pointer");
-		auto class_type = type->getClass();
-		if (!print.templates()) {
-			cprint.printName(class_type->getAsCXXRecordDecl(), print,
-							 loc::of(type));
-		} else {
-			/*
-			`class_type` may not be a concrete class (e.g., it could
-			be a template parameter).
-			*/
-			this->Visit(class_type, print, cprint);
-		}
+		cprint.printType(type->getClass(), print, loc::of(type));
 		print.output() << fmt::nbsp;
 		cprint.printQualType(type->getPointeeType(), print, loc::of(type));
 		print.end_ctor();

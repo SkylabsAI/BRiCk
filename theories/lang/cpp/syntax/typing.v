@@ -269,7 +269,7 @@ Module decltype.
         | Eglobal _ t => mret $ tref QM t
         | Eglobal_member nm t =>
             match nm with
-            | Nscoped cls _ => mret $ Tmember_pointer cls t
+            | Nscoped cls _ => mret $ Tmember_pointer (Tnamed cls) t
             | _ => mfail
             end
 

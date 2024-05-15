@@ -77,7 +77,7 @@ Section TestTypeNotations.
   #[local] Definition Notation_Tbool : type := Tbool.
   Print Notation_Tbool.
 
-  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer (Nglobal (Nid "foobarbaz")) Tchar.
+  #[local] Definition Notation_Tmember_pointer_1 : type := Tmember_pointer (Tnamed (Nglobal (Nid "foobarbaz"))) Tchar.
   Print Notation_Tmember_pointer_1.
 
   Section Qualifiers.

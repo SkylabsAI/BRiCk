@@ -179,7 +179,7 @@ Section with_lang.
     | Tptr t => printT t ++ "*"
     | Tref t => printT t ++ "&"
     | Trv_ref t => printT t ++ "&&"
-    | Tmember_pointer cls t => printT t ++ " " ++ printN cls ++ "::*"
+    | Tmember_pointer cls t => printT t ++ " " ++ printT cls ++ "::*"
     | Tqualified q t =>
         sepBy " " $ (printT t :: (if q_const q then ["const"] else []) ++
         (if q_volatile q then ["volatile"] else []))%list

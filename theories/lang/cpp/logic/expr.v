@@ -697,7 +697,7 @@ Module Type Expr.
     Axiom wp_operand_cast_null2memberptr : forall cls e ty Q,
         type_of e = Tnullptr ->
             wp_operand e (fun _ free => Q (Vmember_ptr cls None) free)
-        |-- wp_operand (Ecast (Cnull2memberptr $ Tmember_pointer cls ty) e) Q.
+        |-- wp_operand (Ecast (Cnull2memberptr $ Tmember_pointer (Tnamed cls) ty) e) Q.
 
     (* Determine if a 0-constant of this type can be used as a pseudonym for <<nullptr>> *)
     Definition can_represent_null (ty : type) : bool :=

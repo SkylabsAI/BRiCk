@@ -462,7 +462,7 @@ with type' {lang : lang.t} : Set :=
 (**
 TODO: this should be [gn : classname lang]
 *)
-| Tmember_pointer (gn : name') (t : type')
+| Tmember_pointer (gn : (* classname' *)type') (t : type')
 | Tfloat_ (_ : float_type.t)
 | Tqualified (q : type_qualifiers) (t : type')
 | Tnullptr
@@ -916,7 +916,7 @@ with is_dependentT {lang} (t : type' lang) : bool :=
   | Tenum n => is_dependentN n
   | Tfunction ft => function_type.existsb is_dependentT ft
   | Tbool => false
-  | Tmember_pointer gn t => is_dependentN gn || is_dependentT t
+  | Tmember_pointer gn t => is_dependentT gn || is_dependentT t
   | Tfloat_ _ => false
   | Tqualified _ t => is_dependentT t
   | Tnullptr

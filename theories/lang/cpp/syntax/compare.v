@@ -1174,11 +1174,11 @@ Module type.
       compareE b1.(box_Tvariable_array_1) b2.(box_Tvariable_array_1).
 
     Record box_Tmember_pointer : Set := Box_Tmember_pointer {
-      box_Tmember_pointer_0 : name;
+      box_Tmember_pointer_0 : type;
       box_Tmember_pointer_1 : type;
     }.
     Definition box_Tmember_pointer_compare (b1 b2 : box_Tmember_pointer) : comparison :=
-      compare_lex (compareN b1.(box_Tmember_pointer_0) b2.(box_Tmember_pointer_0)) $ fun _ =>
+      compare_lex (compareT b1.(box_Tmember_pointer_0) b2.(box_Tmember_pointer_0)) $ fun _ =>
       compareT b1.(box_Tmember_pointer_1) b2.(box_Tmember_pointer_1).
 
     Record box_Tqualified : Set := Box_Tqualified {

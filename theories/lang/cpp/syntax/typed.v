@@ -158,8 +158,7 @@ Module decltype.
       end.
     Definition require_mfunctype (t : decltype) : M (decltype * function_type) :=
       match t with
-      | Tmember_pointer nm ft =>
-          pair (Tnamed nm) <$> require_functype ft
+      | Tmember_pointer nm ft => pair nm <$> require_functype ft
       | _ => mfail
       end.
 
@@ -374,7 +373,7 @@ Module decltype.
         | Eglobal_member nm ty =>
             match nm with
             | Nscoped cls _ =>
-              mret $ Tmember_pointer cls ty
+              mret $ Tmember_pointer (Tnamed cls) ty
             | _ => mfail
             end
 
