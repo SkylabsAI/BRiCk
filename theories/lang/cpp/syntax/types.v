@@ -139,6 +139,35 @@ C++.
 *)
 
 Inductive type_equiv : Equiv type :=
+
+(**
+Qualifier normalization
+*)
+| Tqualified_id t : Tqualified QM t ≡ t
+| Tqualified_merge q q' t : Tqualified q (Tqualified q' t) ≡ Tqualified (merge_tq q q') t
+(*
+"An array type whose elements are cv-qualified is also considered to
+have the same cv-qualifications as its elements. [...] Cv-qualifiers
+applied to an array type attach to the underlying element type."
+<https://www.eel.is/c++draft/basic.type.qualifier#3>
+*)
+| Tqualified_array q t n : Tqualified q (Tarray t n) ≡ Tarray (Tqualified q t) n
+(*
+"A function or reference type is always cv-unqualified."
+<https://www.eel.is/c++draft/basic.type.qualifier#1>
+*)
+| Tqualified_ref q t : Tqualified q (Tref t) ≡ Tref t
+| Tqualified_rv_ref q t : Tqualified q (Trv_ref t) ≡ Trv_ref t
+| Tqualified_func q ft : Tqualified q (Tfunction ft) ≡ Tfunction ft
+(**
+"After producing the list of parameter types, any top-level
+cv-qualifiers modifying a parameter type are deleted when forming the
+function type."
+<https://www.eel.is/c++draft/dcl.fct#5>
+*)
+| Tqualified_func_param cc ar ret q t args args' :
+  Tfunction (@FunctionType _ cc ar ret (args ++ Tqualified q t :: args')) ≡ Tfunction (@FunctionType _ cc ar ret (args ++ t :: args'))
+
 (** Equivalence *)
 | type_equiv_refl t : t ≡ t
 | type_equiv_sym t u : t ≡ u -> u ≡ t
@@ -189,7 +218,7 @@ Proof. solve_proper. Qed.
 Proof. solve_proper. Qed.
 
 Lemma Qmut_equiv t : Qmut t ≡ t.
-Proof. (* by rewrite /Qmut Tqualified_id. *) Admitted. (* type_equiv *)
+Proof. by rewrite /Qmut Tqualified_id. Qed.
 
 (**
 It would be nice to make this the default.
@@ -297,10 +326,10 @@ Lemma qual_norm'_equiv q t : qual_norm' Tqualified q t ≡ Tqualified q t.
 Proof.
   induction (qual_norm'_ok Tqualified q t).
   { done. }
-  { (* by rewrite Tqualified_merge. }
-Qed. *) Admitted. (* type_equiv *)
+  { by rewrite Tqualified_merge. }
+Qed.
 Lemma qual_norm_equiv t : qual_norm Tqualified t ≡ t.
-Proof. (* by rewrite /qual_norm qual_norm'_equiv Tqualified_id. Qed. *) Admitted. (* type_equiv *)
+Proof. by rewrite /qual_norm qual_norm'_equiv Tqualified_id. Qed.
 
 (** [decompose_type] *)
 
@@ -310,12 +339,12 @@ Lemma decompose_type_unfold t :
       let p := decompose_type t' in
       (merge_tq q p.1, p.2)
     else (QM, t).
-Proof. (*
+Proof.
   rewrite /decompose_type qual_norm_unfold.
-  destruct t as [| | | | | | | | | | | | | | |q t| | |]; try done. set pair := fun x y => (x, y).
-  move: q. induction t=>q; cbn; try by rewrite right_id_L.
+  destruct t; try done. set pair := fun x y => (x, y).
+  move: q. induction t=>?; cbn; try by rewrite right_id_L.
   rewrite left_id_L !IHt /=. f_equal. by rewrite assoc_L.
-Qed. *) Admitted. (* TODO *)
+Qed.
 
 Inductive decompose_type_spec : type -> type_qualifiers * type -> Prop :=
 | decompose_type_spec_unqual t : ~~ is_qualified t -> decompose_type_spec t (QM, t)
@@ -345,14 +374,14 @@ Proof. by rewrite decompose_type_unfold. Qed.
 
 Lemma decompose_type_idemp t :
   decompose_type (decompose_type t).2 = (QM, (decompose_type t).2).
-Proof. (* by rewrite decompose_type_unqual. Qed. *) Admitted. (* type_equiv *)
+Proof. rewrite decompose_type_unqual; eauto using is_qualified_decompose_type. Qed.
 
 Lemma decompose_type_equiv t : let p := decompose_type t in Tqualified p.1 p.2 ≡ t.
-Proof. (*
+Proof.
   elim: (decompose_type_ok t); cbn.
   { intros. by rewrite Tqualified_id. }
   { intros ???? <-. by rewrite Tqualified_merge. }
-Qed. *) Admitted. (* type_equiv *)
+Qed.
 
 (** [qual_norm], [qual_norm'] in terms of [decompose_type] *)
 
@@ -360,10 +389,10 @@ Lemma qual_norm'_decompose_type {A} (f : type_qualifiers -> type -> A) q t :
   qual_norm' f q t =
     let p := decompose_type t in
     f (merge_tq q p.1) p.2.
-Proof. (*
-  move: q. induction t=>q /=; try by rewrite right_id_L.
+Proof.
+  move: q. induction t=>? /=; try by rewrite right_id_L.
   rewrite decompose_type_unfold IHt /=. by rewrite assoc_L.
-Qed. *) Admitted. (* FIXME *)
+Qed.
 
 Lemma qual_norm_decompose_type {A} (f : type_qualifiers -> type -> A) t :
   qual_norm f t =
@@ -468,7 +497,7 @@ Proof. by rewrite erase_qualifiers_qual_norm qual_norm_decompose_type. Qed.
 Lemma erase_qualifiers_idemp t : erase_qualifiers (erase_qualifiers t) = erase_qualifiers t.
 Proof.
   move: t. fix IHt 1=>t.
-  destruct t (*as [| | | | | | | | | | |cc ar ret args| | | | | | |] *); cbn; auto with f_equal.
+  destruct t; cbn; auto with f_equal.
   { (* functions *) rewrite IHt. f_equal. f_equal. induction (ft_params t); cbn; auto with f_equal. }
 Qed.
 
@@ -514,12 +543,10 @@ Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
 Lemma drop_qualifiers_Tenum : forall [ty nm],
     drop_qualifiers ty = Tenum nm -> erase_qualifiers ty = Tenum nm.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-(* TODO function types
 Lemma drop_qualifiers_Tfunction : forall [ty c ar ty' tArgs],
-    drop_qualifiers ty = @Tfunction c ar ty' tArgs ->
-    erase_qualifiers ty = @Tfunction c ar (erase_qualifiers ty') (map erase_qualifiers tArgs).
-Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
-*)
+    drop_qualifiers ty = Tfunction (@FunctionType _ c ar ty' tArgs) ->
+    erase_qualifiers ty = Tfunction (@FunctionType _ c ar (erase_qualifiers ty') (map erase_qualifiers tArgs)).
+Proof. induction ty; simpl; intros; try congruence; eauto. inversion H; subst. done. Qed.
 Lemma drop_qualifiers_Tbool : forall [ty],
     drop_qualifiers ty = Tbool -> erase_qualifiers ty = Tbool.
 Proof. induction ty; simpl; intros; try congruence; eauto. Qed.
@@ -549,7 +576,7 @@ Ltac simpl_drop_qualifiers :=
           | rewrite (drop_qualifiers_Tarray H)
           | rewrite (drop_qualifiers_Tnamed H)
           | rewrite (drop_qualifiers_Tenum H)
-(*          | rewrite (drop_qualifiers_Tfunction H) *)
+          | rewrite (drop_qualifiers_Tfunction H)
           | rewrite (drop_qualifiers_Tbool H)
           | rewrite (drop_qualifiers_Tmember_pointer H)
           | rewrite (drop_qualifiers_Tfloat H)
@@ -603,13 +630,13 @@ Proof.
 Qed.
 
 Lemma tqualified'_equiv q t : tqualified' q t ≡ Tqualified q t.
-Proof. (*
+Proof.
   case: (tqualified'_ok q t).
   { intros ?? (?&[-> | ->])%is_ref_spec.
     by rewrite Tqualified_ref. by rewrite Tqualified_rv_ref. }
   { intros. by rewrite Tqualified_id. }
   { done. }
-Qed. *) Admitted. (* type_equiv *)
+Qed.
 
 #[global] Instance: Params (@tqualified') 1 := {}.
 #[global] Instance tqualified'_proper q : Proper (equiv ==> equiv) (tqualified' q).
@@ -631,8 +658,8 @@ Lemma tqualified_equiv q t : tqualified q t ≡ Tqualified q t.
 Proof.
   induction (tqualified_ok q t).
   { by rewrite tqualified'_equiv. }
-  { (* by rewrite Tqualified_merge. }
-Qed. *) Admitted. (* type_equiv *)
+  { by rewrite Tqualified_merge. }
+Qed.
 
 #[global] Instance: Params (@tqualified) 1 := {}.
 #[global] Instance tqualified_proper q : Proper (equiv ==> equiv) (tqualified q).
