@@ -85,6 +85,7 @@ theories/prelude/list.v
 theories/prelude/list_numbers.v
 theories/prelude/bitsN.v
 theories/prelude/compare.v
+theories/prelude/namemap.v
 
 theories/prelude/axioms/funext.v
 theories/prelude/bool.v

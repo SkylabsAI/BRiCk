@@ -9,7 +9,7 @@ Require Import bedrock.prelude.avl.
 Require Import bedrock.lang.cpp.syntax.core.
 Require Import bedrock.lang.cpp.syntax.types.
 Require Import bedrock.lang.cpp.syntax.decl.
-Require Import bedrock.lang.cpp.syntax.compare.
+Require Import bedrock.lang.cpp.syntax.namemap.
 Export decl.
 
 #[local] Set Primitive Projections.
