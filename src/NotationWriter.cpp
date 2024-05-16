@@ -16,141 +16,136 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.inc"
 #include <algorithm>
+#include <set>
 
-// TODO this should be replaced by something else.
 bool
-print_path(llvm::raw_string_ostream &print, const DeclContext *dc,
-		   bool end = true) {
-	if (dc == nullptr || isa<TranslationUnitDecl>(dc)) {
-		if (end)
-			print << "::";
+should_print(const clang::DeclContext *ctxt) {
+	if (isa<TranslationUnitDecl>(ctxt))
 		return true;
-	} else {
-		if (not print_path(print, dc->getParent())) {
+	else if (auto rd = dyn_cast<RecordDecl>(ctxt)) {
+		if (rd->isAnonymousStructOrUnion() || rd->isInAnonymousNamespace() ||
+			rd->getName() != "")
 			return false;
-		}
-		if (auto ts = dyn_cast<ClassTemplateSpecializationDecl>(dc)) {
-			print << ts->getNameAsString() << "<";
-			bool first = true;
-			for (auto i : ts->getTemplateArgs().asArray()) {
-				if (!first) {
-					print << ",";
-				}
-				first = false;
-				switch (i.getKind()) {
-				case TemplateArgument::ArgKind::Integral:
-					print << i.getAsIntegral();
-					break;
-				case TemplateArgument::ArgKind::Type: {
-					// TODO: this is still somewhat of a hack
-					auto s = i.getAsType().getAsString();
-					if (find(s.begin(), s.end(), '/') != s.end() or
-						find(s.begin(), s.end(), '\\') != s.end()) {
-						// a heuristic to determine if a path is being generated
-						return false;
-					} else {
-						replace(s.begin(), s.end(), ' ', '_');
-						print << s;
-						break;
-					}
-				}
-				default:
-					return false;
-				}
-			}
-			print << (end ? ">::" : ">");
-		} else if (auto td = dyn_cast<TagDecl>(dc)) {
-			if (td->getName() != "") {
-				print << td->getNameAsString() << (end ? "::" : "");
-			} else
-				return false;
-		} else if (auto ns = dyn_cast<NamespaceDecl>(dc)) {
-			if (!ns->isAnonymousNamespace()) {
-				print << ns->getNameAsString() << (end ? "::" : "");
-			} else
-				return false;
-		} else {
-			using namespace logging;
-			//logging::log() << "unknown declaration while printing path "
-			//               << dc->getDeclKindName() << "\n";
+	} else if (auto td = dyn_cast<TagDecl>(ctxt)) {
+		if (td->getName() != "")
 			return false;
-		}
+	} else if (auto ns = dyn_cast<NamespaceDecl>(ctxt)) {
+		if (ns->isAnonymousNamespace())
+			return false;
 	}
-	return true;
+	return should_print(ctxt->getParent());
+}
+
+std::string &
+replace_space(std::string &s) {
+	auto cur = s.find_first_of(' ');
+	while (cur != std::string::npos) {
+		s[cur] = '_';
+		cur = s.find_first_of(' ', cur);
+	}
+	return s;
 }
 
 void
 write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 	print.output() << "Module _'." << fmt::indent << fmt::line;
+	std::set<std::string> notations;
+	auto track = [&](std::string &s) {
+		if (notations.find(s) != notations.end()) {
+			llvm::errs() << "Warning: overlapping notation! '" << s << "'\n";
+			return false;
+		} else {
+			notations.insert(s);
+			return true;
+		}
+	};
 
 	auto write_notations = [&](const clang::NamedDecl *def) {
-		if (!def->getIdentifier())
+		if (!def->getIdentifier() or !should_print(def->getDeclContext()))
 			return;
 		std::string s_notation;
 		llvm::raw_string_ostream notation{s_notation};
 		llvm::StringRef def_name = def->getName();
+
+		auto emit_name = [&]() {
+			notation << "::";
+			def->getNameForDiagnostic(
+				notation, PrintingPolicy(cprint.getContext().getLangOpts()),
+				true);
+			notation.flush();
+		};
+		emit_name();
+
 		if (def_name == "__builtin_va_list" || def_name.startswith("__SV") ||
 			def_name.startswith("__clang_sv"))
 			return;
 		if (const FieldDecl *fd = dyn_cast<FieldDecl>(def)) {
-			if (not print_path(notation, fd->getParent(), true))
-				return;
-
-			notation << fd->getNameAsString();
-			print.output() << "Notation \"'" << s_notation;
-			print.output() << fd->getNameAsString() << "'\" :=" << fmt::nbsp;
+			track(s_notation);
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::indent << fmt::nbsp;
 			cprint.printField(fd, print);
-			print.output() << " (in custom cppglobal at level 0)." << fmt::line;
+			print.output() << " (in custom cppglobal at level 0)."
+						   << fmt::outdent << fmt::line;
 		} else if (const RecordDecl *rd = dyn_cast<RecordDecl>(def)) {
-			if (not print_path(notation, rd, false))
-				return;
-
 			if (!rd->isAnonymousStructOrUnion() &&
 				rd->getNameAsString() != "") {
-				print.output()
-					<< "Notation \"'" << s_notation << "'\" :=" << fmt::nbsp;
-
+				print.output() << "Notation \"'" << replace_space(s_notation)
+							   << "'\" :=" << fmt::indent << fmt::nbsp;
+				track(s_notation);
 				cprint.printTypeName(*rd, print);
-				print.output()
-					<< "%bs (in custom cppglobal at level 0)." << fmt::line;
+				print.output() << "%bs (in custom cppglobal at level 0)."
+							   << fmt::outdent << fmt::line;
 			}
 
+			std::string cls_name = s_notation;
+			cls_name += "::";
 			for (auto fd : rd->fields()) {
 				if (fd->getName() != "") {
-					print.output() << "Notation \"'" << s_notation << "::";
+					s_notation.clear();
+					notation << cls_name << fd->getName();
+					track(s_notation);
 					print.output()
-						<< fd->getNameAsString() << "'\" :=" << fmt::nbsp;
+						<< "Notation \"'" << replace_space(s_notation)
+						<< "'\" :=" << fmt::nbsp;
 					cprint.printField(fd, print);
 					print.output()
 						<< " (in custom cppglobal at level 0)." << fmt::line;
 				}
 			}
+			/*
+		} else if (const EnumDecl *ed = dyn_cast<EnumDecl>(def)) {
+			ed->getN
+			*/
 		} else if (isa<FunctionDecl>(def)) {
 			// todo(gmm): skipping due to function overloading
 		} else if (const TypedefDecl *td = dyn_cast<TypedefDecl>(def)) {
 			if (td->isTemplated())
 				return;
-			if (not print_path(notation, td->getDeclContext(), true))
-				return;
 
-			print.output() << "Notation \"'" << s_notation;
-			print.output() << td->getNameAsString() << "'\" :=" << fmt::nbsp;
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::nbsp << fmt::indent;
+			track(s_notation);
+
 			cprint.printQualType(td->getUnderlyingType(), print, loc::of(td));
 			print.output() << " (only parsing, in custom cppglobal at level 0)."
-						   << fmt::line;
+						   << fmt::outdent << fmt::line;
 		} else if (const auto *ta = dyn_cast<TypeAliasDecl>(def)) {
 			if (ta->isTemplated())
 				return;
-			if (not print_path(notation, ta->getDeclContext(), true))
-				return;
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::indent;
+			track(s_notation);
 
-			print.output() << "Notation \"'" << s_notation;
-			print.output() << ta->getNameAsString() << "'\" :=" << fmt::nbsp;
 			cprint.printQualType(ta->getUnderlyingType(), print, loc::of(ta));
 			print.output() << " (only parsing, in custom cppglobal at level 0)."
-						   << fmt::line;
-		} else if (isa<VarDecl>(def) || isa<EnumDecl>(def) ||
-				   isa<EnumConstantDecl>(def)) {
+						   << fmt::outdent << fmt::line;
+		} else if (const auto *vd = dyn_cast<VarDecl>(def)) {
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::indent;
+			track(s_notation);
+			cprint.printObjName(vd, print, loc::of(vd));
+			print.output() << " (only parsing, in custom cppglobal at level 0)."
+						   << fmt::outdent << fmt::line;
 		} else {
 			using namespace logging;
 			log(Level::VERBOSE) << "unknown declaration type "
