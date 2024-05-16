@@ -65,7 +65,7 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 	};
 
 	auto write_notations = [&](const clang::NamedDecl *def) {
-		if (!def->getIdentifier() or !should_print(def->getDeclContext()))
+		if (!def->getIdentifier() || !should_print(def->getDeclContext()))
 			return;
 		std::string s_notation;
 		llvm::raw_string_ostream notation{s_notation};
