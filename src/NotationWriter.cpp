@@ -67,14 +67,18 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 		llvm::raw_string_ostream notation{s_notation};
 		llvm::StringRef def_name = def->getName();
 
-		auto emit_name = [&]() {
-			notation << "::";
-			def->getNameForDiagnostic(
-				notation, PrintingPolicy(cprint.getContext().getLangOpts()),
-				true);
-			notation.flush();
-		};
-		emit_name();
+		// We prefix names with '::', but we could probably drop this, it doesn't really
+		// add anything unless, at some point, we allow fuzzy matching such that `C` might
+		// match `::NS::C`.
+		notation << "::";
+		def->getNameForDiagnostic(
+			notation, PrintingPolicy(cprint.getContext().getLangOpts()), true);
+		notation.flush();
+
+		// we don't really have a way to escape "'", so do not emit notation that contains
+		// that character.
+		if (s_notation.find('\'') != std::string::npos)
+			return;
 
 		if (def_name == "__builtin_va_list" || def_name.startswith("__SV") ||
 			def_name.startswith("__clang_sv"))
@@ -106,18 +110,34 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 					track(s_notation);
 					print.output()
 						<< "Notation \"'" << replace_space(s_notation)
-						<< "'\" :=" << fmt::nbsp;
+						<< "'\" :=" << fmt::nbsp << fmt::indent;
 					cprint.printField(fd, print);
-					print.output()
-						<< " (in custom cppglobal at level 0)." << fmt::line;
+					print.output() << " (in custom cppglobal at level 0)."
+								   << fmt::outdent << fmt::line;
 				}
 			}
-			/*
 		} else if (const EnumDecl *ed = dyn_cast<EnumDecl>(def)) {
-			ed->getN
-			*/
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::nbsp << fmt::indent;
+			track(s_notation);
+
+			cprint.printTypeName(ed, print, loc::of(ed));
+			print.output()
+				<< "%bs (only parsing, in custom cppglobal at level 0)."
+				<< fmt::outdent << fmt::line;
+
 		} else if (isa<FunctionDecl>(def)) {
 			// todo(gmm): skipping due to function overloading
+		} else if (auto ecd = dyn_cast<EnumConstantDecl>(def)) {
+			notation << ecd->getName();
+			print.output() << "Notation \"'" << replace_space(s_notation)
+						   << "'\" :=" << fmt::indent;
+			track(s_notation);
+
+			cprint.printObjName(ecd, print, loc::of(ed));
+			print.output()
+				<< "%bs (only parsing, in custom cppglobal at level 0)."
+				<< fmt::outdent << fmt::line;
 		} else if (const TypedefDecl *td = dyn_cast<TypedefDecl>(def)) {
 			if (td->isTemplated())
 				return;
@@ -133,7 +153,7 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 			if (ta->isTemplated())
 				return;
 			print.output() << "Notation \"'" << replace_space(s_notation)
-						   << "'\" :=" << fmt::indent;
+						   << "'\" :=" << fmt::nbsp << fmt::indent;
 			track(s_notation);
 
 			cprint.printQualType(ta->getUnderlyingType(), print, loc::of(ta));
@@ -141,11 +161,12 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 						   << fmt::outdent << fmt::line;
 		} else if (const auto *vd = dyn_cast<VarDecl>(def)) {
 			print.output() << "Notation \"'" << replace_space(s_notation)
-						   << "'\" :=" << fmt::indent;
+						   << "'\" :=" << fmt::nbsp << fmt::indent;
 			track(s_notation);
 			cprint.printObjName(vd, print, loc::of(vd));
-			print.output() << " (only parsing, in custom cppglobal at level 0)."
-						   << fmt::outdent << fmt::line;
+			print.output()
+				<< "%bs (only parsing, in custom cppglobal at level 0)."
+				<< fmt::outdent << fmt::line;
 		} else {
 			using namespace logging;
 			log(Level::VERBOSE) << "unknown declaration type "
