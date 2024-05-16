@@ -40,7 +40,11 @@ std::string &
 replace_space(std::string &s) {
 	auto cur = s.find_first_of(' ');
 	while (cur != std::string::npos) {
-		s[cur] = '_';
+		if (cur > 0 && s[cur - 1] == ',') {
+			s.erase(cur, 1);
+		} else {
+			s[cur] = '_';
+		}
 		cur = s.find_first_of(' ', cur);
 	}
 	return s;
@@ -131,7 +135,7 @@ write_globals(::Module &mod, CoqPrinter &print, ClangPrinter &cprint) {
 		} else if (auto ecd = dyn_cast<EnumConstantDecl>(def)) {
 			notation << ecd->getName();
 			print.output() << "Notation \"'" << replace_space(s_notation)
-						   << "'\" :=" << fmt::indent;
+						   << "'\" :=" << fmt::nbsp << fmt::indent;
 			track(s_notation);
 
 			cprint.printObjName(ecd, print, loc::of(ed));
