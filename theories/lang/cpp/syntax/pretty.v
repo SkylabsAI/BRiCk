@@ -12,13 +12,59 @@ Require Import bedrock.lang.cpp.syntax.core.
 
 (** Pretty printing of C++ terms *)
 
+Definition printOO (oo : OverloadableOperator) : bs :=
+  match oo with
+  | OOTilde => "~"
+  | OOExclaim => "!"
+  | OOPlusPlus => "++"
+  | OOMinusMinus => "--"
+  | OOStar => "*"
+  | OOPlus => "+"
+  | OOMinus => "-"
+  | OOSlash => "/"
+  | OOPercent => "%"
+  | OOCaret => "^"
+  | OOAmp => "&"
+  | OOPipe => "|"
+  | OOEqual => "="
+  | OOLessLess => "<<"
+  | OOGreaterGreater => ">>"
+  | OOPlusEqual => "+="
+  | OOMinusEqual => "-="
+  | OOStarEqual => "*="
+  | OOSlashEqual => "/="
+  | OOPercentEqual => "%/"
+  | OOCaretEqual => "^="
+  | OOAmpEqual => "&="
+  | OOPipeEqual => "|="
+  | OOLessLessEqual => "<<="
+  | OOGreaterGreaterEqual => ">>="
+  | OOEqualEqual => "=="
+  | OOExclaimEqual => "!="
+  | OOLess => "<"
+  | OOGreater => ">"
+  | OOLessEqual => "<="
+  | OOGreaterEqual => ">="
+  | OOSpaceship => "<=>"
+  | OOComma => ","
+  | OOArrowStar => "->*"
+  | OOArrow => "->"
+  | OOSubscript => "[]"
+  | OOAmpAmp => "&&"
+  | OOPipePipe => "||"
+  | OONew array => if array then "new[]" else "new"
+  | OODelete array => if array then "delete[]" else "delete"
+  | OOCall => "()"
+  | OOCoawait => "coawait"
+  end%bs.
+
 Section with_lang.
 
   #[local] Open Scope bs_scope.
 
   Definition bs_ShowScheme : ShowScheme bs :=
     {| show_mon := {| Monoid.monoid_plus := BS.append ; Monoid.monoid_unit := BS.EmptyString |}
-    ; show_inj a := BS.String (Ascii.byte_of_ascii a) BS.EmptyString |}.
+     ; show_inj a := BS.String (Ascii.byte_of_ascii a) BS.EmptyString |}.
 
   Definition showN (n : N) : bs := runShow (M:=bs_ShowScheme) (show $ N.to_nat n).
 
@@ -37,6 +83,7 @@ Section with_lang.
     Context {type Expr : Set} (printType : type -> bs) (printExpr : Expr -> bs).
     Variable top : option bs.
 
+
     Definition printFN (fn : function_name_ type) : bs :=
       match fn with
       | Nf nm => nm
@@ -50,7 +97,7 @@ Section with_lang.
           | None => "<dtor>"
           | Some cls => "~" ++ cls
           end
-      | Nop o => "operator" ++ "?TODO"
+      | Nop o => "operator" ++ printOO o
       | Nop_conv t => "operator " ++ printType t
       | Nop_lit i => "operator """"_" ++ i
       | Nunsupported_function note => "?" ++ note
@@ -213,3 +260,16 @@ Section with_lang.
     end.
 
 End with_lang.
+
+Definition print_name (input : name) : list Byte.byte :=
+  BS.print $ printN input.
+Definition parse_name (test : list Byte.byte) : option name :=
+  None.
+
+Declare Scope cpp_name_scope.
+Delimit Scope cpp_name_scope with cpp_name.
+Bind Scope cpp_name_scope with name.
+String Notation name parse_name print_name : cpp_name_scope.
+
+Definition test : name :=
+  Nscoped (Nglobal (Nid "XX")) (Nfunction [] (Nf "foo") [Tint;Tchar;Tlong;Tlonglong;Tulonglong;Tptr Tvoid]).
