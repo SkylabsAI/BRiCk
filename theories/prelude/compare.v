@@ -30,7 +30,7 @@ Section compare.
       *)
       (tag : A -> positive)
       (**
-      constructor data (<<#[only(fields) derive>>)
+      constructor data (<<#[only(fields)] derive>>)
       *)
       (car : positive -> Type) (data : ∀ a, car (tag a))
       (compare : ∀ p, car p -> car p -> comparison)	(** data comparison *)

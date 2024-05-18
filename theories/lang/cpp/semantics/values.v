@@ -9,7 +9,6 @@ Require Import Coq.Strings.Ascii.
 Require Import stdpp.gmap.
 
 Require Import bedrock.prelude.base.
-Require Import bedrock.prelude.addr.
 Require Import bedrock.prelude.option.
 Require Import bedrock.prelude.numbers.
 
