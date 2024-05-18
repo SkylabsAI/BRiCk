@@ -529,8 +529,13 @@ printStruct(const CXXRecordDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 			const ASTContext &ctxt) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 		cprint.trace("printStruct", loc::of(decl));
+#if 18 <= CLANG_VERSION_MAJOR
+	always_assert(decl.getTagKind() == TagTypeKind::Class ||
+				  decl.getTagKind() == TagTypeKind::Struct);
+#else
 	always_assert(decl.getTagKind() == TagTypeKind::TTK_Class ||
 				  decl.getTagKind() == TagTypeKind::TTK_Struct);
+#endif
 
 	if (!decl.isCompleteDefinition())
 		return print.none();
@@ -557,7 +562,11 @@ printUnion(const CXXRecordDecl &decl, CoqPrinter &print, ClangPrinter &cprint,
 		   const ASTContext &ctxt) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Decl))
 		cprint.trace("printUnion", loc::of(decl));
+#if 18 <= CLANG_VERSION_MAJOR
+	always_assert(decl.getTagKind() == TagTypeKind::Union);
+#else
 	always_assert(decl.getTagKind() == TagTypeKind::TTK_Union);
+#endif
 
 	if (!decl.isCompleteDefinition())
 		return print.none();
