@@ -21,7 +21,11 @@ Module showN.
   Definition showN (n : N) : bs := runShow (M:=bs_ShowScheme) (show $ N.to_nat n).
 End showN.
 
-(** Pretty printing of C++ terms *)
+(** Pretty printing of C++ names
+    This printer is quite similar to the <pretty.v> printer, but this one is more
+    restricted becuase it is important that this function is invertible by the parser
+    in <parser.v>.
+ *)
 Section with_lang.
   Import UPoly.
   #[local] Open Scope bs_scope.
