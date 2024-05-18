@@ -12,6 +12,11 @@ Require Import bedrock.upoly.upoly.
 Require Import bedrock.upoly.optionT.
 Require Import bedrock.upoly.stateT.
 
+(* BEGIN UPSTREAM *)
+(* marking this local to avoid backtracking since the definition is upstreamed *)
+#[local] Instance byte_eq_dec : EqDecision Byte.byte := Byte.byte_eq_dec.
+(* END UPSTREAM *)
+
 (** ** parsec
     Simple implementation of a parser combinator library.
 
@@ -116,7 +121,7 @@ Section parsec.
     | x :: xs =>
         match input with
         | y :: ys =>
-            if Byte.eqb x y then
+            if bool_decide (x = y) then
               exact_ xs ys
             else mfail
         | nil => mfail
@@ -127,11 +132,11 @@ Section parsec.
     stateT.mk $ exact_ b.
 
   Definition digit : M Byte.byte :=
-    char (fun x => BinNatDef.N.leb (Byte.to_N "0") (Byte.to_N x) &&
-                BinNatDef.N.leb (Byte.to_N x) (Byte.to_N "9")).
+    char (fun x => let x := Byte.to_N x in
+                bool_decide (Byte.to_N "0" ≤ x ≤ Byte.to_N "9")%N).
 
   Definition exact_char (b : Byte.byte) : M unit :=
-    fmap (fun _ => ()) $ char (fun b' => Byte.eqb b b').
+    fmap (fun _ => ()) $ char (fun b' => bool_decide (b = b')).
 
   Definition quoted {U V T} (pre : M U) (post : M V) (p : M T) : M T :=
     (fun _ x _ => x) <$> pre <*> p <*> post.
