@@ -16,7 +16,7 @@ Definition GlobDecl_size_of (g : GlobDecl) : option N :=
   | Genum t _ =>
     match drop_qualifiers t with
     | Tchar_ sz => Some $ char_type.bytesN sz
-    | Tnum sz _ => Some $ bytesN sz
+    | Tnum sz _ => Some $ int_type.bytesN sz
     | Tbool => Some 1%N
     | _ => None
     end
@@ -29,7 +29,7 @@ Definition GlobDecl_align_of (g : GlobDecl) : option N :=
   | Genum t _ =>
     match drop_qualifiers t with
     | Tchar_ sz => Some $ char_type.bytesN sz
-    | Tnum sz _ => Some $ bytesN sz
+    | Tnum sz _ => Some $ int_type.bytesN sz
     | Tbool => Some 1%N
     | _ => None
     end
@@ -68,7 +68,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tptr _ => Some (pointer_size resolve)
   | Tref _ => None
   | Trv_ref _ => None
-  | Tnum sz _ => Some (bytesN sz)
+  | Tnum sz _ => Some (int_type.bytesN sz)
   | Tchar_ ct => Some (char_type.bytesN ct)
   | Tvoid => None
   | Tarray t n => N.mul n <$> size_of resolve t
@@ -82,7 +82,7 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   | Tqualified _ t => size_of resolve t
   | Tnullptr => Some (pointer_size resolve)
   | Tfloat_ sz => Some (float_type.bytesN sz)
-  | Tarch sz _ => bytesN <$> sz
+  | Tarch sz _ => bitsize.bytesN <$> sz
   | Tunsupported _ => None
   | Tdecltype _
   | Texprtype _
@@ -98,10 +98,10 @@ Fixpoint size_of (resolve : genv) (t : type) : option N :=
   end%N.
 
 (* [size_of] result can overflow: *)
-Goal forall σ, size_of σ (Tarray Tu8 (2^128)) = Some (2^128)%N.
+Goal forall σ, size_of σ (Tarray Tuchar (2^128)) = Some (2^128)%N.
 Proof. by []. Abort.
 (* [size_of] result can overflow, even with in-bounds arguments: *)
-Goal forall σ, size_of σ (Tarray Tu64 (2^61)) = Some (2^64)%N.
+Goal forall σ, size_of σ (Tarray Tulonglong (2^61)) = Some (2^64)%N.
 Proof. by []. Abort.
 
 #[global] Instance Proper_size_of
@@ -126,7 +126,7 @@ Proof. (*
 Qed. *) Admitted.
 
 Theorem size_of_int : forall {c : genv} s w,
-    @size_of c (Tnum w s) = Some (bytesN w).
+    @size_of c (Tnum w s) = Some (int_type.bytesN w).
 Proof. reflexivity. Qed.
 Theorem size_of_char : forall {c : genv} s,
     @size_of c (Tchar_ s) = Some (char_type.bytesN s).
@@ -238,7 +238,7 @@ Proof. done. Qed.
 
 (* TODO?: consider using [SizeOf (Tnum sz sgn) (bytesN sz)]. *)
 #[global] Instance int_size_of {σ : genv} sz sgn n :
-  TCEq (bytesN sz) n -> SizeOf (Tnum sz sgn) n.
+  TCEq (int_type.bytesN sz) n -> SizeOf (Tnum sz sgn) n.
 Proof. by rewrite /SizeOf TCEq_eq=><-. Qed.
 
 (* TODO?: consider using [SizeOf (Tnum sz sgn) (char_type.bytesN ct)]. *)
@@ -255,7 +255,7 @@ Proof. done. Qed.
 Proof. by rewrite /SizeOf TCEq_eq=><-. Qed.
 
 #[global] Instance arch_size_of {σ : genv} sz name n :
-  TCEq (bytesN sz) n -> SizeOf (Tarch (Some sz) name) n.
+  TCEq (bitsize.bytesN sz) n -> SizeOf (Tarch (Some sz) name) n.
 Proof. by rewrite /SizeOf TCEq_eq=><-. Qed.
 
 (** [HasSize ty] means that C++ type [ty] has a defined size *)

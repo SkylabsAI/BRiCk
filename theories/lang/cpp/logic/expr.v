@@ -531,7 +531,7 @@ Module Type Expr.
           Exists r,
           (Exists q, a |-> rawR q r ** True) //\\
           Q (Vraw r) free
-        ) |-- wp_operand (Ecast (Cl2r Tu8) e) Q.
+        ) |-- wp_operand (Ecast (Cl2r Tbyte) e) Q.
     Proof.
       intros. rewrite -wp_operand_cast_l2r /=. iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "(%r & ?)".
@@ -809,8 +809,8 @@ Module Type Expr.
         | Tptr _ , Tnum sz sgn =>
           wp_operand e (fun v free => Exists p, [| v = Vptr p |] **
             (Forall va, pinned_ptr va p -* Q (Vint (match sgn with
-                                                    | Signed => to_signed sz
-                                                    | Unsigned => trim (bitsN sz)
+                                                    | Signed => to_signed (int_type.bitsize sz)
+                                                    | Unsigned => trim (int_type.bitsN sz)
                                                     end (Z.of_N va))) free))
         | _ , _ => False
         end
@@ -1726,14 +1726,14 @@ Module Type Expr.
                            to the program to make it read-only.
                          NOTE that no "correct" program will ever modify this variable
                            anyways. *)
-                      loop_index |-> primR Tu64 (cQp.c 1) idx -*
+                      loop_index |-> primR Tsize_t (cQp.c 1) idx -*
                       wp_initialize tu ρ ty (targetp .[ erase_qualifiers ty ! idx ]) init
                               (fun free => interp free $
-                                 loop_index |-> primR Tu64 (cQp.c 1) idx **
+                                 loop_index |-> primR Tsize_t (cQp.c 1) idx **
                                  rest (N.succ idx))) sz idx.
 
     Axiom wp_init_arrayloop_init : forall oname level sz ρ (trg : ptr) src init ety ty Q,
-          has_type_prop (Vn sz) Tu64 ->
+          has_type_prop (Vn sz) Tsize_t ->
           is_array_of ty ety ->
           wp_glval tu ρ src
                    (fun p free =>

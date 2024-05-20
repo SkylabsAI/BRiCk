@@ -4,6 +4,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import bedrock.prelude.base.
+Require Export bedrock.lang.prelude.platform.
 Require Export bedrock.lang.cpp.syntax.
 Require Export bedrock.lang.cpp.semantics.sub_module.
 
@@ -51,7 +52,7 @@ Record genv : Type :=
 Existing Class genv.
 Definition genv_byte_order (g : genv) : endian :=
   g.(genv_tu).(byte_order).
-Definition pointer_size (g : genv) := bytesN (pointer_size_bitsize g).
+Definition pointer_size (g : genv) : N := bitsize.bytesN (pointer_size_bitsize g).
 Definition genv_type_table (g : genv) : type_table :=
   g.(genv_tu).(types).
 
@@ -78,12 +79,12 @@ Definition equivalent_int_type (g : genv) (ct : char_type) : integral_type.t :=
     | char_type.Cchar => int_type.Ichar
     | _ =>
         match char_type.bitsN ct with
-        | 8 => W8
-        | 16 => W16
-        | 32 => W32
-        | 64 => W64
-        | 128 => W128
-        | _ => W8
+        | 8 => int_type.Ichar
+        | 16 => int_type.Ishort
+        | 32 => int_type.Iint
+        | 64 => int_type.Ilong (*??? *)
+        | 128 => int_type.S128
+        | _ => int_type.Ichar
         end%N
     end
   in

@@ -47,8 +47,8 @@ Qed.
 Notation to_unsigned_bits := (trim) (only parsing).
 Notation to_unsigned a    := (to_unsigned_bits (bitsize.bitsN a)) (only parsing).
 
-Definition bitFlipZU (len : bitsize) (z : Z) : Z :=
-  to_unsigned len (Z.lnot z).
+Definition bitFlipZU (len : N) (z : Z) : Z :=
+  to_unsigned_bits len (Z.lnot z).
 
 Lemma to_unsigned_bits_id : forall z (bits : N),
     0 <= z < 2 ^ (Z.of_N bits) ->

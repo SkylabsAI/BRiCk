@@ -14,34 +14,35 @@ Section with_σ.
   Context {σ : genv}.
 
   Lemma _Z_to_bytes_has_type_prop (cnt : nat) (endianness : endian) sign (z : Z) :
-    List.Forall (fun (v : N) => has_type_prop (Vn v) Tu8) (_Z_to_bytes cnt endianness sign z).
+    List.Forall (fun (v : N) => has_type_prop (Vn v) Tbyte) (_Z_to_bytes cnt endianness sign z).
   Proof.
     eapply List.Forall_impl.
     2: { exact: _Z_to_bytes_range. }
     move => ? /= ?.
     rewrite -has_int_type.
-    rewrite/bound/min_val/max_val.
+    rewrite/bound/min_val/max_val/=.
     lia.
   Qed.
 
   Lemma _Z_from_bytes_unsigned_le_has_type_prop (sz : int_type.t) :
     forall (bytes : list N),
-      lengthN bytes = bytesN sz ->
+      lengthN bytes = int_type.bytesN sz ->
       has_type_prop (_Z_from_bytes_unsigned_le bytes) (Tnum sz Unsigned).
   Proof.
     intros * Hlength; rewrite -has_int_type/bound/=.
-    rewrite /lengthN/bytesN in Hlength; apply Nat2N.inj in Hlength.
-    eapply _Z_from_bytes_unsigned_le_bound; rewrite Hlength.
+    rewrite /lengthN/int_type.bytesN in Hlength.
+    eapply _Z_from_bytes_unsigned_le_bound.
+    rewrite -nat_N_Z Hlength.
     destruct sz=> /=; lia.
   Qed.
 
   Lemma _Z_from_bytes_le_has_type_prop (bytes : list N) (sz : int_type.t) (sgn : signed) :
-    lengthN bytes = bytesN sz ->
+    lengthN bytes = int_type.bytesN sz ->
     has_type_prop (_Z_from_bytes_le sgn bytes) (Tnum sz sgn).
   Proof.
     move => Hlength. rewrite /_Z_from_bytes_le.
     case_match; subst; last by apply _Z_from_bytes_unsigned_le_has_type_prop.
-    rewrite /lengthN /bytesN in Hlength; apply Nat2N.inj in Hlength; rewrite Hlength.
+    rewrite /lengthN /int_type.bytesN in Hlength; rewrite Hlength.
     unfold operator.to_signed_bits.
     rewrite bool_decide_false; last by destruct sz.
     destruct sz => /=.
@@ -54,7 +55,7 @@ Section with_σ.
 
   Lemma _Z_from_bytes_has_type_prop :
     forall (endianness : endian) (sz : int_type.t) (sgn : signed) (bytes : list N),
-      lengthN bytes = bytesN sz ->
+      lengthN bytes = int_type.bytesN sz ->
       has_type_prop (Vint (_Z_from_bytes endianness sgn bytes)) (Tnum sz sgn).
   Proof.
     intros * Hlength.

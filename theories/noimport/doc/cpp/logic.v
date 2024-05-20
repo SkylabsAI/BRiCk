@@ -70,7 +70,7 @@ Example e_int : Rep := intR q z. (** similarly, [sintR] and [uingR] *)
 Example e_short : Rep := shortR q z. (** similarly, [ushortR] and [sshortR] *)
 Example e_long : Rep := longR q z. (** similarly, [ulongR] and [slongR] *)
 Example e_longlong : Rep := longlongR q z. (** similarly, [ulonglongR] and [slonglongR] *)
-Example e_i8 : Rep := i8R q z. (** similarly, [int16], [int32], [uint64]. Prefix 'u' for the unsigned variants *)
+
 
 (** Character types work a little bit differently because they are represented
     in an architecture-indepenent way as *unsigned* numbers *)
@@ -79,9 +79,6 @@ Example e_wchar : Rep := wcharR q 10.
 Example e_char32 : Rep := char32R q 10.
 Example e_char16 : Rep := char16R q 10.
 Example e_char8 : Rep := char8R q 10.
-
-
-
 
 Variable b: bool.
 Example e11: bool:=true.
@@ -99,8 +96,8 @@ Example eptr : Rep := ptrR<ctype> q p.
 [ctype] is the C++ type of the pointer.
 Click at [type] to see the current definition of C++ types.
 For example, below, we are saying that the pointer is of type
-signed 64 bit (long * ) *)
-Example eptr2 : Rep := ptrR<Ti64> q p.
+<<signed long*>> *)
+Example eptr2 : Rep := ptrR<Tlong> q p.
 
 (**
 To refer to (named) struct types, use the [Tnamed] constructor,

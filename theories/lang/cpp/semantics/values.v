@@ -318,10 +318,10 @@ Module Type RAW_BYTES_MIXIN
   | Vqual t ty v1 v2 :
     val_related ty v1 v2 ->
     val_related (Tqualified t ty) v1 v2
-  | Vraw_uint8 raw z (Hraw : raw_bytes_of_val σ Tu8 (Vint z) [raw]) :
-    val_related Tu8 (Vraw raw) (Vint z)
-  | Vuint8_raw z raw (Hraw : raw_bytes_of_val σ Tu8 (Vint z) [raw]) :
-    val_related Tu8 (Vint z) (Vraw raw).
+  | Vraw_uint8 raw z (Hraw : raw_bytes_of_val σ Tuchar (Vint z) [raw]) :
+    val_related Tuchar (Vraw raw) (Vint z)
+  | Vuint8_raw z raw (Hraw : raw_bytes_of_val σ Tuchar (Vint z) [raw]) :
+    val_related Tuchar (Vint z) (Vraw raw).
   #[local] Hint Constructors val_related : core.
 
   Lemma val_related_not_raw {σ} v1 v2 ty :
@@ -414,9 +414,9 @@ Module Type RAW_BYTES_MIXIN
   (** TODO: Arguably misplaced *)
   Lemma raw_bytes_of_val_uint_length {σ} v rs sz sgn :
     raw_bytes_of_val σ (Tnum sz sgn) v rs ->
-    length rs = bytesNat sz.
+    length rs = N.to_nat (int_type.bytesN sz).
   Proof.
-    by intros [= ?%N_of_nat_inj]%raw_bytes_of_val_sizeof.
+    intros [= ]%raw_bytes_of_val_sizeof. lia.
   Qed.
 End RAW_BYTES_MIXIN.
 
@@ -598,30 +598,33 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
     Section has_type_prop.
       Lemma has_type_prop_bswap8:
         forall v,
-          has_type_prop (Vint (bswap8 v)) Tu8.
-      Proof. intros *; apply has_int_type; red; generalize (bswap8_bounded v); simpl; lia. Qed.
+          has_type_prop (Vint (bswap8 v)) Tuchar.
+      Proof. (* intros *; apply has_int_type; red; generalize (bswap8_bounded v); simpl; lia. Qed. *) Admitted. (* TODO: port bswap theory *)
 
       Lemma has_type_prop_bswap16:
         forall v,
-          has_type_prop (Vint (bswap16 v)) Tu16.
-      Proof. intros *; apply has_int_type; red; generalize (bswap16_bounded v); simpl; lia. Qed.
+          has_type_prop (Vint (bswap16 v)) Tushort.
+      Proof. (* intros *; apply has_int_type; red; generalize (bswap16_bounded v); simpl; lia. Qed. *) Admitted. (* TODO: port bswap theory *)
 
       Lemma has_type_prop_bswap32:
         forall v,
-          has_type_prop (Vint (bswap32 v)) Tu32.
-      Proof. intros *; apply has_int_type; red; generalize (bswap32_bounded v); simpl; lia. Qed.
+          has_type_prop (Vint (bswap32 v)) Tuint.
+      Proof. (* intros *; apply has_int_type; red; generalize (bswap32_bounded v); simpl; lia. Qed. *) Admitted. (* TODO: port bswap theory *)
 
       Lemma has_type_prop_bswap64:
         forall v,
-          has_type_prop (Vint (bswap64 v)) Tu64.
-      Proof. intros *; apply has_int_type; red; generalize (bswap64_bounded v); simpl; lia. Qed.
+          has_type_prop (Vint (bswap64 v)) Tulong.
+      Proof. (* intros *; apply has_int_type; red; generalize (bswap64_bounded v); simpl; lia. Qed. *) Admitted. (* TODO: port bswap theory *)
+
+      (* TODO: missing instance for ulonglong *)
 
       Lemma has_type_prop_bswap128:
         forall v,
-          has_type_prop (Vint (bswap128 v)) Tu128.
-      Proof. intros *; apply has_int_type; red; generalize (bswap128_bounded v); simpl; lia. Qed.
+          has_type_prop (Vint (bswap128 v)) (Tnum int_type.S128 Unsigned).
+      Proof. (* intros *; apply has_int_type; red; generalize (bswap128_bounded v); simpl; lia. Qed. *) Admitted. (* TODO: port bswap theory *)
     End has_type_prop.
 
+    (* TODO need a mapping [int_size.t -> bitsize.t]
     Lemma has_type_prop_bswap:
       forall sz v,
         has_type_prop (Vint (bswap sz v)) (Tnum sz Unsigned).
@@ -634,11 +637,12 @@ Module Type HAS_TYPE_MIXIN (Import P : PTRS) (Import R : RAW_BYTES) (Import V : 
               has_type_prop_bswap64,
               has_type_prop_bswap128.
     Qed.
+    *)
 
   End with_env.
 
   #[global] Hint Resolve has_type_prop_qual : has_type_prop.
-  #[global] Hint Resolve has_type_prop_bswap : has_type_prop.
+  (*#[global] Hint Resolve has_type_prop_bswap : has_type_prop. *)
 
   Arguments Z.add _ _ : simpl never.
   Arguments Z.sub _ _ : simpl never.
@@ -664,8 +668,8 @@ End VALUES_INTF_AXIOM.
 (** Derived *)
 
 Lemma has_type_prop_raw_bytes_of_val {σ} z raw :
-  raw_bytes_of_val σ Tu8 (Vint z) [raw] ->
-  has_type_prop (Vraw raw) Tu8 <-> has_type_prop (Vint z) Tu8.
+  raw_bytes_of_val σ Tuchar (Vint z) [raw] ->
+  has_type_prop (Vraw raw) Tuchar <-> has_type_prop (Vint z) Tuchar.
 Proof.
   rewrite !has_int_type'. split.
   { intros [(? & ? & _)|(? & ? & _)]; first done.

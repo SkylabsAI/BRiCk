@@ -857,23 +857,30 @@ Notation Tchar32 := (Tchar_ char_type.C32).
 Notation Tschar := (Tnum int_type.Ichar Signed) (only parsing).
 Notation Tuchar := (Tnum int_type.Ichar Unsigned) (only parsing).
 
-Notation Tushort := (Tnum int_type.Ishort Unsigned) (only parsing).
 Notation Tshort := (Tnum int_type.Ishort Signed) (only parsing).
+Notation Tushort := (Tnum int_type.Ishort Unsigned) (only parsing).
 
 Notation Tint := (Tnum int_type.Iint Signed) (only parsing).
 Notation Tuint := (Tnum int_type.Iint Unsigned) (only parsing).
 
-Notation Tulong := (Tnum int_type.Ilong Unsigned) (only parsing).
 Notation Tlong := (Tnum int_type.Ilong Signed) (only parsing).
+Notation Tulong := (Tnum int_type.Ilong Unsigned) (only parsing).
 
-Notation Tulonglong := (Tnum int_type.Ilonglong Unsigned) (only parsing).
 Notation Tlonglong := (Tnum int_type.Ilonglong Signed) (only parsing).
+Notation Tulonglong := (Tnum int_type.Ilonglong Unsigned) (only parsing).
+
+Notation T128 := (Tnum int_type.S128 Signed) (only parsing).
+Notation Tu128 := (Tnum int_type.S128 Unsigned) (only parsing).
+
 
 Notation Tfloat16 := (Tfloat_ float_type.Ffloat16).
 Notation Tfloat := (Tfloat_ float_type.Ffloat).
 Notation Tdouble := (Tfloat_ float_type.Fdouble).
 Notation Tlongdouble := (Tfloat_ float_type.Flongdouble).
 Notation Tfloat128 := (Tfloat_ float_type.Ffloat128).
+
+(* Use this notation to refer to <<std::byte>> *)
+Notation Tbyte := Tuchar (only parsing).
 
 (* Temporarily disable.
 Notation Ti8 := (Tnum W8 Signed).

@@ -5,6 +5,8 @@
  *)
 
 Require Import bedrock.prelude.base bedrock.prelude.numbers.
+Require Import bedrock.lang.prelude.platform.
+
 
 #[local] Open Scope Z_scope.
 
@@ -52,8 +54,21 @@ Module int_type.
     | S128      => 16
     end.
 
+  Definition bitsize (t : int_type.t) : bitsize.t :=
+    match t with
+    | int_type.Schar => bitsize.W8
+    | int_type.Sshort => bitsize.W16
+    | int_type.Sint => bitsize.W32
+    | int_type.Slong => bitsize.W64
+    | int_type.Slonglong => bitsize.W64
+    | int_type.S128 => bitsize.W128
+    end.
+
   Definition bitsN (t : t) : N :=
     8 * bytesN t.
+
+  Notation bitsNat t := (N.to_nat (bitsN t)).
+  Notation bytesNat t := (N.to_nat (bytesN t)).
 
   Definition t_le (a b : t) : Prop :=
     (bytesN a <= bytesN b)%N.
@@ -74,17 +89,16 @@ Module int_type.
 End int_type.
 Notation int_type := int_type.t.
 
-
 Definition max_val (bits : int_type) (sgn : signed) : Z :=
   match sgn with
-  | Signed => pow2N (int_type.bitsN bits - 1) - 1
-  | Unsigned => pow2N (int_type.bitsN bits) - 1
+  | Signed => 2 ^ (int_type.bitsN bits - 1)%N - 1
+  | Unsigned => 2 ^ (int_type.bitsN bits) - 1
   end%N.
 
 Definition min_val (bits : int_type) (sgn : signed) : Z :=
   match sgn with
   | Unsigned => 0
-  | Signed => - pow2N (int_type.bitsN bits - 1)
+  | Signed => - Z.of_N (2 ^ (int_type.bitsN bits - 1))
   end.
 
 Definition bound (bits : int_type) (sgn : signed) (v : Z) : Prop :=

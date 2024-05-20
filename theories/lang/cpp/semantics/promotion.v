@@ -192,13 +192,13 @@ Definition promote_integral {σ : genv} (tu : translation_unit) (ty : type) : op
 Goal forall {σ : genv} tu, promote_integral tu Tchar = Some Tint.
 Proof.
   intros. rewrite /promote_integral/=.
-  destruct (char_signed σ); done.
+  by destruct (char_signed σ).
 Succeed Qed. Abort.
 Goal forall {σ : genv} tu, promote_integral tu Twchar = Some (integral_type.to_type $ equivalent_int_type _ char_type.Cwchar).
 Proof.
   intros. rewrite /promote_integral/equivalent_int_type/=.
-  rewrite /fully_representable/=.
-  destruct (wchar_signed σ); done.
+  rewrite /fully_representable/= /int_type.bitsN.
+  by destruct (wchar_signed σ).
 Succeed Qed. Abort.
 
 (* Test cases *)

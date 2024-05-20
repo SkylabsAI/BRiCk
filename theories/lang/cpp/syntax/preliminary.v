@@ -229,8 +229,6 @@ Module char_type.
 End char_type.
 Notation char_type := char_type.t.
 
-Print int_type.
-
 (** ** Floating point types
     See <https://en.cppreference.com/w/cpp/language/types>
  *)

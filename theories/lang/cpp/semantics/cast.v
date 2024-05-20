@@ -49,7 +49,7 @@ Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' :
       end
   | Tnum _ _ , Tnum sz Unsigned =>
       match v with
-      | Vint v => v' = Vint (to_unsigned sz v)
+      | Vint v => v' = Vint (to_unsigned_bits (int_type.bitsN sz) v)
       | _ => False
       end
   | Tnum _ _ , Tnum sz Signed =>
@@ -65,12 +65,12 @@ Definition conv_int {σ : genv} (tu : translation_unit) (from to : type) (v v' :
   | Tnum sz sgn , Tchar_ ct =>
       match v with
       | Vint v =>
-          v' = Vchar (to_char (bitsN sz) sgn (char_type.bitsN ct) v)
+          v' = Vchar (to_char (int_type.bitsN sz) sgn (char_type.bitsN ct) v)
       | _ => False
       end
   | Tchar_ ct , Tnum sz sgn =>
       match v with
-      | Vchar v => v' = Vint (of_char (char_type.bitsN ct) (signedness_of_char σ ct) (bitsN sz) sgn v)
+      | Vchar v => v' = Vint (of_char (char_type.bitsN ct) (signedness_of_char σ ct) (int_type.bitsN sz) sgn v)
       | _ => False
       end
   | Tchar_ ct , Tchar_ ct' =>
@@ -154,7 +154,7 @@ Section conv_int.
       destruct H2 as [[?[??]] | [?[??]]]; congruence. }
     { eapply has_int_type.
       red; rewrite /=/max_val/trim.
-      generalize (Z_mod_lt z (2 ^ bitsN sz0) ltac:(lia)).
+      generalize (Z_mod_lt z (2 ^ int_type.bitsN sz0) ltac:(lia)).
       destruct sz0 => /=; try lia. }
     { eapply has_type_prop_char.
       eexists; split; eauto.
@@ -165,10 +165,10 @@ Section conv_int.
     { eapply has_int_type.
       eapply has_type_prop_char' in H0.
       red.
-      generalize (of_char_bounded (char_type.bitsN t) (signedness_of_char σ t) (bitsN sz) sgn n
+      generalize (of_char_bounded (char_type.bitsN t) (signedness_of_char σ t) (int_type.bitsN sz) sgn n
                     ltac:(destruct sz; simpl; lia)
                     ltac:(destruct t; simpl; lia)).
-      rewrite /min_val/max_val. repeat case_match; simpl; lia. }
+      repeat case_match; simpl; try lia. }
     { apply has_type_prop_char; eexists; split; eauto.
       apply has_type_prop_char in H0.
       destruct H0 as [?[Hinv?]]; inversion Hinv; subst.
@@ -194,7 +194,7 @@ Section conv_int.
     apply has_int_type' in Hty.
     destruct Hty as [(? & -> & Hty) | (? & -> & ?)]; last done.
     move: Hty. rewrite /bound/min_val/max_val. intros.
-    rewrite to_unsigned_id//. destruct sz; cbn; lia.
+    rewrite to_unsigned_bits_id//. destruct sz; cbn; lia.
   Qed.
 
   (* conversion is deterministic *)

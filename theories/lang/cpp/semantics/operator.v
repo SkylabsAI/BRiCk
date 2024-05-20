@@ -33,15 +33,14 @@ Class supports_arith (ty : type) : Prop :=
 Proof. constructor; compute; congruence. Qed.
 #[global] Instance: supports_arith Tuint.
 Proof. constructor; compute; congruence. Qed.
+#[global] Instance: supports_arith Tlong.
+Proof. constructor; compute; congruence. Qed.
+#[global] Instance: supports_arith Tulong.
+Proof. constructor; compute; congruence. Qed.
 #[global] Instance: supports_arith Tlonglong.
 Proof. constructor; compute; congruence. Qed.
 #[global] Instance: supports_arith Tulonglong.
 Proof. constructor; compute; congruence. Qed.
-
-(* These work because BRiCk does not *currently* distinguish
-   integer types with the same bitwidth *)
-Succeed Example supports_arith_long : supports_arith Tlong := _.
-Succeed Example supports_arith_ulong : supports_arith Tulong := _.
 
 Module Type OPERATOR_INTF_FUNCTOR
   (Import P : PTRS_INTF)
@@ -102,10 +101,10 @@ Axiom eval_not_bool : forall a,
 
    NOTE [Z.lnot a = -1 - a]
  *)
-Axiom eval_unop_not : forall (w : bitsize) (sgn : signed) (a : Z),
+Axiom eval_unop_not : forall (w : int_type) (sgn : signed) (a : Z),
     let b := match sgn with
              | Signed => -1 - a
-             | Unsigned => bitFlipZU w a
+             | Unsigned => bitFlipZU (int_type.bitsN w) a
              end in
     has_type_prop (Vint b) (Tnum w sgn) ->
     eval_unop Ubnot (Tnum w sgn) (Tnum w sgn)
@@ -127,7 +126,7 @@ Axiom eval_minus_int : forall ty a c,
     has_type_prop (Vint a) ty ->
     match arith_as ty with
     | Some (_, Signed) => c = 0 - a
-    | Some (w, Unsigned) => c = trim (bitsN w) (0 - a)
+    | Some (w, Unsigned) => c = trim (int_type.bitsN w) (0 - a)
     | None => False
     end ->
     has_type_prop (Vint c) ty ->
@@ -151,7 +150,7 @@ Let eval_int_op (bo : BinOp) (o : Z -> Z -> Z) : Prop :=
     has_type_prop (Vint b) ty ->
     match arith_as ty with
     | Some (_, Signed) => c = o a b
-    | Some (sz, Unsigned) => c = trim (bitsN sz) (o a b)
+    | Some (sz, Unsigned) => c = trim (int_type.bitsN sz) (o a b)
     | None => False
     end ->
     has_type_prop (Vint c) ty ->
@@ -242,13 +241,13 @@ NOTE: Shift operators are *not* homogeneous.
 
 Axiom eval_shl : forall ty `{supports_arith ty_by} w sgn (a b : Z),
     arith_as ty = Some (w, sgn) ->
-    (0 <= b < bitsZ w)%Z ->
+    (0 <= b < int_type.bitsN w)%Z ->
     (0 <= a)%Z ->
     has_type_prop (Vint a) ty ->
     has_type_prop (Vint b) ty_by ->
     let c := match sgn with
              | Signed => Z.shiftl a b
-             | Unsigned => trim (bitsN w) (Z.shiftl a b)
+             | Unsigned => trim (int_type.bitsN w) (Z.shiftl a b)
              end in
     has_type_prop (Vint c) ty ->
     eval_binop_pure Bshl ty ty_by ty (Vint a) (Vint b) (Vint c).
@@ -260,13 +259,13 @@ Axiom eval_shl : forall ty `{supports_arith ty_by} w sgn (a b : Z),
    negative value, the resulting value is implementation-defined. *)
 Axiom eval_shr : forall ty `{supports_arith ty_by} w sgn (a b : Z),
     arith_as ty = Some (w, sgn) ->
-    (0 <= b < bitsZ w)%Z ->
+    (0 <= b < int_type.bitsN w)%Z ->
     (0 <= a)%Z ->
     has_type_prop (Vint a) ty ->
     has_type_prop (Vint b) ty_by ->
     let c := match sgn with
              | Signed => Z.shiftr a b
-             | Unsigned => trim (bitsN w) (Z.shiftr a b)
+             | Unsigned => trim (int_type.bitsN w) (Z.shiftr a b)
              end in
     has_type_prop (Vint c) ty ->
     eval_binop_pure Bshr ty ty_by ty (Vint a) (Vint b) (Vint c).

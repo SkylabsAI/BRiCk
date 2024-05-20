@@ -365,23 +365,25 @@ Proof.
   generalize (Z_mod_lt z (2^bits)). lia.
 Qed.
 
+#[local] Ltac saturate :=
+  repeat match goal with
+    | |- context [ Z.modulo ?X ?Y ] =>
+        lazymatch goal with
+        | H : (0 <= X `mod` Y < Y)%Z |- _ => fail 1
+        | |- _ => generalize (Z.mod_pos_bound X Y ltac:(lia)); intro
+        end
+    end.
+
 Lemma of_char_bounded (from_sz : N) from_sgn (to_sz : N) to_sgn n :
   0 < to_sz -> 0< from_sz ->
-  let min_val : Z := if to_sgn is Signed then -2^(to_sz-1) else 0 in
-  let max_val : Z := if to_sgn is Signed then 2^(to_sz-1) else 2^to_sz in
+  let min_val : Z := if to_sgn is Signed then -Z.of_N (2^(to_sz-1)) else 0 in
+  let max_val : Z := if to_sgn is Signed then Z.of_N (2^(to_sz-1)) else Z.of_N (2^to_sz) in
   min_val <= of_char from_sz from_sgn to_sz to_sgn n < max_val.
 Proof.
   rewrite of_char.unlock /to_signed_bits; intros.
-  assert (2^to_sz = 2 * 2^(to_sz - 1)).
-  { have->: Z.of_N to_sz = Z.succ (to_sz - 1) by lia.
-    rewrite Z.pow_succ_r; try lia. f_equal. f_equal. lia. }
-  #[local] Ltac saturate :=
-    repeat match goal with
-      | |- context [ Z.modulo ?X ?Y ] =>
-          lazymatch goal with
-          | H : (0 <= X `mod` Y < Y)%Z |- _ => fail 1
-          | |- _ => generalize (Z.mod_pos_bound X Y ltac:(lia)); intro
-          end
-      end.
-  repeat first [ case_bool_decide | case_match ]; rewrite /trim/=; split; try rewrite Zmod_0_l ; saturate; try lia.
+  have: 2 ^ (Z.of_N to_sz - 1) = (2 ^ Z.of_N (to_sz - 1)) by (f_equal; lia).
+  assert (Z.of_N (2^to_sz) = 2 * Z.of_N (2^(to_sz - 1))).
+  { have->: to_sz = N.succ (to_sz - 1) by lia.
+    rewrite N.pow_succ_r; try lia. rewrite N2Z.inj_mul/=. f_equal. f_equal. f_equal. lia. }
+  repeat first [ case_bool_decide | case_match ]; rewrite /trim/=; split; try rewrite Zmod_0_l; try solve [ saturate; lia ].
 Qed.

@@ -1368,8 +1368,8 @@ Section with_cpp.
 
   Lemma offset_ptr_congP (p : ptr) o1 o2 :
     offset_congP σ o1 o2 |--
-    type_ptr Tu8 (p ,, o1) -*
-    type_ptr Tu8 (p ,, o2) -*
+    type_ptr Tbyte (p ,, o1) -*
+    type_ptr Tbyte (p ,, o2) -*
     ptr_congP σ (p ,, o1) (p ,, o2).
   Proof.
     iIntros "% T1 T2". rewrite /ptr_congP. iFrame "T1 T2".

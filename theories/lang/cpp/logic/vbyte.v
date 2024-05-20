@@ -38,10 +38,10 @@ Module Type PHANTDATA.
     points-to.*)
   Parameter phantdata_at :
     forall `{Σ:cpp_logic} {σ:genv} (ty : Rtype) (q : Qp) (p : ptr), mpred.
-  #[global] Notation phantbyte_at := (phantdata_at W8).
-  #[global] Notation phantshort_at := (phantdata_at W16).
-  #[global] Notation phantword_at := (phantdata_at W32).
-  #[global] Notation phantdword_at := (phantdata_at W64).
+  #[global] Notation phantbyte_at := (phantdata_at bitsize.W8).
+  #[global] Notation phantshort_at := (phantdata_at bitsize.W16).
+  #[global] Notation phantword_at := (phantdata_at bitsize.W32).
+  #[global] Notation phantdword_at := (phantdata_at bitsize.W64).
 
   Axiom phantdata_at_fractional :
     forall `{Σ:cpp_logic} {σ:genv} ty p, Fractional (λ q, phantdata_at ty q p).

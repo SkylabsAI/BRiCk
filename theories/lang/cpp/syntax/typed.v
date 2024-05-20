@@ -841,7 +841,7 @@ Module decltype.
     let fn (nm_v : name * ObjValue) :=
       trace (breadcrumb nm_v.1) $ internal.check_obj_value nm_v.2
     in
-    let* _ := traverse (T:=eta list) fn $ compare.NM.elements tu.(symbols) in
+    let* _ := traverse (T:=eta list) fn $ namemap.NM.elements tu.(symbols) in
     mret tt.
 End decltype.
 

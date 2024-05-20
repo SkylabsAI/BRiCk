@@ -15,8 +15,8 @@ Require Import bedrock.lang.cpp.arith.operator.
 
 (* Returns one plus the index of the least significant 1-bit of x,
    or if x is zero, returns zero. *)
-Definition first_set (sz : bitsize) (n : Z) : Z :=
-  let n := trim (bitsize.bitsN sz) n in
+Definition first_set (bits : N) (n : Z) : Z :=
+  let n := trim bits n in
   if Z.eqb n 0 then 0
   else
     (fix get ls : Z :=
@@ -26,12 +26,12 @@ Definition first_set (sz : bitsize) (n : Z) : Z :=
          if Z.testbit n l
          then 1 + l
          else get ls
-       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsize.bitsN sz)))).
+       end)%Z (List.map Z.of_nat (seq 0 (N.to_nat bits))).
 #[global] Arguments first_set : simpl never.
 
 (* Returns the number of trailing 0-bits in x, starting at the least
    significant bit position. If x is 0, the result is undefined. *)
-Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
+Definition trailing_zeros (bits : N) (n : Z) : Z :=
   (fix get ls : Z :=
      match ls with
      | nil => 64
@@ -39,13 +39,13 @@ Definition trailing_zeros (sz : bitsize) (n : Z) : Z :=
        if Z.testbit n l
        then l
        else get ls
-     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat (bitsize.bitsN sz)))).
+     end)%Z (List.map Z.of_nat (seq 0 (N.to_nat bits))).
 #[global] Arguments trailing_zeros : simpl never.
 
 (* Returns the number of leading 0-bits in x, starting at the most significant
    bit position. If x is 0, the result is undefined. *)
-Definition leading_zeros (sz : bitsize) (l : Z) : Z :=
-  bitsize.bitsZ sz - Z.log2 (l mod (2^64)).
+Definition leading_zeros (bits : N) (l : Z) : Z :=
+  Z.of_N bits - Z.log2 (l mod (2^64)).
 #[global] Arguments leading_zeros : simpl never.
 
 
@@ -625,7 +625,6 @@ Notation bswap128 := (bswap bitsize.W128) (only parsing).
 
 #[global] Opaque bswap.
 
-(*
 Section Bswap.
   Section Theory.
     Section bounded.
@@ -665,22 +664,6 @@ Section Bswap.
       Lemma bswap64_bounded:
         forall v,
           0 ≤ bswap64 v < 18446744073709551616.
-      Proof.
-        intros *; rewrite /bswap/bswap_/= Z.lor_0_l.
-        pose proof (_set_byte_bound (_get_byte v 0) 7).
-        pose proof (_set_byte_bound (_get_byte v 1) 6).
-        pose proof (_set_byte_bound (_get_byte v 2) 5).
-        pose proof (_set_byte_bound (_get_byte v 3) 4).
-        pose proof (_set_byte_bound (_get_byte v 4) 3).
-        pose proof (_set_byte_bound (_get_byte v 5) 2).
-        pose proof (_set_byte_bound (_get_byte v 6) 1).
-        pose proof (_set_byte_bound (_get_byte v 7) 0).
-        repeat (try apply ZlorRange with (w:=64%N)); lia.
-      Qed.
-
-      Lemma bswap64_bounded:
-        forall v,
-          0 ≤ bswap80 v < ltac:(let x := eval cbv in (2^80) in exact x).
       Proof.
         intros *; rewrite /bswap/bswap_/= Z.lor_0_l.
         pose proof (_set_byte_bound (_get_byte v 0) 7).
@@ -735,6 +718,7 @@ Section Bswap.
 End Bswap.
 
 Section Bswap.
+  Import bedrock.prelude.bits.churn_bits.
   Section Theory.
     Section useless_lor.
       #[local] Transparent _get_byte _set_byte bswap.
@@ -801,7 +785,7 @@ Section Bswap.
 
     Lemma bswap_useless_lor:
       forall sz v v' idx,
-        (idx >= bytesNat sz)%nat ->
+        (idx >= N.to_nat (bitsize.bytesN sz))%nat ->
         bswap sz (Z.lor v (_set_byte v' idx)) =
         bswap sz v.
     Proof.
@@ -1137,4 +1121,3 @@ Section Bswap.
     Qed.
   End Theory.
 End Bswap.
-*)

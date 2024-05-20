@@ -10,7 +10,9 @@ Require Import bedrock.lang.cpp.arith.types.
 Require Import bedrock.lang.cpp.arith.builtins.
 Require Import bedrock.lang.cpp.arith.operator.
 
-Import arith.builtins.churn_bits.
+Import bedrock.prelude.bits.
+Import bedrock.prelude.bits.churn_bits.
+
 
 Section FromToBytes.
   Section ExtraFacts.
@@ -541,7 +543,7 @@ Section FromToBytes.
     Lemma _Z_from_bytes_unsigned_le_bswap:
       forall bsz sz (bytes: list N) v,
         Datatypes.length bytes = sz ->
-        bytesNat bsz = sz ->
+        N.to_nat (bitsize.bytesN bsz) = sz ->
         _Z_from_bytes_unsigned_le bytes = v ->
         _Z_from_bytes_unsigned_le (rev bytes) = bswap bsz v.
     Proof.
@@ -554,7 +556,7 @@ Section FromToBytes.
         | apply length_8_inv  in Hlen as [? [? [? [? [? [? [? [? Hbytes]]]]]]]]
         | apply length_16_inv in Hlen as [? [? [? [? [? [? [? [?
                                             [? [? [? [? [? [? [? [? Hbytes]]]]]]]]]]]]]]]]];
-        rewrite Hbytes //= !Z.lor_0_r.
+        try rewrite Hbytes //= !Z.lor_0_r.
       - now rewrite bswap8_set_byte_reverse.
       - now rewrite bswap16_set_byte_reverse.
       - now rewrite bswap32_set_byte_reverse.
