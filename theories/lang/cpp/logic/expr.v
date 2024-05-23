@@ -367,6 +367,32 @@ Module Type Expr.
            (la |-> primR (erase_qualifiers ty) (cQp.mut 1) rv -* Q la free))
         |-- wp_lval (Eassign l r ty) Q.
 
+    Fixpoint find_idx {T} (P : T -> bool) (ls : list T) : option nat :=
+      match ls with
+      | nil => None
+      | l :: ls => if P l then Some 0 else S <$> find_idx P ls
+      end.
+
+    Definition union_member (cls : exprtype) (fld : ident) : option (globname * nat) :=
+      match cls with
+      | Tnamed cls =>
+        match tu.(types) !! cls with
+        | Some (Gunion u) =>
+            pair cls <$> find_idx (fun m => bool_decide (m.(mem_name) = fld)) u.(u_fields)
+        | _ => None
+        end
+      | _ => None
+      end.
+
+    Axiom wp_lval_assign_union_change : forall ty l fld mut ty' r u mem_idx Q,
+        (* the type of [l] is a union [u], and fld is the [mem_idx]-th field. *)
+        union_member (type_of l) fld = Some (u, mem_idx) ->
+        nd_seq (wp_lval l) (wp_operand r) (fun '(la, rv) free =>
+            la |-> anyR (Tnamed u) (cQp.mut 1) ** (* consume the entire union ownership *)
+            (la |-> unionR u (cQp.mut 1) (Some mem_idx) -*
+             la ., {| f_type := u ; f_name := fld |} |-> primR (erase_qualifiers ty) (cQp.mut 1) rv -* Q la free))
+     |-- wp_lval (Eassign (Emember l fld mut ty') r ty) Q.
+
     Axiom wp_lval_bop_assign : forall ty o l r Q,
             match convert_type_op tu o (type_of l) (type_of r) with
             | Some (tl, tr, resultT) =>
