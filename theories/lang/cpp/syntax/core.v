@@ -542,7 +542,7 @@ program because, in part, C++ has no type for references to members.
      GM: the only way I see to solve this problem is to make [lang] and index rather than
        a parameter. Doing that would allow for two different constructors for [Ecast]
    *)
-| Emember (arrow : bool) (obj : Expr') (f : ident) (mut : bool) (t : type') (* << [f] should be [atomic_name] *)
+| Emember (arrow : bool) (obj : Expr') (f : atomic_name_ type') (mut : bool) (t : type')
 | Emember_call (arrow : bool) (method : MethodRef_ name' type' Expr') (obj : Expr') (args : list Expr')
 | Eoperator_call (_ : OverloadableOperator) (_ : operator_impl.t name' type') (_ : list Expr')
 | Esubscript (e1 : Expr') (e2 : Expr') (t : type')
@@ -967,7 +967,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Ecall e es => is_dependentE e || existsb is_dependentE es
   | Eexplicit_cast _ t e => is_dependentE e || is_dependentT t
   | Ecast c e => Cast.existsb is_dependentT is_dependentT c || is_dependentE e
-  | Emember _ e _ _ t => is_dependentE e || is_dependentT t
+  | Emember _ e f _ t => is_dependentE e || atomic_name.existsb is_dependentT f || is_dependentT t
   | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es
   | Esubscript e1 e2 t => is_dependentE e1 || is_dependentE e2 || is_dependentT t

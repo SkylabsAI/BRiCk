@@ -210,7 +210,7 @@ Module Type Expr.
         match valcat_of a , drop_qualifiers (type_of a) with
         | Lvalue , Tnamed nm =>
           letI* base, free := read_arrow arrow a in
-          letI* p := read_decl (base ,, _field (Field nm (Nid m))) ty in
+          letI* p := read_decl (base ,, _field (Field nm m)) ty in
           Q p free
         | _ , _ => False
           (* NOTE If the object is a temporary, then the field access will also be a
@@ -226,7 +226,7 @@ Module Type Expr.
         match valcat_of a , drop_qualifiers (type_of a) with
         | Xvalue , Tnamed nm =>
           letI* base, free := wp_xval a in
-          letI* p := read_decl (base ,, _field (Field nm (Nid m))) ty in
+          letI* p := read_decl (base ,, _field (Field nm m)) ty in
           Q p free
         | _ , _ => False
           (* This does not occur because our AST explicitly contains [Cl2r] casts.
