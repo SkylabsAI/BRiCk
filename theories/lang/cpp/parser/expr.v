@@ -75,7 +75,7 @@ Module ParserExpr (Import Lang : PARSER_LANG).
   Definition Ebuiltin (nm : obj_name) (ty : type) : Expr :=
     Ecast (Cbuiltin2fun $ Tptr ty) (Eglobal nm ty).
 
-  Definition Emember (arrow : bool) (e_orig : Expr) (f : ident + name) (mut : bool) (ty : decltype) : force_some Expr :=
+  Definition Emember (arrow : bool) (e_orig : Expr) (f : atomic_name_ type + name) (mut : bool) (ty : decltype) : force_some Expr :=
     option.get_some $
       match f with
       | inl f => Some $ Emember arrow e_orig f mut ty

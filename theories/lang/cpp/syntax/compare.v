@@ -1553,14 +1553,14 @@ Module Expr.
     Record box_Emember : Set := Box_Emember {
       box_Emember_0 : bool ;
       box_Emember_1 : Expr;
-      box_Emember_2 : ident;
+      box_Emember_2 : atomic_name' lang;
       box_Emember_3 : bool;
       box_Emember_4 : type;
     }.
     Definition box_Emember_compare (b1 b2 : box_Emember) : comparison :=
       compare_lex (Bool.compare b1.(box_Emember_0) b2.(box_Emember_0)) $ fun _ =>
       compare_lex (compareE b1.(box_Emember_1) b2.(box_Emember_1)) $ fun _ =>
-      compare_lex (bs_cmp b1.(box_Emember_2) b2.(box_Emember_2)) $ fun _ =>
+      compare_lex (atomic_name.compare compareT b1.(box_Emember_2) b2.(box_Emember_2)) $ fun _ =>
       compare_lex (Bool.compare b1.(box_Emember_3) b2.(box_Emember_3)) $ fun _ =>
       compareT b1.(box_Emember_4) b2.(box_Emember_4).
 
