@@ -796,44 +796,56 @@ normalization of types
 - compresses adjacent [Tqualified] constructors
 - drops (irrelevant) qualifiers on function arguments
  *)
-Fixpoint normalize_type (t : type) : type :=
-  let drop_norm := qual_norm (fun _ t => normalize_type t) in
-  let qual_norm :=
-    (* merge adjacent qualifiers and then normalize *)
-    qual_norm' (fun q t => tqualified q (normalize_type t))
-  in
+Fixpoint normalize_type' (cv : type_qualifiers) (t : type) : type :=
+  let normalize_type := normalize_type' QM in
   match t with
-  | Tptr t => Tptr (normalize_type t)
+  | Tptr t => tqualified cv $ Tptr (normalize_type t)
   | Tref t => Tref (normalize_type t)
   | Trv_ref t => Trv_ref (normalize_type t)
-  | Tarray t n => Tarray (normalize_type t) n
-  | Tincomplete_array t => Tincomplete_array (normalize_type t)
-  | Tvariable_array t e => Tvariable_array (normalize_type t) e
-  | Tfunction ft (* cc ar r args *) =>
-    Tfunction $ FunctionType (ft_cc:=ft.(ft_cc)) (ft_arity:=ft.(ft_arity)) (normalize_type ft.(ft_return)) (List.map drop_norm ft.(ft_params))
+    (* TODO: i probably need to normalize the <<const>> and <<volatile>> qualifiers
+       on an array *)
+  | Tarray t n => Tarray (normalize_type' cv t) n
+  | Tincomplete_array t => Tincomplete_array (normalize_type' cv t)
+  | Tvariable_array t e => Tvariable_array (normalize_type' cv t) e
+  | Tfunction ft =>
+    Tfunction $ FunctionType (ft_cc:=ft.(ft_cc)) (ft_arity:=ft.(ft_arity))
+      (normalize_type ft.(ft_return))
+      (List.map normalize_arg_type ft.(ft_params))
   | Tmember_pointer gn t => Tmember_pointer gn (normalize_type t)
-  | Tqualified q t => qual_norm q t
-  | Tnum _ _ => t
-  | Tchar_ _ => t
-  | Tbool => t
-  | Tvoid => t
-  | Tnamed _ => t
-  | Tenum _ => t
-  | Tnullptr => t
-  | Tfloat_ _ => t
-  | Tarch _ _ => t
-  | Tunsupported _ => t
+  | Tqualified q t => normalize_type' (merge_tq cv q) t
+  | Tnum _ _
+  | Tchar_ _
+  | Tbool
+  | Tvoid
+  | Tnamed _
+  | Tenum _
+  | Tnullptr
+  | Tfloat_ _
+  | Tarch _ _ => tqualified cv t
+  | Tunsupported _ => tqualified cv t
   | Tparam _
   | Tresult_param _
   | Tresult_global _
   | Tresult_unop _ _ | Tresult_binop _ _ _ | Tresult_call _ _ | Tresult_member_call _ _ _
   | Tresult_parenlist _ _
   | Tresult_member _ _
-  | Tdecltype _ => t (* TODO: it isn't clear what [normalize_type] means on meta types *)
-  | Texprtype _ => t (* TODO: it isn't clear what [normalize_type] means on meta types *)
-  end.
+  | Tdecltype _ => tqualified cv t
+  | Texprtype _ => tqualified cv t
+  end
+with normalize_arg_type (t : type) : type :=
+  qual_norm (fun cv t =>
+               match t with
+               | Tarray ety _
+               | Tvariable_array ety _
+               | Tincomplete_array ety => Tptr (normalize_type' cv ety)
+               | Tptr t => Tptr $ normalize_type' QM t (* the outer qualifier does not factor into the type *)
+               | Tref t => Tref $ normalize_type' QM t
+               | Trv_ref t => Trv_ref $ normalize_type' QM t
+               | _ => t (* the outer qualifiers do not factor into the type *)
+               end) t.
+Notation normalize_type := (normalize_type' QM).
 
-(*
+(* TODO NAMES
 Section normalize_type_idempotent.
 
   Fixpoint _drop_norm_idempotent q q' ty {struct ty}:
@@ -925,6 +937,18 @@ Definition is_arithmetic (ty : type) : bool :=
   | Tbool => true
   | _ => false
   end.
+
+(* [as_function ty] returns the [function_type'] if [ty] is a function type. *)
+Definition as_function {lang} (ty : functype' lang) : option (function_type' lang) :=
+  match ty with
+  | Tfunction ft => Some ft
+  | _ => None
+  end.
+
+(* extracts the parameter information from a function type *)
+Definition args_for {lang} (ft : function_type' lang)
+  : list (decltype' lang) * function_arity :=
+  (ft.(ft_params), ft.(ft_arity)).
 
 (**
 [is_pointer ty] is [true] if [ty] is a pointer type
@@ -1209,6 +1233,7 @@ Definition Tmember_func {lang} (ty : exprtype' lang) (fty : functype' lang) : fu
 
 End with_lang.
 
+Notation normalize_type := (normalize_type' QM).
 Notation as_ref := (as_ref' (fun u => u) Tvoid).
 Notation as_ref_option := (as_ref' Some None).
 #[global] Hint Resolve is_qualified_decompose_type | 0 : core.

@@ -34,7 +34,7 @@
        : type
   
   Notation_Tarray_2 uses section variables ty n.
-  Notation_Tnamed_1 = {t: Nglobal (Nid "foobarbaz")}
+  Notation_Tnamed_1 = {t: "foobarbaz"%cpp_name}
        : type
   Notation_Tnamed_2 = {t: nm}
        : type
@@ -58,12 +58,8 @@
   Notation_Tfunction_novariadic_args_nowrap_2 uses section variables
   rty aty1 aty2.
   Notation_Tfunction_novariadic_args_wrap =
-  {t: extern CC_C ???(Nglobal
-                        (Nid
-                           "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"),
-                      Nglobal
-                        (Nid
-                           "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk")) -> void}
+  {t: extern CC_C ???("askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"%cpp_name,
+                      "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"%cpp_name) -> void}
        : type
   Notation_Tfunction_variadic_noargs_1 =
   {t: extern CC_C ???()(...) -> void}
@@ -83,17 +79,13 @@
   Notation_Tfunction_variadic_args_nowrap_2 uses section variables
   rty aty1 aty2.
   Notation_Tfunction_variadic_args_wrap =
-  {t: extern CC_C ???(Nglobal
-                        (Nid
-                           "askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"),
-                      Nglobal
-                        (Nid
-                           "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"))(...) -> void}
+  {t: extern CC_C ???("askldjfo;lasjdlkfj;aklsdjg;blkajl;ksdjfl;aksdjf;lkasjdf;lkajsd;lfkjas;dlkfj;alskdjf;kalsdjf;lk"%cpp_name,
+                      "askldjflk;ajsdkl;gjasdklgjakl;sdjgl;kasdjfl;kjasdlfhajklsdgljkasdhfgjkahsdfljk"%cpp_name)(...) -> void}
        : type
   Notation_Tbool = {t: bool}
        : type
   Notation_Tmember_pointer_1 =
-  {t: ptr[{t: Nglobal (Nid "foobarbaz")}]<char>}
+  {t: ptr[{t: "foobarbaz"%cpp_name}]<char>}
        : type
   Notation_mut_1 = Qmut ({t: bool})
        : type

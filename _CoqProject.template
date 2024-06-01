@@ -97,6 +97,7 @@ theories/prelude/sets.v
 theories/prelude/finite.v
 theories/prelude/fin_map_dom.v
 theories/prelude/functions.v
+theories/prelude/parsec.v
 
 theories/prelude/tactics/base_dbs.v
 theories/prelude/tactics/telescopes.v
@@ -217,6 +218,9 @@ theories/lang/cpp/syntax/translation_unit.v
 theories/lang/cpp/syntax/type_notations.v
 theories/lang/cpp/syntax/types.v
 theories/lang/cpp/syntax/typing.v
+theories/lang/cpp/syntax/name_notation.v
+theories/lang/cpp/syntax/name_notation/parser.v
+theories/lang/cpp/syntax/name_notation/printer.v
 theories/lang/cpp/syntax.v
 theories/lang/cpp/code_notations.v
 
@@ -316,6 +320,7 @@ theories/lang/cpp/parser/expr.v
 theories/lang/cpp/parser/lang.v
 theories/lang/cpp/parser/reduction.v
 theories/lang/cpp/parser/stmt.v
+theories/lang/cpp/parser/name.v
 theories/lang/cpp/parser/type.v
 theories/lang/cpp/parser/notation.v
 theories/lang/cpp/parser.v

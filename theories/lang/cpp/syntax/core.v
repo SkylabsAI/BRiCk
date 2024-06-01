@@ -323,88 +323,6 @@ Module atomic_name.
 
 End atomic_name.
 
-(** ** Casts
-    Proposal: make [Cast] part of the recursive bundle.
- *)
-Variant Cast_ {classname type : Set} : Set :=
-| Cdependent (_ : type)
-| Cbitcast (_ : type)
-| Clvaluebitcast	(_ : type) (** TODO (FM-3431): Drop this constructor? *)
-| Cl2r (_ : type) (* OPTIMIZABLE *)
-| Cnoop (_ : type)
-| Carray2ptr (_ : type) (* OPTIMIZABLE *)
-| Cfun2ptr (_ : type) (* OPTIMIZABLE *)
-| Cint2ptr (_ : type) (* OPTIMIZABLE *)
-| Cptr2int (_ : type)
-| Cptr2bool
-  (* in [Cderived2base] and [Cbase2derived], the list is a tree
-     from (top..bottom], i.e. **in both cases** the most derived
-     class is not included in the list and the base class is at
-     the end of the list. For example, with
-     ```c++
-     class A {};
-     class B : public A {};
-     class C : public B {};
-     ```
-     A cast from `C` to `A` will be [Cderived2base ["::B";"::A"]] and
-       the "::C" comes from the type of the sub-expression.
-     A cast from `A` to `C` will be [Cbase2derived ["::B";"::A"]] and
-       the "::C" comes form the type of the expression.
-   *)
-| Cintegral (_ : type)
-| Cint2bool
-| Cfloat2int (_ : type)
-| Cnull2ptr (_ : type)
-| Cnull2memberptr (_ : type)
-| Cbuiltin2fun (_ : type) (* OPTIMIZABLE? *)
-| C2void
-
-  (* These are just annotations on the underlying expression *)
-| Cctor (_ : type)
-| Cuser (* this is an annotation, the actual member call is the child node *)
-| Cdynamic     (to : type)
-| Cderived2base (_ : list classname) (_ : type)
-| Cbase2derived (_ : list classname) (_ : type)
-.
-#[global] Arguments Cast_ : clear implicits.
-(**
-TODO (FM-3431): For the explicit casts, we could embed the type as
-written and compute the value category (rather than annote `Ecast`
-with a value category).
-*)
-#[global] Instance Cast__eq_dec : EqDecision2 Cast_.
-Proof. solve_decision. Defined.
-Module Cast.
-  Definition existsb {classname type : Set}
-      (GN : classname -> bool) (T : type -> bool)
-      (c : Cast_ classname type) : bool :=
-    match c with
-    | Cdependent t
-    | Cbitcast t
-    | Clvaluebitcast t
-    | Cl2r t
-    | Cnoop t
-    | Carray2ptr t
-    | Cfun2ptr t
-    | Cint2ptr t
-    | Cptr2int t => T t
-    | Cptr2bool => false
-    | Cderived2base path t
-    | Cbase2derived path t => List.existsb GN path || T t
-    | Cintegral t => T t
-    | Cint2bool => false
-    | Cfloat2int t
-    | Cnull2ptr t
-    | Cnull2memberptr t
-    | Cbuiltin2fun t
-    | Cctor t => T t
-    | C2void => false
-    | Cuser => false
-    | Cdynamic t => T t
-    end.
-
-End Cast.
-
 Module cast_style.
   Variant t : Set :=
   | functional
@@ -536,7 +454,7 @@ program because, in part, C++ has no type for references to members.
 | Ecomma (e1 e2 : Expr')
 | Ecall (f : Expr') (es : list Expr')
 | Eexplicit_cast (c : cast_style.t) (_ : type') (e : Expr')
-| Ecast (c : Cast_ type' type') (e : Expr')
+| Ecast (c : Cast') (e : Expr')
   (* TODO: this use of [Cast_] should really use [classname] as its first argument, but
      we can not use that without a [match] which Coq rejects as not being strictly positive.
      GM: the only way I see to solve this problem is to make [lang] and index rather than
@@ -627,8 +545,50 @@ with VarDecl' {lang : lang.t} : Set :=
 | Dvar (name : localname) (_ : type') (init : option Expr')
 | Ddecompose (_ : Expr') (anon_var : ident) (_ : list VarDecl')
   (* initialization of a function-local [static]. See https://eel.is/c++draft/stmt.dcl#3 *)
-| Dinit (thread_safe : bool) (name : name') (_ : type') (init : option Expr').
+| Dinit (thread_safe : bool) (name : name') (_ : type') (init : option Expr')
+(** ** Casts
+ *)
+with Cast' {lang : lang.t} : Set :=
+| Cdependent (_ : type')
+| Cbitcast (_ : type')
+| Clvaluebitcast	(_ : type') (** TODO (FM-3431): Drop this constructor? *)
+| Cl2r
+| Cnoop (_ : type')
+| Carray2ptr
+| Cfun2ptr
+| Cint2ptr (_ : type')
+| Cptr2int (_ : type')
+| Cptr2bool
+  (* in [Cderived2base] and [Cbase2derived], the list is a tree
+     from (top..bottom], i.e. **in both cases** the most derived
+     class is not included in the list and the base class is at
+     the end of the list. For example, with
+     ```c++
+     class A {};
+     class B : public A {};
+     class C : public B {};
+     ```
+     A cast from `C` to `A` will be [Cderived2base ["::B";"::A"]] and
+       the "::C" comes from the type of the sub-expression.
+     A cast from `A` to `C` will be [Cbase2derived ["::B";"::A"]] and
+       the "::C" comes form the type of the expression.
+   *)
+| Cintegral (_ : type')
+| Cint2bool
+| Cfloat2int (_ : type')
+| Cnull2ptr (_ : type')
+| Cnull2memberptr (_ : type')
+| Cbuiltin2fun (_ : type') (* OPTIMIZABLE? *)
+| C2void
 
+  (* These are just annotations on the underlying expression *)
+| Cctor (_ : type')
+| Cuser (* this is an annotation, the actual member call is the child node *)
+| Cdynamic     (to : type')
+| Cderived2base (_ : list type') (_ : type')
+| Cbase2derived (_ : list type') (_ : type')
+.
+#[global] Arguments Cast' : clear implicits.
 #[global] Arguments name' : clear implicits.
 #[global] Arguments type' : clear implicits.
 #[global] Arguments Expr' : clear implicits.
@@ -645,7 +605,8 @@ Proof. apply populate, Nglobal, inhabitant. Qed.
 Proof. solve_inhabited. Qed.
 #[global] Instance Stmt_inhabited {lang} : Inhabited (Stmt' lang).
 Proof. apply populate, Sseq, nil. Qed.
-
+#[global] Instance Cast_inhabited {lang} : Inhabited (Cast' lang).
+Proof. apply populate, C2void. Qed.
 
 Section eq_dec.
   Context {lang : lang.t}.
@@ -655,7 +616,8 @@ Section eq_dec.
   with type_eq_dec' : EQ_DEC (type' lang)
   with Expr_eq_dec' : EQ_DEC (Expr' lang)
   with VarDecl_eq_dec' : EQ_DEC (VarDecl' lang)
-  with Stmt_eq_dec' : EQ_DEC (Stmt' lang).
+  with Stmt_eq_dec' : EQ_DEC (Stmt' lang)
+  with Cast_eq_dec' : EQ_DEC (Cast' lang).
   Proof.
     all: intros x y.
     all: pose (name_eq_dec' : EqDecision _).
@@ -663,6 +625,7 @@ Section eq_dec.
     all: pose (Expr_eq_dec' : EqDecision _).
     all: pose (VarDecl_eq_dec' : EqDecision _).
     all: pose (Stmt_eq_dec' : EqDecision _).
+    all: pose (Cast_eq_dec' : EqDecision _).
     all:unfold Decision; decide equality; solve_decision.
   Defined.
 
@@ -671,8 +634,39 @@ Section eq_dec.
   #[global] Instance Expr_eq_dec : EqDecision _ := Expr_eq_dec'.
   #[global] Instance VarDecl_eq_dec : EqDecision _ := VarDecl_eq_dec'.
   #[global] Instance Stmt_eq_dec : EqDecision _ := Stmt_eq_dec'.
+  #[global] Instance Cast_eq_dec : EqDecision _ := Cast_eq_dec'.
 End eq_dec.
 
+Module Cast.
+  Definition existsb {lang : lang.t}
+    (T : type' lang -> bool)
+    (c : Cast' lang) : bool :=
+    match c with
+    | Cdependent t
+    | Cbitcast t
+    | Clvaluebitcast t => T t
+    | Cl2r => false
+    | Cnoop t => T t
+    | Carray2ptr
+    | Cfun2ptr => false
+    | Cint2ptr t
+    | Cptr2int t => T t
+    | Cptr2bool => false
+    | Cderived2base path t
+    | Cbase2derived path t => List.existsb T path || T t
+    | Cintegral t => T t
+    | Cint2bool => false
+    | Cfloat2int t
+    | Cnull2ptr t
+    | Cnull2memberptr t
+    | Cbuiltin2fun t
+    | Cctor t => T t
+    | C2void => false
+    | Cuser => false
+    | Cdynamic t => T t
+    end.
+
+End Cast.
 
 Definition is_implicit {lang} (e : Expr' lang) : bool :=
   if e is Eimplicit _ then true else false.
@@ -741,8 +735,6 @@ Notation function_type' lang := (function_type_ (decltype' lang)).
 Notation function_name' lang := (function_name_ (decltype' lang)).
 Notation temp_param' lang := (temp_param_ (type' lang)).
 Notation temp_arg' lang := (temp_arg_ (decltype' lang) (Expr' lang)).
-Notation Cast' lang := (Cast_ (classname' lang) (type' lang)).
-(** TODO (FM-3431): Should be [decltype]                          ^^^^^*)
 Notation atomic_name' lang := (atomic_name_ (type' lang)).
 
 (*
@@ -809,7 +801,8 @@ Proof. rewrite /field_name.t. refine _. Defined.
 #[global] Hint Opaque field_name.t : typeclass_instances.
 *)
 
-Definition field' lang : Set := name' lang.
+Notation field' := name' (only parsing).
+(* Definition field' lang : Set := name' lang. *)
 Definition Field' {lang} : classname' lang -> field_name.t lang -> field' lang :=
   match lang with
   | lang.cpp => Nscoped
@@ -823,7 +816,7 @@ Definition Field' {lang} : classname' lang -> field_name.t lang -> field' lang :
     | _ => Nunsupported "Field failed"
     end
   end.
-Notation field := (field' lang.cpp).
+Notation field := (field' lang.cpp) (only parsing).
 Notation Field := (@Field' lang.cpp).
 Definition f_type {lang} (t : field' lang) : globname' lang :=
   match t with
@@ -835,8 +828,11 @@ Definition f_name {lang} (t : field' lang) : atomic_name' lang :=
   | Nscoped _ n => n
   | _ => Nunsupported_atomic "not a field"
   end.
-#[global] Bind Scope cppfield_scope with field'.
-#[global] Bind Scope cppname_scope with name'.
+#[global] Bind Scope cpp_field_scope with field'.
+#[global] Bind Scope cpp_name_scope with name'.
+#[global] Bind Scope cpp_name_scope with globname'.
+#[global] Bind Scope cpp_name_scope with obj_name'.
+
 
 (** ** Derived forms *)
 Definition Qconst_volatile {lang} : type' lang -> type' lang :=
@@ -966,7 +962,7 @@ with is_dependentE {lang} (e : Expr' lang) : bool :=
   | Ecomma e1 e2 => is_dependentE e1 || is_dependentE e2
   | Ecall e es => is_dependentE e || existsb is_dependentE es
   | Eexplicit_cast _ t e => is_dependentE e || is_dependentT t
-  | Ecast c e => Cast.existsb is_dependentT is_dependentT c || is_dependentE e
+  | Ecast c e => Cast.existsb is_dependentT c || is_dependentE e
   | Emember _ e f _ t => is_dependentE e || atomic_name.existsb is_dependentT f || is_dependentT t
   | Emember_call _ m e es => MethodRef.existsb is_dependentN is_dependentT is_dependentE m || is_dependentE e || existsb is_dependentE es
   | Eoperator_call _ i es => operator_impl.existsb is_dependentN is_dependentT i || existsb is_dependentE es

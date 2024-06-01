@@ -706,10 +706,10 @@ public:
 		break;
 			CASE_WITH_TYPE(BitCast, Cbitcast)
 			CASE_WITH_TYPE(LValueBitCast, Clvaluebitcast)
-			CASE_WITH_TYPE(LValueToRValue, Cl2r)
+			CASE_NO_TYPE(LValueToRValue, Cl2r)
 			CASE_WITH_TYPE(NoOp, Cnoop)
-			CASE_WITH_TYPE(ArrayToPointerDecay, Carray2ptr)
-			CASE_WITH_TYPE(FunctionToPointerDecay, Cfun2ptr)
+			CASE_NO_TYPE(ArrayToPointerDecay, Carray2ptr)
+			CASE_NO_TYPE(FunctionToPointerDecay, Cfun2ptr)
 			CASE_WITH_TYPE(IntegralToPointer, Cint2ptr)
 			CASE_WITH_TYPE(PointerToIntegral, Cptr2int)
 

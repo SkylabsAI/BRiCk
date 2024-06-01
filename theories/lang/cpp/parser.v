@@ -11,12 +11,14 @@ Require Export bedrock.lang.cpp.syntax. (* NOTE: too much *)
 Require Export bedrock.lang.cpp.parser.stmt.
 Require Import bedrock.lang.cpp.parser.lang.
 Require Import bedrock.lang.cpp.parser.type.
+Require Import bedrock.lang.cpp.parser.name.
 Require Import bedrock.lang.cpp.parser.expr.
 Require Import bedrock.lang.cpp.parser.decl.
 Require Import bedrock.lang.cpp.parser.notation.
 Require Import bedrock.lang.cpp.parser.reduction.
 
 #[local] Definition parser_lang : lang.t := lang.cpp.
+Include ParserName.
 Include ParserType.
 Include ParserExpr.
 Include ParserDecl.

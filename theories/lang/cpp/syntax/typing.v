@@ -97,18 +97,41 @@ Module decltype.
       | _ => mfail
       end.
 
+    Definition requireL (t : decltype) : M exprtype :=
+      match drop_qualifiers t with
+      | Tref t => mret t
+      | _ => mfail
+      end.
+
+    Definition requireGL (t : decltype) : M exprtype :=
+      match drop_qualifiers t with
+      | Tref t => mret t
+      | Trv_ref t => mret t
+      | _ => mfail
+      end.
+
     Section fixpoint.
       Context (of_expr : Expr -> M decltype).
 
-      Definition of_cast (base : decltype) (c : Cast_ (type' lang) (type' lang)) : M decltype :=
+      Definition of_cast (base : decltype) (c : Cast' lang) : M decltype :=
         match c with
         | Cdependent t
         | Cbitcast t
-        | Clvaluebitcast t
-        | Cl2r t
-        | Cnoop t
-        | Carray2ptr t
-        | Cfun2ptr t
+        | Clvaluebitcast t => mret t
+        | Cl2r => drop_qualifiers <$> requireGL base
+        | Cnoop t => mret t
+        | Carray2ptr =>
+            let k cv base :=
+              match base with
+              | Tarray ty _
+              | Tincomplete_array ty
+              | Tvariable_array ty _ =>
+                  mret $ Tptr $ tqualified cv ty
+              | _ => mfail
+              end
+            in
+            requireGL base >>= qual_norm k
+        | Cfun2ptr => Tptr <$> requireL base
         | Cint2ptr t
         | Cptr2int t => mret t
         | Cptr2bool => mret Tbool
@@ -261,7 +284,7 @@ Module decltype.
 
         | Evar _ t => mret $ tref QM t
         | Eenum_const n _ => mret $ Tenum n
-        | Eglobal _ t => mret $ tref QM t
+        | Eglobal _ t => mret $ tref QM $ normalize_type t
         | Eglobal_member nm t =>
             match nm with
             | Nscoped cls _ => mret $ Tmember_pointer (Tnamed cls) t
@@ -330,6 +353,7 @@ Module decltype.
 
   Fixpoint of_expr {lang} (e : Expr' lang) : M (decltype' lang) :=
     internal.of_expr_body of_expr e.
+
 End decltype.
 
 Module exprtype.
