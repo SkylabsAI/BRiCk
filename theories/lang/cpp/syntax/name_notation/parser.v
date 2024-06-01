@@ -10,7 +10,9 @@ Require Import bedrock.prelude.bytestring.
 Require Import bedrock.upoly.upoly.
 Require Import bedrock.upoly.option.
 Require Import bedrock.prelude.parsec.
-Require Import bedrock.lang.cpp.syntax.
+Require Import bedrock.lang.cpp.syntax.core.
+Require Import bedrock.lang.cpp.syntax.types.
+
 
 (** ** A parser for C++ names.
 
@@ -57,6 +59,10 @@ Module parser.
   Definition token (b : bs) : M unit :=
     ignore_ws (exact b).
 
+  Definition decimal : M N :=
+    let make ls := fold_left (fun acc x => 10 * acc + x)%N ls 0%N in
+    make <$> plus ((fun x => Byte.to_N x - Byte.to_N "0")%N <$> digit).
+
   Definition NEXT {T} (n : nat) (f : nat -> M T) : M T :=
     match n with
     | 0 => mfail
@@ -76,6 +82,10 @@ Module parser.
           (let* _ := exact "*" in mret (true, Tptr)) <|>
           (let* _ := exact "const" in mret (true, fun x => Qconst x)) <|>
           (let* _ := exact "volatile" in mret (true, fun x => Qvolatile x)) <|>
+          (let* _ := exact "[" in
+           let* n := decimal in
+           let* _ := exact "]" in
+           mret (true, fun x => Tarray x n)) <|>
           (mret (false, fun x => x))
       in
       if (continue : bool) then
@@ -121,6 +131,7 @@ Module parser.
       ; ("&", OOAmp)
       ; ("||", OOPipePipe)
       ; ("==", OOEqualEqual)
+      ; ("=", OOEqual)
       ; ("<=", OOLessEqual)
       ; ("<<", OOLessLess)
       ; (">=", OOGreaterEqual)
@@ -157,15 +168,18 @@ Module parser.
           end
       end.
 
-    Definition operator : M OverloadableOperator :=
-      firstOf $ (fun '(lex, syn) => const syn <$> token lex) <$> operators.
-
     (** classification of names based to account for destructors and overloadable
         operators. *)
     Variant name_type : Set :=
       | Simple (_ : bs)
       | Dtor (_ : bs)
-      | Op (_ : OverloadableOperator).
+      | Anon (_ : N)
+      | Op (_ : OverloadableOperator)
+      | OpConv (_ : type).
+
+    Definition operator : M OverloadableOperator :=
+      firstOf $ (fun '(lex, syn) => const syn <$> token lex) <$> operators.
+
 
     (* The core parsers are based on fuel to handle the mutual recursion *)
     Fixpoint parse_type (fuel : nat) : M type :=
@@ -181,7 +195,7 @@ Module parser.
 
     with parse_name (fuel : nat) : M name :=
       let* (x : list (atomic_name' _ * _)) :=
-        sepBy (exact "::") (NEXT fuel parse_name_component)
+        (fun _ x => x) <$> optional (exact "::") <*> sepBy (exact "::") (NEXT fuel parse_name_component)
       in
       match x with
       | nil => mfail (* unreachable *)
@@ -218,25 +232,34 @@ Module parser.
         match op with
         | None => let* d := optional (token "~") in
                  match d with
-                 | None => Simple <$> ident
+                 | None => let* d := optional (exact "#") in
+                          match d with
+                          | None => Simple <$> ident
+                          | Some _ => Anon <$> decimal
+                          end
                  | Some _ => Dtor <$> ident
                  end
-        | Some _ => Op <$> operator
+        | Some _ => (Op <$> operator) <|> (OpConv <$> NEXT fuel parse_type)
         end
       in
       let mk_atomic_name (nm : name_type) (args : option _) : M (atomic_name' _) :=
         match args with
         | None => match nm with
                  | Simple nm => mret $ Nid nm
-                 | Dtor _ => mfail
-                 | Op _ => mfail
+                 | Anon nm => mret $ Nanon nm
+                 | Dtor _
+                 | Op _
+                 | OpConv _ => mfail
                  end
         | Some (args, quals) =>
-            mret $ Nfunction quals (match nm with
-                                    | Dtor _ => Ndtor
-                                    | Simple nm => Nf nm
-                                    | Op oo => Nop oo
-                                    end) args
+            (fun nm => Nfunction quals nm args) <$>
+              match nm with
+              | Dtor _ => mret $ Ndtor
+              | Simple nm => mret $ Nf nm
+              | Anon n => mfail
+              | Op oo => mret $ Nop oo
+              | OpConv t => mret $ Nop_conv t
+              end
         end
       in
       let parse_args : M _ :=
@@ -261,3 +284,26 @@ End parser.
 
 Definition parse_name (input : list Byte.byte) : option name :=
   parser.run_full (parser.parse_name 1000) $ BS.parse input.
+
+Module Type TESTS.
+  #[local] Definition TEST (input : bs) (nm : name) : Prop :=
+    (parse_name $ BS.print input) = Some nm.
+
+  #[local] Definition Msg : name := Nglobal $ Nid "Msg".
+
+  Succeed Example _0 : TEST "Msg" Msg := eq_refl.
+  Succeed Example _0 : TEST "::Msg" Msg := eq_refl.
+  Succeed Example _0 : TEST "Msg::#0" (Nscoped Msg (Nanon 0)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg()" (Nscoped Msg (Nfunction [] Nctor [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::~Msg()" (Nscoped Msg (Nfunction [] Ndtor [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg(int)" (Nscoped Msg (Nfunction [] Nctor [Tint])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg(long)" (Nscoped Msg (Nfunction [] Nctor [Tlong])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator=(const Msg&)" (Nscoped Msg (Nfunction [] (Nop OOEqual) [Tref (Qconst (Tnamed $ Nglobal (Nid "Msg")))])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator=(const Msg&&)" (Nscoped Msg (Nfunction [] (Nop OOEqual) [Trv_ref (Qconst (Tnamed $ Nglobal (Nid "Msg")))])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator new()" (Nscoped Msg (Nfunction [] (Nop (OONew false)) [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator new[]()" (Nscoped Msg (Nfunction [] (Nop (OONew true)) [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator   delete()" (Nscoped Msg (Nfunction [] (Nop (OODelete false)) [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator delete[]()" (Nscoped Msg (Nfunction [] (Nop (OODelete true)) [])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator int()" (Nscoped Msg (Nfunction [] (Nop_conv Tint) [])) := eq_refl.
+  Succeed Example _0 : TEST "foo_client(int[2]&, int const*, bool*, int**, char*)" (Nglobal (Nfunction [] (Nf "foo_client") [Tref (Tarray Tint 2); Tptr (Qconst Tint); Tptr Tbool; Tptr (Tptr Tint); Tptr Tchar])) := eq_refl.
+End TESTS.

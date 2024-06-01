@@ -5,28 +5,32 @@
  *)
 Require Import bedrock.lang.cpp.parser.notation.
 
+(* This file simply sets up notation scopes, in particular,
+   those that are needed by <<_names>> files.
+ *)
+
 Declare Scope cpp_scope.
 Delimit Scope cpp_scope with cpp.
 
-Declare Scope cppfield_scope.
-Delimit Scope cppfield_scope with field.
+Declare Scope cpp_field_scope.
+Delimit Scope cpp_field_scope with cpp_field.
 
-Declare Scope cppname_scope.
-Delimit Scope cppname_scope with cppname.
+Declare Scope cpp_name_scope.
+Delimit Scope cpp_name_scope with cpp_name.
 
 (* XXX This is only parsing to work around Coq misusing it outside
-[cppfield_scope]. See #235. *)
+[cpp_field_scope]. See #235. *)
 Notation "` e `" := e (e custom cppglobal at level 200, at level 0,
-                        only parsing) : cppfield_scope.
+                        only parsing) : cpp_field_scope.
 Notation "` e `" := e (e custom cppglobal at level 200, at level 0,
-                        only parsing) : cppname_scope.
+                        only parsing) : cpp_name_scope.
 
 
 (** Importing [cpp_notation] makes cpp2v-generated names generally
 available as, e.g., [``::MyClass``]. *)
 Module Export cpp_notation.
   Notation "'``' e '``'" := e
-                              (at level 0, e custom cppglobal at level 200,
-                                format "`` e ``") : cpp_scope.
+    (at level 0, e custom cppglobal at level 200,
+      format "`` e ``") : cpp_scope.
   Open Scope cpp_scope.
 End cpp_notation.

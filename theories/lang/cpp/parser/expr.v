@@ -19,7 +19,7 @@ Module ParserExpr (Import Lang : PARSER_LANG).
   #[local] Notation exprtype := (exprtype' parser_lang).
   #[local] Notation decltype := (decltype' parser_lang).
   #[local] Notation Expr := (Expr' parser_lang).
-  #[local] Notation Cast := (Cast_ type type).
+  #[local] Notation Cast := (Cast' parser_lang).
 
   Definition Ecstyle_cast (c : Cast) (t : type) (e : Expr) : Expr :=
     Eexplicit_cast cast_style.c t (Ecast c e).

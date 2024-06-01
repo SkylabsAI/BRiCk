@@ -206,7 +206,7 @@ Module Type Expr__newdelete.
           forall (oinit : option Expr)
             new_fn (pass_align : bool) new_args (_ : new_args <> nil) aty Q targs
             (nfty := normalize_type new_fn.2)
-            (_ : arg_types nfty = Some targs)
+            (_ : (args_for <$> as_function nfty) = Some targs)
             (alloc_sz alloc_al : N)
             (_ : size_of aty = Some alloc_sz) (_ : align_of aty = Some alloc_al),
             (let implicit_args := new_implicits pass_align alloc_sz alloc_al in
@@ -255,7 +255,7 @@ Module Type Expr__newdelete.
             new_fn storage_expr aty Q
             (nfty := normalize_type new_fn.2)
             (_ : type_of storage_expr = Tptr Tvoid)
-            (_ : arg_types nfty = Some ([Tsize_t; Tptr Tvoid], Ar_Definite)),
+            (_ : args_for <$> as_function nfty = Some ([Tsize_t; Tptr Tvoid], Ar_Definite)),
             (Exists alloc_sz alloc_al,
                [| size_of aty = Some alloc_sz |] **
                [| align_of aty = Some alloc_al |] ** (** <-- TODO FM-975 *)
@@ -305,7 +305,7 @@ Module Type Expr__newdelete.
             new_fn (pass_align : bool) new_args aty Q targs
             (_ : new_args <> nil) (* prevents default [new] which must be able to throw *)
             (nfty := normalize_type new_fn.2)
-            (_ : arg_types nfty = Some targs),
+            (_ : args_for <$> as_function nfty = Some targs),
             (* <https://eel.is/c++draft/expr.new#7>
                | (7) Every constant-expression in a noptr-new-declarator shall be a
                |     converted constant expression ([expr.const]) of type std​::​size_t
@@ -555,7 +555,7 @@ Module Type Expr__newdelete.
       Axiom wp_operand_delete :
         forall delete_fn e destroyed_type Q
           (dfty := normalize_type delete_fn.2)
-          (_ : arg_types dfty = Some ([Tptr Tvoid], Ar_Definite)),
+          (_ : args_for <$> as_function dfty = Some ([Tptr Tvoid], Ar_Definite)),
         (* call the destructor on the object, and then call delete_fn *)
         (letI* v , free := wp_operand e in
           Exists obj_ptr, [| v = Vptr obj_ptr |] **
@@ -577,7 +577,7 @@ Module Type Expr__newdelete.
       Lemma wp_operand_delete_default :
         forall delete_fn e destroyed_type Q
           (dfty := normalize_type delete_fn.2)
-          (_ : arg_types dfty = Some ([Tptr Tvoid], Ar_Definite)),
+          (_ : args_for <$> as_function dfty = Some ([Tptr Tvoid], Ar_Definite)),
         (* call the destructor on the object, and then call delete_fn *)
         (letI* v, free := wp_operand e in
             Exists obj_ptr, [| v = Vptr obj_ptr |] ** [| obj_ptr <> nullptr |] **
@@ -599,7 +599,7 @@ Module Type Expr__newdelete.
       Axiom wp_operand_array_delete :
         forall delete_fn e destroyed_type Q
           (dfty := normalize_type delete_fn.2)
-          (_ : arg_types dfty = Some ([Tptr Tvoid], Ar_Definite)),
+          (_ : args_for <$> as_function dfty = Some ([Tptr Tvoid], Ar_Definite)),
         (* call the destructor on the object, and then call delete_fn *)
         (letI* v, free := wp_operand e in
           Exists obj_ptr, [| v = Vptr obj_ptr |] **

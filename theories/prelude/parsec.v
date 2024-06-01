@@ -59,6 +59,9 @@ Section parsec.
     let* c := any in
     if P c then mret c else mfail.
 
+  Definition charP (P : Byte.byte -> Prop) {_ : forall x, Decision (P x)} : M Byte.byte :=
+    char (fun x => bool_decide (P x)).
+
   Definition epsilon : M unit := mret tt.
 
   Definition or {T} (pl pr : M T) : M T :=

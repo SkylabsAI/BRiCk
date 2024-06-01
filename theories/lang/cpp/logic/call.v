@@ -84,12 +84,6 @@ Section with_resolve.
   Variables (ρ : region).
   Implicit Types (p : ptr).
 
-  Definition arg_types (ty : functype) : option (list decltype * function_arity) :=
-    match ty with
-    | Tfunction {| ft_arity := ar ; ft_params := args |} => Some (args, ar)
-    | _ => None
-    end.
-
   (* [wp_arg ty e K] evaluates [e] to initialize a parameter of type [ty].
 
      This function does *not* add temporary destruction for trivially
