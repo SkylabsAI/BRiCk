@@ -30,7 +30,7 @@
     _Σ : gFunctors
     Σ : cpp_logic thread_info _Σ
     R : Rep
-    f, g : field
+    f, g : name
     o : offset
     p : ptr
     v : val
@@ -43,7 +43,7 @@
     _Σ : gFunctors
     Σ : cpp_logic thread_info _Σ
     R : Rep
-    f, g : field
+    f, g : name
     o : offset
     p : ptr
     v : val
@@ -56,7 +56,7 @@
     _Σ : gFunctors
     Σ : cpp_logic thread_info _Σ
     R : Rep
-    f, g : field
+    f, g : name
     o : offset
     p : ptr
     v : val
@@ -85,7 +85,7 @@
     _Σ : gFunctors
     Σ : cpp_logic thread_info _Σ
     R : Rep
-    f, g : field
+    f, g : name
     o : offset
     p : ptr
     v : val

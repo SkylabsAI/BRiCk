@@ -448,106 +448,6 @@ End type_qualifiers.
 
 Definition compare_unit (a b : unit) : comparison := Eq.
 
-Module Cast.
-  #[prefix="", only(tag)] derive Cast_.
-  Section compare.
-    Context {classname type : Set}.
-    Context (compareGN : classname -> classname -> comparison).
-    Context (compareT : type -> type -> comparison).
-    #[local] Notation Cast := (Cast_ classname type).
-    #[local] Notation TAG := (tag classname type).
-
-    #[local] Canonical classname_comparator :=
-      {| _car := classname
-      ; _compare := compareGN |}.
-    #[local] Canonical type_comparator :=
-      {| _car := type
-      ; _compare := compareT |}.
-
-    Definition car (t : positive) : Set :=
-      match t with
-      | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => type
-      | 10 | 12 => unit
-      | 11 | 13 | 14 | 15 | 16 => type
-      | 17 => unit
-      | 18 => type
-      | 19 => unit
-      | 20 => type
-      | 21 | 22 => list classname * type
-      | _ => unit
-      end.
-    Definition data (c : Cast) : car (TAG c) :=
-      match c with
-      | Cdependent t
-      | Cbitcast t
-      | Clvaluebitcast t
-      | Cl2r t
-      | Cnoop t
-      | Carray2ptr t
-      | Cfun2ptr t
-      | Cint2ptr t
-      | Cptr2int t => t
-      | Cptr2bool => ()
-      | Cderived2base ns t | Cbase2derived ns t => (ns, t)
-      | Cintegral t => t
-      | Cint2bool => ()
-      | Cfloat2int t
-      | Cnull2ptr t
-      | Cnull2memberptr t
-      | Cbuiltin2fun t
-      | Cctor t => t
-      | Cuser => tt
-      | Cdynamic t => t
-      | _ => ()
-      end.
-    Definition compare_data (t : positive) : car t -> car t -> comparison :=
-      match t as t return car t -> car t -> comparison with
-      | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 => compareT
-      | 10 | 12 => compare_unit
-      | 11 | 13 | 14 | 15 | 16 => compareT
-      | 17 => compare_unit
-      | 18 => compareT
-      | 19 => compare_unit
-      | 20 => compareT
-      | 21 => _compare | 22 => _compare
-      | _ => compare_unit
-      end.
-
-    #[local] Notation compare_ctor := (compare_ctor TAG car data).
-    #[local] Notation compare_tag := (compare_tag TAG).
-    #[local] Notation COMP X :=
-      (compare_ctor compare_data (Reduce (TAG X)) (fun _ => Reduce (data X))) (only parsing).
-    Definition compare (c : Cast) : Cast -> comparison :=
-      match c with
-      | Cdependent t => COMP (Cdependent t : Cast)
-      | Cbitcast t => COMP (Cbitcast t : Cast)
-      | Clvaluebitcast t => COMP (Clvaluebitcast t : Cast)
-      | Cl2r t => COMP (Cl2r t : Cast)
-      | Cnoop t => COMP (Cnoop t : Cast)
-      | Carray2ptr t => COMP (Carray2ptr t : Cast)
-      | Cfun2ptr t => COMP (Cfun2ptr t : Cast)
-      | Cint2ptr t => COMP (Cint2ptr t : Cast)
-      | Cptr2int t => COMP (Cptr2int t : Cast)
-      | Cptr2bool => compare_tag (Reduce (TAG Cptr2bool))
-      | Cderived2base ns t => COMP (Cderived2base ns t : Cast)
-      | Cbase2derived ns t => COMP (Cderived2base ns t : Cast)
-      | Cintegral t => COMP (Cintegral t : Cast)
-      | Cint2bool => compare_tag (Reduce (TAG Cint2bool))
-      | Cfloat2int t => COMP (Cfloat2int t : Cast)
-      | Cnull2ptr t => COMP (Cnull2ptr t : Cast)
-      | Cnull2memberptr t => COMP (Cnull2memberptr t : Cast)
-      | Cbuiltin2fun t => COMP (Cbuiltin2fun t : Cast)
-      | Cctor t => COMP (Cctor t : Cast)
-      | C2void => compare_tag (Reduce (TAG C2void))
-      | Cuser => COMP (Cuser : Cast)
-      | Cdynamic cls => COMP (Cdynamic cls : Cast)
-      end.
-  End compare.
-
-End Cast.
-#[global] Instance Cast_compare {A B : Set} `{!Compare A, !Compare B} : Compare (Cast_ A B) := Cast.compare compare compare.
-
-
 Module dispatch_type.
   #[prefix="", only(tag)] derive dispatch_type.
 
@@ -1014,6 +914,133 @@ Module atomic_name.
 End atomic_name.
 #[global] Instance atomic_name_compare {A : Set} `{!Compare A} : Compare (atomic_name_ A) := atomic_name.compare compare.
 
+Module Cast.
+  Section compare.
+    Context {lang : lang.t}.
+    #[local] Notation type := (type' lang).
+    Context (compareT : type -> type -> comparison).
+    #[local] Notation Cast := (Cast' lang).
+
+    #[local] Canonical type_comparator :=
+      {| _car := type
+      ; _compare := compareT |}.
+
+    Definition tag (c : Cast) : positive :=
+      match c with
+      | Cdependent _ => 1
+      | Cbitcast _ => 2
+      | Clvaluebitcast _ => 3
+      | Cl2r => 4
+      | Cnoop _ => 5
+      | Carray2ptr => 6
+      | Cfun2ptr => 7
+      | Cint2ptr _ => 8
+      | Cptr2int _ => 9
+      | Cptr2bool => 10
+      | Cintegral _ => 11
+      | Cint2bool => 12
+      | Cfloat2int _ => 13
+      | Cnull2ptr _ => 14
+      | Cnull2memberptr _ => 15
+      | Cbuiltin2fun _ => 16
+      | C2void => 17
+      | Cctor _ => 18
+      | Cuser => 19
+      | Cdynamic _ => 20
+      | Cderived2base _ _ => 21
+      | Cbase2derived _ _ => 22
+      end.
+    Definition car (t : positive) : Set :=
+      match t with
+      | 1 | 2 | 3 => type
+      | 4 => unit
+      | 5 => type
+      | 6 | 7 => unit
+      | 8 | 9 => type
+      | 10 | 12 => unit
+      | 11 | 13 | 14 | 15 | 16 => type
+      | 17 => unit
+      | 18 => type
+      | 19 => unit
+      | 20 => type
+      | 21 | 22 => list type * type
+      | _ => unit
+      end.
+    Definition data (c : Cast) : car (tag c) :=
+      match c with
+      | Cdependent t
+      | Cbitcast t
+      | Clvaluebitcast t => t
+      | Cl2r => tt
+      | Cnoop t => t
+      | Carray2ptr
+      | Cfun2ptr => tt
+      | Cint2ptr t
+      | Cptr2int t => t
+      | Cptr2bool => ()
+      | Cderived2base ns t | Cbase2derived ns t => (ns, t)
+      | Cintegral t => t
+      | Cint2bool => ()
+      | Cfloat2int t
+      | Cnull2ptr t
+      | Cnull2memberptr t
+      | Cbuiltin2fun t
+      | Cctor t => t
+      | Cuser => tt
+      | Cdynamic t => t
+      | _ => ()
+      end.
+    Definition compare_data (t : positive) : car t -> car t -> comparison :=
+      match t as t return car t -> car t -> comparison with
+      | 1 | 2 | 3 => compareT
+      | 4 => compare_unit
+      | 5 => compareT
+      | 6 | 7 => compare_unit
+      | 8 | 9 => compareT
+      | 10 | 12 => compare_unit
+      | 11 | 13 | 14 | 15 | 16 => compareT
+      | 17 => compare_unit
+      | 18 => compareT
+      | 19 => compare_unit
+      | 20 => compareT
+      | 21 => _compare | 22 => _compare
+      | _ => compare_unit
+      end.
+
+    #[local] Notation TAG := tag.
+    #[local] Notation compare_ctor := (compare_ctor TAG car data).
+    #[local] Notation compare_tag := (compare_tag TAG).
+    #[local] Notation COMP X :=
+      (compare_ctor compare_data (Reduce (TAG X)) (fun _ => Reduce (data X))) (only parsing).
+    Definition compare_body (c : Cast) : Cast -> comparison :=
+      match c with
+      | Cdependent t => COMP (Cdependent t : Cast)
+      | Cbitcast t => COMP (Cbitcast t : Cast)
+      | Clvaluebitcast t => COMP (Clvaluebitcast t : Cast)
+      | Cl2r => compare_tag (Reduce (TAG Cl2r))
+      | Cnoop t => COMP (Cnoop t : Cast)
+      | Carray2ptr => compare_tag (Reduce (TAG Carray2ptr))
+      | Cfun2ptr => compare_tag (Reduce (TAG Cfun2ptr))
+      | Cint2ptr t => COMP (Cint2ptr t : Cast)
+      | Cptr2int t => COMP (Cptr2int t : Cast)
+      | Cptr2bool => compare_tag (Reduce (TAG Cptr2bool))
+      | Cderived2base ns t => COMP (Cderived2base ns t : Cast)
+      | Cbase2derived ns t => COMP (Cderived2base ns t : Cast)
+      | Cintegral t => COMP (Cintegral t : Cast)
+      | Cint2bool => compare_tag (Reduce (TAG Cint2bool))
+      | Cfloat2int t => COMP (Cfloat2int t : Cast)
+      | Cnull2ptr t => COMP (Cnull2ptr t : Cast)
+      | Cnull2memberptr t => COMP (Cnull2memberptr t : Cast)
+      | Cbuiltin2fun t => COMP (Cbuiltin2fun t : Cast)
+      | Cctor t => COMP (Cctor t : Cast)
+      | C2void => compare_tag (Reduce (TAG C2void))
+      | Cuser => COMP (Cuser : Cast)
+      | Cdynamic cls => COMP (Cdynamic cls : Cast)
+      end.
+  End compare.
+
+End Cast.
+
 Module name.
   Section compare_body.
     Context {lang : lang.t}.
@@ -1361,10 +1388,12 @@ Module Expr.
     Context {lang : lang.t}.
     #[local] Notation name := (name' lang).
     #[local] Notation type := (type' lang).
+    #[local] Notation Cast := (Cast' lang).
     #[local] Notation Expr := (Expr' lang).
     #[local] Notation Stmt := (Stmt' lang).
     Context (compareN : name -> name -> comparison).
     Context (compareT : type -> type -> comparison).
+    Context (compareC : Cast -> Cast -> comparison).
     Context (compareE : Expr -> Expr -> comparison).
     Context (compareS : Stmt -> Stmt -> comparison).
 
@@ -1535,11 +1564,11 @@ Module Expr.
       compareE b1.(box_Eexplicit_cast_2) b2.(box_Eexplicit_cast_2).
 
     Record box_Ecast : Set := Box_Ecast {
-      box_Ecast_0 : Cast_ type type;
+      box_Ecast_0 : Cast' lang;
       box_Ecast_1 : Expr;
     }.
     Definition box_Ecast_compare (b1 b2 : box_Ecast) : comparison :=
-      compare_lex (Cast.compare compareT compareT b1.(box_Ecast_0) b2.(box_Ecast_0)) $ fun _ =>
+      compare_lex (compareC b1.(box_Ecast_0) b2.(box_Ecast_0)) $ fun _ =>
       compareE b1.(box_Ecast_1) b2.(box_Ecast_1).
 
     Record box_Edependent_cast : Set := Box_Edependent_cast {
@@ -2282,11 +2311,10 @@ Section compare.
   Context {lang : lang.t}.
   #[local] Notation name := (name' lang).
   #[local] Notation type := (type' lang).
+  #[local] Notation Cast := (Cast' lang).
   #[local] Notation Expr := (Expr' lang).
   #[local] Notation VarDecl := (VarDecl' lang).
   #[local] Notation Stmt := (Stmt' lang).
-
-  Parameter FIXME : forall {T}, T.
 
   Fixpoint compareN (n : name) : name -> comparison :=
     name.compare_body compareN compareT compareE n
@@ -2295,13 +2323,16 @@ Section compare.
     type.compare_body compareN compareT compareE t
 
   with compareE (e : Expr) : Expr -> comparison :=
-    Expr.compare_body compareN compareT compareE compareS e
+    Expr.compare_body compareN compareT compareC compareE compareS e
 
   with compareVD (vd : VarDecl) : VarDecl -> comparison :=
     VarDecl.compare_body compareN compareT compareE compareVD vd
 
   with compareS (s : Stmt) : Stmt -> comparison :=
     Stmt.compare_body compareE compareVD compareS s
+
+  with compareC (s : Cast) : Cast -> comparison :=
+    Cast.compare_body compareT s
   .
 
 End compare.

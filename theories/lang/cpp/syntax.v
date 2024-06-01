@@ -13,4 +13,5 @@ Require Export bedrock.lang.cpp.syntax.stmt.	(* syntax/stmt.v *)
 Require Export bedrock.lang.cpp.syntax.decl.	(* syntax/decl.v *)
 Require Export bedrock.lang.cpp.syntax.namemap. (* syntax/namemap.v *)
 Require Export bedrock.lang.cpp.syntax.notations. (* syntax/notations.v *)
+Require Export bedrock.lang.cpp.syntax.name_notation.
 Require Export bedrock.lang.cpp.syntax.translation_unit.	(* syntax/translation_unit.v *)

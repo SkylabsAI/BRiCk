@@ -60,7 +60,12 @@ Section with_lang.
           | None => mfail
           | Some cls => mret $ "~" ++ cls
           end
-      | Nop o => mret $ "operator" ++ printOO o
+      | Nop o =>
+          match o with
+          | OONew _ | OODelete _ | OOCoawait =>
+            mret $ "operator " ++ printOO o
+          | _ => mret $ "operator" ++ printOO o
+          end
       | Nop_conv t => prefix "operator " <$> printType t
       | Nop_lit i => mret $ "operator """"_" ++ i
       | Nunsupported_function note => mfail
@@ -212,9 +217,17 @@ Section with_lang.
     | Tnamed nm => printN nm
     | Tenum nm => prefix "#" <$> printN nm
     | Tfunction ft =>
-        (fun t tas => parens (t ++ "*") ++ parens (sepBy ", " tas))
-          <$> printT ft.(ft_return)
-          <*> traverse (T:=eta list) (F:=eta option) printT ft.(ft_params)
+        let add_dots (ls : list bs) :=
+          match ft.(ft_arity) with
+          | Ar_Variadic => (ls ++ ["..."])%list
+          | _ => ls
+          end
+        in
+        if ft.(ft_cc) is CC_C then
+          (fun t tas => parens (t ++ "*") ++ parens (sepBy ", " $ add_dots tas))
+            <$> printT ft.(ft_return)
+            <*> traverse (T:=eta list) (F:=eta option) printT ft.(ft_params)
+        else mfail
     | Tarch _ note => mfail
     | Tunsupported note => mfail
     | Tparam nm => mret $ "$" ++ nm

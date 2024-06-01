@@ -193,6 +193,9 @@ public:
 						if (d->isStaticLocal()) {
 							go(d, flags);
 						}
+					} else if (auto nd = dyn_cast<NamedDecl>(i)) {
+						if (isa<FunctionDecl>(nd) || isa<RecordDecl>(nd))
+							go(nd, flags);
 					}
 				}
 			}

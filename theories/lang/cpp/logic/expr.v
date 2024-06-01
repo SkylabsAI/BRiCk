@@ -202,36 +202,49 @@ Module Type Expr.
       { iApply wp_glval_frame; eauto. reflexivity. }
     Qed.
 
+    Definition arrow_aggregate_type (arrow : bool) (t : decltype) : option (ValCat * type_qualifiers * name) :=
+      if arrow then
+        match drop_qualifiers t with
+        | Tptr pt =>
+            match decompose_type pt with
+            | (cv, Tnamed n) => Some (Lvalue, cv, n)
+            | _ => None
+            end
+        | _ => None
+        end
+      else
+        let '(vc, et) := decltype.to_exprtype t in
+        if bool_decide (vc = Prvalue)
+        then None
+        else
+          match decompose_type et with
+          | (cv, Tnamed nm) => Some (vc, cv, nm)
+          | _ => None
+          end.
+
     (* [Emember a f mut ty] is an lvalue by default except when
      * - where [m] is a member enumerator or a non-static member function, or
      * - where [a] is an rvalue and [m] is a non-static data member of non-reference type
      *)
-    Axiom wp_lval_member : forall arrow ty a m mut Q,
-        match valcat_of a , drop_qualifiers (type_of a) with
-        | Lvalue , Tnamed nm =>
-          letI* base, free := read_arrow arrow a in
+    Axiom wp_lval_member : forall arrow ty a m mut vc cv nm Q,
+        arrow_aggregate_type arrow (decltype_of_expr a) = Some (vc, cv, nm) ->
+          (letI* base, free := read_arrow arrow a in
           letI* p := read_decl (base ,, _field (Field nm m)) ty in
-          Q p free
-        | _ , _ => False
-          (* NOTE If the object is a temporary, then the field access will also be a
-             temporary. Being conservative is sensible in our semantic style.
-          *)
-        end
+          Q p free)
       |-- wp_lval (Emember arrow a m mut ty) Q.
 
     (* [Emember a m mut ty] is an xvalue if
      * - [a] is an rvalue and [m] is a non-static data member of non-reference type
      *)
-    Axiom wp_xval_member : forall ty a m mut Q,
-        match valcat_of a , drop_qualifiers (type_of a) with
-        | Xvalue , Tnamed nm =>
-          letI* base, free := wp_xval a in
-          letI* p := read_decl (base ,, _field (Field nm m)) ty in
-          Q p free
-        | _ , _ => False
-          (* This does not occur because our AST explicitly contains [Cl2r] casts.
-           *)
-        end%I
+    Axiom wp_xval_member : forall ty a m mut cv nm Q,
+        arrow_aggregate_type false (decltype_of_expr a) = Some (Xvalue, cv, nm) ->
+          match decltype.to_valcat ty with
+          | Prvalue =>
+            letI* base, free := wp_xval a in
+            letI* p := read_decl (base ,, _field (Field nm m)) ty in
+            Q p free
+          | _ => False
+          end
       |-- wp_xval (Emember false a m mut ty) Q.
     (* <<e->f>> is never an xvalue because <<e>> must be a pointer *)
 
@@ -504,27 +517,28 @@ Module Type Expr.
     This counts as an _access_, so it must happen at one of the types listed in
     https://eel.is/c++draft/basic.lval#11.
     *)
-    Axiom wp_operand_cast_l2r : forall ty e Q,
+    Axiom wp_operand_cast_l2r : forall e Q,
         (
           letI* a, free := wp_glval e in
           Exists v,
-          (Exists q, a |-> tptsto_fuzzyR (erase_qualifiers ty) q v ** True) //\\
+          (Exists q, a |-> tptsto_fuzzyR (erase_qualifiers $ type_of e) q v ** True) //\\
           Q v free
-        ) |-- wp_operand (Ecast (Cl2r ty) e) Q.
+        ) |-- wp_operand (Ecast Cl2r e) Q.
 
-    Lemma wp_operand_cast_l2r_prim ty e Q :
+    Lemma wp_operand_cast_l2r_prim e Q :
         (
           letI* a, free := wp_glval e in
           Exists v,
-          (Exists q, a |-> primR (erase_qualifiers ty) q v ** True) //\\
+          (Exists q, a |-> primR (erase_qualifiers $ type_of e) q v ** True) //\\
           Q v free
-        ) |-- wp_operand (Ecast (Cl2r ty) e) Q.
+        ) |-- wp_operand (Ecast Cl2r e) Q.
     Proof.
       intros. rewrite -wp_operand_cast_l2r. iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "?".
       by setoid_rewrite primR_tptsto_fuzzyR.
     Qed.
 
+    (* TODO NAMES
     Lemma wp_operand_cast_l2r_raw : forall e Q,
         (
           letI* a, free := wp_glval e in
@@ -537,6 +551,7 @@ Module Type Expr.
       iApply (wp_glval_wand with "wp"). iIntros (p f) "(%r & ?)".
       iExists (Vraw r). by rewrite rawR.unlock.
     Qed.
+     *)
 
     (** No-op casts [Cnoop] are casts that only affect the type and not the value.
         Clang states that these casts are only used for adding and removing [const].
@@ -659,7 +674,7 @@ Module Type Expr.
         let ty := Tfunction $ FunctionType (ft_cc:=cc) (ft_arity:=ar) ret args in
         let e := Eglobal g ty in
             wp_lval e (fun v => Q (Vptr v))
-        |-- wp_operand (Ecast (Cfun2ptr $ Tptr ty) e) Q.
+        |-- wp_operand (Ecast Cfun2ptr e) Q.
 
     (** [Cbuiltin2ptr] is a cast from a builtin to a pointer.
      *)
@@ -798,9 +813,9 @@ Module Type Expr.
           wp_discard e (fun free => Q Vundef free)
       |-- wp_operand (Ecast C2void e) Q.
 
-    Axiom wp_operand_cast_array2ptr : forall e t Q,
+    Axiom wp_operand_cast_array2ptr : forall e Q,
         wp_glval e (fun p => Q (Vptr p))
-        |-- wp_operand (Ecast (Carray2ptr t) e) Q.
+        |-- wp_operand (Ecast Carray2ptr e) Q.
 
     (** [Cptr2int] exposes the pointer, which is expressed with [pinned_ptr]
      *)
@@ -1031,10 +1046,11 @@ Module Type Expr.
       match unptr pfty with
       | Some fty =>
         let fty := normalize_type fty in
-        match arg_types fty with
+        match as_function fty with
         | Some targs =>
             let eval_f Q := wp_operand f (fun v fr => Exists fp, [| v = Vptr fp |] ** Q fp fr) in
-            letI* fps, vs, ifree, free := wp_args ooe [eval_f] targs es in
+            letI* fps, vs, ifree, free :=
+               wp_args ooe [eval_f] (targs.(ft_params), targs.(ft_arity)) es in
             match fps with
             | [fp] => |> wp_fptr fty fp vs (fun v => interp ifree $ Q v free)
             | _ => UNREACHABLE ("wp_args did not return a singleton list for pre", fps)
@@ -1137,7 +1153,7 @@ Module Type Expr.
       ooe (obj : Expr) (fty : functype) (es : list Expr)
       (Q : ptr -> FreeTemps -> epred) : mpred :=
       let fty := normalize_type fty in
-      match arg_types fty with
+      match args_for <$> as_function fty with
       | Some targs =>
         letI* this, args, ifree, free := wp_args ooe [read_arrow arrow obj] targs es in
         match this with
@@ -1164,25 +1180,36 @@ Module Type Expr.
       iApply "f". iIntros (?); iApply interp_frame; iApply "Q".
     Qed.
 
-    Axiom wp_lval_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
-        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
-           lval_receive ty res $ fun v => Q v free)
+    Axiom wp_lval_member_call : forall arrow ct fty f obj es vc cv nm Q,
+        arrow_aggregate_type arrow (decltype_of_expr obj) = Some (vc, cv, nm) ->
+        (let ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es in
+         let* res, free :=
+           wp_mcall arrow (dispatch ct fty f $ tqualified cv (Tnamed nm)) (evaluation_order.order_of OOCall) obj fty es in
+         lval_receive ty res $ fun v => Q v free)
         |-- wp_lval (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_xval_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
-        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
-           xval_receive ty res $ fun v => Q v free)
-        |-- wp_xval (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
+    Axiom wp_xval_member_call : forall arrow ct fty f obj es vc cv nm Q,
+       arrow_aggregate_type arrow (decltype_of_expr obj) = Some (vc, cv, nm) ->
+       (let ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es in
+        let* res, free :=
+          wp_mcall arrow (dispatch ct fty f $ tqualified cv (Tnamed nm)) (evaluation_order.order_of OOCall) obj fty es in
+        xval_receive ty res $ fun v => Q v free)
+      |-- wp_xval (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_operand_member_call : forall arrow ct fty f obj es Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
-        wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es (fun res free =>
-           operand_receive ty res $ fun v => Q v free)
-        |-- wp_operand (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
+    Axiom wp_operand_member_call : forall arrow ct fty f obj es vc cv nm Q,
+        arrow_aggregate_type arrow (decltype_of_expr obj) = Some (vc, cv, nm) ->
+        (let ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es in
+         let* res, free :=
+           wp_mcall arrow (dispatch ct fty f $ tqualified cv (Tnamed nm)) (evaluation_order.order_of OOCall) obj fty es in
+         operand_receive ty res $ fun v => Q v free)
+      |-- wp_operand (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
-    Axiom wp_init_member_call : forall arrow ct f fty es (addr : ptr) obj Q (ty := type_of $ Emember_call arrow (inl (f, ct, fty)) obj es),
-        (letI* res, free := wp_mcall arrow (dispatch ct fty f (type_of obj)) (evaluation_order.order_of OOCall) obj fty es in
-           init_receive addr res $ Q free)
-        |-- wp_init ty addr (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
+    Axiom wp_init_member_call : forall arrow ct f fty es (addr : ptr) vc cv nm obj ty Q,
+        arrow_aggregate_type arrow (decltype_of_expr obj) = Some (vc, cv, nm) ->
+        (let* res, free :=
+           wp_mcall arrow (dispatch ct fty f $ tqualified cv (Tnamed nm)) (evaluation_order.order_of OOCall) obj fty es in
+         init_receive addr res $ Q free)
+     |-- wp_init ty addr (Emember_call arrow (inl (f, ct, fty)) obj es) Q.
 
     (** * Operator Calls
         These are calls or member calls that are written as operators and
@@ -1193,7 +1220,7 @@ Module Type Expr.
       match oi with
       | operator_impl.Func f fty =>
           let fty := normalize_type fty in
-          match arg_types fty with
+          match args_for <$> as_function fty with
           | Some targs =>
             letI* fps, vs, ifree, free := wp_args (evaluation_order.order_of oo) [] targs es in
             |> wp_fptr fty (_global f) vs (fun v => interp ifree $ Q v free)
