@@ -848,12 +848,12 @@ End function_name.
 #[global] Instance function_name_compare {A : Set} `{!Compare A} : Compare (function_name_ A) := function_name.compare compare.
 
 Module function_qualifier.
-  #[prefix="", only(tag)] derive function_qualifier.
+  #[prefix="", only(tag)] derive function_qualifier.t.
 
-  Definition compare (x y : function_qualifier) : comparison :=
+  Definition compare (x y : function_qualifier.t) : comparison :=
     Pos.compare (tag x) (tag y).
 End function_qualifier.
-#[global] Instance function_qualifier_compare : Compare function_qualifier := function_qualifier.compare.
+#[global] Instance function_qualifier_compare : Compare function_qualifier.t := function_qualifier.compare.
 
 Module atomic_name.
   #[prefix="", only(tag)] derive atomic_name_.
@@ -865,14 +865,16 @@ Module atomic_name.
     #[local] Notation tag := (@tag type).
 
     Record box_Nfunction : Set := Box_Nfunction {
-      box_Nfunction_0 : list function_qualifier;
+      box_Nfunction_0 : function_qualifier.t;
       box_Nfunction_1 : function_name_ type;
       box_Nfunction_2 : list type;
+      box_Nfunction_3 : function_arity;
     }.
     Definition box_Nfunction_compare (b1 b2 : box_Nfunction) : comparison :=
-      compare_lex (List.compare function_qualifier.compare b1.(box_Nfunction_0) b2.(box_Nfunction_0)) $ fun _ =>
+      compare_lex (function_qualifier.compare b1.(box_Nfunction_0) b2.(box_Nfunction_0)) $ fun _ =>
       compare_lex (function_name.compare compareT b1.(box_Nfunction_1) b2.(box_Nfunction_1)) $ fun _ =>
-      List.compare compareT b1.(box_Nfunction_2) b2.(box_Nfunction_2).
+      compare_lex (List.compare compareT b1.(box_Nfunction_2) b2.(box_Nfunction_2)) $ fun _ =>
+      compare b1.(box_Nfunction_3) b2.(box_Nfunction_3).
 
     Definition car (t : positive) : Set :=
       match t with
@@ -885,7 +887,7 @@ Module atomic_name.
     Definition data (p : atomic_name) : car (tag p) :=
       match p with
       | Nid id => id
-      | Nfunction qs f ts => Box_Nfunction qs f ts
+      | Nfunction qs f ts ar => Box_Nfunction qs f ts ar
       | Nclosure ts => ts
       | Nanon n => n
       | Nunsupported_atomic msg => msg
@@ -904,7 +906,7 @@ Module atomic_name.
     Definition compare (p : atomic_name) : atomic_name -> comparison :=
       match p with
       | Nid i => compare_ctor (Reduce (tag (Nid i))) (fun _ => Reduce (data (Nid i)))
-      | Nfunction qs f ts => compare_ctor (Reduce (tag (Nfunction qs f ts))) (fun _ => Reduce (data (Nfunction qs f ts)))
+      | Nfunction qs f ts ar => compare_ctor (Reduce (tag (Nfunction qs f ts ar))) (fun _ => Reduce (data (Nfunction qs f ts ar)))
       | Nclosure ts => compare_ctor (Reduce (tag (Nclosure ts))) (fun _ => Reduce (data (Nclosure ts)))
       | Nanon n => compare_ctor (Reduce (tag (Nanon n))) (fun _ => Reduce (data (Nanon n)))
       | Nunsupported_atomic msg => compare_ctor (Reduce (tag (Nunsupported_atomic msg))) (fun _ => Reduce (data (Nunsupported_atomic msg)))

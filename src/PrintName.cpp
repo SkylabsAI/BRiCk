@@ -269,16 +269,15 @@ printSimpleContext(const DeclContext* dc, CoqPrinter& print,
 										   print.output().nobreak());
 #else
 			{
-			  std::string sout;
-			  llvm::raw_string_ostream out(sout);
+				std::string sout;
+				llvm::raw_string_ostream out(sout);
 
-			  mangle.mangleTypeName(QualType(ts->getTypeForDecl(), 0),
-								  out);
-			  assert(3 < sout.length() && "mangled string length is too small");
-			  sout = sout.substr(4, sout.length());
-			  auto &mos = print.output().nobreak();
-			  mos << "_Z" << sout;
-
+				mangle.mangleTypeName(QualType(ts->getTypeForDecl(), 0), out);
+				assert(3 < sout.length() &&
+					   "mangled string length is too small");
+				sout = sout.substr(4, sout.length());
+				auto& mos = print.output().nobreak();
+				mos << "_Z" << sout;
 			}
 #endif
 			return 2;
@@ -852,28 +851,21 @@ printFunctionQualifiers(const FunctionDecl& decl, CoqPrinter& print,
 						ClangPrinter& cprint) {
 	if (ClangPrinter::debug && cprint.trace(Trace::Name))
 		cprint.trace("printFunctionQualifiers", loc::of(decl));
-	auto& os = print.begin_list();
-	auto add = [&](const std::string what) {
-		os << what;
-		print.cons();
-	};
+	// vc , const , volatile
+	static const char* names[3][2][2] = {{{"F_", "FV"}, {"FC", "FCV"}},
+										 {{"FL", "FLV"}, {"FLC", "FLCV"}},
+										 {{"FR", "FRV"}, {"FRC", "FRCV"}}};
+
+	print.output() << "function_qualifier.";
 	if (auto md = dyn_cast<CXXMethodDecl>(&decl)) {
-		if (md->isConst())
-			add("Nconst");
-		if (md->isVolatile())
-			add("Nvolatile");
-		switch (md->getRefQualifier()) {
-		case RefQualifierKind::RQ_None:
-			break;
-		case RefQualifierKind::RQ_LValue:
-			add("Nlvalue");
-			break;
-		case RefQualifierKind::RQ_RValue:
-			add("Nrvalue");
-			break;
-		}
+		auto rq = md->getRefQualifier() == RefQualifierKind::RQ_None   ? 0 :
+				  md->getRefQualifier() == RefQualifierKind::RQ_LValue ? 1 :
+																		 2;
+		print.output() << names[rq][md->isConst()][md->isVolatile()];
+	} else {
+		print.output() << names[0][0][0];
 	}
-	return print.end_list();
+	return print.output();
 }
 
 static fmt::Formatter&
@@ -937,9 +929,11 @@ printFunctionParamTypes(const FunctionDecl& decl, CoqPrinter& print,
 	if (ClangPrinter::debug && cprint.trace(Trace::Name))
 		cprint.trace("printFunctionParamTypes", loc::of(decl));
 	auto loc = loc::of(decl);
-	return print.list(decl.parameters(), [&](auto* param) {
+	print.list(decl.parameters(), [&](auto* param) {
 		cprint.printQualType(param->getType(), print, loc);
-	});
+	}) << fmt::nbsp;
+	return print.output() << (decl.isVariadic() ? "Ar_Variadic" :
+												  "Ar_Definite");
 }
 
 static fmt::Formatter&
@@ -1154,8 +1148,8 @@ printDtorName(const CXXRecordDecl& decl, CoqPrinter& print,
 	printName(decl, print, cprint) << fmt::nbsp;
 	{
 		guard::ctor _(print, "Nfunction");
-		return print.output()
-			   << "nil" << fmt::nbsp << "Ndtor" << fmt::nbsp << "nil";
+		return print.output() << "function_qualifier.F_" << fmt::nbsp << "Ndtor"
+							  << fmt::nbsp << "nil Ar_Definite";
 	}
 }
 

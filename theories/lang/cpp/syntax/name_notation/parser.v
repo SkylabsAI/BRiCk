@@ -185,6 +185,31 @@ Module parser.
 
 
     (* The core parsers are based on fuel to handle the mutual recursion *)
+    Fixpoint fold_leftM {M : Type -> Type} {RET : MRet M} {BIND : MBind M} {T U}
+                        (f : T -> U -> M T) (ls : list U) (acc : T) : M T :=
+      match ls with
+      | nil => mret acc
+      | l :: ls => f acc l >>= fold_leftM f ls
+      end.
+
+    Definition fq_join (a b : function_qualifier.t) : M function_qualifier.t :=
+      let c := function_qualifier.is_const a || function_qualifier.is_const b in
+      let v := function_qualifier.is_volatile a || function_qualifier.is_volatile b in
+      match function_qualifier.vc a , function_qualifier.vc b with
+      | None , a
+      | a , None => mret $ function_qualifier.from_vals c v a
+      | Some _ , Some _ => mfail
+      end.
+
+    Fixpoint process_args (ls : list (option type)) : M (list type * function_arity) :=
+      match ls with
+      | nil => mret (nil, Ar_Definite)
+      | None :: nil => mret (nil, Ar_Variadic)
+      | Some t :: ls =>
+          (fun '(a,b) => (t :: a, b)) <$> process_args ls
+      | None :: _ :: _ => mfail
+      end.
+
     Fixpoint parse_type (fuel : nat) : M type :=
       let* quals :=
         star (((fun _ => Qconst (lang:=lang)) <$> token "const") <|>
@@ -215,9 +240,9 @@ Module parser.
           in
           mret (List.fold_left (fun '(acc, last) '(nm, oinst) =>
                                   match nm with
-                                  | Nfunction [] (Nf fnm) args =>
+                                  | Nfunction function_qualifier.F_ (Nf fnm) args ar =>
                                       if bool_decide (Nid fnm = last) then
-                                        (sp oinst (Nscoped acc $ Nfunction [] Nctor args), nm)
+                                        (sp oinst (Nscoped acc $ Nfunction function_qualifier.F_ Nctor args ar), nm)
                                       else
                                         (sp oinst (Nscoped acc nm), nm)
                                   | _ =>
@@ -255,8 +280,8 @@ Module parser.
                  | Op _
                  | OpConv _ => mfail
                  end
-        | Some (args, quals) =>
-            (fun nm => Nfunction quals nm args) <$>
+        | Some ((args, ar), quals) =>
+            (fun nm => Nfunction quals nm args ar) <$>
               match nm with
               | Dtor _ => mret $ Ndtor
               | Simple nm => mret $ Nf nm
@@ -268,11 +293,15 @@ Module parser.
       in
       let parse_args : M _ :=
         optional (let* args := quoted (token "(") (token ")") $
-                    sepBy (token ",") (NEXT fuel parse_type) in
-                  let* quals := star (anyOf $ [const Nconst <$> token "const";
-                                               const Nvolatile <$> token "volatile";
-                                               const Nrvalue <$> token "&&";
-                                               const Nlvalue <$> token "&"]) in
+                    sepBy (token ",") ((Some <$> NEXT fuel parse_type) <|> (const None <$> token "...")) in
+                  let* quals := star (anyOf $ [const function_qualifier.FC <$> token "const";
+                                               const function_qualifier.FV <$> token "volatile";
+                                               const function_qualifier.FR <$> token "&&";
+                                               const function_qualifier.FL <$> token "&"]) in
+                  let* quals :=
+                    fold_leftM fq_join quals function_qualifier.F_
+                  in
+                  let* args := process_args args in
                   mret (args, quals))
       in
       let* x := optional (quoted (token "<") (token ">") $ sepBy (token ",") (NEXT fuel parse_type)) in
@@ -297,23 +326,26 @@ Module Type TESTS.
 
   #[local] Definition Msg : name := Nglobal $ Nid "Msg".
 
+  Import function_qualifier.
+
   Succeed Example _0 : TEST "Msg" Msg := eq_refl.
-  Succeed Example _0 : TEST "foo(const int volatile)" (Nglobal (Nfunction [] (Nf "foo") [Tqualified QV (Tqualified QC Tint)])) := eq_refl.
+  Succeed Example _0 : TEST "foo(const int volatile)" (Nglobal (Nfunction F_ (Nf "foo") [Tqualified QCV Tint] Ar_Definite)) := eq_refl.
   Succeed Example _0 : TEST "foo(const int ** volatile & &&)"
                  (Nglobal
-                    (Nfunction [] (Nf "foo") [Trv_ref (Tref (Tqualified QV (Tptr (Tptr (Tqualified QC Ti32)))))])) := eq_refl.
+                    (Nfunction F_ (Nf "foo") [Trv_ref (Tref (Tqualified QV (Tptr (Tptr (Tqualified QC Ti32)))))] Ar_Definite)) := eq_refl.
   Succeed Example _0 : TEST "::Msg" Msg := eq_refl.
   Succeed Example _0 : TEST "Msg::#0" (Nscoped Msg (Nanon 0)) := eq_refl.
-  Succeed Example _0 : TEST "Msg::Msg()" (Nscoped Msg (Nfunction [] Nctor [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::~Msg()" (Nscoped Msg (Nfunction [] Ndtor [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::Msg(int)" (Nscoped Msg (Nfunction [] Nctor [Tint])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::Msg(long)" (Nscoped Msg (Nfunction [] Nctor [Tlong])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator=(const Msg&)" (Nscoped Msg (Nfunction [] (Nop OOEqual) [Tref (Qconst (Tnamed $ Nglobal (Nid "Msg")))])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator=(const Msg&&)" (Nscoped Msg (Nfunction [] (Nop OOEqual) [Trv_ref (Qconst (Tnamed $ Nglobal (Nid "Msg")))])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator new()" (Nscoped Msg (Nfunction [] (Nop (OONew false)) [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator new[]()" (Nscoped Msg (Nfunction [] (Nop (OONew true)) [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator   delete()" (Nscoped Msg (Nfunction [] (Nop (OODelete false)) [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator delete[]()" (Nscoped Msg (Nfunction [] (Nop (OODelete true)) [])) := eq_refl.
-  Succeed Example _0 : TEST "Msg::operator int()" (Nscoped Msg (Nfunction [] (Nop_conv Tint) [])) := eq_refl.
-  Succeed Example _0 : TEST "foo_client(int[2]&, int const*, bool*, int**, char*)" (Nglobal (Nfunction [] (Nf "foo_client") [Tref (Tarray Tint 2); Tptr (Qconst Tint); Tptr Tbool; Tptr (Tptr Tint); Tptr Tchar])) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg()" (Nscoped Msg (Nfunction F_ Nctor [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::~Msg()" (Nscoped Msg (Nfunction F_ Ndtor [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg(int)" (Nscoped Msg (Nfunction F_ Nctor [Tint] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg(int, ...)" (Nscoped Msg (Nfunction F_ Nctor [Tint] Ar_Variadic)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::Msg(long)" (Nscoped Msg (Nfunction F_ Nctor [Tlong] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator=(const Msg&)" (Nscoped Msg (Nfunction F_ (Nop OOEqual) [Tref (Qconst (Tnamed $ Nglobal (Nid "Msg")))] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator=(const Msg&&)" (Nscoped Msg (Nfunction F_ (Nop OOEqual) [Trv_ref (Qconst (Tnamed $ Nglobal (Nid "Msg")))] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator new()" (Nscoped Msg (Nfunction F_ (Nop (OONew false)) [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator new[]()" (Nscoped Msg (Nfunction F_ (Nop (OONew true)) [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator   delete()" (Nscoped Msg (Nfunction F_ (Nop (OODelete false)) [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator delete[]()" (Nscoped Msg (Nfunction F_ (Nop (OODelete true)) [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "Msg::operator int()" (Nscoped Msg (Nfunction F_ (Nop_conv Tint) [] Ar_Definite)) := eq_refl.
+  Succeed Example _0 : TEST "foo_client(int[2]&, int const*, bool*, int**, char*)" (Nglobal (Nfunction F_ (Nf "foo_client") [Tref (Tarray Tint 2); Tptr (Qconst Tint); Tptr Tbool; Tptr (Tptr Tint); Tptr Tchar] Ar_Definite)) := eq_refl.
 End TESTS.

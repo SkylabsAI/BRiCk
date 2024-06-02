@@ -171,12 +171,12 @@ struct PrintDependentName : public ConstStmtVisitor<PrintDependentName, void> {
 			auto atomic = [&]() -> fmt::Formatter& {
 				{
 					guard::ctor _(print, "Nfunction", false);
-					print.output() << "nil" << fmt::nbsp;
+					print.output() << "function_qualifier.F_" << fmt::nbsp;
 					{
 						guard::ctor _(print, "Nf", false);
 						print.str(name.getAsString());
 					}
-					return print.output() << fmt::nbsp << "nil";
+					return print.output() << fmt::nbsp << "nil Ar_Defnite";
 				}
 			};
 
@@ -742,7 +742,7 @@ public:
 				auto t = i->getType().getTypePtrOrNull();
 				always_assert(t && "Cderived2base without type");
 				cprint.printType(*t, print, loc::of(ce));
-			});
+			}) << fmt::nbsp;
 			done(ce, Done::DT);
 			break;
 		}
@@ -753,7 +753,7 @@ public:
 				auto t = i->getType().getTypePtrOrNull();
 				always_assert(t && "Cbase2derived without type");
 				cprint.printType(*t, print, loc::of(ce));
-			});
+			}) << fmt::nbsp;
 			done(ce, Done::DT);
 			break;
 		default:

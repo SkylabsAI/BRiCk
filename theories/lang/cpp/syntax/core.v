@@ -226,17 +226,64 @@ Module function_name.
 
 End function_name.
 
-Variant function_qualifier : Set :=
-| Nconst	(** <<const>> *)
-| Nvolatile	(** <<volatile>> *)
-| Nnoexcept	(** <<noexcept>> *)
-| Nlvalue	(** <<&>> *)
-| Nrvalue	(** <<&&>> *)
-.
-#[global] Instance function_qualifier_inhabited : Inhabited function_qualifier.
-Proof. solve_inhabited. Qed.
-#[global] Instance function_qualifier_eq_dec : EqDecision function_qualifier.
-Proof. solve_decision. Defined.
+(* This type logically contains the following three fields:
+   - <<const>>
+   - <<volatile>>
+   - <<&|&&>
+   all of these values are optional.
+   To encode this efficiently & canonically, we expand the 12 possible cases.
+*)
+Module function_qualifier.
+  Variant t : Set :=
+  | F_ | FC | FV | FCV
+  | FL | FLC | FLV | FLCV
+  | FR | FRC | FRV | FRCV.
+
+  Definition is_const (a : t) : bool :=
+    match a with
+    | FC | FCV
+    | FLC | FLCV
+    | FRC | FRCV => true
+    | _ => false
+    end.
+  Definition is_volatile (a : t) : bool :=
+    match a with
+    | FV | FCV
+    | FLV | FLCV
+    | FRV | FRCV => true
+    | _ => false
+    end.
+  (* - [Some true] is [&]
+     - [Some false] is [&&]
+     - [None] is not qualified *)
+  Definition vc (a : t) : option bool :=
+    match a with
+    | F_ | FC | FV | FCV => None
+    | FL | FLC | FLV | FLCV => Some true
+    | FR | FRC | FRV | FRCV => Some false
+    end.
+
+  Definition from_vals (c v : bool) (vc : option bool) : t :=
+      match c , v , vc with
+      | false , false , None => F_
+      | false , false , Some true => FL
+      | false , false , Some false => FR
+      | true , false , None => FC
+      | true , false , Some true => FLC
+      | true , false , Some false => FRC
+      | false , true , None => FV
+      | false , true , Some true => FLV
+      | false , true , Some false => FRV
+      | true , true , None => FCV
+      | true , true , Some true => FLCV
+      | true , true , Some false => FRCV
+      end.
+
+  #[global] Instance t_inhabited : Inhabited t.
+  Proof. solve_inhabited. Qed.
+  #[global] Instance t_eq_dec : EqDecision t.
+  Proof. solve_decision. Defined.
+End function_qualifier.
 
 (** ** Atomic names *)
 (**
@@ -246,25 +293,12 @@ Variant atomic_name_ {type : Set} : Set :=
 (** Named things *)
 | Nid (_ : ident)	(** namespace, struct, union, typedef, variable, member, ... *)
 (**
-NOTE: [Nfunction] should take a set of qualifiers but [gset] has an
-opaque empty instance (interfering with reduction) and [listset] lacks
-an [EqDecision] instance. Cpp2v emits qualifiers in a specific order
-to enable pattern to use Leibniz equality.
-
-TODO: Add a varargs bit (perhaps to <<function_qualifier>>) for
-trailing <<...>>> in argument types.
-
 TODO (Discuss): Do we need to distinguish templated functions by their
 return types?
 *)
-| Nfunction (_ : list function_qualifier) (_ : function_name_ type) (_ : list type)
+| Nfunction (_ : function_qualifier.t) (_ : function_name_ type) (_ : list type)
+    (_ : function_arity)
 (** Unnamed things *)
-(**
-TODO: We should generalize <<Ndecltype>> to <<Ndependent (_ : type)>>
-to enable (say) <<Tparam>> in a declaration's context. This may also
-let us replace some uses of <<classname>> in declarations with
-<<name>>.
-*)
 | Nclosure (_ : list type)
 | Nanon (_ : N)
 (** Errors *)
@@ -280,7 +314,7 @@ Module atomic_name.
       (c : atomic_name_ type) : bool :=
     match c with
     | Nid _ => false
-    | Nfunction _ n ts => function_name.existsb f n || List.existsb f ts
+    | Nfunction _ n ts _ => function_name.existsb f n || List.existsb f ts
     | Nclosure ts => List.existsb f ts
     | Nanon _
     | Nunsupported_atomic _ => false
@@ -292,7 +326,7 @@ Module atomic_name.
       (c : atomic_name_ type) : atomic_name_ type' :=
     match c with
     | Nid id => Nid id
-    | Nfunction qs n ts => Nfunction qs (function_name.fmap f n) (f <$> ts)
+    | Nfunction qs n ts ar => Nfunction qs (function_name.fmap f n) (f <$> ts) ar
     | Nclosure ts => Nclosure (f <$> ts)
     | Nanon n => Nanon n
     | Nunsupported_atomic msg => Nunsupported_atomic msg
@@ -312,7 +346,7 @@ Module atomic_name.
     Definition traverse (c : atomic_name_ type) : F (atomic_name_ type') :=
       match c with
       | Nid id => mret $ Nid id
-      | Nfunction qs n ts => Nfunction qs <$> function_name.traverse f n <*> list_traverse f ts
+      | Nfunction qs n ts ar => Nfunction qs <$> function_name.traverse f n <*> list_traverse f ts <*> mret ar
       | Nclosure ts => Nclosure <$> list_traverse f ts
       | Nanon n => mret $ Nanon n
       | Nunsupported_atomic msg => mret $ Nunsupported_atomic msg

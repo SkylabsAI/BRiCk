@@ -71,27 +71,24 @@ Section with_lang.
       | Nunsupported_function note => mfail
       end.
 
-    Definition printFQ (fq : function_qualifier) : bs :=
-      match fq with
-      | Nconst => "const"
-      | Nvolatile => "volatile"
-      | Nnoexcept => "noexcept"
-      | Nlvalue => "&"
-      | Nrvalue => "&&"
-      end.
-
     #[local] Open Scope monad_scope.
     Definition printAN (an : atomic_name_ type) : option bs :=
       match an with
       | Nid id => mret id
-      | Nfunction quals nm args =>
+      | Nfunction quals nm args ar =>
           let* nm := printFN nm in
           let* args := traverse (F:=eta option) printType args in
-          let quals := fmap (M:=eta list) printFQ quals in
-          mret $ nm ++ parens (sepBy ", " args) ++
+          let quals := pretty.printFQ quals in
+          let add_dots ls :=
+            match ar with
+            | Ar_Definite => ls
+            | Ar_Variadic => ls ++ ["..."]
+            end%list
+          in
+          mret $ nm ++ parens (sepBy ", " $ add_dots args) ++
                   match quals with
-                  | [] => ""
-                  | _ => sepBy " " quals
+                  | BS.EmptyString => ""
+                  | _ => " " ++ quals
                   end
       | Nclosure types =>
           (fun t => parens $ sepBy ". " t) <$> traverse (T:=eta list) (F:=eta option) printType types

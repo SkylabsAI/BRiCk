@@ -97,20 +97,39 @@ Section with_lang.
       | Nunsupported_function note => "?" ++ note
       end.
 
-    Definition printFQ (fq : function_qualifier) : bs :=
-      match fq with
-      | Nconst => "const"
-      | Nvolatile => "volatile"
-      | Nnoexcept => "noexcept"
-      | Nlvalue => "&"
-      | Nrvalue => "&&"
+    Definition printFQ (fq : function_qualifier.t) : bs :=
+      let c :=
+        if function_qualifier.is_const fq then ["const"] else []
+      in
+      let v :=
+        if function_qualifier.is_volatile fq then ["volatile"] else []
+      in
+      let q :=
+        match function_qualifier.vc fq with
+        | None => ""
+        | Some true => "&"
+        | Some false => "&&"
+        end
+      in
+      let r :=
+        BS.concat " " (c ++ v)%list ++ q
+      in
+      match r with
+      | BS.EmptyString => r
+      | _ => " " ++ r
       end.
 
     Definition printAN (an : atomic_name_ type) : bs :=
       match an with
       | Nid id => id
-      | Nfunction quals nm args =>
-          printFN nm ++ (parens $ BS.concat ", " $ printType <$> args) ++ BS.concat " " (printFQ <$> quals)
+      | Nfunction quals nm args ar =>
+          let add_dots ls :=
+            match ar with
+            | Ar_Definite => ls
+            | Ar_Variadic => ls ++ ["..."]
+            end%list
+          in
+          printFN nm ++ (parens $ BS.concat ", " $ add_dots $ printType <$> args) ++ printFQ quals
       | Nclosure types => parens $ BS.concat ", " $ printType <$> types
       | Nanon n => "#" ++ showN n
       | Nunsupported_atomic note => "?" ++ note
@@ -265,5 +284,7 @@ Delimit Scope cpp_name_scope with cpp_name.
 Bind Scope cpp_name_scope with name.
 String Notation name parse_name print_name : cpp_name_scope.
 
+(*
 Definition test : name :=
-  Nscoped (Nglobal (Nid "XX")) (Nfunction [] (Nf "foo") [Tint;Tchar;Tlong;Tlonglong;Tulonglong;Tptr Tvoid]).
+  Nscoped (Nglobal (Nid "XX")) (Nfunction function_qualifier.F_ (Nf "foo") [Tint;Tchar;Tlong;Tlonglong;Tulonglong;Tptr Tvoid] Ar_Definite).
+*)
