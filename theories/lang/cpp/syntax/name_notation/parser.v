@@ -80,12 +80,15 @@ Module parser.
         (let* _ := exact "&&" in mret (true, Trv_ref)) <|>
           (let* _ := exact "&" in mret (true, Tref)) <|>
           (let* _ := exact "*" in mret (true, Tptr)) <|>
-          (let* _ := exact "const" in mret (true, fun x => Qconst x)) <|>
-          (let* _ := exact "volatile" in mret (true, fun x => Qvolatile x)) <|>
+          (let* _ := exact "const" in mret (true, tqualified QC)) <|>
+          (let* _ := exact "volatile" in mret (true, tqualified QV)) <|>
           (let* _ := exact "[" in
-           let* n := decimal in
+           let* n := optional decimal in
            let* _ := exact "]" in
-           mret (true, fun x => Tarray x n)) <|>
+           mret (true, fun ty => match n with
+                             | None => Tincomplete_array ty
+                             | Some n => Tarray ty n
+                              end)) <|>
           (mret (false, fun x => x))
       in
       if (continue : bool) then
@@ -190,6 +193,7 @@ Module parser.
       let* t :=
         basic_type <|>
         ((fun _ => Tparam) <$> exact "$" <*> ident) <|>
+        ((fun _ => Tenum) <$> exact "#" <*> NEXT fuel parse_name) <|>
         (Tnamed <$> NEXT fuel parse_name)
       in parse_postfix_type (List.fold_right (fun f x => f x) t quals) fuel
 
@@ -288,10 +292,16 @@ Definition parse_name (input : list Byte.byte) : option name :=
 Module Type TESTS.
   #[local] Definition TEST (input : bs) (nm : name) : Prop :=
     (parse_name $ BS.print input) = Some nm.
+  #[local] Definition FAIL (input : bs) : Prop :=
+    (parse_name $ BS.print input) = None.
 
   #[local] Definition Msg : name := Nglobal $ Nid "Msg".
 
   Succeed Example _0 : TEST "Msg" Msg := eq_refl.
+  Succeed Example _0 : TEST "foo(const int volatile)" (Nglobal (Nfunction [] (Nf "foo") [Tqualified QV (Tqualified QC Tint)])) := eq_refl.
+  Succeed Example _0 : TEST "foo(const int ** volatile & &&)"
+                 (Nglobal
+                    (Nfunction [] (Nf "foo") [Trv_ref (Tref (Tqualified QV (Tptr (Tptr (Tqualified QC Ti32)))))])) := eq_refl.
   Succeed Example _0 : TEST "::Msg" Msg := eq_refl.
   Succeed Example _0 : TEST "Msg::#0" (Nscoped Msg (Nanon 0)) := eq_refl.
   Succeed Example _0 : TEST "Msg::Msg()" (Nscoped Msg (Nfunction [] Nctor [])) := eq_refl.

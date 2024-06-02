@@ -205,6 +205,7 @@ Section with_lang.
     | Tref t => postfix "&" <$> printT t
     | Trv_ref t => postfix "&&" <$> printT t
     | Tmember_pointer cls t => (fun t c => t ++ " " ++ c ++ "::*") <$> printT t <*> printT cls
+    | Tqualified _ (Tqualified _ _) => mfail
     | Tqualified q t =>
         (fun t => sepBy " " $ (t :: (if q_const q then ["const"] else []) ++
         (if q_volatile q then ["volatile"] else []))%list) <$> printT t
@@ -212,8 +213,8 @@ Section with_lang.
     | Tarray t n => (fun t => t ++ "[" ++ showN n ++ "]") <$> printT t
     | Tincomplete_array t => postfix "[]" <$> printT t
     | Tvariable_array t e => (fun t n => t ++ "[" ++ n ++ "]") <$> printT t <*> printE e
-    | Tdecltype e => (fun e => "decltype((" ++ e ++ "))") <$> printE e
-    | Texprtype e => (fun e => "decltype(" ++ e ++ ")") <$> printE e
+    | Tdecltype e => mfail (* (fun e => "decltype((" ++ e ++ "))") <$> printE e *)
+    | Texprtype e => mfail (* (fun e => "decltype(" ++ e ++ ")") <$> printE e *)
     | Tnamed nm => printN nm
     | Tenum nm => prefix "#" <$> printN nm
     | Tfunction ft =>
