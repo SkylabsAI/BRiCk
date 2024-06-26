@@ -1042,12 +1042,12 @@ Section listZ.
     lengthZ xs = m - n <-> lengthN xs = Z.to_N (m - n) ∧ n ≤ m.
   Proof. lia. Qed.
 
-  #[global] Instance list_lookupZ {A} : Lookup Z A (list A) :=
+  #[global] Instance list_lookupZ {A} : Lookup Z A (list A) | 20 :=
     fun k l => if bool_decide (0 ≤ k)
             then l !! (Z.to_nat k)
             else None.
 
-  #[global] Instance list_insertZ {A} : Insert Z A (list A) :=
+  #[global] Instance list_insertZ {A} : Insert Z A (list A) | 20 :=
     fun k a l => if bool_decide (0 ≤ k)
               then <[ Z.to_nat k := a ]> l
               else l.
