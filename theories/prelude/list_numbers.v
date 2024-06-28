@@ -1118,6 +1118,18 @@ Section listZ.
       (xs ++ <[ k - lengthZ xs := x']> xs').
   Proof. by rewrite insertZ_app_iff bool_decide_eq_false_2 // Z.nlt_ge. Qed.
 
+  #[local] Lemma bool_decide_refl `{HR : Reflexive A R} (x : A) `{!Decision (R x x)} :
+    bool_decide (R x x) = true.
+  Proof. by apply bool_decide_eq_true_2. Qed.
+
+  #[local] Lemma bool_decide_sub_move_0_r (x y : Z) :
+    bool_decide (x - y = 0) = bool_decide (x = y).
+  Proof. by apply bool_decide_ext, Z.sub_move_0_r. Qed.
+
+  #[local] Lemma bool_decide_lt_irrefl (x : Z) :
+    bool_decide (x < x) = false.
+  Proof. by apply bool_decide_eq_false_2, Z.lt_irrefl. Qed.
+
   (** [Zarith_simpl] simplifies arithmetic expressions of the form:
    *    - [x - x]
    *    - [0 - x]
@@ -1133,17 +1145,17 @@ Section listZ.
    *    - [bool_decide (R x x)] for any reflexive relation [R]
    *    - [bool_decide (x < x)]
    *
-   * In the following, it is used with insertion on lists
+   * Those lemmas, in combination with definition by case of [insertZ] and [lookupZ],
+   * help normalize the list indices and conditions about list indices.
    *)
   Definition Zarith_simpl :=
     (Z.sub_diag, Z.sub_0_l, Z.sub_0_r,
-     (fun a b : Z => (bool_decide_ext _ _ $ Z.sub_move_0_r a b)),
+     @bool_decide_sub_move_0_r,
      Z.add_0_l, Z.add_0_r,
      Z.min_id, Z.min_l_iff, Z.min_r_iff,
      Z.max_id, Z.max_l_iff, Z.max_r_iff,
-       (fun A (R : relation A) (HR : Reflexive R) (x : A) (HP : Decision (R x x)) =>
-          @bool_decide_eq_true_2 (R x x) HP (@reflexivity A R HR x)),
-       (fun x : Z => @bool_decide_eq_false_2 (Z.lt x x) _ (Z.lt_irrefl x))
+     @bool_decide_refl,
+     @bool_decide_lt_irrefl
     ).
 
   Lemma insertZ_nil {A} (i : Z) (x : A) : <[i:=x]>[] = [].
