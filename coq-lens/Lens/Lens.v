@@ -5,8 +5,8 @@ Record Lens (a b c d : Type) : Type :=
 ; over : (c -> d) -> a -> b
 }.
 
-Arguments over {_ _ _ _} _ _ _.
-Arguments view {_ _ _ _} _ _.
+Arguments over {_ _ _ _} _ _ !_.
+Arguments view {_ _ _ _} _ !_.
 
 Definition lens_compose {a b c d e f : Type}
            (l1 : Lens a b c d) (l2 : Lens c d e f)
@@ -20,6 +20,8 @@ Section ops.
   Definition set (new : d) : a -> b :=
     l.(over) (fun _ => new).
 End ops.
+
+Arguments set {_ _ _ _} _ _ !_.
 
 Module LensNotations.
   Declare Scope lens_scope.
