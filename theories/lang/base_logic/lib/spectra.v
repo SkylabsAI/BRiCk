@@ -217,7 +217,7 @@ Module Step.
               [| ∀ s', s' ∈ sset' -> ∃ s, s ∈ sset /\ x.(lts).(lts_step) s (Some e) s' |] **
               AuthSet.auth γ sset',
              COMM Q e }>.
-
+    (* CI hack: cause conflict with alt_gen_commmitter to build this version *)
     (** This is the AC a requester /proves/ in order to perform its
         own [STEP] action.
     TODO: requester := requester_learn γ STEP (λ _ _ _, True) Q.
