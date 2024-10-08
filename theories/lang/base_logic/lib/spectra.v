@@ -1596,4 +1596,18 @@ Section singleton_with_ref.
     move=> _ /elem_of_singleton -> /=.
     iSplit. { iIntros "$ !% /=". set_solver. } iDestruct 1 as (? ?) "$".
   Qed.
+
+  Lemma transport_singleton comp γ nl nr Q
+      (STEPl : Label (Compose.sts_name _ nl)) (STEPr : Label (Compose.sts_name _ nr)) :
+    nl <> nr ->
+    Compose.cancel_evt ComposeN.fam nl nr STEPl STEPr ->
+    gen_transports comp γ ⊢
+    singleton_requester (app := appn nl) (γ nl) STEPl Q -∗
+    singleton_committer (app := appn nr) (γ nr) STEPr Q.
+  Proof.
+    intros.
+    rewrite /singleton_committer /ctor_committer -Step.gen_committer_committer.
+    rewrite /singleton_requester /ctor_requester Step.requester_gen_requester.
+    exact: gen_transport_singleton.
+  Qed.
 End singleton_with_ref.
