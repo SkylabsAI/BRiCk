@@ -16,6 +16,8 @@
   (coq
    (flags
     (:standard
+      ; 8.20 compat
+      -w -context-outside-section
       ;see https://gitlab.mpi-sws.org/iris/iris/-/blob/master/_CoqProject
       -w -notation-overridden
       ; Similar to notation warnings.
