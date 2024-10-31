@@ -934,9 +934,9 @@ Notation Ti32 := (Tnum int_rank.Iint Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tuint]")]
 Notation Tu32 := (Tnum int_rank.Iint Unsigned) (only parsing).
 #[deprecated(since="20240624", note="use [Tlong] or [Tlonglong]")]
-Notation Ti64 := (Tnum bitsize.W64 Signed).
+Notation Ti64 := (Tnum int_rank.Ilonglong Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tulong] or [Tulonglong]")]
-Notation Tu64 := (Tnum bitsize.W64 Unsigned).
+Notation Tu64 := (Tnum int_rank.Ilonglong Unsigned) (only parsing).
 #[deprecated(since="20240624", note="use [Tint128_t]")]
 Notation Ti128 := (Tnum int_rank.I128 Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tuint128_t]")]
