@@ -152,10 +152,9 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 				}
 			}
 
-			print.output()
-				<< "Definition module_check := " << fmt::indent << fmt::line
-				<< "Eval reduce_translation_unit in translation_unit.decls"
-				<< fmt::nbsp;
+			print.output() << "Definition module_check := " << fmt::indent
+						   << fmt::line << "translation_unit.decls"
+						   << fmt::nbsp;
 
 			print.begin_list();
 			for (auto decl : mod.declarations()) {
@@ -182,7 +181,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 			print.output() << fmt::line
 						   << "Succeed Example test : module_check.2 = [] := "
-							  "ltac:(compute; reflexivity)."
+							  "ltac:(vm_compute; reflexivity)."
 						   << fmt::line;
 
 			print.output() << fmt::line
