@@ -922,25 +922,25 @@ Notation Tchar16 := (Tchar_ char_type.C16).
 Notation Tchar32 := (Tchar_ char_type.C32).
 
 #[deprecated(since="20240624", note="use [Tschar]")]
-Notation Ti8 := (Tnum bitsize.W8 Signed).
+Notation Ti8 := (Tnum int_rank.Ichar Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tuchar]")]
-Notation Tu8 := (Tnum bitsize.W8 Unsigned).
+Notation Tu8 := (Tnum int_rank.Ichar Unsigned) (only parsing).
 #[deprecated(since="20240624", note="use [Tshort]")]
-Notation Ti16 := (Tnum bitsize.W16 Signed).
+Notation Ti16 := (Tnum int_rank.Ishort Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tushort]")]
-Notation Tu16 := (Tnum bitsize.W16 Unsigned).
+Notation Tu16 := (Tnum int_rank.Ishort Unsigned) (only parsing).
 #[deprecated(since="20240624", note="use [Tint]")]
-Notation Ti32 := (Tnum bitsize.W32 Signed).
+Notation Ti32 := (Tnum int_rank.Iint Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tuint]")]
-Notation Tu32 := (Tnum bitsize.W32 Unsigned).
+Notation Tu32 := (Tnum int_rank.Iint Unsigned) (only parsing).
 #[deprecated(since="20240624", note="use [Tlong] or [Tlonglong]")]
 Notation Ti64 := (Tnum bitsize.W64 Signed).
 #[deprecated(since="20240624", note="use [Tulong] or [Tulonglong]")]
 Notation Tu64 := (Tnum bitsize.W64 Unsigned).
 #[deprecated(since="20240624", note="use [Tint128_t]")]
-Notation Ti128 := (Tnum bitsize.W128 Signed).
+Notation Ti128 := (Tnum int_rank.I128 Signed) (only parsing).
 #[deprecated(since="20240624", note="use [Tuint128_t]")]
-Notation Tu128 := (Tnum bitsize.W128 Unsigned).
+Notation Tu128 := (Tnum int_rank.I128 Unsigned) (only parsing).
 
 Notation Tschar := (Tnum int_rank.Ichar Signed).
 Notation Tuchar := (Tnum int_rank.Ichar Unsigned).
