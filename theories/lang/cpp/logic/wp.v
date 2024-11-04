@@ -315,7 +315,10 @@ Section with_cpp.
 
   (* the natural relation for [M] *)
   #[local] Definition Mrel T : M T -> M T -> Prop :=
-    (pointwise_relation _ (FreeTemps.t_eq ==> (⊢)) ==> (⊢))%signature.
+    (pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))%signature.
+
+  #[local] Definition Mequiv T : M T -> M T -> Prop :=
+    (pointwise_relation _ ((≡) ==> (≡)) ==> (≡))%signature.
 
   #[local] Definition Mframe {T} (a b : M T) : mpred :=
     Forall Q Q', (Forall x y, Q x y -* Q' x y) -* a Q -* b Q'.
@@ -464,31 +467,61 @@ Section with_cpp.
   (* sanity check on [nd_seq] and [nd_seqs] *)
   Example nd_seq_example : forall {T} (a b : M T),
       Proper (Mrel _) a -> Proper (Mrel _) b ->
-      Mrel _ (nd_seqs [a;b]) (Mmap (fun '(a,b) => [a;b]) $ nd_seq a b).
+      Mequiv _ (nd_seqs [a;b]) (Mmap (fun '(a,b) => [a;b]) $ nd_seq a b).
   Proof.
     rewrite /nd_seqs/=; intros.
     rewrite /Mmap/nd_seq.
     repeat intro.
-    iIntros "X".
     iSplit.
-    { iSpecialize ("X" $! nil [b] a eq_refl).
-      iRevert "X".
-      iApply H. repeat intro; simpl.
-      iIntros "X".
-      iSpecialize ("X" $! nil nil b eq_refl).
-      iRevert "X".
-      iApply H0. repeat intro; simpl.
-      rewrite /Mret.
-      simpl. apply H1. rewrite FreeTemps.seq_id_unitL.
-      f_equiv; eauto. }
-    { iSpecialize ("X" $! [a] nil b eq_refl).
-      iRevert "X". iApply H0. repeat intro; simpl.
-      iIntros "X".
-      iSpecialize ("X" $! nil nil a eq_refl).
-      iRevert "X".
-      iApply H. repeat intro; simpl.
-      apply H1. rewrite FreeTemps.seq_id_unitL.
-      f_equiv; eauto. }
+    { iIntros "X".
+      iSplit.
+      { iSpecialize ("X" $! nil [b] a eq_refl).
+        iRevert "X".
+        iApply H. repeat intro; simpl.
+        iIntros "X".
+        iSpecialize ("X" $! nil nil b eq_refl).
+        iRevert "X".
+        iApply H0. repeat intro; simpl.
+        rewrite /Mret.
+        rewrite (H1 _ _ _) => //. by rewrite FreeTemps.seq_id_unitL. }
+      { iSpecialize ("X" $! [a] nil b eq_refl).
+        iRevert "X". iApply H0. repeat intro; simpl.
+        iIntros "X".
+        iSpecialize ("X" $! nil nil a eq_refl).
+        iRevert "X".
+        iApply H. repeat intro; simpl.
+        rewrite /Mret.
+        rewrite H1 => //. by rewrite FreeTemps.seq_id_unitL. } }
+    { iIntros "X" (pre post m Horder).
+      destruct pre.
+      { inversion Horder; subst.
+        iDestruct "X" as "[X _]".
+        rewrite /Mbind. iApply H; last iAssumption.
+        iIntros (??) => /=.
+        iIntros "X" (pre' post' m' Horder').
+        assert (pre' = [] /\ m' = b /\ post' = []) as [?[??]]; last subst.
+        { clear - Horder'.
+          destruct pre'.
+          - inversion Horder'; subst; auto.
+          - destruct pre'; inversion Horder'. }
+        iApply H0; last iAssumption.
+        iIntros (??) => /=; rewrite /Mret/=.
+        rewrite H1 => //. by rewrite FreeTemps.seq_id_unitL. }
+      { assert (a = m0 /\ b = m /\ pre = [] /\ post = []) as [?[?[??]]]; last subst.
+        { clear -Horder.
+          inversion Horder; subst.
+          destruct pre; inversion H1; subst; eauto.
+          destruct pre; inversion H2. }
+        iDestruct "X" as "[_ X]".
+        rewrite /Mbind. iApply H0; last iAssumption.
+        iIntros (??) "H" => /=. iIntros (pre' post' m' Horder')=> /=.
+        assert (m0 = m' /\ pre' = [] /\ post' = []) as [?[??]]; last subst.
+        { destruct pre'; inversion Horder'; subst; eauto.
+          destruct pre'; inversion H4. }
+        iApply H; last iAssumption.
+        iIntros (??). rewrite /=/Mret/=.
+        rewrite H1 => //.
+        by rewrite FreeTemps.seq_id_unitL. } }
   Qed.
 
   (** *** sequencing of monadic compuations *)
@@ -652,16 +685,15 @@ Section with_cpp.
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
   (* END wp_lval *)
 
-  #[global] Declare Instance wp_lval_ne :
-    `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_lval σ tu ρ e)}.
+  Axiom wp_lval_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_lval σ)}.
   (** Usual corollary. Might conflict with [Proper_wp_lval]. *)
   #[global] Instance wp_lval_proper :
-    `{Proper (pointwise_relation _ (pointwise_relation _ equiv) ==> equiv) (@wp_lval σ tu ρ e)}.
+    `{Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ equiv) ==> equiv) (@wp_lval σ)}.
   Proof.
-    intros * Q1 Q2 HQ.
+    intros * ??? ??? ??? Q1 Q2 HQ.
     apply equiv_dist => n.
-    f_equiv => p free.
-    by rewrite HQ.
+    by apply wp_lval_ne => // ??; rewrite HQ.
   Qed.
 
   Axiom wp_lval_shift : forall {σ:genv} tu ρ e Q,
@@ -730,7 +762,7 @@ Section with_cpp.
     repeat red. intros; subst.
     iIntros "X". iRevert "X".
     iApply wp_lval_frame; eauto.
-    iIntros (v). iIntros (f). iApply H2. reflexivity.
+    iIntros (v). iIntros (f). iApply H2.
   Qed.
 
   Section wp_lval.
@@ -822,8 +854,8 @@ Section with_cpp.
                         (FreeTemps -> epred) -> (* free -> post *)
                         mpred. (* pre-condition *)
   (* END wp_init *)
-  #[global] Declare Instance wp_init_ne :
-    `{Proper (pointwise_relation _ (dist n) ==> dist n) (@wp_init σ tu ρ et p e)}.
+  Parameter wp_init_ne :
+    `{Proper (eq ==> eq ==> eq ==> eq ==> eq ==> pointwise_relation _ (dist n) ==> dist n) (@wp_init σ)}.
 
   Axiom wp_init_shift : forall {σ:genv} tu ρ ty p e Q,
       (|={top}=> wp_init tu ρ ty p e (fun frees => |={top}=> Q frees))
@@ -919,11 +951,11 @@ Section with_cpp.
   (* END wp_prval *)
 
 
-  #[global] Instance wp_prval_ne :
-    `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_prval σ tu ρ e)}.
+  Lemma wp_prval_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_prval σ)}.
   Proof.
-    intros. intro. intros. apply bi.forall_ne; intro.
-    apply wp_init_ne. apply H.
+    move => * ??? ??? ??? ???. apply bi.forall_ne; intro; subst.
+    apply wp_init_ne => //.
   Qed.
 
   (** TODO prove instances for [wp_prval] *)
@@ -934,8 +966,8 @@ Section with_cpp.
   Parameter wp_operand : forall {resolve:genv}, translation_unit -> region -> Expr -> M val.
   (* END wp_operand *)
 
-  #[global] Declare Instance wp_operand_ne :
-    `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_operand σ tu ρ e)}.
+  Axiom wp_operand_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_operand σ)}.
 
   Axiom wp_operand_shift : forall {σ:genv} tu ρ e Q,
       (|={top}=> wp_operand tu ρ e (fun v free => |={top}=> Q v free))
@@ -1013,14 +1045,15 @@ Section with_cpp.
   #[global] Hint Opaque wp_test : br_opacity.
   #[global] Arguments wp_test /.
 
-  #[global] Instance wp_test_ne :
-    `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
-             (@wp_test σ tu ρ e)}.
+  Lemma wp_test_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
+             (@wp_test σ)}.
   Proof.
-    intros; intro; intros; rewrite /wp_test.
-    apply wp_operand_ne. intro. intro.
+    do 14 intro; rewrite /wp_test.
+    apply wp_operand_ne; eauto.
+    intro. intro.
     case_match; try reflexivity.
-    apply H.
+    apply H2.
   Qed.
 
   Lemma wp_test_frame {σ : genv} tu ρ test (Q Q' : _ -> _ -> epred) :
@@ -1038,9 +1071,9 @@ Section with_cpp.
   Parameter wp_xval
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
 
-  #[global] Declare Instance wp_xval_ne :
-    `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
-             (@wp_xval σ tu ρ e)}.
+  Axiom wp_xval_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
+             (@wp_xval σ)}.
 
   Axiom wp_xval_shift : forall {σ:genv} tu ρ e Q,
       (|={top}=> wp_xval tu ρ e (fun v free => |={top}=> Q v free))
@@ -1113,7 +1146,7 @@ Section with_cpp.
       | vc => wp_glval_mismatch ρ vc e
       end%I.
 
-  #[global] Instance wp_glval_ne :
+  Lemma wp_glval_ne :
     `{forall n, Proper (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
              (@wp_glval σ tu ρ e)}.
   Proof.
@@ -1144,8 +1177,8 @@ Section with_cpp.
     - by apply wp_xval_frame.
   Qed.
 
-  #[global] Instance Proper_wp_glval σ :
-    Proper (sub_module ==> eq ==> eq ==> Mrel _) (@wp_glval σ).
+  Lemma Proper_wp_glval σ :
+    Proper (sub_module ==> eq ==> eq ==> Reduce (Mrel ptr)) (@wp_glval σ).
   Proof.
     solve_proper_prepare. case_match; solve_proper.
   Qed.
@@ -1209,17 +1242,17 @@ Section with_cpp.
       | Xvalue => wp_xval tu ρ e (fun _ => Q)
       end.
 
-    #[global] Instance wp_discard_ne :
+    Lemma wp_discard_ne :
       `{forall n, Proper (pointwise_relation _ (dist n) ==> dist n) (@wp_discard e)}.
     Proof.
       rewrite /wp_discard. intros; intro; intros.
       case_match.
-      { apply wp_lval_ne. by intro. }
+      { apply wp_lval_ne => //. by intro. }
       { case_match.
-        - apply wp_operand_ne. by do 2 intro.
+        - apply wp_operand_ne =>//. by do 2 intro.
         - apply bi.forall_ne. intro.
-          apply wp_init_ne. by intro. }
-      { apply wp_xval_ne; by intro. }
+          apply wp_init_ne => //. by intro. }
+      { apply wp_xval_ne=> //. by intro. }
     Qed.
 
   End wp_discard.
@@ -1244,16 +1277,7 @@ Section with_cpp.
   Qed.
 
   #[global] Instance Proper_wp_discard σ :
-    Proper (sub_module ==> eq ==> eq ==> ((≡) ==> (⊢)) ==> (⊢))
-           (@wp_discard σ).
-  Proof.
-    repeat red; intros; subst.
-    iIntros "X"; iRevert "X"; iApply wp_discard_frame; eauto.
-    iIntros (?); iApply H2; reflexivity.
-  Qed.
-
-  #[global] Instance Proper_wp_discard' σ :
-    Proper (sub_module ==> eq ==> eq ==> (pointwise_relation _ lentails) ==> lentails)
+    Proper (sub_module ==> eq ==> eq ==> pointwise_relation _ (⊢) ==> (⊢))
            (@wp_discard σ).
   Proof.
     repeat red; intros; subst.
@@ -1267,8 +1291,9 @@ Section with_cpp.
   Parameter wp
     : forall {resolve:genv}, translation_unit -> region -> Stmt -> KpredI -> mpred.
 
-  #[global] Declare Instance wp_ne :
-    `{forall n, Proper (dist n ==> dist n) (@wp σ tu ρ s)}.
+  (* NOTE: added [eq] relations so that all [Proper] proofs have the same arity *)
+  Axiom wp_ne :
+    `{forall n, Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp σ)}.
 
   Axiom wp_shift : forall σ tu ρ s Q,
       (|={top}=> wp tu ρ s (|={top}=> Q))
