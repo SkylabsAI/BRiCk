@@ -187,8 +187,8 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 			print.output() << fmt::line
 						   << "Definition module : translation_unit := "
-                "Eval hnf in "
-							  "module_check.1."
+                "Eval lazy [fst] in "
+							  "fst module_check."
         //						   << fmt::line << "Arguments module : simpl never."
 						   << fmt::line << fmt::line;
 
