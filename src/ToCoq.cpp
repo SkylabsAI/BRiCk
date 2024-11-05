@@ -187,8 +187,9 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 			print.output() << fmt::line
 						   << "Definition module : translation_unit := "
-							  "translation_unit.the_tu module_check."
-						   << fmt::line << "Arguments module : simpl never."
+                "Eval hnf in "
+							  "module_check.1."
+        //						   << fmt::line << "Arguments module : simpl never."
 						   << fmt::line << fmt::line;
 
 			if (check_types_) {
