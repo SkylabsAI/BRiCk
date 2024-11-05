@@ -3,7 +3,7 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-
+Require Ltac2.Ltac2.
 Require Export bedrock.prelude.base.	(* for, e.g., <<::>> *)
 Require Export bedrock.prelude.bytestring.	(* for <<%bs>> *)
 Require Import bedrock.prelude.avl.
@@ -109,17 +109,28 @@ Module Import translation_unit.
    *)
 
   Module make.
+    Import Ltac2.Ltac2.
+
+    Ltac2 Type exn ::= [DuplicateSymbols (constr)].
+
     (* [check_translation_unit tu]
-    *)
-    Ltac check_translation_unit tu endian :=
-      let rtu := eval vm_compute in (decls tu endian) in
-      lazymatch rtu with
-      | pair ?tu nil => exact_no_check tu
+     *)
+    Ltac2 check_translation_unit (tu : preterm) (en : preterm) :=
+      let endian := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(endian)) en in
+      let tu := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(list t)) tu in
+      let term := Constr.Unsafe.make (Constr.Unsafe.App ('decls) (Array.of_list [tu; endian])) in
+      let rtu := Std.eval_vm None term in
+      lazy_match! rtu with
+      | pair ?tu nil => Std.exact_no_check tu
       | pair _ ?dups =>
-          fail "Duplicate symbols found in translation unit: " dups
+          let _ := Message.print (Message.concat (Message.of_string "Duplicate symbols found in translation unit: ") (Message.of_constr dups)) in
+          Control.throw (DuplicateSymbols dups)
       end.
 
   End make.
+
+  Notation check tu en :=
+    ltac2:(translation_unit.make.check_translation_unit tu en) (only parsing).
 
 End translation_unit.
 Export translation_unit(decls).
@@ -168,6 +179,3 @@ Definition Dstatic_assert (msg : option bs) (e : Expr) : K :=
 Definition Qconst_volatile : type -> type := tqualified QCV.
 Definition Qconst : type -> type := tqualified QC.
 Definition Qvolatile : type -> type := tqualified QV.
-
-Tactic Notation "translation_unit.check" uconstr(tu) uconstr(endian) :=
-  make.check_translation_unit tu endian.

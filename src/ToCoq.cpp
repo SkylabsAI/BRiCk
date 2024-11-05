@@ -155,7 +155,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 			print.output()
         << fmt::line
 				<< "Definition module : translation_unit := " << fmt::indent << fmt::line
-				<< "ltac:(translation_unit.check "
+				<< "translation_unit.check "
 				<< fmt::nbsp;
 
 			print.begin_list();
@@ -179,7 +179,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 			// TODO I still need to generate the initializer
 
-			print.output() << ")." << fmt::outdent << fmt::line;
+			print.output() << "." << fmt::outdent << fmt::line;
 
       /*
 			print.output()
