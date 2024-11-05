@@ -8,6 +8,7 @@ Require Export bedrock.prelude.base.	(* for, e.g., <<::>> *)
 Require Export bedrock.prelude.bytestring.	(* for <<%bs>> *)
 Require Import bedrock.prelude.avl.
 Require Export bedrock.lang.cpp.syntax. (* NOTE: too much *)
+Require bedrock.lang.cpp.semantics.sub_module.
 Require Export bedrock.lang.cpp.parser.stmt.
 Require Import bedrock.lang.cpp.parser.lang.
 Require Import bedrock.lang.cpp.parser.type.
@@ -41,11 +42,10 @@ Module Import translation_unit.
     (raw_symbol_table -> raw_type_table -> raw_alias_table -> list name -> translation_unit * list name) ->
     translation_unit * list name.
 
-  Require Import bedrock.lang.cpp.semantics.sub_module.
   Definition merge_obj_value (a b : ObjValue) : option ObjValue :=
-    if ObjValue_le a b then
+    if sub_module.ObjValue_le a b then
       Some b
-    else if ObjValue_le b a then Some a
+    else if sub_module.ObjValue_le b a then Some a
          else None.
 
   Definition _symbols (n : name) (v : ObjValue) : t :=
@@ -58,9 +58,9 @@ Module Import translation_unit.
                   end
       end.
   Definition merge_glob_decl (a b : GlobDecl) : option GlobDecl :=
-    if GlobDecl_le a b then
+    if sub_module.GlobDecl_le a b then
       Some b
-    else if GlobDecl_le b a then Some a
+    else if sub_module.GlobDecl_le b a then Some a
          else None.
 
   Definition _types (n : name) (v : GlobDecl) : t :=
@@ -96,6 +96,7 @@ Module Import translation_unit.
       byte_order := e;
     |}.
 
+  (*
   Definition the_tu (result : translation_unit * list name)
     : match result.2 with
       | [] => translation_unit
@@ -105,6 +106,20 @@ Module Import translation_unit.
     | [] => result.1
     | _ => tt
     end.
+   *)
+
+  Module make.
+    (* [check_translation_unit tu]
+    *)
+    Ltac check_translation_unit tu endian :=
+      let rtu := eval vm_compute in (decls tu endian) in
+      lazymatch rtu with
+      | pair ?tu nil => exact_no_check tu
+      | pair _ ?dups =>
+          fail "Duplicate symbols found in translation unit: " dups
+      end.
+
+  End make.
 
 End translation_unit.
 Export translation_unit(decls).
@@ -153,3 +168,6 @@ Definition Dstatic_assert (msg : option bs) (e : Expr) : K :=
 Definition Qconst_volatile : type -> type := tqualified QCV.
 Definition Qconst : type -> type := tqualified QC.
 Definition Qvolatile : type -> type := tqualified QV.
+
+Tactic Notation "translation_unit.check" uconstr(tu) uconstr(endian) :=
+  make.check_translation_unit tu endian.

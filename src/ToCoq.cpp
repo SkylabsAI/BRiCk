@@ -153,8 +153,9 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 			}
 
 			print.output()
-				<< "Definition module_check := " << fmt::indent << fmt::line
-				<< "Eval reduce_translation_unit in translation_unit.decls"
+        << fmt::line
+				<< "Definition module : translation_unit := " << fmt::indent << fmt::line
+				<< "ltac:(translation_unit.check "
 				<< fmt::nbsp;
 
 			print.begin_list();
@@ -178,8 +179,9 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 
 			// TODO I still need to generate the initializer
 
-			print.output() << "." << fmt::outdent << fmt::line;
+			print.output() << ")." << fmt::outdent << fmt::line;
 
+      /*
 			print.output()
 				<< fmt::line
 				<< "Succeed Example test : module_check.2 = [] := eq_refl."
@@ -191,6 +193,7 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 							  "fst module_check."
         //						   << fmt::line << "Arguments module : simpl never."
 						   << fmt::line << fmt::line;
+      */
 
 			if (check_types_) {
 				print.output()
