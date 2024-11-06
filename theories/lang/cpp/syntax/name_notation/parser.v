@@ -221,6 +221,8 @@ Module parser.
     Variant name_type : Set :=
       | Simple (_ : bs)
       | Dtor (_ : bs)
+      | FirstDecl (_ : bs)
+      | FirstChild (_ : bs)
       | Anon (_ : N)
       | Op (_ : OverloadableOperator)
       | OpConv (_ : type)
@@ -333,11 +335,17 @@ Module parser.
         match op with
         | None => let* d := optional (op_token "~") in
                  match d with
-                 | None => let* d := optional (exact "@") in
-                          match d with
-                          | None => Simple <$> ident
-                          | Some _ => Anon <$> decimal
-                          end
+                 | None =>
+                     let* d := optional (exact "@") in
+                     match d with
+                     | None =>
+                         let* d := optional (exact ".") in
+                         match d with
+                         | None => Simple <$> ident
+                         | Some _ => FirstChild <$> ident
+                         end
+                     | Some _ => (Anon <$> decimal) <|> (FirstDecl <$> ident)
+                     end
                  | Some _ => Dtor <$> ident
                  end
         | Some _ =>
@@ -350,7 +358,9 @@ Module parser.
         match args with
         | None => match nm with
                  | Simple nm => mret $ Nid nm
-                 | Anon nm => mret $ Nanon nm
+                 | FirstDecl nm => mret $ Nfirst_decl nm
+                 | FirstChild nm => mret $ Nfirst_child nm
+                 | Anon n => mret $ Nanon n
                  | Dtor _
                  | Op _
                  | OpLit _
@@ -361,10 +371,12 @@ Module parser.
               match nm with
               | Dtor _ => mret $ Ndtor
               | Simple nm => mret $ Nf nm
-              | Anon n => mfail
               | Op oo => mret $ Nop oo
               | OpConv t => mret $ Nop_conv t
               | OpLit n => mret $ Nop_lit n
+              | FirstDecl n => mfail
+              | FirstChild n => mfail
+              | Anon _ => mfail
               end
         end
       in
@@ -525,5 +537,9 @@ Module Type TESTS.
                          (Nscoped (Nglobal (Nid "CpuSet")) (Nfunction function_qualifiers.Nc (Nf "forall") [Tmember_pointer (Tnamed (Nglobal $ Nid "C")) $ Tfunction (FunctionType Tvoid [Tint])])) := eq_refl.
   Succeed Example _0 : TEST "CpuSet::forall(void (C::*)(int, ...), ...) const"
                          (Nscoped (Nglobal (Nid "CpuSet")) (Nfunction function_qualifiers.Nc (Nf "forall") [Tmember_pointer (Tnamed (Nglobal $ Nid "C")) $ Tfunction (FunctionType (ft_arity:=Ar_Variadic) Tvoid [Tint])])) := eq_refl.
+
+  (* NOTE: non-standard names *)
+  Succeed Example _0 : TEST "Msg::@msg" (Nscoped Msg (Nfirst_decl "msg")) := eq_refl.
+  Succeed Example _0 : TEST "Msg::.msg" (Nscoped Msg (Nfirst_child "msg")) := eq_refl.
 
 End TESTS.
