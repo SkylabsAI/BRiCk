@@ -142,7 +142,7 @@ Section parsec.
     (fun _ x _ => x) <$> pre <*> p <*> post.
 
   Definition ws : M unit :=
-    const () <$> (star $ char (fun x => strings.is_space $ Ascii.ascii_of_byte x)).
+    const () <$> (star $ char (fun x => strings.Ascii.is_space $ Ascii.ascii_of_byte x)).
 
   Definition ignore_ws {T} (p : M T) : M T :=
     quoted ws ws p.
