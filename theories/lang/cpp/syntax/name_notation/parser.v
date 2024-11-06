@@ -9,6 +9,7 @@ Require Import bedrock.prelude.base.
 Require Import bedrock.prelude.bytestring.
 Require Import bedrock.upoly.upoly.
 Require Import bedrock.upoly.option.
+Require Import bedrock.upoly.list.
 Require Import bedrock.prelude.parsec.
 Require Import bedrock.lang.cpp.syntax.core.
 Require Import bedrock.lang.cpp.syntax.types.
@@ -37,7 +38,7 @@ Module parser.
     Context {Mbase : Type -> Type}.
     Context {RET : MRet Mbase} {FMAP : FMap Mbase} {AP : Ap Mbase} {MBIND : MBind Mbase}.
 
-    Notation M := (parsec.M Byte.byte Mbase).
+    Notation M := (parsec.M@{Set _ _ _ _ _ _} Byte.byte Mbase).
 
     Definition digit_char (b : Byte.byte) : bool :=
       bool_decide (Byte.to_N "0" ≤ Byte.to_N b ≤ Byte.to_N "9")%N.
@@ -110,7 +111,9 @@ Module parser.
       ; (["signed"], Tint) ]%bs.
 
     Definition basic_type {lang} : M (type' lang) :=
-      anyOf $ (fun '(tkns, val) => (fun _ => val) <$> (seqs $ keyword <$> tkns)) <$> basic_types.
+      let os : list (M (type' lang)) :=
+        fmap (M:=eta list) (fun '(tkns, val) => fmap (M:=M) (fun _ => val) (seqs $ fmap (M:=eta list) keyword tkns)) basic_types in
+      anyOf os.
 
     Definition operators : list (bs * OverloadableOperator) :=
       (* this is used in an early commit manner, so longer operators

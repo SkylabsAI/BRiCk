@@ -4,18 +4,11 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
-Require Import Coq.Strings.Byte.
-Require Import stdpp.base.
 Require Import stdpp.decidable.
-Require Import stdpp.strings.
+Require Import bedrock.upoly.prelude.
 Require Import bedrock.upoly.upoly.
 Require Import bedrock.upoly.optionT.
 Require Import bedrock.upoly.stateT.
-
-(* BEGIN UPSTREAM *)
-(* marking this local to avoid backtracking since the definition is upstreamed *)
-#[local] Instance byte_eq_dec : EqDecision Byte.byte := Byte.byte_eq_dec.
-(* END UPSTREAM *)
 
 (** ** parsec
     Simple implementation of a parser combinator library.
@@ -23,33 +16,30 @@ Require Import bedrock.upoly.stateT.
     NOTE: [M] is a monad transformer so additional state can be
           threaded through the parsing.
  *)
-
 Import UPoly.
 Section parsec.
-  Context {F : Type -> Type} {MR : MRet F} {FM : FMap F} {MB : MBind F}.
-
-  #[local] Notation bs := (list Byte.byte).
+  Context {TKN : Type} {F : Type -> Type} {MR : MRet F} {FM : FMap F} {MB : MBind F}.
 
   Definition M (T : Type) : Type :=
-    stateT.M bs (optionT.M F) T.
+    stateT.M (list TKN) (optionT.M F) T.
 
-  Definition run {T} (m : M T) : bs -> F _ :=
+  Definition run {T} (m : M T) : list TKN -> F _ :=
     fun str => optionT.run (stateT.run m str).
 
   #[global] Instance MRet_M : MRet M := @stateT.ret _ _ _.
   #[global] Instance FMap_M : FMap M := @stateT.map _ _ _.
-  #[global] Instance MBind_M : MBind M := @stateT.bind _ _ _.
+  #[global] Instance MBind_M : MBind M := @stateT.bind _ _ _. (* prefer not to use this *)
   #[global] Instance Ap_M : Ap M := _.
   #[global] Instance MFail_M : MFail M := @stateT.fail _ _ _.
   #[global] Instance MLift_M : MLift F M := fun _ m => lift (optionT.lift m).
   #[global] Instance M_Alternative : Alternative M :=
     fun _ pl pr =>
-      stateT.mk $ fun s => alternative (stateT.runp pl s) (fun tt => stateT.runp (pr tt) s).
+      stateT.mk (fun s => alternative (stateT.runp pl s) (fun tt => stateT.runp (pr tt) s)).
 
   #[global] Hint Opaque M : typeclass_instances.
   #[local] Open Scope monad_scope.
 
-  Definition any : M Byte.byte :=
+  Definition any : M TKN :=
     let* l := stateT.get in
     match l with
     | nil => mfail
@@ -64,9 +54,19 @@ Section parsec.
     | _ => mfail
     end.
 
-  Definition char (P : Byte.byte -> bool) : M Byte.byte :=
+  Definition run_full {T} (m : M T) : list TKN -> F (option T) :=
+    fun str =>
+      (fun x => match x with
+             | Some (nil, x) => Some x
+             | _ => None
+             end) <$> optionT.run (stateT.run ((fun x _ => x) <$> m <*> eos) str).
+
+  Definition char (P : TKN -> bool) : M TKN :=
     let* c := any in
     if P c then mret c else mfail.
+
+  Definition charP (P : TKN -> Prop) {_ : forall x, Decision (P x)} : M TKN :=
+    char (fun x => bool_decide (P x)).
 
   Definition epsilon : M unit := mret tt.
 
@@ -102,7 +102,7 @@ Section parsec.
   Definition plus {T} (p : M T) : M (list T) :=
     cons <$> p <*> star p.
 
-  Definition peek : M (option Byte.byte) :=
+  Definition peek : M (option TKN) :=
     let k l :=
       match l with
       | nil => None
@@ -114,8 +114,8 @@ Section parsec.
   Definition sepBy {T} (sep : M unit) (p : M T) : M (list T) :=
     (cons <$> p <*> (star ((fun _ x => x) <$> sep <*> p))) <|> mret nil.
 
-
-  Fixpoint exact_ (b : bs) (input : bs) {struct b} : optionT.M F (UTypes.prod bs unit) :=
+  #[local]
+  Fixpoint exact_ {_ : EqDecision TKN} (b : list TKN) (input : list TKN) {struct b} : optionT.M F (UTypes.prod (list TKN) unit) :=
     match b with
     | nil => mret (UTypes.pair input tt)
     | x :: xs =>
@@ -128,31 +128,13 @@ Section parsec.
         end
     end.
 
-  Definition exact (b : bs) : M unit :=
+  Definition exact {_ : EqDecision TKN} (b : list TKN) : M unit :=
     stateT.mk $ exact_ b.
 
-  Definition digit : M Byte.byte :=
-    char (fun x => let x := Byte.to_N x in
-                bool_decide (Byte.to_N "0" ≤ x ≤ Byte.to_N "9")%N).
-
-  Definition exact_char (b : Byte.byte) : M unit :=
-    fmap (fun _ => ()) $ char (fun b' => bool_decide (b = b')).
-
-  Definition quoted {U V T} (pre : M U) (post : M V) (p : M T) : M T :=
-    (fun _ x _ => x) <$> pre <*> p <*> post.
-
-  Definition ws : M unit :=
-    const () <$> (star $ char (fun x => strings.Ascii.is_space $ Ascii.ascii_of_byte x)).
-
-  Definition ignore_ws {T} (p : M T) : M T :=
-    quoted ws ws p.
-
-  Definition not_char (P : Byte.byte -> bool) : M unit :=
-    let* x := parsec.peek in
-    match x with
-    | None => mret ()
-    | Some x => if P x then mfail else mret ()
-    end.
-
+   Definition not {T} (p : M T) : M unit :=
+    stateT.mk $ fun bs => optionT.mk $
+      let* v := parsec.run p bs in
+      if v is None then mret (UTypes.Some $ UTypes.pair bs tt) else mret UTypes.None.
 End parsec.
-Arguments M _ _ : clear implicits.
+
+Arguments M _ _ _ : clear implicits.
