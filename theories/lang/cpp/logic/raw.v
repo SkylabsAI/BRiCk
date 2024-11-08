@@ -45,12 +45,18 @@ Axiom primR_to_rawsR : ∀ `{Σ : cpp_logic, σ : genv} ty q v,
   Exists rs, [| raw_bytes_of_val σ ty v rs |] ** type_ptrR ty ** rawsR q rs.
 (* ^^ TODO: rewrite this in terms of [tptsto] *)
 
-Definition decodes {σ : genv} (endianness : endian) (sgn : signed) (l : list N) (z : Z) : Prop :=
+Definition decodes {σ : genv} (endianness : endian) (sz : int_rank) (sgn : signed) (l : list N) (z : Z) : Prop :=
   List.Forall (fun v => has_type_prop (Vn v) Tbyte) l /\
+  int_rank.bytesNat sz = length l * int_rank.bytesNat int_rank.Ichar /\
   _Z_from_bytes endianness sgn l = z.
 
-Definition decodes_uint {σ : genv} (l : list N) (z : Z) : Prop :=
-  Reduce (decodes (genv_byte_order σ) Unsigned l z).
+(* Question: is there any way to force this? *)
+Notation native_decodes_explicit σ := (@decodes σ (genv_byte_order σ)) (only parsing).
+Notation native_decodes := (native_decodes_explicit _).
+(*
+Definition native_decodes {σ : genv} sz sgn (l : list N) (z : Z) : Prop :=
+  Reduce (decodes (genv_byte_order σ) sz sgn l z).
+*)
 
 (*
 TODO (JH): Determine if we can axiomatize a more specific property and
@@ -64,7 +70,7 @@ Axiom decode_uint_anyR : ∀ `{Σ : cpp_logic, σ : genv} q sz,
 (* JH: TODO: Determine what new axioms we should add here. *)
 Axiom raw_byte_of_int_eq : ∀ {σ : genv} sz x rs,
   raw_bytes_of_val σ (Tnum sz Unsigned) (Vint x) rs <->
-  ∃ l, decodes_uint l x /\ raw_int_byte <$> l = rs /\ length l = N.to_nat (int_rank.bytesN sz).
+  ∃ l, native_decodes sz Unsigned l x /\ raw_int_byte <$> l = rs /\ length l = N.to_nat (int_rank.bytesN sz).
 
 Section with_Σ.
   Context `{Σ : cpp_logic} {σ : genv}.
@@ -214,10 +220,10 @@ Section with_Σ.
     primR (Tnum sz Unsigned) q (Vint x) -|-
       Exists (rs : list raw_byte) (l : list N),
       (**
-      Reconsider: We may only need one list and [raw_bytes_of_val σ
-      (Tnum sz Unsigned) (Vint x) rs]
+      Reconsider: We may only need one list and
+      [raw_bytes_of_val σ (Tnum sz Unsigned) (Vint x) rs]
       *)
-      [| decodes_uint l x |] **
+      [| native_decodes sz Unsigned l x |] **
       [| raw_int_byte <$> l = rs |] **
       [| length l = N.to_nat (int_rank.bytesN sz) |] **
       type_ptrR (Tnum sz Unsigned) **
@@ -243,41 +249,41 @@ Module Endian.
 
     Lemma decodes_uint_to_end :
       forall endianness sz l v,
-        length l = N.to_nat (bitsize.bytesN sz) ->
-        decodes endianness Unsigned l v ->
-        decodes_uint l (to_end endianness sz v).
+        decodes endianness sz Unsigned l v ->
+        native_decodes sz Unsigned l (to_end endianness (int_rank.bitsize sz) v).
     Proof.
-      move=> endianness sz l v Hsz [Hbyte Hdecode].
-      rewrite /decodes in Hdecode.
-      rewrite /decodes_uint/to_end/to_little_end/to_big_end.
-      split; first assumption.
+      move=> endianness sz l v [Hbyte [Hlen Hdecode]].
+      rewrite /decodes. split; eauto.
+      split; eauto.
+      rewrite /to_end/to_little_end/to_big_end.
       repeat case_match; eauto;
         rewrite z_to_bytes._Z_from_bytes_eq/z_to_bytes._Z_from_bytes_def;
         rewrite z_to_bytes._Z_from_bytes_eq/z_to_bytes._Z_from_bytes_def in Hdecode;
         [ | replace l with (rev (rev l)) by (apply rev_involutive)];
         erewrite z_to_bytes._Z_from_bytes_unsigned_le_bswap; eauto.
-      by destruct sz.
-      rewrite /bitsize.bytesNat length_rev.
-      destruct sz; simpl in *; lia.
+      - destruct sz; simpl in *; lia.
+      - rewrite length_rev.
+        destruct sz; simpl in *; lia.
     Qed.
 
     Lemma decodes_Z_to_bytes_Unsigned:
       forall sz (n : nat)  (endianness : endian) (z : Z),
-        (int_rank.bytesNat sz = n)%N ->
+        int_rank.bytesNat sz = n ->
         has_type_prop z (Tnum sz Unsigned) ->
-        decodes endianness Unsigned (_Z_to_bytes n endianness Unsigned z) z.
+        decodes endianness sz Unsigned (_Z_to_bytes n endianness Unsigned z) z.
     Proof.
       intros * Hsz Hty; subst.
       rewrite /decodes.
+      split; first by exact: _Z_to_bytes_has_type_prop.
       split.
-      2: {
+      { rewrite _Z_to_bytes_length. simpl. lia. }
+      {
         erewrite _Z_from_to_bytes_roundtrip; try reflexivity.
         move: Hty.
         rewrite -has_int_type.
         rewrite/bitsize.bound/bitsize.min_val/bitsize.max_val.
         destruct sz; rewrite/int_rank.bytesN; simpl in *; split; try lia.
       }
-      exact: _Z_to_bytes_has_type_prop.
     Qed.
 
     Lemma raw_bytes_of_val_to_end_raw_int_byte (endianness : endian) sz (z : Z) :
@@ -290,7 +296,6 @@ Module Endian.
       intuition.
       2: by rewrite _Z_to_bytes_length //.
       apply: decodes_uint_to_end.
-      { rewrite _Z_to_bytes_length. by destruct sz. }
       apply: (decodes_Z_to_bytes_Unsigned sz); try reflexivity.
       by destruct sz.
     Qed.
