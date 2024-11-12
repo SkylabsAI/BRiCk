@@ -5,7 +5,11 @@
  * License. See the LICENSE-BedRock file in the repository root for details.
  *)
 
+Require Import bedrock.prelude.bytestring.
 Require Export iris.proofmode.proofmode.
+
+(** [to_str] instance for [bs]. *)
+Canonical Structure bsTS : to_str := ToStr BS.to_string.
 
 (* See https://gitlab.mpi-sws.org/iris/iris/-/merge_requests/1041. *)
 #[global] Remove Hints class_instances_frame.frame_bupd : typeclass_instances.
