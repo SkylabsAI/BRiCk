@@ -124,8 +124,28 @@ Section compare_ctor.
     { intros; eapply compare_ctor_trans; eauto. apply pf. }
   Qed.
 
+  Lemma comparison_ext {T}
+    : Proper (pointwise_relation T (pointwise_relation _ eq) ==> Basics.impl) Comparison.
+  Proof.
+    compute; intros.
+    split.
+    { intros. rewrite -!H. apply H0. }
+    { intros *. rewrite -!H. apply H0. }
+  Qed.
+
+  Lemma by_compare_ctor
+    CMP
+    (is_comparison : forall x y, CMP x y = compare_ctor tag car data cmp (tag x) (fun _ => data x) y)
+    (pf : forall p, Comparison (cmp p)) (* solved by typeclass search *)
+    : Comparison CMP.
+  Proof.
+    split.
+    { intros *. rewrite !is_comparison. by apply compare_ctor_comparison. }
+    { intros *. rewrite !is_comparison. by apply compare_ctor_comparison. }
+  Qed.
+
 End compare_ctor.
-      .
+
 #[global] Instance const_comparison : Comparison (fun _ _ : () => Eq).
 Proof. by constructor. Qed.
 
