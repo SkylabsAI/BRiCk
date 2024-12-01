@@ -42,72 +42,90 @@ Proof.
   intros; intro. subst. eapply (comparison_not_eq b b); congruence.
 Qed.
 
-Lemma compare_ctor_eq `{tag : A -> positive} {car : positive -> Type} (data : forall a, car (tag a)) (cmp : forall p, car p -> car p -> comparison) t k y :
-  compare.compare_ctor tag car data cmp t k y = Eq ->
-  exists pf : tag y = t,
-    cmp t (k ()) (match pf with eq_refl => data y end) = Eq.
-Proof.
-  rewrite /compare.compare_ctor.
-  generalize (@eq_refl _ (tag y ?= t)).
-  destruct (tag y ?= t) at 2 3; simpl; try congruence.
-  intros. generalize (numbers.Pos.compare_eq _ _ e); intros; subst.
-  exists eq_refl.
-  rewrite -H. f_equal. clear.
-  apply Eqdep_dec.eq_rect_eq_dec. apply BinPos.Pos.eq_dec.
-Qed.
-Lemma compare_ctor_antisym `{tag : A -> positive} {car : positive -> Type} (data : forall a, car (tag a)) (cmp : forall p, car p -> car p -> comparison) x y :
-  (forall p a b, cmp p a b = CompOpp (cmp p b a)) ->
-  compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) y = CompOpp (compare.compare_ctor tag car data cmp (tag y) (fun _ => data y) x).
-Proof.
-  rewrite /compare.compare_ctor; simpl.
-  generalize (@eq_refl _ (tag y ?= tag x)).
-  generalize (@eq_refl _ (tag x ?= tag y)).
-  generalize (compare_antisym (tag x) (tag y)).
-  destruct (tag y ?= tag x) at 1 3 4;
-    destruct (tag x ?= tag y) at 1 3 4; simpl; try congruence.
-  intros.
+Section compare_ctor.
+  Context `{tag : A -> positive} {car : positive -> Type} (data : forall a, car (tag a))
+    (cmp : forall p, car p -> car p -> comparison).
+  Lemma compare_ctor_eq t k y :
+    compare.compare_ctor tag car data cmp t k y = Eq ->
+    exists pf : tag y = t,
+      cmp t (k ()) (match pf with eq_refl => data y end) = Eq.
+  Proof.
+    rewrite /compare.compare_ctor.
+    generalize (@eq_refl _ (tag y ?= t)).
+    destruct (tag y ?= t) at 2 3; simpl; try congruence.
+    intros. generalize (numbers.Pos.compare_eq _ _ e); intros; subst.
+    exists eq_refl.
+    rewrite -H. f_equal. clear.
+    apply Eqdep_dec.eq_rect_eq_dec. apply BinPos.Pos.eq_dec.
+  Qed.
+  Lemma compare_ctor_antisym x y :
+    (forall p a b, cmp p a b = CompOpp (cmp p b a)) ->
+    compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) y = CompOpp (compare.compare_ctor tag car data cmp (tag y) (fun _ => data y) x).
+  Proof.
+    rewrite /compare.compare_ctor; simpl.
+    generalize (@eq_refl _ (tag y ?= tag x)).
+    generalize (@eq_refl _ (tag x ?= tag y)).
+    generalize (compare_antisym (tag x) (tag y)).
+    destruct (tag y ?= tag x) at 1 3 4;
+      destruct (tag x ?= tag y) at 1 3 4; simpl; try congruence.
+    intros.
 
-  generalize (numbers.Pos.compare_eq (tag x) (tag y) e).
-  generalize (numbers.Pos.compare_eq (tag y) (tag x) e0).
-  generalize dependent (tag x ?= tag y).
-  generalize dependent (tag y ?= tag x).
-  intros; subst.
-  generalize dependent (data y); generalize dependent (data x).
-  generalize dependent (tag x); generalize dependent (tag y); intros; subst.
-  rewrite -!Eqdep_dec.eq_rect_eq_dec; try apply BinPos.Pos.eq_dec.
-  apply H0.
-Qed.
+    generalize (numbers.Pos.compare_eq (tag x) (tag y) e).
+    generalize (numbers.Pos.compare_eq (tag y) (tag x) e0).
+    generalize dependent (tag x ?= tag y).
+    generalize dependent (tag y ?= tag x).
+    intros; subst.
+    generalize dependent (data y); generalize dependent (data x).
+    generalize dependent (tag x); generalize dependent (tag y); intros; subst.
+    rewrite -!Eqdep_dec.eq_rect_eq_dec; try apply BinPos.Pos.eq_dec.
+    apply H0.
+  Qed.
+  Lemma compare_ctor_trans x y z :
+    (forall p x y z c,
+        cmp p x y = c ->
+        cmp p y z = c ->
+        cmp p x z = c) ->
+    forall c,
+    compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) y = c ->
+    compare.compare_ctor tag car data cmp (tag y) (fun _ => data y) z = c ->
+    compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) z = c.
+  Proof.
+    rewrite /compare.compare_ctor; simpl; intros.
+    generalize dependent (@eq_refl _ (tag y ?= tag x)).
+    generalize dependent (@eq_refl _ (tag z ?= tag y)).
+    generalize dependent (@eq_refl _ (tag z ?= tag x)).
+    generalize (compare_trans (tag z) (tag y) (tag x)).
+    generalize dependent (data x);
+      generalize dependent (data y);
+      generalize dependent (data z);
+      generalize dependent (tag x);
+      generalize dependent (tag y);
+      generalize dependent (tag z).
+    intros p p0 p1.
+    destruct (p ?= p0) at 1 3 4;
+      destruct (p0 ?= p1) at 1 3 4;
+      destruct (p ?= p1) at 1 3 4; simpl in *; intros;
+      repeat match goal with
+        | H : _ |- _ => specialize (H _ eq_refl eq_refl)
+        | H : (?X ?= ?Y) = Eq |- _ =>
+            lazymatch X with
+            | Y => fail
+            | _ => generalize (numbers.Pos.compare_eq _ _ H); intros; subst
+            end
+        end; simpl; try congruence. revert H2;
+      rewrite -!Eqdep_dec.eq_rect_eq_dec; try apply BinPos.Pos.eq_dec; eauto.
+  Qed.
 
-Lemma compare_ctor_trans `{tag : A -> positive} {car : positive -> Type} (data : forall a, car (tag a)) (cmp : forall p, car p -> car p -> comparison) x y z :
-  (forall p x y z c,
-      cmp p x y = c ->
-      cmp p y z = c ->
-      cmp p x z = c) ->
-  forall c,
-  compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) y = c ->
-  compare.compare_ctor tag car data cmp (tag y) (fun _ => data y) z = c ->
-  compare.compare_ctor tag car data cmp (tag x) (fun _ => data x) z = c.
-Proof.
-  rewrite /compare.compare_ctor; simpl; intros.
-  generalize dependent (@eq_refl _ (tag y ?= tag x)).
-  generalize dependent (@eq_refl _ (tag z ?= tag y)).
-  generalize dependent (@eq_refl _ (tag z ?= tag x)).
-  generalize (compare_trans (tag z) (tag y) (tag x)).
-  generalize dependent (data x); generalize dependent (data y); generalize dependent (data z); generalize dependent (tag x); generalize dependent (tag y); generalize dependent (tag z).
-  intros p p0 p1.
-  destruct (p ?= p0) at 1 3 4;
-    destruct (p0 ?= p1) at 1 3 4;
-    destruct (p ?= p1) at 1 3 4; simpl in *; intros;
-    repeat match goal with
-      | H : _ |- _ => specialize (H _ eq_refl eq_refl)
-      | H : (?X ?= ?Y) = Eq |- _ =>
-          lazymatch X with
-          | Y => fail
-          | _ => generalize (numbers.Pos.compare_eq _ _ H); intros; subst
-          end
-      end; simpl; try congruence. revert H2;
-    rewrite -!Eqdep_dec.eq_rect_eq_dec; try apply BinPos.Pos.eq_dec; eauto.
-Qed.
+  Lemma compare_ctor_comparison (pf : forall p, Comparison (cmp p))
+    : Comparison (fun x => compare_ctor tag car data cmp (tag x) (fun _ => data x)).
+  Proof.
+    constructor.
+    { intros; apply compare_ctor_antisym. apply pf. }
+    { intros; eapply compare_ctor_trans; eauto. apply pf. }
+  Qed.
+
+End compare_ctor.
+      .
 #[global] Instance const_comparison : Comparison (fun _ _ : () => Eq).
 Proof. by constructor. Qed.
 
@@ -160,21 +178,14 @@ Proof.
   by rewrite -compare_antisym.
 Qed.
 
-Definition C_antisym {T} (cmp : T -> T -> comparison) : Prop := forall x y,
-    cmp x y = CompOpp (cmp y x).
-Definition C_trans {T} (cmp : T -> T -> comparison) : Prop :=
-  forall x y z c,
-    cmp x y = c ->
-    cmp y z = c ->
-    cmp x z = c.
-
-Lemma compare_lex_antisym `{C : @Comparison T cmp} x1 y1 z1 k1 k2 k3 :
-  (forall c, k1 () = c -> k2 () = c -> k3 () = c) ->
-  forall c,
-    compare_lex (cmp x1 y1) k1 = c ->
-    compare_lex (cmp y1 z1) k2 = c ->
-    compare_lex (cmp x1 z1) k3 = c.
-Abort.
+Lemma compare_lex_antisym `{C : @Comparison T cmp} x1 y1 k1 k2 :
+  (k1 () = CompOpp (k2 ())) ->
+    compare_lex (cmp x1 y1) k1 = CompOpp (compare_lex (cmp y1 x1) k2).
+Proof.
+  rewrite /compare_lex. intros.
+  rewrite compare_antisym.
+  destruct (cmp y1 x1); simpl; try reflexivity; eauto.
+Qed.
 
 Lemma compare_lex_trans `{C : @Comparison T cmp} x1 y1 z1 k1 k2 k3 :
   (forall c, k1 () = c -> k2 () = c -> k3 () = c) ->
@@ -196,83 +207,43 @@ Proof.
                       | eapply compare_trans in H0; eauto; congruence ].
 Qed.
 
-(* END upstream *)
+Lemma compare_lex_opp a b :
+  compare_lex a b = CompOpp (compare_lex (CompOpp a) (fun x => CompOpp (b x))).
+Proof.
+  clear. destruct a; simpl; try reflexivity.
+  by destruct (b ()).
+Qed.
+Instance compare_lex_proper : Proper (eq ==> pointwise_relation _ eq ==> eq) compare_lex.
+Proof. compute; intros; subst. destruct y; eauto. Qed.
 
-(* BEGIN: temporary infrastructure *)
-  Structure comparator :=
-    { _car : Set
-    ; #[canonical=no] _compare :> _car -> _car -> comparison
-    }.
-  Arguments _compare {_} _ _.
-  Canonical unit_comparator :=
-    {| _car := unit
-    ; _compare := fun _ _ => Eq |}.
+Lemma compare_lex_eq c k : compare_lex c k = Eq -> c = Eq /\ k () = Eq.
+Proof. destruct c; simpl; try congruence; eauto. Qed.
 
-  Canonical pair_comparator (C1 C2 : comparator) :=
-    {| _car := C1.(_car) * C2.(_car)
-    ; _compare := fun '(a,b) '(c,d) => compare_lex (C1.(_compare) a c) $ fun _ => C2.(_compare) b d |}.
-  Canonical bs_comparator :=
-    {| _car := bs
-    ; _compare := bs_compare |}.
-  Canonical localname_comparator :=
-    {| _car := localname
-     ; _compare := bs_compare |}.
-  Canonical ident_comparator :=
-    {| _car := ident
-    ; _compare := bs_compare |}.
-  Canonical bool_comparator :=
-    {| _car := bool
-    ; _compare := Bool.compare |}.
-  Definition SwitchBranch_compare (a b : SwitchBranch) : comparison :=
-    match a , b with
-    | Exact a , Exact b => Z.compare a b
-    | Exact _ , Range _ _ => Lt
-    | Range _ _ , Exact _ => Gt
-    | Range a b , Range c d => compare_lex (Z.compare a c) $ fun _ => Z.compare b d
-    end.
-  #[local] Canonical SwitchBranch_comparator :=
-    {| _car := SwitchBranch
-     ; _compare := SwitchBranch_compare |}.
-(* END: temporary infrastructure *)
 
-Instance unit_comparator_leibniz : LeibnizComparison unit_comparator.
-Proof. red; by destruct a, b. Qed.
+Lemma by_tag_comparison {T} (f : T -> positive) :
+  Comparison (fun a b => Pos.compare (f a) (f b)).
+Proof.
+  constructor.
+  - intros. apply compare_antisym.
+  - intros. eapply compare_trans; eauto.
+Qed.
 
+Ltac tag_comparison :=
+  apply by_tag_comparison.
 Definition by_tag_leibniz {T} (f : T -> positive) {Hinj : Inj eq eq f}
   : LeibnizComparison (fun a b => Pos.compare (f a) (f b)).
 Proof. red; move=> ? ? /Pos.compare_eq; apply inj; apply _. Qed.
+Ltac tag_leibniz :=
+  apply by_tag_leibniz;
+  solve [ apply _
+        | intros a b; destruct a, b; compute; congruence ].
 
-Instance byte_cmp_leibniz : LeibnizComparison byte_cmp.
-Proof. red; rewrite /byte_cmp; move=> ? ? /N.compare_eq. apply inj. apply _. Qed.
-
-Instance bs_cmp_leibniz : LeibnizComparison bs_cmp.
-Proof.
-  red.
-  induction a; move=> [|y ys]; eauto; try inversion 1.
-  generalize (leibniz_cmp_eq byte_cmp b y).
-  case_match; try inversion H1.
-  intros; f_equal; eauto.
-Qed.
-
-Module cast_style.
-  #[prefix="",only(tag)] derive cast_style.t.
-  Definition compare (a b : cast_style.t) : comparison :=
-    Pos.compare (tag a) (tag b).
-
-  #[global] Instance comparison : Comparison compare.
-  Proof.
-    constructor.
-    { by destruct x, y; compute. }
-    { intros; subst; destruct x, y, z; compute; try done. }
-  Qed.
-
-  #[global] Instance leibniz : LeibnizComparison compare.
-  Proof. red; destruct a, b; simpl; try inversion 1; done. Qed.
-End cast_style.
-
-Canonical cast_style_comparator :=
-  {| _car := cast_style.t
-   ; _compare := cast_style.compare |}.
+Ltac smash_comparison :=
+  split;
+  [ intros x y; destruct x, y; done
+  | intros x y z; destruct x, y, z; compute; congruence ].
+Ltac smash_leibniz :=
+  intros x y; destruct x, y; done.
 
 Module sum.
   Section compare.
@@ -308,34 +279,6 @@ Module sum.
   End compare.
 End sum.
 #[global] Instance sum_compare `{!Compare A, !Compare B} : Compare (A + B) := sum.compare compare compare.
-
-
-#[global] Instance byte_comparison : Comparison byte_cmp.
-Proof.
-  constructor; rewrite /byte_cmp.
-  - intros. apply numbers.N_comparison.
-  - intros. eapply numbers.N_comparison; eauto.
-Qed.
-
-#[global] Instance bs_comparison : Comparison bs_cmp.
-Proof.
-  constructor.
-  - induction x; destruct y; simpl; eauto.
-    rewrite ((byte_comparison).(compare_antisym) b b0).
-    destruct (byte_cmp b0 b); simpl; eauto.
-  - induction x; destruct y; destruct z; simpl; intros; subst; try congruence.
-    generalize (byte_comparison.(compare_trans) b b0 b1).
-    repeat case_match; simpl; intros; subst;
-      repeat match goal with
-        | H : ?X = ?X -> _ |- _ => specialize (H eq_refl)
-        | H : ?F ?A ?B = Eq , H' : ?F ?A ?C = _ |- _ =>
-            generalize (@comparison_eq_elim _ F _ A B H C); congruence
-        | H : ?F ?A ?B = Eq , H' : ?F ?C ?A = _ |- _ =>
-            generalize (@comparison_eq_elim2 _ F _ A B H C); congruence
-        end; try solve [ congruence | eauto | eapply compare_trans; eauto
-                        | eapply compare_trans in H; eauto; congruence ].
-Qed.
-
 Module prod.
   Section compare.
     Context {A B : Type}.
@@ -418,17 +361,104 @@ Module option.
 End option.
 #[global] Instance option_compare `{!Compare A} : Compare (option A) := option.compare compare.
 
-Lemma compare_lex_opp a b :
-  compare_lex a b = CompOpp (compare_lex (CompOpp a) (fun x => CompOpp (b x))).
-Proof.
-  clear. destruct a; simpl; try reflexivity.
-  by destruct (b ()).
-Qed.
-Instance compare_lex_proper : Proper (eq ==> pointwise_relation _ eq ==> eq) compare_lex.
-Proof. compute; intros; subst. destruct y; eauto. Qed.
+(* END upstream *)
 
-Lemma compare_lex_eq c k : compare_lex c k = Eq -> c = Eq /\ k () = Eq.
-Proof. destruct c; simpl; try congruence; eauto. Qed.
+(* BEGIN: temporary infrastructure *)
+Structure comparator :=
+  { _car : Set
+  ; #[canonical=no] _compare :> _car -> _car -> comparison
+  }.
+Arguments _compare {_} _ _.
+Canonical unit_comparator :=
+  {| _car := unit
+  ; _compare := fun _ _ => Eq |}.
+
+Canonical pair_comparator (C1 C2 : comparator) :=
+  {| _car := C1.(_car) * C2.(_car)
+  ; _compare := fun '(a,b) '(c,d) => compare_lex (C1.(_compare) a c) $ fun _ => C2.(_compare) b d |}.
+Canonical bs_comparator :=
+  {| _car := bs
+  ; _compare := bs_compare |}.
+Canonical localname_comparator :=
+  {| _car := localname
+    ; _compare := bs_compare |}.
+Canonical ident_comparator :=
+  {| _car := ident
+  ; _compare := bs_compare |}.
+Canonical bool_comparator :=
+  {| _car := bool
+  ; _compare := Bool.compare |}.
+(* END: temporary infrastructure *)
+
+Instance unit_comparator_leibniz : LeibnizComparison unit_comparator.
+Proof. red; by destruct a, b. Qed.
+
+
+Definition SwitchBranch_compare (a b : SwitchBranch) : comparison :=
+  match a , b with
+  | Exact a , Exact b => Z.compare a b
+  | Exact _ , Range _ _ => Lt
+  | Range _ _ , Exact _ => Gt
+  | Range a b , Range c d => compare_lex (Z.compare a c) $ fun _ => Z.compare b d
+  end.
+#[local] Canonical SwitchBranch_comparator :=
+  {| _car := SwitchBranch
+  ; _compare := SwitchBranch_compare |}.
+
+
+Instance byte_cmp_leibniz : LeibnizComparison byte_cmp.
+Proof. red; rewrite /byte_cmp; move=> ? ? /N.compare_eq. apply inj. apply _. Qed.
+
+Instance bs_cmp_leibniz : LeibnizComparison bs_cmp.
+Proof.
+  red.
+  induction a; move=> [|y ys]; eauto; try inversion 1.
+  generalize (leibniz_cmp_eq byte_cmp b y).
+  case_match; try inversion H1.
+  intros; f_equal; eauto.
+Qed.
+
+Module cast_style.
+  #[prefix="",only(tag)] derive cast_style.t.
+  Definition compare (a b : cast_style.t) : comparison :=
+    Pos.compare (tag a) (tag b).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
+End cast_style.
+
+Canonical cast_style_comparator :=
+  {| _car := cast_style.t
+   ; _compare := cast_style.compare |}.
+
+#[global] Instance byte_comparison : Comparison byte_cmp.
+Proof.
+  constructor; rewrite /byte_cmp.
+  - intros. apply numbers.N_comparison.
+  - intros. eapply numbers.N_comparison; eauto.
+Qed.
+
+#[global] Instance bs_comparison : Comparison bs_cmp.
+Proof.
+  constructor.
+  - induction x; destruct y; simpl; eauto.
+    rewrite ((byte_comparison).(compare_antisym) b b0).
+    destruct (byte_cmp b0 b); simpl; eauto.
+  - induction x; destruct y; destruct z; simpl; intros; subst; try congruence.
+    generalize (byte_comparison.(compare_trans) b b0 b1).
+    repeat case_match; simpl; intros; subst;
+      repeat match goal with
+        | H : ?X = ?X -> _ |- _ => specialize (H eq_refl)
+        | H : ?F ?A ?B = Eq , H' : ?F ?A ?C = _ |- _ =>
+            generalize (@comparison_eq_elim _ F _ A B H C); congruence
+        | H : ?F ?A ?B = Eq , H' : ?F ?C ?A = _ |- _ =>
+            generalize (@comparison_eq_elim2 _ F _ A B H C); congruence
+        end; try solve [ congruence | eauto | eapply compare_trans; eauto
+                        | eapply compare_trans in H; eauto; congruence ].
+Qed.
 
 Module List.
   Section compare.
@@ -449,9 +479,7 @@ Module List.
     Proof.
       constructor.
       { induction x; destruct y; simpl; intros; eauto.
-        rewrite compare_lex_opp. f_equal. eapply compare_lex_proper.
-        - by rewrite -compare_antisym.
-        - intro. by rewrite IHx CompOpp_involutive. }
+        apply compare_lex_antisym; eauto. }
       { induction x; destruct y; destruct z; simpl; try solve [ intros; eauto; congruence ].
         eapply compare_lex_trans; eauto. }
     Qed.
@@ -459,9 +487,12 @@ Module List.
     #[global] Instance leibniz {LA : LeibnizComparison compareA}
       : LeibnizComparison compare.
     Proof.
-      red; rewrite /compare. induction a; destruct b; intros; try congruence.
-      apply compare_lex_eq in H. destruct H.
-      f_equal. eapply LA; eauto. eauto.
+      red; induction a; destruct b; simpl; intros; try congruence.
+      repeat match goal with
+             | H : compare_lex _ _ = Eq |- _ =>
+                 apply compare_lex_eq in H; destruct H
+             end.
+      f_equal; eauto.
     Qed.
 
   End compare.
@@ -501,6 +532,8 @@ Module UnOp.
     | _ => fun _ _ => Eq
     end.
 
+  Lemma compare_ctor_comparison
+
   #[local] Tactic Notation "compare_ctor" uconstr(x) :=
     let t := eval red in (tag x) in
     let d := eval red in (data x) in
@@ -519,6 +552,33 @@ Module UnOp.
     | Ubnot => compare_tag Ubnot
     | Uunsupported msg => compare_ctor (Uunsupported msg)
     end.
+  Definition compare' (op : UnOp) : UnOp -> comparison :=
+    compare_ctor op.
+
+  Lemma tag_compare_ctor {T} (tag : T -> positive) (car : positive -> Type)
+    (data : forall t : T, car (tag t)) (compare_data : forall p, car p -> car p -> comparison)
+    : forall tg (pf : @eq Type unit (car tg)) (ok : forall x y, compare_data tg x y = Eq) b,
+      tg ?= tag b =
+        compare.compare_ctor tag car data compare_data tg
+          (fun _ : unit => match pf in _ = X return X with
+                           | eq_refl => tt
+                           end) b.
+  Proof.
+    rewrite /compare.compare_ctor.
+    intros. rewrite compare_antisym.
+    generalize (eq_refl (tag b ?= tg)).
+    destruct (tag b ?= tg) at 2 3 4; eauto.
+  Qed.
+
+  Lemma compare_compare' : forall a b, compare a b = compare' a b.
+  Proof.
+    destruct a; simpl; try reflexivity;
+      rewrite /compare'/=; intros;
+    match goal with
+    | |- (?tg ?= ?tag ?b) = compare.compare_ctor ?tag ?car ?data ?compare_data ?tg _ ?b =>
+        apply (@tag_compare_ctor _ tag car data compare_data tg eq_refl (fun _ _ => eq_refl) b)
+    end.
+  Qed.
 
 
   #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
@@ -537,7 +597,11 @@ Module UnOp.
   #[global] Instance comparison : Comparison compare.
   Proof.
     constructor.
-    { induction x; destruct y; eauto;
+    { induction x.
+      - intros. generalize ((compare_data_ok (tag Uminus)).(compare_antisym)) Uminus).
+
+
+      induction x; destruct y; eauto;
       match goal with
       | |- _ ?X ?Y = CompOpp (_ ?Y ?X) =>
           apply (compare_data_ok (tag X)).(compare_antisym)
@@ -730,6 +794,19 @@ Module signed.
     | Unsigned , Signed => Gt
     | Unsigned , Unsigned => Eq
     end.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof.
+    constructor.
+    { destruct x, y; done. }
+    { destruct x, y, z; compute; congruence. }
+  Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof.
+    intro a; induction a; destruct b; try solve [ compute; congruence ].
+  Qed.
+
 End signed.
 #[global] Instance signed_compare : Compare signed := signed.compare.
 
@@ -738,6 +815,13 @@ Module char_type.
 
   Definition compare (x y : char_type.t) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
+
 End char_type.
 #[global] Instance char_type_compare : Compare char_type.t := char_type.compare.
 
@@ -746,6 +830,13 @@ Module float_type.
 
   Definition compare (x y : float_type.t) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
+
 End float_type.
 #[global] Instance float_type_compare : Compare float_type.t := float_type.compare.
 
@@ -754,6 +845,13 @@ Module type_qualifiers.
 
   Definition compare (x y : type_qualifiers) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
+
 End type_qualifiers.
 #[global] Instance type_qualifiers_compare : Compare type_qualifiers := type_qualifiers.compare.
 
@@ -767,6 +865,13 @@ Module dispatch_type.
     | Direct , Virtual => Gt
     | Direct , Direct => Eq
     end.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. smash_comparison. Qed.
+
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. smash_leibniz. Qed.
+
 End dispatch_type.
 #[global] Instance dispatch_type_compare : Compare dispatch_type := dispatch_type.compare.
 
