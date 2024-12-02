@@ -133,9 +133,25 @@ Section compare_ctor.
     { intros *. rewrite -!H. apply H0. }
   Qed.
 
-  Lemma by_compare_ctor
-    CMP
-    (is_comparison : forall x y, CMP x y = compare_ctor tag car data cmp (tag x) (fun _ => data x) y)
+  Class IsCompareCtorAt CMP x : Prop :=
+    is_comparison : forall y, CMP x y = compare_ctor tag car data cmp (tag x) (fun _ => data x) y.
+  Notation IsCompareCtor CMP := (forall x, IsCompareCtorAt CMP x).
+
+  Lemma tag_compare_ctor
+    : forall tg (pf : @eq Type unit (car tg)) (ok : forall x y, cmp tg x y = Eq) b,
+      tg ?= tag b =
+        compare.compare_ctor tag car data cmp tg
+          (fun _ : unit => match pf in _ = X return X with
+                           | eq_refl => tt
+                           end) b.
+  Proof.
+    rewrite /compare.compare_ctor.
+    intros. rewrite compare_antisym.
+    generalize (eq_refl (tag b ?= tg)).
+    destruct (tag b ?= tg) at 2 3 4; eauto.
+  Qed.
+
+  Lemma by_compare_ctor `(is_cmp : IsCompareCtor CMP)
     (pf : forall p, Comparison (cmp p)) (* solved by typeclass search *)
     : Comparison CMP.
   Proof.
@@ -144,7 +160,34 @@ Section compare_ctor.
     { intros *. rewrite !is_comparison. by apply compare_ctor_comparison. }
   Qed.
 
+  Class DataInj : Prop :=
+    inj_data : forall a b (pf : tag b = tag a),
+        data a = match pf with
+                 | eq_refl => data b
+                 end -> a = b.
+
+  Lemma compare_ctor_leibniz (LC : forall p, LeibnizComparison (cmp p))
+    (inj : DataInj) :
+    LeibnizComparison (fun x => compare_ctor tag car data cmp (tag x) (fun _ => data x)).
+  Proof.
+    intros a b. rewrite /compare_ctor.
+    generalize (eq_refl (tag b ?= tag a)).
+    destruct (tag b ?= tag a) at 2 3; intros; try congruence.
+    apply LC in H. by apply inj in H.
+  Qed.
+
+  Lemma leibniz_by_compare_ctor `(is_cmp : IsCompareCtor CMP)
+    (pf : forall p, LeibnizComparison (cmp p)) (* solved by typeclass search *)
+    (inj : DataInj)
+    : LeibnizComparison CMP.
+  Proof.
+    red; intros a b H; rewrite is_cmp in H; revert H.
+    apply compare_ctor_leibniz; eauto.
+  Qed.
+
 End compare_ctor.
+Notation IsCompareCtor data compare_data CMP := (forall x, IsCompareCtorAt data compare_data CMP x).
+
 
 #[global] Instance const_comparison : Comparison (fun _ _ : () => Eq).
 Proof. by constructor. Qed.
@@ -531,8 +574,67 @@ Module ValCat.
 
   Definition compare (x y : ValCat) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
 End ValCat.
 #[global] Instance ValCat_compare : Compare ValCat := ValCat.compare.
+
+  Ltac solve_is_compare :=
+    let x := fresh in
+    intro x; destruct x;
+    try solve [ match goal with
+                | |- @IsCompareCtorAt _ ?tag ?car ?data ?compare_data ?compare ?x =>
+                    red; apply (tag_compare_ctor data compare_data (tag x) eq_refl (fun _ _ => eq_refl))
+                end
+              | red; reflexivity ].
+
+  Ltac solve_comparison :=
+    match goal with
+    | |- Comparison ?compare =>
+        let is_compare := constr:(_ : IsCompareCtor _ _ compare) in
+        apply (@by_compare_ctor _ _ _ _ _ compare is_compare); refine _
+    end.
+
+  Ltac solve_data_inj :=
+    red; intros a b; destruct a, b; simpl;
+    try solve [ congruence
+              | refine (Eqdep_dec.K_dec_type numbers.Pos.eq_dec _ _); congruence ].
+
+  Ltac solve_leibniz :=
+    eapply leibniz_by_compare_ctor; refine _.
+
+  Ltac solve_data_comparison :=
+    idtac;
+    match goal with
+    | |- forall p, Comparison (?compare_data p) =>
+        rewrite /compare_data; intros; repeat case_match; simpl; refine _
+    end.
+
+  Ltac solve_leibniz_helper :=
+    repeat match goal with
+      | H : ?X _ _ = Eq |- _ =>
+          apply leibniz_cmp_eq in H; last by apply _
+      | H : _ = Eq |- _ =>
+          apply compare_lex_eq in H; destruct H
+      end;
+    match goal with
+    | |- ?x = ?y => destruct x, y; simpl in *; congruence
+    end.
+
+  Ltac solve_data_leibniz :=
+    idtac;
+    match goal with
+    | |- forall p, LeibnizComparison (?compare_data p) =>
+        red; rewrite /compare_data;
+        intros; repeat case_match; simpl;
+        try solve [ unshelve eapply (_ : LeibnizComparison _); eauto
+                  | by intros a b; destruct a, b
+                  | solve_leibniz_helper ]
+    end.
+
 
 Module UnOp.
   #[prefix="", only(tag)] derive UnOp.
@@ -552,8 +654,6 @@ Module UnOp.
     | _ => fun _ _ => Eq
     end.
 
-  Lemma compare_ctor_comparison
-
   #[local] Tactic Notation "compare_ctor" uconstr(x) :=
     let t := eval red in (tag x) in
     let d := eval red in (data x) in
@@ -572,85 +672,21 @@ Module UnOp.
     | Ubnot => compare_tag Ubnot
     | Uunsupported msg => compare_ctor (Uunsupported msg)
     end.
-  Definition compare' (op : UnOp) : UnOp -> comparison :=
-    compare_ctor op.
-
-  Lemma tag_compare_ctor {T} (tag : T -> positive) (car : positive -> Type)
-    (data : forall t : T, car (tag t)) (compare_data : forall p, car p -> car p -> comparison)
-    : forall tg (pf : @eq Type unit (car tg)) (ok : forall x y, compare_data tg x y = Eq) b,
-      tg ?= tag b =
-        compare.compare_ctor tag car data compare_data tg
-          (fun _ : unit => match pf in _ = X return X with
-                           | eq_refl => tt
-                           end) b.
-  Proof.
-    rewrite /compare.compare_ctor.
-    intros. rewrite compare_antisym.
-    generalize (eq_refl (tag b ?= tg)).
-    destruct (tag b ?= tg) at 2 3 4; eauto.
-  Qed.
-
-  Lemma compare_compare' : forall a b, compare a b = compare' a b.
-  Proof.
-    destruct a; simpl; try reflexivity;
-      rewrite /compare'/=; intros;
-    match goal with
-    | |- (?tg ?= ?tag ?b) = compare.compare_ctor ?tag ?car ?data ?compare_data ?tg _ ?b =>
-        apply (@tag_compare_ctor _ tag car data compare_data tg eq_refl (fun _ _ => eq_refl) b)
-    end.
-  Qed.
 
 
   #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
-  Proof.
-    rewrite /compare_data; intros; repeat case_match; simpl; refine _.
-  Qed.
-
-  #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data (tag p))}.
-  Proof.
-    red; rewrite /compare_data.
-    destruct p; simpl.
-    all: try solve [ apply (_ : LeibnizComparison _)
-                   | by destruct a, b ].
-  Qed.
+  Proof. solve_data_comparison. Qed.
+  #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+  Proof. solve_data_leibniz. Qed.
+  #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+  Proof. solve_is_compare. Qed.
+  #[local] Instance data_inj : DataInj data.
+  Proof. solve_data_inj. Qed.
 
   #[global] Instance comparison : Comparison compare.
-  Proof.
-    constructor.
-    { induction x.
-      - intros. generalize ((compare_data_ok (tag Uminus)).(compare_antisym)) Uminus).
-
-
-      induction x; destruct y; eauto;
-      match goal with
-      | |- _ ?X ?Y = CompOpp (_ ?Y ?X) =>
-          apply (compare_data_ok (tag X)).(compare_antisym)
-      end. }
-(*      ; simpl; intros; eauto.
-      rewrite /compare.compare_ctor/=.
-      apply bs_comparison. } *)
-    { induction x; destruct y; destruct z; try solve [ compute; intros; eauto; congruence ];
-      match goal with
-      | |- forall c, compare ?X ?Y = _ -> compare ?Y ?Z = _ -> compare ?X ?Z = _ =>
-          apply (compare_ctor_trans data _ X Y Z)
-      end; apply compare_data_ok. }
-(*
-    { induction x; destruct y; destruct z; try solve [ compute; intros; eauto; congruence ].
-      match goal with
-      | |- forall c, compare ?X ?Y = _ -> compare ?Y ?Z = _ -> compare ?X ?Z = _ =>
-          apply (compare_ctor_trans data _ X Y Z)
-      end.
-      apply compare_data_ok. } *)
-  Qed.
-
-
-  #[global] Instance leibniz {LA : LeibnizComparison compare}
-    : LeibnizComparison compare.
-  Proof.
-    intro a; induction a; destruct b; try solve [ compute; congruence ].
-    intros H.
-    generalize (@compare_data_leibniz (Uunsupported t) (data (Uunsupported t)) (data (Uunsupported t0)) H); simpl. congruence.
-  Qed.
+  Proof. solve_comparison.  Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. solve_leibniz. Qed.
 End UnOp.
 #[global] Instance UnOp_compare : Compare UnOp := UnOp.compare.
 
@@ -706,6 +742,19 @@ Module BinOp.
     | Bunsupported msg => compare_ctor (Bunsupported msg)
     end.
 
+  #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+  Proof. solve_data_comparison. Qed.
+  #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+  Proof. solve_data_leibniz. Qed.
+  #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+  Proof. solve_is_compare. Qed.
+  #[local] Instance data_inj : DataInj data.
+  Proof. solve_data_inj. Qed.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. solve_comparison.  Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. solve_leibniz. Qed.
 End BinOp.
 #[global] Instance BinOp_compare : Compare BinOp := BinOp.compare.
 
@@ -748,6 +797,19 @@ Module RUnOp.
     | Rarrow => compare_tag Rarrow
     end.
 
+  #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+  Proof. solve_data_comparison. Qed.
+  #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+  Proof. solve_data_leibniz. Qed.
+  #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+  Proof. solve_is_compare. Qed.
+  #[local] Instance data_inj : DataInj data.
+  Proof. solve_data_inj. Qed.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. solve_comparison.  Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. solve_leibniz. Qed.
 End RUnOp.
 #[global] Instance RUnOp_compare : Compare RUnOp := RUnOp.compare.
 
@@ -787,6 +849,19 @@ Module RBinOp.
     | Rsubscript => compare_tag Rsubscript
     end.
 
+  #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+  Proof. solve_data_comparison. Qed.
+  #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+  Proof. solve_data_leibniz. Qed.
+  #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+  Proof. solve_is_compare. Qed.
+  #[local] Instance data_inj : DataInj data.
+  Proof. solve_data_inj. Qed.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. solve_comparison.  Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. solve_leibniz. Qed.
 End RBinOp.
 #[global] Instance RBinOp_compare : Compare RBinOp := RBinOp.compare.
 
@@ -795,6 +870,11 @@ Module bitsize.
 
   Definition compare (x y : bitsize) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
 End bitsize.
 #[global] Instance bitsize_compare : Compare bitsize := bitsize.compare.
 
@@ -803,6 +883,11 @@ Module int_rank.
 
   Definition compare (x y : int_rank.t) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
 End int_rank.
 #[global] Instance int_rank_compare : Compare int_rank := int_rank.compare.
 
@@ -824,9 +909,8 @@ Module signed.
 
   #[global] Instance leibniz : LeibnizComparison compare.
   Proof.
-    intro a; induction a; destruct b; try solve [ compute; congruence ].
+    intro a; destruct a, b; try solve [ compute; congruence ].
   Qed.
-
 End signed.
 #[global] Instance signed_compare : Compare signed := signed.compare.
 
@@ -838,10 +922,8 @@ Module char_type.
 
   #[global] Instance comparison : Comparison compare.
   Proof. tag_comparison. Qed.
-
   #[global] Instance leibniz : LeibnizComparison compare.
   Proof. tag_leibniz. Qed.
-
 End char_type.
 #[global] Instance char_type_compare : Compare char_type.t := char_type.compare.
 
@@ -853,10 +935,8 @@ Module float_type.
 
   #[global] Instance comparison : Comparison compare.
   Proof. tag_comparison. Qed.
-
   #[global] Instance leibniz : LeibnizComparison compare.
   Proof. tag_leibniz. Qed.
-
 End float_type.
 #[global] Instance float_type_compare : Compare float_type.t := float_type.compare.
 
@@ -868,10 +948,8 @@ Module type_qualifiers.
 
   #[global] Instance comparison : Comparison compare.
   Proof. tag_comparison. Qed.
-
   #[global] Instance leibniz : LeibnizComparison compare.
   Proof. tag_leibniz. Qed.
-
 End type_qualifiers.
 #[global] Instance type_qualifiers_compare : Compare type_qualifiers := type_qualifiers.compare.
 
@@ -888,10 +966,8 @@ Module dispatch_type.
 
   #[global] Instance comparison : Comparison compare.
   Proof. smash_comparison. Qed.
-
   #[global] Instance leibniz : LeibnizComparison compare.
   Proof. smash_leibniz. Qed.
-
 End dispatch_type.
 #[global] Instance dispatch_type_compare : Compare dispatch_type := dispatch_type.compare.
 
@@ -910,10 +986,37 @@ Module MethodRef.
         compare_lex (dispatch_type.compare d1 d2) $ fun _ =>
         compareFT t1 t2
       ) compareE.
+
+    #[global] Instance comparison
+      {CON : Comparison compareON} {CFT : Comparison compareFT} {CE : Comparison compareE}
+      : Comparison compare.
+    Proof.
+      apply sum.comparison; refine _.
+      constructor.
+      { destruct x as [[??]?], y as [[??]?].
+        do 2 apply compare_lex_antisym; apply CFT. }
+      { destruct x as [[??]?], y as [[??]?], z as [[??]?].
+        do 2 apply compare_lex_trans; apply CFT. }
+    Qed.
+    #[global] Instance leibniz
+      {CON : LeibnizComparison compareON} {CFT : LeibnizComparison compareFT} {CE : LeibnizComparison compareE}
+      : LeibnizComparison compare.
+    Proof.
+      apply sum.leibniz; refine _.
+    Admitted.
   End compare.
 End MethodRef.
 #[global] Hint Opaque MethodRef_ : typeclass_instances.
 #[global] Instance MethodRef_compare {A B C : Set} `{!Compare A, !Compare B, !Compare C} : Compare (MethodRef_ A B C) := MethodRef.compare compare compare compare.
+
+Ltac solve_comparison_helper :=
+  let x := fresh in
+  let y := fresh in
+  let z := fresh in
+  split;
+  [ intros x y; destruct x, y; simpl; repeat apply compare_lex_antisym; apply compare_antisym
+  | intros x y z; destruct x, y, z; simpl; repeat apply compare_lex_trans; apply compare_trans ].
+
 
 Module operator_impl.
   Export preliminary.operator_impl.
@@ -970,6 +1073,26 @@ Module operator_impl.
       | Func on t => compare_ctor (Reduce (tag (Func on t))) (fun _ => Reduce (data (Func on t)))
       | MFunc on d t => compare_ctor (Reduce (tag (MFunc on d t))) (fun _ => Reduce (data (MFunc on d t)))
       end.
+
+    Context {CON : Comparison compareON} {CT : Comparison compareT}.
+    Context {LON : LeibnizComparison compareON} {LT : LeibnizComparison compareT}.
+
+
+    #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+    Proof using CON CT. solve_data_comparison; solve_comparison_helper. Qed.
+
+    #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+    Proof using LON LT. solve_data_leibniz. Qed.
+    #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+    Proof. solve_is_compare. Qed.
+    #[local] Instance data_inj : DataInj data.
+    Proof. solve_data_inj. Qed.
+
+    #[global] Instance comparison : Comparison compare.
+    Proof using CON CT. solve_comparison.  Qed.
+    #[global] Instance leibniz : LeibnizComparison compare.
+    Proof using LON LT. solve_leibniz. Qed.
+
   End compare.
 
 End operator_impl.
@@ -980,6 +1103,11 @@ Module AtomicOp.
 
   Definition compare (x y : AtomicOp) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
 End AtomicOp.
 #[global] Instance AtomicOp_compare : Compare AtomicOp := AtomicOp.compare.
 
@@ -988,6 +1116,11 @@ Module calling_conv.
 
   Definition compare (x y : calling_conv) : comparison :=
     Pos.compare (tag x) (tag y).
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. tag_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. tag_leibniz. Qed.
 End calling_conv.
 #[global] Instance calling_conv_compare : Compare calling_conv := calling_conv.compare.
 
@@ -999,8 +1132,18 @@ Module function_arity.
     | Ar_Variadic , Ar_Definite => Gt
     | Ar_Variadic , Ar_Variadic => Eq
     end.
+
+  #[global] Instance comparison : Comparison compare.
+  Proof. smash_comparison. Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof. smash_leibniz. Qed.
 End function_arity.
 #[global] Instance function_arity_compare : Compare function_arity := function_arity.compare.
+
+#[global] Instance bool_comparison : Comparison Bool.compare.
+Proof. smash_comparison. Qed.
+#[global] Instance bool_leibniz : LeibnizComparison Bool.compare.
+Proof. smash_leibniz. Qed.
 
 Module new_form.
   Export preliminary.new_form.
@@ -1013,18 +1156,37 @@ Module new_form.
     | NonAllocating , NonAllocating => Eq
     end.
 
+  #[global] Instance comparison : Comparison compare.
+  Proof.
+    apply of_comparison_full.
+    intro x; destruct x, y; simpl; (split; [ auto | destruct z; simpl; try congruence ]).
+    apply compare_antisym.
+    apply compare_trans.
+  Qed.
+  #[global] Instance leibniz : LeibnizComparison compare.
+  Proof.
+    intros x y; destruct x, y; simpl; try congruence.
+    intro. f_equal. by eapply bool_leibniz.
+  Qed.
+
 End new_form.
 #[global] Instance new_form_compare : Compare new_form := new_form.compare.
 
 Module function_type.
+  Section compare.
+    Context {type : Set} (compareT : type -> type -> comparison).
+    Definition compare (x y : function_type_ type) : comparison :=
+      compare_lex (calling_conv.compare x.(ft_cc) y.(ft_cc)) $ fun _ =>
+      compare_lex (function_arity.compare x.(ft_arity) y.(ft_arity)) $ fun _ =>
+      compare_lex (compareT x.(ft_return) y.(ft_return)) $ fun _ =>
+      List.compare compareT x.(ft_params) y.(ft_params).
 
-  Definition compare {type : Set} (compareT : type -> type -> comparison)
-      (x y : function_type_ type) : comparison :=
-    compare_lex (calling_conv.compare x.(ft_cc) y.(ft_cc)) $ fun _ =>
-    compare_lex (function_arity.compare x.(ft_arity) y.(ft_arity)) $ fun _ =>
-    compare_lex (compareT x.(ft_return) y.(ft_return)) $ fun _ =>
-    List.compare compareT x.(ft_params) y.(ft_params).
-
+    Context {CT : Comparison compareT} {LT : LeibnizComparison compareT}.
+    #[global] Instance comparison : Comparison compare.
+    Proof using CT. solve_comparison_helper. Qed.
+    #[global] Instance leibniz : LeibnizComparison compare.
+    Proof using LT. red; intros; solve_leibniz_helper. Qed.
+  End compare.
 End function_type.
 #[global] Instance function_type_compare {A : Set} `{!Compare A} : Compare (function_type_ A) := function_type.compare compare.
 
@@ -1073,6 +1235,22 @@ Module temp_param.
       | Pvalue id ty => compare_ctor (Reduce (tag (Pvalue id ty))) (fun _ => Reduce (data (Pvalue id ty)))
       | Punsupported msg => compare_ctor (Reduce (tag (Punsupported msg))) (fun _ => Reduce (data (Punsupported msg)))
       end.
+
+    Context {CT : Comparison compareT} {LT : LeibnizComparison compareT}.
+    #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+    Proof using CT. solve_data_comparison; solve_comparison_helper. Qed.
+
+    #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+    Proof using LT. solve_data_leibniz. Qed.
+    #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+    Proof. solve_is_compare. Qed.
+    #[local] Instance data_inj : DataInj data.
+    Proof. solve_data_inj. Qed.
+
+    #[global] Instance comparison : Comparison compare.
+    Proof using CT. solve_comparison.  Qed.
+    #[global] Instance leibniz : LeibnizComparison compare.
+    Proof using LT. solve_leibniz. Qed.
   End compare.
 
 End temp_param.
@@ -1124,6 +1302,25 @@ Module temp_arg.
       | Apack ls => compare_ctor compare (Reduce (tag (Apack ls))) (fun _ => Reduce (data (Apack ls)))
       | Aunsupported msg => compare_ctor compare (Reduce (tag (Aunsupported msg))) (fun _ => Reduce (data (Aunsupported msg)))
       end.
+
+    (* TODO: the current infrastructure does not work with actual inductives.
+    Context {CT : Comparison compareT} {CE : Comparison compareE}
+      {LT : LeibnizComparison compareT} {LE : LeibnizComparison compareE}.
+    #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+    Proof using CT CE. solve_data_comparison; solve_comparison_helper. Qed.
+
+    #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+    Proof using LT. solve_data_leibniz. Qed.
+    #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+    Proof. solve_is_compare. Qed.
+    #[local] Instance data_inj : DataInj data.
+    Proof. solve_data_inj. Qed.
+
+    #[global] Instance comparison : Comparison compare.
+    Proof using CT. solve_comparison.  Qed.
+    #[global] Instance leibniz : LeibnizComparison compare.
+    Proof using LT. solve_leibniz. Qed.
+    *)
   End compare.
 
 End temp_arg.
