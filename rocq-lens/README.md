@@ -14,6 +14,7 @@ Require Import Lens.Elpi.Elpi.
 Import LensNotations.
 #[local] Open Scope lens_scope.
 
+(* Works with or without primitive projections. *)
 #[projections(primitive=yes)]
 Record Foo : Set := {
   foo : nat;
@@ -31,17 +32,17 @@ Proof. reflexivity. Qed.
 Goal {| foo := 3 ; bar := true |} .^ _bar = true.
 Proof. reflexivity. Qed.
 
-Goal {| foo := 3 ; bar := true |} &: _bar .= false = {| foo := 3 ; bar := false |}.
+Goal {| foo := 3 ; bar := true |} &: _bar .= false =
+     {| foo := 3 ; bar := false |}.
 Proof. reflexivity. Qed.
 ```
 
 ## Limitations
 
-Generation of lenses currently only supports `Record`s defined with primitive
-projections enabled. Further, it does not support:
+Generation of lenses does not support:
 - polymorphic lenses,
 - universe polymorphic definitions,
-- iniverse polymorphic lenses.
+- universe polymorphic lenses.
 
 ## Implementation Notes
 
