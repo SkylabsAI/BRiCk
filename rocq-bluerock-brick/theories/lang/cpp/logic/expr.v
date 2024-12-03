@@ -1364,7 +1364,8 @@ Module Type Expr.
     Axiom wp_xval_temp : forall e Q,
         (let ty := type_of e in
          Forall a : ptr,
-         wp_initialize ty a e (fun frees => Q a (FreeTemps.delete ty a >*> frees)))
+           letI* free, frees := wp_initialize ty a e in
+           Q a (free >*> frees))
         |-- wp_xval (Ematerialize_temp e Xvalue) Q.
 
     Axiom wp_lval_temp : forall e Q,

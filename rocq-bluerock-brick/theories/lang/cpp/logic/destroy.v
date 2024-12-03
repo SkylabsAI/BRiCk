@@ -1037,6 +1037,7 @@ emp] is not provable unless [Q] is affine.
   match free with
   | FreeTemps.id => |={top}=> Q
   | FreeTemps.seq f g => interp tu f $ interp tu g Q
+  | FreeTemps.dep f fs => interp tu f $ fold_right (interp tu) Q fs
   | FreeTemps.par f g => |={top}=> Exists Qf Qg, interp tu f Qf ** interp tu g Qg ** (Qf -* Qg -* |={top}=> Q)
   | FreeTemps.delete ty addr => destroy_val tu ty addr Q
   | FreeTemps.delete_va va addr => |={top}=> addr |-> varargsR va ** Q
@@ -1076,6 +1077,7 @@ Section temps.
     match free with
     | FreeTemps.id => Q
     | FreeTemps.seq f g => interp tu f (interp tu g Q)
+    | FreeTemps.dep f fs => interp tu f $ fold_right (interp tu) Q fs
     | FreeTemps.par f g => Exists Qf Qg, interp tu f Qf ** interp tu g Qg ** (Qf -* Qg -* Q)
     | FreeTemps.delete ty addr => destroy_val tu ty addr Q
     | FreeTemps.delete_va va addr => addr |-> varargsR va ** Q
@@ -1149,11 +1151,12 @@ Section temps.
     - by iApply destroy_val_frame.
     - iIntros ">($ & Q)". by iApply "HQ".
     - iApply IHfree1. by iApply IHfree2.
+    - iApply IHfree. admit. (* TODO *)
     - iIntros ">(%Qf & %Qg & (Qf & Qg & Hfg))". iExists Qf, Qg.
       iDestruct (IHfree1 with "[] Qf") as "$"; auto.
       iDestruct (IHfree2 with "[] Qg") as "$"; auto.
       iIntros "!> Qf Qg". iApply "HQ". iApply ("Hfg" with "Qf Qg").
-  Qed.
+  Admitted.
 
   (** The name is historic *)
   Lemma interp_frame tu free Q Q' :
@@ -1174,9 +1177,10 @@ Section temps.
     - iIntros ">>($ & $)".
     - iIntros "HQ". iApply (IHfree1 with "[HQ]"). iApply (interp_wand with "HQ").
       iIntros "HQ". by iApply (IHfree2 with "[HQ]").
+    - admit.
     - iIntros ">>(%Qf & %Qg & (Qf & Qg & Hfg))". iExists Qf, Qg.
       iFrame "Qf Qg". iIntros "!> Qf Qg". by iMod ("Hfg" with "Qf Qg").
-  Qed.
+  Admitted.
 
   Lemma fupd_interp tu free Q :
     (|={top}=> interp tu free Q) |-- interp tu free Q.

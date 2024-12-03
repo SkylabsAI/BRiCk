@@ -95,13 +95,76 @@ Section with_resolve.
            but since these destructors are trivial, the difference is
            not observable.
    *)
+  About wp_initialize.
+
+  Print FreeTemps.t.
+  Variant Classification : Set :=
+    | CompletelyTrivial
+    | CompletelyNonTrivial
+    | Both (_ _ : FreeTemps.t).
+  (* this needs to partition [free] such that everything inside of it that is trivially destructible is destroyed early *)
+  Fixpoint partition (free : FreeTemps.t) : Classification :=
+    match free with
+    | FreeTemps.id => CompletelyTrivial
+    | FreeTemps.delete ty _ =>
+        if is_trivially_destructible tu ty
+        then CompletelyTrivial
+        else CompletelyNonTrivial
+    | FreeTemps.delete_va _ _ =>
+        CompletelyTrivial
+    | FreeTemps.seq f g =>
+        match partition f with
+        | CompletelyTrivial =>
+            match partition g with
+            | CompletelyTrivial => CompletelyTrivial
+            | CompletelyNonTrivial => Both f g
+            | Both g' g'' => Both (f >*> g') g''
+            end
+        | CompletelyNonTrivial => CompletelyNonTrivial
+        | Both f' f'' => Both f' (f'' >*> g)
+        end
+    | FreeTemps.par f g =>
+        match partition f , partition g with
+        | CompletelyTrivial , CompletelyTrivial => CompletelyTrivial
+        | CompletelyTrivial , CompletelyNonTrivial => Both f g
+        | CompletelyTrivial , Both g' g'' => Both (FreeTemps.par f g') g''
+        | _ , _ => CompletelyNonTrivial (* TODO: incomplete *)
+        end
+    end.
+
+  (* Consider the following program:
+<<
+struct CC {};
+
+struct DD {
+    const CC& c_;
+    ~DD() { } // not trivially destructible
+};
+struct C { // trivially destructible
+    const DD& d;
+};
+
+int foo(const C&);
+
+void test() {
+ foo(C{D{CC{}}}, C{D{CC{}}});
+}
+>>
+   In this program, C should be destroyed early, but D should be destroyed at the end of the expression.
+   Note that if <C> were to contain a <DD> (rather than a <DD&>) then it would not be trivially destructible
+
+   It seems like we need more structure within the FreeTemps in order to capture patterns such as the one above
+   that would allow us to mark dependencies
+   *)
+
+
   #[local]
   Definition wp_arg (ty : decltype) e K :=
     Forall p,
-      letI* free := wp_initialize tu ρ ty p e in
-      K p (if is_trivially_destructible tu ty
-           then free
-           else FreeTemps.delete ty p >*> free)%free.
+      letI* free , frees := wp_initialize tu ρ ty p e in
+      K p (if is_trivially_destructible tu ty 
+           then K p frees
+           else free >*> frees)%free.
   #[global] Arguments wp_arg _ _ _ /.
 
   Lemma wp_arg_frame : forall ty e, |-- wp.WPE.Mframe (wp_arg ty e) (wp_arg ty e).

@@ -354,10 +354,13 @@ magic wands.
 #[local] Notation fupd_compatible := false (only parsing).
 
 (* BEGIN wp_initialize *)
+Print FreeTemps.t.
+Search Expr type.
+
 #[local] Definition wp_initialize_unqualified_body `{Σ : cpp_logic, σ : genv}
     (u : bool) (tu : translation_unit) (ρ : region)
     (cv : type_qualifiers) (ty : decltype)
-    (addr : ptr) (init : Expr) (Q : FreeTemps -> epred) : mpred :=
+    (addr : ptr) (init : Expr) (Q : FreeTemps.t -> FreeTemps -> epred) : mpred :=
   let UNSUPPORTED := funI m => |={top}=>?u UNSUPPORTED m in
   if q_volatile cv then False%I
   else
@@ -379,7 +382,7 @@ magic wands.
       [primR] is enough because C++ code never uses the raw bytes
       underlying an inhabitant of type void.
       *)
-      (addr |-> primR Tvoid qf Vvoid -* |={top}=>?u Q frees)
+      (addr |-> primR Tvoid qf Vvoid -* |={top}=>?u Q (FreeTemps.delete Tvoid addr) frees)
 
     | Tptr _
     | Tmember_pointer _ _
@@ -391,7 +394,7 @@ magic wands.
     | Tnullptr =>
       letI* v, free := wp_operand tu ρ init in
       let qf := cQp.mk (q_const cv) 1 in
-      addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q free
+      addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q (FreeTemps.delete (erase_qualifiers ty) addr) free
 
       (* non-primitives are handled via prvalue-initialization semantics *)
     | Tarray _ _
@@ -410,7 +413,7 @@ magic wands.
       TODO: [ref]s are never mutable, but we use [qf] here for
       compatibility with [implicit_destruct_struct]
       *)
-      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q free
+      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q (FreeTemps.delete rty addr) free
 
     | Trv_ref ty =>
       let rty := Tref $ erase_qualifiers ty in
@@ -423,7 +426,7 @@ magic wands.
       TODO: [ref]s are never mutable, but we use [qf] here for
       compatibility with [implicit_destruct_struct]
       *)
-      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q free
+      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q (FreeTemps.delete rty addr) free
 
     | Tfunction _ => UNSUPPORTED (initializing_type ty init)
 
@@ -442,12 +445,12 @@ mlock
 Definition wp_initialize_unqualified `{Σ : cpp_logic, σ : genv} :
   ∀ (tu : translation_unit) (ρ : region)
     (cv : type_qualifiers) (ty : decltype)
-    (addr : ptr) (init : Expr) (Q : FreeTemps -> epred), mpred :=
+    (addr : ptr) (init : Expr) (Q : FreeTemp -> FreeTemps -> epred), mpred :=
   Cbn (Reduce (wp_initialize_unqualified_body fupd_compatible)).
 #[global] Arguments wp_initialize_unqualified {_ _ _ _} _ _ _ _ _ _ _%_I : assert.	(* mlock bug *)
 
 Definition wp_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ : region)
-    (qty : decltype) (addr : ptr) (init : Expr) (Q : FreeTemps -> epred) : mpred :=
+    (qty : decltype) (addr : ptr) (init : Expr) (Q : FreeTemps -> FreeTemps -> epred) : mpred :=
   qual_norm (wp_initialize_unqualified tu ρ) qty addr init Q.
 #[global] Hint Opaque wp_initialize : typeclass_instances.
 #[global] Arguments wp_initialize {_ _ _ _} _ _ !_ _ _ _ / : assert.
@@ -460,8 +463,9 @@ Definition heap_type_of (t : type) : type :=
   end.
 
 Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
-  tu ρ cv ty addr init (Q : FreeTemps.t -> epred) :
-      wp_initialize_unqualified tu ρ cv ty addr init (fun free => reference_to (heap_type_of ty) addr -* Q free)
+  tu ρ cv ty addr init (Q : FreeTemp -> FreeTemps.t -> epred) :
+      (letI* free , frees := wp_initialize_unqualified tu ρ cv ty addr init in
+      reference_to (heap_type_of ty) addr -* Q free frees)
   |-- wp_initialize_unqualified tu ρ cv ty addr init Q.
 Proof.
   rewrite wp_initialize_unqualified.unlock.
@@ -487,13 +491,13 @@ Proof.
     iApply ("X" with "Y"); eauto.
   - etransitivity; [ | apply wp_init_well_typed ].
     iApply wp_init_frame; [ done | ].
-    iIntros (?) "X Y". iApply "X".
+    iIntros (??) "X Y". iApply "X".
     rewrite /heap_type_of/=.
     rewrite reference_to_erase/=/tqualified'.
     destruct cv; simpl; eauto.
   - etransitivity; [ | apply wp_init_well_typed ].
     iApply wp_init_frame; [ done | ].
-    iIntros (?) "X Y". iApply "X".
+    iIntros (??) "X Y". iApply "X".
     rewrite (reference_to_erase (Tnamed gn)).
     rewrite reference_to_erase/=/tqualified'.
     destruct cv; simpl; eauto.
@@ -511,11 +515,11 @@ expression.
 See [https://eel.is/c++draft/class.init#class.base.init-note-2].
 *)
 Definition wpi `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ : region)
-    (cls : globname) (thisp : ptr) (ty : type) (init : Initializer) (Q : epred) : mpred :=
+    (cls : globname) (thisp : ptr) (ty : type) (init : Initializer) (Q : FreeTemps.t -> epred) : mpred :=
   let p' := thisp ,, offset_for cls init.(init_path) in
-  letI* free := wp_initialize tu ρ ty p' init.(init_init) in
-  letI* := interp tu free in
-  Q.
+  letI* free , frees := wp_initialize tu ρ ty p' init.(init_init) in
+  letI* := interp tu frees in
+  Q free.
 #[global] Hint Opaque wpi : typeclass_instances.
 #[global] Arguments wpi {_ _ _ _} _ _ _ _ _ _ _ / : assert.
 
@@ -528,7 +532,7 @@ right now. So, for the time being, we prove [_frame] lemmas without
 
 Section wp_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : FreeTemps -> epred).
+  Implicit Types (Q : FreeTemp -> FreeTemps -> epred).
 
   (** [wp_initialize_unqualified] *)
 
@@ -587,7 +591,7 @@ Section wp_initialize.
     else
       letI* v, free := wp_operand tu ρ init in
       let qf := cQp.mk (q_const cv') 1 in
-      addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q free
+      addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q (FreeTemps.delete (erase_qualifiers ty) addr) free
   )%I) (only parsing).
 
   Lemma wp_initialize_unqualified_intro_val tu ρ cv ty (addr : ptr) init Q :
@@ -653,7 +657,7 @@ Section wp_initialize.
 
   Lemma wp_initialize_unqualified_frame tu tu' ρ obj cv ty e Q Q' :
     sub_module tu tu' ->
-    (Forall free, Q free -* Q' free)
+    (Forall free frees, Q free frees -* Q' free frees)
     |-- wp_initialize_unqualified tu ρ cv ty obj e Q -* wp_initialize_unqualified tu' ρ cv ty obj e Q'.
   Proof.
     intros. iIntros "HQ'". destruct ty; rewrite unlock; auto.
@@ -670,14 +674,14 @@ Section wp_initialize.
       end;
       first
         [ by iIntros (??) "HQ ?"; iApply "HQ'"; iApply "HQ"
-        | by iIntros (?) "?"; iApply "HQ'"
+        | by iIntros (??) "?"; iApply "HQ'"
         | idtac ].
     (* void *)
     iIntros (??) "($ & HQ) ?". iApply "HQ'". by iApply "HQ".
   Qed.
 
   Lemma wp_initialize_unqualified_shift tu ρ cv ty obj e Q :
-    Cbn (|={top}=>?fupd_compatible wp_initialize_unqualified tu ρ cv ty obj e (fun free => |={top}=>?fupd_compatible Q free))
+    Cbn (|={top}=>?fupd_compatible wp_initialize_unqualified tu ρ cv ty obj e (fun free frees => |={top}=>?fupd_compatible Q free frees))
     |-- wp_initialize_unqualified tu ρ cv ty obj e Q.
   Proof.
     destruct ty; rewrite unlock; auto using fupd_elim, fupd_intro.
@@ -699,18 +703,18 @@ Section wp_initialize.
   #[global] Instance: Params (@wp_initialize_unqualified) 10 := {}.
   #[local] Notation BODY R := (
     ∀ tu ρ cv ty obj init,
-    Proper (pointwise_relation _ R ==> R) (wp_initialize_unqualified tu ρ cv ty obj init)
+    Proper (pointwise_relation _ (pointwise_relation _ R) ==> R) (wp_initialize_unqualified tu ρ cv ty obj init)
   ) (only parsing).
   #[global] Instance wp_initialize_unqualified_mono : BODY bi_entails.
   Proof.
     intros * Q1 Q2 HQ. iIntros "wp".
-    iApply (wp_initialize_unqualified_frame with "[] wp"); [done|]. iIntros (free) "Q".
+    iApply (wp_initialize_unqualified_frame with "[] wp"); [done|]. iIntros (? ?) "Q".
     by iApply HQ.
   Qed.
   #[global] Instance wp_initialize_unqualified_flip_mono : BODY (flip bi_entails).
   Proof. repeat intro. by apply wp_initialize_unqualified_mono. Qed.
   #[global] Instance wp_initialize_unqualified_proper : BODY equiv.
-  Proof. intros * Q1 Q2 HQ. by split'; apply wp_initialize_unqualified_mono=>free; rewrite HQ. Qed.
+  Proof. intros * Q1 Q2 HQ. by split'; apply wp_initialize_unqualified_mono=>? ?; rewrite HQ. Qed.
 
   (** [wp_initialize] *)
 
@@ -798,7 +802,7 @@ Section wp_initialize.
 
   Lemma wp_initialize_frame tu tu' ρ obj ty e Q Q' :
     sub_module tu tu' ->
-    (Forall free, Q free -* Q' free)
+    (Forall free frees, Q free frees -* Q' free frees)
     |-- wp_initialize tu ρ ty obj e Q -* wp_initialize tu' ρ ty obj e Q'.
   Proof.
     intros. rewrite /wp_initialize/qual_norm.
@@ -807,7 +811,7 @@ Section wp_initialize.
   Qed.
 
   Lemma wp_initialize_shift tu ρ ty obj e Q :
-    Cbn (|={top}=>?fupd_compatible wp_initialize tu ρ ty obj e (fun free => |={top}=>?fupd_compatible Q free))
+    Cbn (|={top}=>?fupd_compatible wp_initialize tu ρ ty obj e (fun free frees => |={top}=>?fupd_compatible Q free frees))
     |-- wp_initialize tu ρ ty obj e Q.
   Proof.
     rewrite /wp_initialize/qual_norm.
@@ -821,24 +825,25 @@ Section wp_initialize.
   #[global] Instance: Params (@wp_initialize) 9 := {}.
   #[local] Notation INIT R := (
     ∀ tu ρ ty obj init,
-    Proper (pointwise_relation _ R ==> R) (wp_initialize tu ρ ty obj init)
+    Proper (pointwise_relation _ (pointwise_relation _ R) ==> R) (wp_initialize tu ρ ty obj init)
   ) (only parsing).
   #[global] Instance wp_initialize_mono : INIT bi_entails.
   Proof.
     intros * Q1 Q2 HQ. iIntros "wp".
-    iApply (wp_initialize_frame with "[] wp"); [done|]. iIntros (free) "Q".
+    iApply (wp_initialize_frame with "[] wp"); [done|]. iIntros (??) "Q".
     by iApply HQ.
   Qed.
   #[global] Instance wp_initialize_flip_mono : INIT (flip bi_entails).
   Proof. repeat intro. by apply wp_initialize_mono. Qed.
   #[global] Instance wp_initialize_proper : INIT equiv.
-  Proof. intros * Q1 Q2 HQ. by split'; apply wp_initialize_mono=>free; rewrite HQ. Qed.
+  Proof. intros * Q1 Q2 HQ. by split'; apply wp_initialize_mono=>??; rewrite HQ. Qed.
 
   Lemma wp_initialize_wand tu ρ obj ty e Q Q' :
     wp_initialize tu ρ ty obj e Q
-    |-- (Forall free, Q free -* Q' free) -* wp_initialize tu ρ ty obj e Q'.
+    |-- (Forall free frees, Q free frees -* Q' free frees) -* wp_initialize tu ρ ty obj e Q'.
   Proof. by iIntros "H Y"; iRevert "H"; iApply wp_initialize_frame. Qed.
 
+  (* TODO
   Inductive wp_initialize_decomp_spec tu ρ ty (addr : ptr) init Q : mpred -> Prop :=
   | WpInitVolatile cv ty' : (cv, ty') = decompose_type ty ->
                             q_volatile cv ->
@@ -849,14 +854,14 @@ Section wp_initialize.
                          wp_initialize_decomp_spec tu ρ ty addr init Q (
                              letI* v, free := wp_operand tu ρ init in
                                let qf := cQp.mk (q_const cv) 1 in
-                               addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* Q free
+                               addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* Q (FreeTemps.delete (erase_qualifiers ty) addr) free
                            )
   | WpInitRef cv ty' : drop_qualifiers ty = Tref ty' ->
                       wp_initialize_decomp_spec tu ρ ty addr init Q (
                           let rty := Tref $ erase_qualifiers ty' in
                           letI* p, free := wp_lval tu ρ init in
                             let qf := cQp.mk (q_const cv) 1 in
-                            addr |-> primR rty qf (Vref p) -* Q free
+                            addr |-> primR rty qf (Vref p) -* Q (FreeTemps.delete )free
                         )
   | WpInitRvRef cv ty' : drop_qualifiers ty = Trv_ref ty' ->
                         wp_initialize_decomp_spec tu ρ ty addr init Q (
@@ -923,20 +928,21 @@ Section wp_initialize.
     { (* Tunsupported *)
       intros. rewrite UNSUPPORTED.unlock. exact: WpInitUnsupported. }
   Qed. *) Admitted. (* TODO: this would be improved by eliminating these cases using dependency *)
+  *)
 
   (** [wpi] *)
 
-  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : epred) :
+  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : FreeTemps -> epred) :
     sub_module tu tu' ->
-    Q -* Q' |-- wpi tu ρ cls this ty e Q -* wpi tu' ρ cls this ty e Q'.
+    (Forall free, Q free -* Q' free) |-- wpi tu ρ cls this ty e Q -* wpi tu' ρ cls this ty e Q'.
   Proof.
     intros. iIntros "HQ". rewrite /wpi.
-    iApply wp_initialize_frame; [done|]. iIntros (free).
+    iApply wp_initialize_frame; [done|]. iIntros (??).
     by iApply interp_frame_strong.
   Qed.
 
-  Lemma wpi_shift tu ρ cls this ty e (Q : epred) :
-    Cbn (|={top}=>?fupd_compatible wpi tu ρ cls this ty e (|={top}=>?fupd_compatible Q))
+  Lemma wpi_shift tu ρ cls this ty e (Q : FreeTemp -> epred) :
+    Cbn (|={top}=>?fupd_compatible wpi tu ρ cls this ty e (fun free => |={top}=>?fupd_compatible Q free))
     |-- wpi tu ρ cls this ty e Q.
   Proof.
     done.
@@ -951,16 +957,16 @@ Section wp_initialize.
   #[global] Instance: Params (@wpi) 9 := {}.
   #[local] Notation WPI R := (
     ∀ tu ρ cls this ty e,
-    Proper (R ==> R) (wpi tu ρ cls this ty e)
+    Proper (pointwise_relation _ R ==> R) (wpi tu ρ cls this ty e)
   ) (only parsing).
   #[global] Instance wpi_mono : WPI bi_entails.
   Proof.
     intros * Q1 Q2 HQ. iIntros "wp".
-    iApply (wpi_frame with "[] wp"); [done|]. iIntros "Q".
+    iApply (wpi_frame with "[] wp"); [done|]. iIntros (?) "Q".
     by iApply HQ.
   Qed.
   #[global] Instance wpi_flip_mono : WPI (flip bi_entails).
   Proof. repeat intro. by apply wpi_mono. Qed.
   #[global] Instance wpi_proper : WPI equiv.
-  Proof. intros * Q1 Q2 HQ. by split'; apply wpi_mono; rewrite HQ. Qed.
+  Proof. intros * Q1 Q2 HQ. by split'; apply wpi_mono=>?; rewrite HQ. Qed.
 End wp_initialize.
