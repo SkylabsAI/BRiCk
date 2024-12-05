@@ -5,6 +5,7 @@
  *)
 
 Require Import stdpp.strings.
+Require Export bedrock.prelude.pstring.
 Require Import bedrock.lang.cpp.syntax.prelude.
 Require Export bedrock.lang.cpp.arith.types.
 
@@ -20,8 +21,8 @@ Require Export bedrock.lang.cpp.arith.types.
 
 #[local] Open Scope N_scope.
 
-Definition ident : Set := bs.
-Bind Scope bs_scope with ident.
+Definition ident : Set := PrimString.string.
+Bind Scope pstring_scope with ident.
 #[global] Instance ident_eq: EqDecision ident := _.
 
 (** local names
@@ -39,19 +40,18 @@ the underlying type and use a special prefix for the inaccessible variable names
  *)
 Module localname.
   Definition t : Set := ident.
-  #[global] Bind Scope bs_scope with localname.t.
+  #[global] Bind Scope pstring_scope with localname.t.
   #[global] Instance localname_eq: EqDecision t := _.
 
   (* these are pseudo constructors for making different types
      of local names. *)
 
-  Definition N_to_bs (n : N) : bs :=
-    if n is 0%N then "0"
-    else BS.of_string $ pretty.pretty_N_go n "".
-
-  Definition arrayloop_index (n : N) : t := "!" ++ N_to_bs n.
-  Definition opaque (n : N) : t := "%" ++ N_to_bs n.
-  Definition anon (n : N) : t := "#" ++ N_to_bs n.
+  Definition arrayloop_index (n : N) : t :=
+    PrimString.cat "!"%pstring (pstring.N.to_string n).
+  Definition opaque (n : N) : t :=
+    PrimString.cat "%"%pstring (pstring.N.to_string n).
+  Definition anon (n : N) : t :=
+    PrimString.cat "#"%pstring (pstring.N.to_string n).
 End localname.
 #[global] Bind Scope bs_scope with localname.t.
 Notation localname := localname.t.
