@@ -320,6 +320,7 @@ public:
 	// Unsupported
 	IGNORE(CXXThrowExpr)
 	IGNORE(CXXTypeidExpr)
+	IGNORE(CXXParenListInitExpr) // TODO
 
 	void VisitStmtExpr(const StmtExpr* expr) {
 		guard::ctor _{print, "Estmt"};
