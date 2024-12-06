@@ -95,42 +95,63 @@ Section with_resolve.
            but since these destructors are trivial, the difference is
            not observable.
    *)
-  About wp_initialize.
-
-  Print FreeTemps.t.
-  Variant Classification : Set :=
-    | CompletelyTrivial
-    | CompletelyNonTrivial
-    | Both (_ _ : FreeTemps.t).
-  (* this needs to partition [free] such that everything inside of it that is trivially destructible is destroyed early *)
-  Fixpoint partition (free : FreeTemps.t) : Classification :=
-    match free with
-    | FreeTemps.id => CompletelyTrivial
-    | FreeTemps.delete ty _ =>
-        if is_trivially_destructible tu ty
-        then CompletelyTrivial
-        else CompletelyNonTrivial
-    | FreeTemps.delete_va _ _ =>
-        CompletelyTrivial
-    | FreeTemps.seq f g =>
-        match partition f with
-        | CompletelyTrivial =>
-            match partition g with
-            | CompletelyTrivial => CompletelyTrivial
-            | CompletelyNonTrivial => Both f g
-            | Both g' g'' => Both (f >*> g') g''
-            end
-        | CompletelyNonTrivial => CompletelyNonTrivial
-        | Both f' f'' => Both f' (f'' >*> g)
-        end
-    | FreeTemps.par f g =>
-        match partition f , partition g with
-        | CompletelyTrivial , CompletelyTrivial => CompletelyTrivial
-        | CompletelyTrivial , CompletelyNonTrivial => Both f g
-        | CompletelyTrivial , Both g' g'' => Both (FreeTemps.par f g') g''
-        | _ , _ => CompletelyNonTrivial (* TODO: incomplete *)
-        end
+  Definition seq_ (a b : FreeTemps.t) : FreeTemps.t :=
+    match a , b with
+    | FreeTemps.id , b => b
+    | a , FreeTemps.id => a
+    | _ , _ => FreeTemps.seq a b
     end.
+  Definition par_ (a b : FreeTemps.t) : FreeTemps.t :=
+    match a , b with
+    | FreeTemps.id , b => b
+    | a , FreeTemps.id => a
+    | _ , _ => FreeTemps.par a b
+    end.
+  Definition dep_ (a : FreeTemps.t) (b : list FreeTemps.t) : FreeTemps.t :=
+    let b := List.filter (fun a => if a is FreeTemps.id then false else true) b in
+    match b with
+    | [] => a
+    | b => FreeTemps.dep a b
+    end.
+
+  Fixpoint trivial_cleanup (free : FreeTemps.t) : FreeTemps.t :=
+    match free with
+    | FreeTemps.id => FreeTemps.id
+    | FreeTemps.delete t p =>
+        if is_trivially_destructible tu t
+        then FreeTemps.delete t p
+        else FreeTemps.id
+    | FreeTemps.delete_va _ _ => free (* always trivially destructible *)
+    | FreeTemps.seq f g =>
+        seq_ (trivial_cleanup f) (trivial_cleanup g)
+    | FreeTemps.dep f ls =>
+        let f := trivial_cleanup f in
+        if f is FreeTemps.id
+        then dep_ f (trivial_cleanup <$> ls)
+        else dep_ f ls
+    | FreeTemps.par f g =>
+        par_ (trivial_cleanup f) (trivial_cleanup g)
+    end.
+
+  Definition nontrivial_cleanup (free : FreeTemps.t) : FreeTemps.t :=
+    match free with
+    | FreeTemps.id => FreeTemps.id
+    | FreeTemps.delete t p =>
+        if is_trivially_destructible tu t
+        then FreeTemps.id
+        else FreeTemps.delete t p
+    | FreeTemps.delete_va _ _ => free (* always trivially destructible *)
+    | FreeTemps.seq f g =>
+        seq_ (trivial_cleanup f) (trivial_cleanup g)
+    | FreeTemps.dep f ls =>
+        let f := trivial_cleanup f in
+        if f is FreeTemps.id
+        then dep_ f (trivial_cleanup <$> ls)
+        else dep_ f ls
+    | FreeTemps.par f g =>
+        par_ (trivial_cleanup f) (trivial_cleanup g)
+    end.
+
 
   (* Consider the following program:
 <<
@@ -160,21 +181,17 @@ void test() {
 
   #[local]
   Definition wp_arg (ty : decltype) e K :=
-    Forall p,
-      letI* free , frees := wp_initialize tu ρ ty p e in
-      K p (if is_trivially_destructible tu ty 
-           then K p frees
-           else free >*> frees)%free.
+    Forall p, wp_initialize tu ρ ty p e (K p).
   #[global] Arguments wp_arg _ _ _ /.
 
-  Lemma wp_arg_frame : forall ty e, |-- wp.WPE.Mframe (wp_arg ty e) (wp_arg ty e).
+  Lemma wp_arg_frame : forall ty e K1 K2, (Forall p free frees, K1 p free frees -* K2 p free frees) |-- wp_arg ty e K1 -* wp_arg ty e K2.
   Proof.
     rewrite /wp.WPE.Mframe; intros.
-    iIntros (??) "X Y %p".
+    iIntros "X Y %p".
     iSpecialize ("Y" $! p).
     iRevert "Y".
     iApply wp_initialize_frame. done.
-    case_match; eauto. iIntros (?); iApply "X".
+    iIntros (??); iApply "X".
   Qed.
 
   Definition early_destroy : list (decltype * ptr) -> list FreeTemps.t :=
