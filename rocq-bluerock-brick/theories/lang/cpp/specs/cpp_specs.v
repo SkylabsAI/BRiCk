@@ -54,7 +54,7 @@ Section with_Σ.
     \pre emp
     \post  emp.
 
-  Fail Definition _2 : WPP :=
+  Succeed Definition _2 : WPP :=
     \with (I J : mpred) (R : Qp -> Qp -> nat -> Rep)
     \prepost emp
     \require True

@@ -62,31 +62,27 @@ mlock Definition offsetR_aux `{Σ : cpp_logic} (o : offset) (R : Rep) : Rep :=
 
 (* points-to *)
 #[projections(primitive=yes)]
-Structure AT `{Σ : cpp_logic} : Type :=
-  { #[canonical=yes] AT_LHS :> Type
-  (** ^^ We make [AT_LHS] a coercion *)
-  ; #[canonical=yes] AT_Result : Type
-  (* We hardcode [Rep] as second argument to improve error messages *)
-  ; #[canonical=no] AT_at : AT_LHS -> Rep -> AT_Result }.
-#[global] Arguments AT_at {AT} _ _ _ : rename, simpl never.
-
-mlock Definition __at := @AT_at.
-#[global] Arguments __at {ti Σ0 Σ AT} _ _ : rename.
+Class At `{Σ : cpp_logic} (LHS : Type) (Result : bi) := MkAt {
+  __at : LHS -> Rep -> Result
+}.
+#[global] Hint Opaque __at : br_opacity typeclass_instances.
+#[global] Arguments __at : simpl never.
+#[global] Arguments __at {_ _ _ _ _ _} _ _ : assert.
 
 (** Since this will appear in inferred types, we choose meaningful names. This
 naming choice makes [ptrA] seem an alternative spelling of [ptr] (like [mpred]
 and [mpredI], and similarly for [offsetA]. *)
-Canonical Structure ptrA `{Σ : cpp_logic} : AT :=
-  {| AT_LHS := ptr; AT_Result := mpred; AT_at := at_aux |}.
-Canonical Structure offsetA `{Σ : cpp_logic} : AT :=
-  {| AT_LHS := offset; AT_Result := Rep; AT_at := offsetR_aux |}.
+#[global] Instance ptrA `{Σ : cpp_logic} : At ptr mpredI :=
+  {| __at := at_aux |}.
+#[global] Instance offsetA `{Σ : cpp_logic} : At offset RepI :=
+  {| __at := offsetR_aux |}.
 
 (** [_at base R] states that [R base] holds.
 
     NOTE This is "weakly at"
   *)
-#[global] Notation _at := (__at (AT := ptrA)).
-#[global] Notation _offsetR := (__at (AT := offsetA)).
+#[global] Notation _at := (__at (At := ptrA)).
+#[global] Notation _offsetR := (__at (At := offsetA)).
 (**
 The above notations are used for printing [_at] / [_offset] in the few cases
 where they are partially applied.
@@ -98,7 +94,7 @@ where they are partially applied.
   (at level 15, r at level 20, right associativity) : stdpp_scope.
 
 Module INTERNAL.
-  Ltac unfold_at := rewrite __at.unlock /AT_at/(AT_at _ _ _ _)/= 1?at_aux.unlock 1?offsetR_aux.unlock.
+  Ltac unfold_at := rewrite /__at/= 1?at_aux.unlock 1?offsetR_aux.unlock.
   Lemma _at_eq `{Σ : cpp_logic} p R : p |-> R = R.(monPred_at) p.
   Proof. by unfold_at. Qed.
   Lemma _offsetR_eq `{Σ : cpp_logic} o R : o |-> R =
@@ -109,5 +105,16 @@ End INTERNAL.
 Section inference_test.
 Context `{Σ : cpp_logic}.
 
-Fail Goal ∀ (R : Rep), ⊢@{mpred} Exists p, p |-> R.
+Goal ∀ (R : Rep), ⊢@{mpredI} Exists p, p |-> R.
+(**
+forall R : @Rep thread_info _Σ Σ,
+@bi_emp_valid (@mpredI thread_info _Σ)
+  (@bi_exist (AT_bi (@AT_Result _ _ _ (@ptrA thread_info _Σ Σ))) (@AT_LHS _ _ _ (@ptrA thread_info _Σ Σ))
+     (fun p : @AT_LHS _ _ _ (@ptrA thread_info _Σ Σ) => @__at.body thread_info _Σ Σ (@ptrA thread_info _Σ Σ) p R))
+
+forall R : @Rep thread_info _Σ Σ,
+@bi_emp_valid (@mpredI thread_info _Σ)
+  (@bi_exist (@mpredI thread_info _Σ) ptr (fun p : ptr => @__at _ _ _ _ _ (@ptrA thread_info _Σ Σ) p R))
+*)
+Abort.
 End inference_test.

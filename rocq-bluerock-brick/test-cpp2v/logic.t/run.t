@@ -18,13 +18,13 @@
   Expands to: Constant test.test.rep_sep
   Declared in library test.test, line 7, characters 15-22
   _at
-       : ptrA → Rep → AT_Result ptrA
+       : ptr → Rep → mpredI
   p |-> R
-       : AT_Result ptrA
+       : mpredI
   _offsetR
-       : offsetA → Rep → AT_Result offsetA
+       : offset → Rep → RepI
   o |-> R
-       : AT_Result offsetA
+       : RepI
   1 goal
     
     σ : genv
@@ -65,19 +65,19 @@
     ============================
     o |-> R = o |-> R
   _2 = p |-> o_field σ f |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _2 uses section variables σ thread_info _Σ Σ R f p.
   _3 = p .[ "int" ! 0 ] |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _3 uses section variables σ thread_info _Σ Σ R p.
   _4 = p |-> o_field σ f .[ "int" ! 0 ] |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _4 uses section variables σ thread_info _Σ Σ R f p.
   _4a = p ,, o_field σ f |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _4a uses section variables σ thread_info _Σ Σ R f p.
   1 goal
@@ -94,57 +94,56 @@
     ============================
     p ,, o_field σ f .[ "int" ! 0 ] = p ,, o_field σ f .[ "int" ! 0 ]
   _5 = p .[ "int" ! 0 ] .[ "int" ! 3 ] |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _5 uses section variables σ thread_info _Σ Σ R p.
-  _6 =
-  p ,, o_field σ f .[ "int" ! 0 ] ,, o_field σ g |-> R
-       : AT_Result ptrA
+  _6 = p ,, o_field σ f .[ "int" ! 0 ] ,, o_field σ g |-> R
+       : mpredI
   
   _6 uses section variables σ thread_info _Σ Σ R f g p.
   _7 =
   p ,, o_field σ g ,, o_field σ f .[ "int" ! 1 ] .[ "int" ! 0 ] ,, 
   o_field σ f |-> o_field σ f |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _7 uses section variables σ thread_info _Σ Σ R f g p.
   _8 =
   p ,, o_field σ g ,, o_field σ f .[ "int" ! 1 ] .[ "int" ! 0 ] ,, 
   o_field σ f |-> .[ "int" ! 1 ] |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _8 uses section variables σ thread_info _Σ Σ R f g p.
   _9 =
   o ,, o_field σ g ,, o_field σ f .[ "int" ! 1 ] .[ "int" ! 0 ] ,, 
   o_field σ f |-> R
-       : AT_Result offsetA
+       : RepI
   
   _9 uses section variables σ thread_info _Σ Σ R f g o.
   _11 = o .[ "int" ! 1 ] |-> R
-       : AT_Result offsetA
+       : RepI
   
   _11 uses section variables σ thread_info _Σ Σ R o.
   _14 = .[ "int" ! 1 ] |-> R
-       : AT_Result offsetA
+       : RepI
   
   _14 uses section variables σ thread_info _Σ Σ R.
   _16 = p .[ "int" ! 1 ] |-> o_field σ f |-> R
-       : AT_Result ptrA
+       : mpredI
   
   _16 uses section variables σ thread_info _Σ Σ R f p.
   b0 = p |-> R
-       : AT_Result ptrA
+       : mpredI
   
   b0 uses section variables thread_info _Σ Σ R p.
   b1 = o_field σ f |-> R
-       : AT_Result offsetA
+       : RepI
   
   b1 uses section variables σ thread_info _Σ Σ R f.
   b2 = p .[ "int" ! 1 ] |-> R
-       : AT_Result ptrA
+       : mpredI
   
   b2 uses section variables σ thread_info _Σ Σ R p.
   b3 = p .[ "int" ! 1 ] |-> o_field σ f |-> R
-       : AT_Result ptrA
+       : mpredI
   
   b3 uses section variables σ thread_info _Σ Σ R f p.

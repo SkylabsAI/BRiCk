@@ -205,7 +205,7 @@ Section derivationsR.
     erewrite sub_module_preserves_gstruct; eauto.
     rewrite !_at_sep !_at_big_sepL. f_equiv.
     induction f0; simpl; eauto.
-    rewrite IHf0 !_at_offsetR. f_equiv.
+    rewrite {}IHf0 !_at_offsetR. f_equiv.
     iApply rec; eauto. lia.
   Qed.
 

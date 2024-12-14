@@ -46,7 +46,7 @@ Section with_cpp.
         iSpecialize ("X" $! a j).
         rewrite !INTERNAL._at_eq.
         iApply "X".
-        unshelve instantiate (1:=OfeMor (λ x : A, Forall Φ : A -n> Rep, □ (Forall x0 : A, pureR (Forall p : ptr, p |-> F Φ x0 -* p |-> Φ x0)) -* Φ x)); first solve_proper.
+        unshelve instantiate (1:=OfeMor (λ x : A, Forall Φ : A -n> Rep, □ (Forall x0 : A, pureR (Forall p : ptr, p |-> F Φ x0 -* p |-> Φ x0)) -* Φ x)); refine _; first solve_proper.
         iApply "H". }
       { iIntros "!>" (??). (* iSpecialize ("Hi" $! x p). *)
         rewrite !INTERNAL._at_eq /=.
