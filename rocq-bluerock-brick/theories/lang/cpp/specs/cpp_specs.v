@@ -54,15 +54,15 @@ Section with_Σ.
     \pre emp
     \post  emp.
 
-  Succeed Definition _2 : WPP :=
-    \with (I J : mpred) (p : ptr) (R : Qp -> Qp -> nat -> Rep)
+  Fail Definition _2 : WPP :=
+    \with (I J : mpred) (R : Qp -> Qp -> nat -> Rep)
     \prepost emp
     \require True
     \require{x} x = 1
     \arg{n (nn: nat)} "foo" (Vint n)
     \with (z : nat) (a : nat)
     \prepost emp
-    \prepost{q1 q2} p |-> R q1 q2 0
+    \prepost{p q1 q2} p |-> R q1 q2 0
     \pre{q3 q4} p |-> R q3 q4 0
     \pre emp ** Exists y : nat, [| a = 7 |] ** [| y = 3 |] ** I ** J
     \post {x} [ Vint x ] emp.

@@ -15,7 +15,7 @@ Require Import bluerock.lang.cpp.semantics.values.
 Require Import bluerock.lang.cpp.logic.mpred.
 
 Import ChargeNotation.
-Implicit Types (σ : genv) (p : ptr) (o : offset).
+Implicit Types (σ : genv) (o : offset).
 
 (** Representation predicates are implicitly indexed by a location, and should be used to
   * assert properties of the heap
@@ -105,3 +105,9 @@ Module INTERNAL.
     as_Rep (fun p => R.(monPred_at) (p ,, o)).
   Proof. by unfold_at. Qed.
 End INTERNAL.
+
+Section inference_test.
+Context `{Σ : cpp_logic}.
+
+Fail Goal ∀ (R : Rep), ⊢@{mpred} Exists p, p |-> R.
+End inference_test.
