@@ -1,12 +1,12 @@
 #pragma once
 #include "Formatter.hpp"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
 #include <Assert.hpp>
 #include <map>
 
 namespace clang {
 class Decl;
-class Type;
-class NamedDecl;
 }
 
 class Cache {
@@ -16,7 +16,7 @@ public:
 	static constexpr char NAME_PREFIX = 'n';
 
 private:
-	template<typename T, char PREFIX>
+	template<typename T, char PREFIX, typename COMP = std::less<T*>>
 	class NameCache {
 		std::map<T*, name_t> entries_{};
 		name_t next_{1};
@@ -42,8 +42,26 @@ private:
 		}
 	};
 
-	NameCache<const clang::Type, TYPE_PREFIX> types_{};
-	NameCache<const clang::NamedDecl, NAME_PREFIX> names_{};
+	struct TypeComp {
+		bool operator()(const clang::Type* const& lhs,
+						const clang::Type* const& rhs) const {
+			uintptr_t l = reinterpret_cast<uintptr_t>(
+				lhs->getCanonicalTypeInternal().getTypePtr());
+			uintptr_t r = reinterpret_cast<uintptr_t>(
+				rhs->getCanonicalTypeInternal().getTypePtr());
+			return l < r;
+		}
+	};
+	NameCache<const clang::Type, TYPE_PREFIX, TypeComp> types_{};
+	struct NameComp {
+		bool operator()(const clang::NamedDecl* const& lhs,
+						const clang::NamedDecl* const& rhs) const {
+			uintptr_t l = reinterpret_cast<uintptr_t>(lhs->getCanonicalDecl());
+			uintptr_t r = reinterpret_cast<uintptr_t>(rhs->getCanonicalDecl());
+			return l < r;
+		}
+	};
+	NameCache<const clang::NamedDecl, NAME_PREFIX, NameComp> names_{};
 
 public:
 #define PASSTHRU(TY, MP)                                                       \
