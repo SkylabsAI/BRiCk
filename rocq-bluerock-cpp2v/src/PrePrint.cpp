@@ -26,11 +26,12 @@ struct PrePrint :
 	bool Visit(const Type* type) {
 		if (not type)
 			return false;
-		if (not cache_.lookup(type))
+		auto ctype = type->getCanonicalTypeInternal().getTypePtr();
+		if (not cache_.lookup(ctype))
 			if (TypeVisitor<PrePrint, bool>::Visit(type)) {
 				auto name = cache_.fresh(type);
 				type_printer_(Cache::TYPE_PREFIX, name, type);
-				cache_.store(type, name);
+				cache_.store(ctype, name);
 			}
 		return false;
 	}
@@ -83,6 +84,17 @@ struct PrePrint :
 			Visit(i);
 		}
 		return VisitFunctionType(type);
+	}
+	bool
+	VisitTemplateSpecializationType(const TemplateSpecializationType* type) {
+		if (auto td = type->getTemplateName().getAsTemplateDecl())
+			Visit(td);
+		for (auto i : type->template_arguments()) {
+			if (i.getKind() == TemplateArgument::ArgKind::Type) {
+				Visit(i.getAsType());
+			}
+		}
+		return true;
 	}
 	// END TypeVisitor
 
@@ -178,6 +190,9 @@ struct PrePrint :
 		ConstDeclVisitorArgs<PrePrint, void>::Visit(decl);
 	}
 
+	void VisitNamedDecl(const NamedDecl* decl) {
+		VisitName(decl);
+	}
 	void VisitVarDecl(const VarDecl* decl) {
 		Visit(decl->getType());
 	}
@@ -212,10 +227,20 @@ struct PrePrint :
 			return;
 		if (decl == nullptr)
 			return;
-		if (not cache_.lookup(decl)) {
-			auto name = cache_.fresh(decl);
-			name_printer_(Cache::NAME_PREFIX, name, decl);
-			cache_.store(decl, name);
+		auto cdecl = static_cast<const NamedDecl*>(decl->getCanonicalDecl());
+
+		for (auto p = decl->getDeclContext(); not p->isTranslationUnit();) {
+			p = p->getParent();
+			if (auto nd = dyn_cast<NamedDecl>(p)) {
+				VisitName(nd);
+				break;
+			}
+		}
+
+		if (not cache_.lookup(cdecl)) {
+			auto name = cache_.fresh(cdecl);
+			name_printer_(Cache::NAME_PREFIX, name, cdecl);
+			cache_.store(cdecl, name);
 		}
 	}
 
