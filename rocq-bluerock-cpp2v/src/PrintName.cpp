@@ -881,6 +881,7 @@ printName(CoqPrinter& print, const Decl& decl, ClangPrinter& cprint) {
 			guard::ctor _(print, "Nglobal", false);
 			printAtomicName(ctx, decl, print, cprint);
 		} else {
+			// TODO: I am not checking for a reference here.
 			guard::ctor _(print, "Nscoped", false);
 			cprint.printName(print, toDecl(ctx, cprint, loc::of(decl)))
 				<< fmt::nbsp;
@@ -899,6 +900,7 @@ printName(CoqPrinter& print, const Decl& decl, ClangPrinter& cprint) {
 	if (auto cd = dyn_cast<CXXRecordDecl>(&decl)) {
 		if (auto dct = cd->getDescribedClassTemplate()) {
 			guard::ctor _(print, "Ninst", true);
+			// cprint.printName(print, *dct, true);
 			name();
 			print.output() << fmt::nbsp;
 			parameters(dct);
@@ -907,6 +909,7 @@ printName(CoqPrinter& print, const Decl& decl, ClangPrinter& cprint) {
 	} else if (auto fd = dyn_cast<FunctionDecl>(&decl)) {
 		if (auto dct = fd->getDescribedFunctionTemplate()) {
 			guard::ctor _(print, "Ninst", true);
+			// cprint.printName(print, *dct, true);
 			name();
 			print.output() << fmt::nbsp;
 			parameters(dct);
