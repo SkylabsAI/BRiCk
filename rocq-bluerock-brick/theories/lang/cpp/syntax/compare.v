@@ -188,7 +188,6 @@ Section compare_ctor.
 End compare_ctor.
 Notation IsCompareCtor data compare_data CMP := (forall x, IsCompareCtorAt data compare_data CMP x).
 
-
 #[global] Instance const_comparison : Comparison (fun _ _ : () => Eq).
 Proof. by constructor. Qed.
 
@@ -536,6 +535,24 @@ Module List.
       | _ :: _ , nil => Gt
       | x :: xs , y :: ys => compare_lex (compareA x y) (fun _ => compare xs ys)
       end.
+
+    Definition comparison_at_full {T : Type} (cmp : T -> T -> comparison) (x : T) : Prop :=
+      forall y : T,
+        (cmp x y = CompOpp (cmp y x)) /\
+          (forall z c, cmp x y = c -> cmp y z = c -> cmp x z = c).
+
+    Lemma comparison' {CA : forall x, comparison_at_full compareA x}
+      : forall x, comparison_at_full compare x.
+    Proof.
+      induction x; intro y; destruct y; simpl.
+      { }
+
+    Lemma of_comparison_full {T} cmp (pf : @comparison_full T cmp) : Comparison cmp.
+    Proof. constructor; apply pf. Qed.
+    Lemma to_comparison_full {T} cmp (pf : @Comparison T cmp) : comparison_full cmp.
+    Proof. red. intros; split; apply pf. Qed.
+
+
 
     #[global] Instance comparison {CA : Comparison compareA}
       : Comparison compare.
@@ -1303,9 +1320,9 @@ Module temp_arg.
       | Aunsupported msg => compare_ctor compare (Reduce (tag (Aunsupported msg))) (fun _ => Reduce (data (Aunsupported msg)))
       end.
 
-    (* TODO: the current infrastructure does not work with actual inductives.
     Context {CT : Comparison compareT} {CE : Comparison compareE}
       {LT : LeibnizComparison compareT} {LE : LeibnizComparison compareE}.
+    Print comparison_full.
     #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
     Proof using CT CE. solve_data_comparison; solve_comparison_helper. Qed.
 
@@ -1403,8 +1420,22 @@ Module OverloadableOperator.
       | OOCall => compare_tag OOCall
       | OOCoawait => compare_tag OOCoawait
       end.
-  End compare.
 
+    #[local] Instance compare_data_ok : forall p, Comparison (compare_data p).
+    Proof. solve_data_comparison. Qed.
+
+    #[local] Instance compare_data_leibniz : `{LeibnizComparison (compare_data p)}.
+    Proof. solve_data_leibniz. Qed.
+    #[local] Instance is_compare : IsCompareCtor data compare_data compare.
+    Proof. solve_is_compare. Qed.
+    #[local] Instance data_inj : DataInj data.
+    Proof. solve_data_inj. Qed.
+
+    #[global] Instance comparison : Comparison compare.
+    Proof. solve_comparison.  Qed.
+    #[global] Instance leibniz : LeibnizComparison compare.
+    Proof. solve_leibniz. Qed.
+  End compare.
 End OverloadableOperator.
 #[global] Instance OverloadableOperator_compare : Compare OverloadableOperator := OverloadableOperator.compare.
 
