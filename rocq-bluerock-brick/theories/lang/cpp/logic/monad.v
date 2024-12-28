@@ -34,6 +34,7 @@ Delimit Scope free_scope with free.
 Reserved Infix "|*|" (at level 30).
 Reserved Infix ">*>" (at level 30).
 
+Require bedrock.lang.bi.linearity.
 Module FreeTemps.
 
   (* BEGIN FreeTemps.t *)
@@ -177,57 +178,133 @@ existentials.
 Section with_cpp.
   Context `{Σ : cpp_logic}.
 
+  Import linearity.
   (* the monad for expression evaluation *)
+  Record M {t : Type} :=
+    { _val : (t -> FreeTemps.t -> mpred) -> mpred
+    ; _ok : forall K1 K2, (Forall x free, K1 x free -* K2 x free) |-- _val K1 -* _val K2 }.
+  #[global] Arguments M _ : clear implicits.
+  #[local] Coercion _val : M >-> Funclass.
+
   #[program]
-  Definition M_index (t : Type) : biIndex :=
-    {| bi_index_type := t -> FreeTemps.t -> mpred
-     ; bi_index_inhabited := _ |}.
-  Definition M (t : Type) := monPredI (M_index t) mpred.
+  Definition Mproduce (P : mpred) : M unit :=
+    {| _val := fun K => P -* K () FreeTemps.id |}.
+  Next Obligation.
+    intros; simpl. iIntros "X Y P". iApply "X". iApply "Y". iApply "P".
+  Qed.
+  #[program]
+  Definition Mconsume (P : mpred) : M unit :=
+    {| _val := fun K => P ** K () FreeTemps.id |}.
+  Next Obligation.
+    intros; simpl. iIntros "X [$ K]". iApply "X". iApply "K".
+  Qed.
+
+  Definition Massume (P : Prop) : M unit := Mproduce [| P |].
+  Definition Mrequire (P : Prop) : M unit := Mconsume [| P |].
+
+  #[program]
+  Definition Mret {t : Type} (v : t) : M t :=
+    {| _val K := K v FreeTemps.id |}.
+  Next Obligation.
+    intros; simpl. iIntros "X"; iApply "X".
+  Qed.
+
+  #[program]
+  Definition Mmap {t u : Type} (f : t -> u) (m : M t) : M u :=
+    {| _val K := m.(_val) (fun t => K (f t)) |}.
+  Next Obligation.
+    intros; simpl.
+    iIntros "X"; iApply _ok.
+    iIntros (??); iApply "X".
+  Qed.
+
+  #[program] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
+    {| _val K := c (fun v f => k v (fun v' f' => K v' (f' >*> f)%free)) |}.
+  Next Obligation.
+    simpl; intros. iIntros "K"; iApply _ok.
+    iIntros (??). iApply _ok. iIntros (??); iApply "K".
+  Qed.
+  Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
+
+  #[program]
+  Definition Mnd (t : Type) : M t :=
+    {| _val K := ∀ x : t, K x FreeTemps.id |}%I.
+  Next Obligation.
+    simpl; intros.
+    iIntros "K X" (?); iApply "K"; eauto.
+  Qed.
+  #[program]
+  Definition Mangelic (t : Type) : M t :=
+    {| _val K := ∃ x : t, K x FreeTemps.id |}%I.
+  Next Obligation.
+    simpl; intros.
+    iIntros "K X"; iDestruct "X" as (?) "X"; iExists _; iApply "K"; eauto.
+  Qed.
+
+  #[program]
+  Definition Mub {t : Type} : M t :=
+    {| _val _ := False%I |}.
+  Next Obligation. simpl; intros. iIntros "? []". Qed.
+  #[program]
+  Definition Many {t : Type} : M t :=
+    {| _val _ := True%I |}.
+  Next Obligation. simpl; intros; iIntros "? ?". iApply bi.pure_intro; [ trivial | ]. iStopProof. reflexivity. Qed.
+
+  #[program]
+  Definition Merror {t : Type} {ERR : Type} (err : ERR) : M t :=
+    {| _val _ := ERROR err |}.
+  Next Obligation. simpl; intros. rewrite ERROR_False. iIntros "? []". Qed.
+
+  #[program]
+  Definition Mpush_free (f : FreeTemps.t) : M () :=
+    {| _val K := K () f |}.
+  Next Obligation. simpl; intros. iIntros "K"; iApply "K". Qed.
+
+  #[program]
+  Definition Matomically {t} (m : M t) : M t :=
+    {| _val K := |={top,∅}=> m.(_val) (fun r free => |={∅,top}=> K r free) |}%I.
+  Next Obligation.
+    simpl; intros. iIntros "K >X !>"; iRevert "X".
+    iApply _ok. iIntros (??) ">X !>"; iRevert "X"; iApply "K".
+  Qed.
+
+  #[program]
+  Definition Mnon_atomically {t} (m : M t) : M t :=
+    {| _val K := |={top}=> m.(_val) (fun r free => |={top}=> K r free) |}%I.
+  Next Obligation.
+    simpl; intros. iIntros "K >X !>"; iRevert "X".
+    iApply _ok. iIntros (??) ">X !>"; iRevert "X"; iApply "K".
+  Qed.
+
+  #[program]
+  Definition Mfupd (E1 E2 : coPset): M unit :=
+    {| _val K := |={E1,E2}=> K () FreeTemps.id |}%I.
+  Next Obligation.
+    simpl; intros. iIntros "K >X !>"; iRevert "X"; iApply "K".
+  Qed.
+
+  #[program]
+  Definition Mstable : M unit :=
+    {| _val K := |={top}=> K () FreeTemps.id |}%I.
+  Next Obligation.
+    simpl; intros. iIntros "K >X !>"; iRevert "X"; iApply "K".
+  Qed.
+
+  #[program]
+  Definition Mboth {t} (a b : M t) : M t :=
+    {| _val K := a K //\\ b K |}.
+  Next Obligation.
+    simpl; intros. iIntros "K X".
+    iSplit; [ iDestruct "X" as "[X _]" | iDestruct "X" as "[_ X]" ]; iRevert "X"; iApply _ok; iIntros (??); iApply "K".
+  Qed.
 
   (*
-  Definition Mfree_all {t : Set} (m : M t) : M t :=
-    MonPred (I:=M_index t) (fun K => m (fun v free => interp free $ K v FreeTemps.id)) _.
-   *)
-
-  Definition Massume (P : Prop) : M unit :=
-    MonPred (I:=M_index unit) (fun K => [| P |] -* K () FreeTemps.id) _.
-  Definition Mrequire (P : Prop) : M unit :=
-    MonPred (I:=M_index unit) (fun K => [| P |] ** K () FreeTemps.id) _.
-
-  Definition Mret {t : Type} (v : t) : M t :=
-    MonPred (I:=M_index t) (fun K => K v FreeTemps.id) _.
-
-  Definition Mmap {t u : Type} (f : t -> u) (m : M t) : M u :=
-    MonPred (I:=M_index u) (fun K => m (fun t => K (f t))) _.
-
-  Definition Mnd (t : Type) : M t :=
-    MonPred (I:=M_index t) (fun K => ∀ x : t, K x FreeTemps.id)%I _.
-  Definition Mangelic (t : Type) : M t :=
-    MonPred (I:=M_index t) (fun K => ∃ x : t, K x FreeTemps.id)%I _.
-
-  Definition Mproduce (m : mpred) : M unit :=
-    MonPred (I:=M_index unit) (fun K => m -* K () FreeTemps.id) _.
-  Definition Mconsume (m : mpred) : M unit :=
-    MonPred (I:=M_index unit) (fun K => m ** K () FreeTemps.id) _.
-
-  Definition Mub {t : Type} : M t :=
-    MonPred (I:=M_index t) (fun _ => False)%I _.
-  Definition Many {t : Type} : M t :=
-    MonPred (I:=M_index t) (fun _ => True)%I _.
-
-  Definition Merror {t : Type} {ERR : Type} (err : ERR) : M t :=
-    MonPred (I:=M_index t) (fun _ => ERROR err) _.
-
-  Definition Mboth {t} (a b : M t) : M t :=
-    MonPred (I:=M_index t) (fun K => a K //\\ b K) _.
-
   Definition Mread {t} (R : t -> mpred) : M t :=
     MonPred (I:=M_index t) (fun K => Exists v, R v ** (R v -* K v FreeTemps.id)) _.
   Definition Mread_with {TT : tele} (R : TT -t> mpred) : M TT :=
     MonPred (I:=M_index TT) (fun K => ∃.. v, tele_app R v ** (tele_app R v -* K v FreeTemps.id))%I _.
+   *)
 
-  Definition Mpush_free (f : FreeTemps.t) : M () :=
-    MonPred (I:=M_index ()) (fun K => K () f) _.
 
   (** The [Proper]ness relation that should typically be used for [M]. *)
   Definition Mrel T : M T -> M T -> Prop :=
@@ -256,18 +333,22 @@ Section with_cpp.
     iApply "A". iIntros (??); iApply "B".
   Qed.
 
-  Lemma Mmap_frame {T U} c (f : T -> U) :
-    Mframe c c |-- Mframe (Mmap f c) (Mmap f c).
+  Lemma Mmap_frame {T U} c1 c2 (f : T -> U) :
+    Mframe c1 c2 |-- Mframe (Mmap f c1) (Mmap f c2).
   Proof.
     rewrite /Mframe/Mmap; iIntros "A" (??) "B".
     iApply "A". iIntros (??); iApply "B".
   Qed.
 
-  #[local] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
-    MonPred (I:=M_index U) (fun K => c (fun v f => k v (fun v' f' => K v' (f' >*> f)%free))) _.
 
-  Lemma Mbind_frame {T U} c (k : T -> M U) :
-    Mframe c c |-- (Forall x, Mframe (k x) (k x)) -* Mframe (Mbind c k) (Mbind c k).
+  Lemma Mframe_refl {T} (m : M T) : |-- Mframe m m.
+  Proof.
+    rewrite /Mframe/Mrel. iIntros (??) "X".
+    iApply _ok. eauto.
+  Qed.
+
+  Lemma Mbind_frame {T U} c1 c2 (k1 k2 : T -> M U) :
+    Mframe c1 c2 |-- (Forall x, Mframe (k1 x) (k2 x)) -* Mframe (Mbind c1 k1) (Mbind c2 k2).
   Proof.
     rewrite /Mframe/Mbind; iIntros "A B" (??) "C".
     iApply "A". iIntros (??). iApply "B".
@@ -279,10 +360,14 @@ Section with_cpp.
       to encode the stack discipline guaranteed by C++.
       (CITATION NEEDED)
    *)
+  #[program]
   Definition nd_seq {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
-    MonPred (I:=M_index (T * U))
-      (fun K => wp1 (fun v1 f1 => wp2 (fun v2 f2 => K (v1,v2) (f2 >*> f1)%free))
-        //\\ wp2 (fun v2 f2 => wp1 (fun v1 f1 => K (v1,v2) (f1 >*> f2)%free))) _.
+    Mboth (letWP* v1 := wp1 in
+           letWP* v2 := wp2 in
+           Mret (v1,v2))
+          (letWP* v2 := wp2 in
+           letWP* v1 := wp1 in
+           Mret (v1,v2)).
 
   Lemma nd_seq_frame {T U} wp1 wp2 :
     Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@nd_seq T U wp1 wp2) (nd_seq wp1 wp2).
@@ -490,9 +575,14 @@ Section with_cpp.
 
       NOTE: this is like the semantics of argument evaluation in C
    *)
+  #[program]
   Definition Mpar {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
-    MonPred (I:=M_index (T * U))
-      (fun Q => Exists Q1 Q2, wp1 Q1 ** wp2 Q2 ** (Forall v1 v2 f1 f2, Q1 v1 f1 -* Q2 v2 f2 -* Q (v1,v2) (f1 |*| f2)%free)) _.
+    {| _val K := Exists Q1 Q2, wp1 Q1 ** wp2 Q2 ** (Forall v1 v2 f1 f2, Q1 v1 f1 -* Q2 v2 f2 -* K (v1,v2) (f1 |*| f2)%free) |}.
+  Next Obligation.
+    simpl; intros.
+    iIntros "K X". iDestruct "X" as (??) "[? [? Q]]".
+    iExists _, _; iFrame. iIntros (????) "Q1 Q2". iApply "K". iApply ("Q" with "Q1 Q2").
+  Qed.
 
   Lemma Mpar_frame {T U} wp1 wp2 :
     Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@Mpar T U wp1 wp2) (Mpar wp1 wp2).
@@ -517,19 +607,18 @@ Section with_cpp.
     end.
 
   Lemma Mpars_frame_strong {T} : forall (ls : list (M T)) Q Q',
-      ([∗list] m ∈ ls, Mframe m m)%I
       |-- (Forall x y, [| length x = length ls |] -* Q x y -* Q' x y) -*
           (Mpars ls Q) -* (Mpars ls Q').
   Proof.
     induction ls; simpl; intros.
-    - iIntros "_ X"; iApply "X"; eauto.
-    - iIntros "[A AS] K".
+    - iIntros "X"; iApply "X"; eauto.
+    - iIntros "K".
       rewrite /Mmap.
       rewrite /Mpar.
       iIntros "X".
       iDestruct "X" as (??) "(L & R & KK)".
       iExists _, _. iFrame "L".
-      iDestruct (IHls with "AS [] R") as "IH".
+      iDestruct (IHls with "[] R") as "IH".
       2: iFrame "IH".
       { instantiate (1:=fun x y => [| length x = length ls |] ** Q2 x y).
         iIntros (???) "$". eauto. }
@@ -595,7 +684,7 @@ Section with_cpp.
     end.
 
   (* TODO: this is the heterogeneous extension of [eval] *)
-  Parameter heval : forall (eo : evaluation_order.t) {ts} (x : tuple ((fun x => bi_car (M x)) <$> ts)), M (tuple ts).
+  Parameter heval : forall (eo : evaluation_order.t) {ts} (x : tuple (M <$> ts)), M (tuple ts).
 End with_cpp.
 
 Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
