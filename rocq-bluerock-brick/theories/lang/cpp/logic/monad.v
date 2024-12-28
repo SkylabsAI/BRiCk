@@ -186,6 +186,47 @@ Section with_cpp.
   #[global] Arguments M _ : clear implicits.
   #[local] Coercion _val : M >-> Funclass.
 
+  (* The canonical notion of equivalence on [M _]
+
+     This definition doesn't work, but it isn't clear how to fix it.
+     The issues:
+     - if you use pointwise equivalence for the [FreeTemps.t], then you
+       lose the monad laws.
+       You can get the bind-ret and ret-bind laws if you reify the unit,
+       but you can not get bind-bind.
+       **Idea**: use smart constructors that can canonicalize the definitions.
+     - if you use the equivalence on [FreeTemps.t], then you can not prove
+       this relation transitive because it requires that all functions satisfy
+       the equivalence.
+   *)
+  #[global] Instance M_equiv [T] : Equiv (M T) :=
+    (pointwise_relation _ ((≡) ==> (⊣⊢)) ==> (⊣⊢))%signature.
+  #[global] Instance M_equiv_refl {T} : Reflexive (≡@{M T}).
+  Proof.
+    repeat red. intros.
+    split'.
+    { iApply _ok; iIntros (??). rewrite H; eauto. }
+    { iApply _ok; iIntros (??). rewrite H; eauto. }
+  Qed.
+  #[global] Instance M_equiv_sym {T} : Symmetric (≡@{M T}).
+  Proof.
+    do 4 red; simpl; intros. symmetry. apply H.
+    red. red. intros. symmetry. apply H0. symmetry; eauto.
+  Qed.
+  #[global] Instance M_equiv_trans {T} : Transitive (≡@{M T}).
+  Proof.
+    do 4 red; simpl; intros. etrans. eapply H.  eapply H1.
+    eapply H0. red. red.
+    (* NOT PROVABLE! *)
+  Qed.
+
+
+  (* The canonical notation of approximation/entailment
+     Effectively, [a ⊆ b] if all behaviors of [a] are included in [b].
+   *)
+  #[global] Instance M_subseteq {T} : SubsetEq (M T) :=
+    (pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))%signature.
+
   #[program]
   Definition Mproduce (P : mpred) : M unit :=
     {| _val := fun K => P -* K () FreeTemps.id |}.
@@ -225,6 +266,36 @@ Section with_cpp.
     iIntros (??). iApply _ok. iIntros (??); iApply "K".
   Qed.
   Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
+
+  Lemma mret_mbind {T U} v (k : T -> M U) : Mbind (Mret v) k ≡ k v.
+  Proof.
+    red. rewrite /M_equiv/Mbind/Mret/=. red. simpl; intros.
+    split'.
+    { iApply _ok; iIntros (??).
+      rewrite H; eauto. apply FreeTemps.seq_id_unitR. }
+    { iApply _ok; iIntros (??).
+      rewrite H; eauto. apply FreeTemps.seq_id_unitR. }
+  Qed.
+
+  Lemma mbind_mret {T} (m : M T) : Mbind m Mret ≡ m.
+  Proof.
+    red; rewrite /M_equiv/Mbind/Mret; red; simpl; intros.
+    split'.
+    { iApply _ok; iIntros (??).
+      rewrite H. eauto. apply FreeTemps.seq_id_unitL. }
+    { iApply _ok; iIntros (??).
+      rewrite H. eauto. apply FreeTemps.seq_id_unitL. }
+  Qed.
+
+  Lemma mbind_mbind {T U V} (m : M T) (k1 : T -> M U) (k2 : U -> M V) :
+    Mbind m (fun x => Mbind (k1 x) k2) ≡ Mbind (Mbind m k1) k2.
+  Proof.
+    red; rewrite /M_equiv/Mbind; red; simpl; intros.
+    split';
+      iApply _ok; iIntros (??); iApply _ok; iIntros (??); iApply _ok; iIntros (??);
+      rewrite H; eauto.
+    all: by rewrite FreeTemps.seq_assoc.
+  Qed.
 
   #[program]
   Definition Mnd (t : Type) : M t :=
@@ -305,14 +376,6 @@ Section with_cpp.
     MonPred (I:=M_index TT) (fun K => ∃.. v, tele_app R v ** (tele_app R v -* K v FreeTemps.id))%I _.
    *)
 
-
-  (** The [Proper]ness relation that should typically be used for [M]. *)
-  Definition Mrel T : M T -> M T -> Prop :=
-    (pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))%signature.
-  (** This relation is _weaker_ because it requires the argument to respect [FreeTemps.t_eq]. *)
-  Definition Mequiv T : M T -> M T -> Prop :=
-    (pointwise_relation _ (FreeTemps.t_eq ==> (⊣⊢)) ==> (⊣⊢))%signature.
-
   Definition Mframe {T} (a b : M T) : mpred :=
     Forall Q Q', (Forall x y, Q x y -* Q' x y) -* a Q -* b Q'.
 
@@ -343,7 +406,7 @@ Section with_cpp.
 
   Lemma Mframe_refl {T} (m : M T) : |-- Mframe m m.
   Proof.
-    rewrite /Mframe/Mrel. iIntros (??) "X".
+    rewrite /Mframe. iIntros (??) "X".
     iApply _ok. eauto.
   Qed.
 
