@@ -17,7 +17,7 @@ Require Import bedrock.lang.cpp.semantics.
 Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.heap_pred.
 Require Import bedrock.lang.cpp.logic.translation_unit.
-Require Import bedrock.lang.cpp.logic.monad.
+Require Export bedrock.lang.cpp.logic.monad.
 
 Require Import bedrock.lang.bi.errors.
 
@@ -113,11 +113,38 @@ Section with_cpp.
   Parameter wp_lval
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
   (* END wp_lval *)
+ 
+  Notation SupportsFupd x := (Mnon_atomically x ⊆ x) (only parsing).
+  Notation RefResult t x :=
+    ((letWP* v := x in
+      letWP* '() := Mproduce (reference_to t v) in
+      Mret v) ⊆ x) (only parsing).
+
+  Notation TypedResult t x :=
+    ((letWP* v := x in
+        letWP* '() := Mproduce (has_type v t) in
+        Mret v) ⊆ x) (only parsing).
 
 
-  Axiom wp_lval_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_lval tu ρ e (fun v free => |={top}=> Q v free))
-    ⊢ wp_lval tu ρ e Q.
+  (*
+  Require Import bedrock.lang.cpp.syntax.typed.
+  Definition has_decltype (t : decltype) (v : val) : mpred :=
+    match decltype.to_valcat t with
+    | Prvalue => _
+    | Lvalue => reference_to
+
+  Class TypedEval tu (dt : type) e {T} (wp : M T):=
+    { well_typed_result : (letWP* r := wp in
+                           letWP* '() := Mproduce (match trace.runO $ decltype.of_expr tu e with
+                                                   | None => False%I
+                                                   | Some dt =>
+                                                   end) in
+
+                           Mret r) ⊆ wp
+    ; well_typed_expr : (letWP* '() := Massume (trace.runO (decltype.of_expr tu e) = Some dt) in wp) ⊆ wp }.
+   *)
+
+  Axiom wp_lval_shift : forall {σ:genv} tu ρ e, SupportsFupd (wp_lval tu ρ e).
 
   (* Proposal (the same thing for [wp_xval])
      - this would require [has_type (Tref $ Tnamed x) (Vref r)] ~ [strict_valid_ptr r ** [| aligned (Tnamed x) .. |]]
@@ -153,19 +180,19 @@ Section with_cpp.
        2. there is a special rule for [has_type  (Vref r) (Tref (Tfunction ..))] that ignores this
      -
    *)
-  Axiom wp_lval_well_typed : forall {σ:genv} tu ρ e Q,
-      wp_lval tu ρ e (fun v free => reference_to (type_of e) v -* Q v free)
-    ⊢ wp_lval tu ρ e Q.
+  Axiom wp_lval_well_typed : forall {σ:genv} tu ρ e, RefResult (type_of e) (wp_lval tu ρ e).
 
-  Axiom wp_lval_models : forall {σ:genv} tu ρ e Q,
-      denoteModule tu -* wp_lval tu ρ e Q
-    ⊢ wp_lval tu ρ e Q.
+  Class WithCode {σ : genv} {T} (m : translation_unit -> M T) : Prop :=
+    { carries_code : forall tu, (letWP* '() := Mproduce (denoteModule (σ:=σ) tu) in m tu) ⊆ m tu
+    ; weakening : forall tu1 tu2, sub_module tu1 tu2 -> |-- Mframe (m tu1) (m tu2)
+    }.
 
-  Axiom wp_lval_frame :
-    forall σ tu1 tu2 ρ e,
-      sub_module tu1 tu2 ->
-      |-- Mframe (@wp_lval σ tu1 ρ e) (@wp_lval σ tu2 ρ e).
+  Axiom wp_lval_models : forall {σ:genv} ρ e, WithCode (fun tu => wp_lval tu ρ e).
 
+  Instance M_Dist {T} : Dist (M T) :=
+    fun n a b => (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)%signature a.(_val) b.(_val).
+
+  (*
   Section wp_lval_proper.
     Context {σ : genv}.
 
@@ -226,6 +253,7 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_lval.
     Qed.
   End wp_lval.
+  *)
 
   (** * prvalue *)
   (*
@@ -395,25 +423,15 @@ Section with_cpp.
   Parameter wp_operand : forall {resolve:genv}, translation_unit -> region -> Expr -> M val.
   (* END wp_operand *)
 
-  Axiom wp_operand_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_operand tu ρ e (fun v free => |={top}=> Q v free))
-    ⊢ wp_operand (resolve:=σ) tu ρ e Q.
+  Axiom wp_operand_shift : forall {σ:genv} tu ρ e, SupportsFupd (wp_operand (resolve:=σ) tu ρ e).
 
-  Axiom wp_operand_models : forall {σ:genv} tu ρ e Q,
-      denoteModule tu -* wp_operand tu ρ e Q
-    ⊢ wp_operand tu ρ e Q.
-
-  Axiom wp_operand_frame :
-    forall σ tu1 tu2 ρ e k1 k2,
-      sub_module tu1 tu2 ->
-      Forall v f, k1 v f -* k2 v f |-- @wp_operand σ tu1 ρ e k1 -* @wp_operand σ tu2 ρ e k2.
+  Axiom wp_operand_models : forall {σ:genv} ρ e, WithCode (fun tu => wp_operand tu ρ e).
 
   (** C++ evaluation semantics guarantees that all expressions of type [t] that
       evaluate without UB evaluate to a well-typed value of type [t] *)
-  Axiom wp_operand_well_typed : forall {σ : genv} tu ρ e Q,
-        wp_operand tu ρ e (fun v frees => has_type v (type_of e) -* Q v frees)
-    |-- wp_operand tu ρ e Q.
+  Axiom wp_operand_well_typed : forall {σ : genv} tu ρ e, TypedResult (type_of e) (wp_operand tu ρ e).
 
+  (*
   Section wp_operand_proper.
     Context {σ : genv}.
 
@@ -474,6 +492,7 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_operand.
     Qed.
   End wp_operand.
+  *)
 
   (** ** boolean operands *)
 
@@ -490,17 +509,17 @@ Section with_cpp.
   #[global] Arguments wp_test /.
 
   #[global] Instance wp_test_ne : forall σ n,
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_test σ).
+    Proper (eq ==> eq ==> eq ==> dist n) (@wp_test σ).
   Proof. (* solve_proper. Qed. *) Admitted.
 
-  Lemma wp_test_frame {σ : genv} tu ρ test (Q Q' : _ -> _ -> epred) :
-    Forall b free, Q b free -* Q' b free |-- wp_test tu ρ test Q -* wp_test tu ρ test Q'.
-  Proof.
-    rewrite /wp_test.
+  Lemma wp_test_frame {σ : genv} tu ρ test :
+    |-- Mframe (wp_test tu ρ test) (wp_test tu ρ test).
+  Proof. (*
+    rewrite /wp_test/Mframe.
     iIntros "Q".
     iApply wp_operand_frame; first reflexivity.
     iIntros (??); case_match; eauto.
-  Qed.
+  Qed. *) Admitted.
 
   (** * xvalues *)
 
@@ -508,14 +527,11 @@ Section with_cpp.
   Parameter wp_xval
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
 
-  Axiom wp_xval_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_xval tu ρ e (fun v free => |={top}=> Q v free))
-    ⊢ wp_xval tu ρ e Q.
+  Axiom wp_xval_shift : forall {σ:genv} tu ρ e, SupportsFupd (wp_xval tu ρ e).
 
-  Axiom wp_xval_models : forall {σ:genv} tu ρ e Q,
-      denoteModule tu -* wp_xval tu ρ e Q
-    ⊢ wp_xval tu ρ e Q.
+  Axiom wp_xval_models : forall {σ:genv} ρ e, WithCode (fun tu => wp_xval tu ρ e).
 
+  (*
   Axiom wp_xval_frame : forall σ tu1 tu2 ρ e,
       sub_module tu1 tu2 ->
       |-- Mframe (@wp_xval σ tu1 ρ e) (@wp_xval σ tu2 ρ e).
@@ -580,6 +596,7 @@ Section with_cpp.
       rewrite/AddModal. by rewrite fupd_frame_r bi.wand_elim_r fupd_wp_xval.
     Qed.
   End wp_xval.
+  *)
 
   (* Opaque wrapper of [False]: this represents a [False] obtained by a [ValCat] mismatch in [wp_glval]. *)
   Definition wp_glval_mismatch {resolve : genv} (r : region) (vc : ValCat) (e : Expr)
@@ -599,8 +616,7 @@ Section with_cpp.
     end%I.
 
   #[global] Instance wp_glval_ne σ n :
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
-             (@wp_glval σ).
+    Proper (eq ==> eq ==> eq ==> dist n) (@wp_glval σ).
   Proof.
     do 12 intro. rewrite /wp_glval; subst.
     case_match; try solve_proper.
@@ -619,19 +635,20 @@ Section with_cpp.
   Lemma wp_glval_frame {σ : genv} tu1 tu2 r e :
     sub_module tu1 tu2 ->
     |-- Mframe (wp_glval tu1 r e) (wp_glval tu2 r e).
-  Proof.
+  Proof. (*
     rewrite /wp_glval. case_match.
     - by apply wp_lval_frame.
     - auto. admit.
     - by apply wp_xval_frame.
-  (* Qed. *) Admitted.
+    Qed. *) Admitted.
 
   #[global] Instance Proper_wp_glval σ :
-    Proper (sub_module ==> eq ==> eq ==> Mrel _) (@wp_glval σ).
+    Proper (sub_module ==> eq ==> eq ==> (⊆)) (@wp_glval σ).
   Proof.
     solve_proper_prepare. case_match; try solve_proper.
   (* Qed. *) Admitted.
 
+  (*
   Section wp_glval.
     Context {σ : genv} (tu : translation_unit) (ρ : region).
     #[local] Notation wp_glval := (wp_glval tu ρ) (only parsing).
@@ -691,6 +708,7 @@ Section with_cpp.
     Qed.
 
   End wp_glval.
+  *)
 
   (** Discarded values.
 
@@ -720,8 +738,7 @@ Section with_cpp.
       | Xvalue => Mmap (fun _ => tt) $ wp_xval tu ρ e
       end%I.
 
-    Lemma fupd_wp_discard e Q :
-      (|={top}=> wp_discard e Q) |-- wp_discard e Q.
+    Lemma fupd_wp_discard e : SupportsFupd (wp_discard e).
     Proof.
       rewrite /wp_discard. repeat case_match; try iIntros  ">$".
     Admitted.
