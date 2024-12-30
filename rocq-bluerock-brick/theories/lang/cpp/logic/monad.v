@@ -37,16 +37,216 @@ Reserved Infix ">*>" (at level 30).
 Require bedrock.lang.bi.linearity.
 Module FreeTemps.
 
-  (* BEGIN FreeTemps.t *)
-  Inductive t : Set :=
-  | id (* = fun x => x *)
-  | delete (ty : decltype) (p : ptr) (* = delete_val ty p *)
-           (* ^^ this type has qualifiers but is otherwise a runtime type *)
-  | delete_va (va : list (type * ptr)) (p : ptr)
-  | seq (f g : t) (* = fun x => f $ g x *)
-  | par (f g : t) (* = fun x => Exists Qf Qg, f Qf ** g Qg ** (Qf -* Qg -* x) *)
-  .
-  (* END FreeTemps.t *)
+  Module raw.
+    (* BEGIN FreeTemps.t *)
+    Inductive t : Set :=
+    | id (* = fun x => x *)
+    | delete (ty : decltype) (p : ptr) (* = delete_val ty p *)
+            (* ^^ this type has qualifiers but is otherwise a runtime type *)
+    | delete_va (va : list (type * ptr)) (p : ptr)
+    | seq (f g : t) (* = fun x => f $ g x *)
+    | par (f g : t) (* = fun x => Exists Qf Qg, f Qf ** g Qg ** (Qf -* Qg -* x) *)
+    .
+    (* END FreeTemps.t *)
+
+    (*
+    Fixpoint seq (f g : t) : t :=
+      match f with
+      | seq_ f f' => seq_ f (seq f' g)
+      | id => g
+      | _ => match g with
+            | id => f
+            | _ => seq_ f g
+            end
+      end.
+    Lemma seq_idL a : seq id a = a.
+    Proof. done. Qed.
+    Lemma seq_idR a : seq a id = a.
+    Proof. induction a; simpl; intros; eauto. rewrite IHa2. done. Qed.
+    Lemma seq_assoc : forall a b c, seq (seq a b) c = seq a (seq b c).
+    Proof.
+      induction a; simpl; intros; eauto.
+    *)
+
+    #[local] Declare Scope raw_scope.
+    Module Import notations.
+      Bind Scope raw_scope with t.
+      Notation "1" := id : raw_scope.
+      Infix ">*>" := seq : raw_scope.
+      Infix "|*|" := par : raw_scope.
+    End notations.
+    #[local] Open Scope raw_scope.
+
+    Inductive t_equiv : Equiv t :=
+    | refl l : l ≡ l
+    | sym l r : l ≡ r -> r ≡ l
+    | trans a b c : a ≡ b -> b ≡ c -> a ≡ c
+
+  (*
+    | delete_ref ty p : delete (Tref ty) p ≡ delete (Trv_ref ty) p
+  *)
+
+    | seqA x y z : x >*> (y >*> z) ≡ (x >*> y) >*> z
+    | seq_id_unitL l : 1 >*> l ≡ l
+    | seq_id_unitR l : l >*> 1 ≡ l
+    | seq_proper_ : ∀ {a b}, a ≡ b -> ∀ {c d}, c ≡ d -> a >*> c ≡ b >*> d
+
+    | parC l r : l |*| r ≡ r |*| l
+    | parA x y z : x |*| (y |*| z) ≡ (x |*| y) |*| z
+    | par_id_unitL l : 1 |*| l ≡ l
+    | par_proper_ : ∀ {a b}, a ≡ b -> ∀ {c d}, c ≡ d -> a |*| c ≡ b |*| d
+    .
+    Notation t_eq := (≡@{t}) (only parsing).
+    Existing Instance t_equiv.
+
+    Fixpoint seq_canon (a b : t) {struct a} : t :=
+      match a , b with
+      | id , b => b
+      | a , id => a
+      | seq x y , b => seq_canon x (seq_canon y b)
+      | _ , _ => seq a b
+      end.
+
+    (* assume that this is canonical *)
+    Parameter ptr_cmp : ptr -> ptr -> comparison.
+    Print comparison.
+
+    Parameter t_cmp : forall (a b : t), comparison.
+    (* This is just the canonical construction
+      match a , b with
+      | id , id => Eq
+      | id , _ => Lt
+      | delete _ _ , id => Gt
+      | delete ty p , delete ty' p' => _
+      | delete _ _ , _ => Lt
+      | delete_va _ _ , (id | delete _ _) => Gt
+      | delete_va tys p , delete_va tys' p' => _
+      | delete_va _ _ , _ => Lt
+      | seq _ _ , (id | delete _ _ | delete_va _ _) => Gt
+      | seq l r , seq l' r' => _
+      | seq _ _ , _ => Lt
+      | par _ _ , (id | delete _ _ | delete_va _ _ | seq _ _) => Lt
+      | par l r , par l' r' => _
+      end.
+      *)
+
+    Fixpoint gather_pars (a : t) : list t :=
+      match a with
+      | id => []
+      | par a b => gather_pars a ++ gather_pars b
+      | _ => [a]
+      end.
+
+    Require stdpp.sorting.
+    Fixpoint list_to_t (ls : list t) : t :=
+      match ls with
+      | nil => id
+      | l :: nil => l
+      | l :: ls => par l (list_to_t ls)
+      end.
+
+    (* NOTE: I can assume that [a] and [b] are canonical, so
+      I need to merge them using the canonical ordering.
+    *)
+    Instance X: forall a b : t, Decision (t_cmp a b = Lt).
+    Admitted.
+    Definition par_canon (a b : t) : t :=
+      list_to_t $ @sorting.merge_sort t (fun a b => t_cmp a b = Lt) _ (gather_pars a ++ gather_pars b).
+
+    Fixpoint canon (a : t) {struct a} : t :=
+      match a with
+      | seq a b => seq_canon (canon a) (canon b)
+      | par a b => par_canon (canon a) (canon b)
+      | _ => a
+      end.
+
+    Lemma seq_canon_unitL a : seq_canon id a = a.
+    Proof. Admitted.
+    Lemma seq_canon_unitR a : seq_canon a id = a.
+    Proof. Admitted.
+
+    Lemma seq_canon_is_id a : forall b, seq_canon a b = id -> a = id /\ b = id.
+    Proof.
+      induction a; simpl; intros.
+      { destruct b; simpl; intros; eauto; try congruence. }
+      { destruct b; congruence. }
+      { destruct b; congruence. }
+      { destruct b; try congruence;
+          apply IHa1 in H; destruct H; apply IHa2 in H0; destruct H0; congruence. }
+      { destruct b; congruence. }
+    Qed.
+
+    Lemma canon_canonical : forall a b : t, a ≡ b -> canon a = canon b.
+    Proof. (*
+      induction 1; simpl; eauto.
+      { (* trans *) etrans; eauto. }
+      { (* seqA *)
+        generalize (canon x), (canon y), (canon z). clear.
+        induction t0; simpl; eauto.
+        { destruct t0; simpl; eauto; solve [ destruct t0; simpl; eauto ]. }
+        { destruct t0; simpl; eauto; solve [ destruct t0; simpl; eauto ]. }
+        { intros.
+          case_match.
+          { apply seq_canon_is_id in H.  destruct H.  subst. rewrite seq_canon_unitR.  done. }
+          { case_match; simpl in *; subst; eauto; rewrite -IHt0_1; f_equal.
+            { destruct t1; inversion H; subst; eauto. rewrite seq_canon_unitR. done. }
+            { destruct t1; inversion H; subst; eauto. }
+            { destruct t1; inversion H; subst; eauto; rewrite -IHt0_2; f_equal. }
+            { destruct t1; inversion H; subst; eauto. } }
+          { destruct t0; simpl in *; subst; eauto; try (rewrite -IHt0_1 -IHt0_2; f_equal; f_equal);
+              destruct t1; inversion H; subst; eauto. }
+          { destruct t0; simpl in *; subst; eauto; try (rewrite -IHt0_1 -IHt0_2; f_equal; f_equal);
+              destruct t1; inversion H; subst; eauto. }
+          { destruct t0; simpl in *; subst; eauto; try (rewrite -IHt0_1 -IHt0_2; f_equal; f_equal);
+              destruct t1; inversion H; subst; eauto. } }
+        admit. }
+      { rewrite seq_canon_unitR. done. }
+      { by f_equal. }
+      { (* parC -- this is problematic because there is no canonical ordering to the unit elements without a total ordering on [ptr] *)
+        admit.
+      }
+      { (* parA *)
+        admit.
+      }
+      { admit. } *)
+    Admitted.
+
+    #[global] Instance t_dec : EqDecision t.
+    Admitted.
+
+    #[global] Existing Instance t_equiv.
+    #[global] Instance t_equivalence : Equivalence t_eq :=
+      Build_Equivalence _ refl sym trans.
+
+    #[global] Instance seq_assoc : Assoc equiv seq := seqA.
+    #[global] Instance seq_left_id : LeftId equiv id seq := seq_id_unitL.
+    #[global] Instance seq_right_id : RightId equiv id seq := seq_id_unitR.
+    #[global] Instance seq_proper : Proper (t_eq ==> t_eq ==> t_eq) seq := @seq_proper_.
+
+    #[global] Instance par_comm : Comm equiv par := parC.
+    #[global] Instance par_left_id : LeftId equiv id par := par_id_unitL.
+    #[global] Instance par_right_id : RightId equiv id par.
+    Proof. intros x. by rewrite comm left_id. Qed.
+    #[global] Instance par_proper : Proper (t_eq ==> t_eq ==> t_eq) par := @par_proper_.
+
+  End raw.
+
+  Record t :=
+    { r : raw.t ; _pf : if bool_decide (raw.canon r = r) then True else False }.
+
+  #[program]
+  Definition id : t :=
+    {| r := raw.id |}.
+  Next Obligation. Admitted.
+
+  Definition seq (a b : t) : t.
+  Admitted.
+  Definition par (a b : t) : t.
+  Admitted.
+  Definition delete (ty : type) (p : ptr) : t.
+  Admitted.
+  Definition delete_va (ty : list (type * ptr)) (p : ptr) : t.
+  Admitted.
 
   Module Import notations.
     Bind Scope free_scope with t.
@@ -56,59 +256,38 @@ Module FreeTemps.
   End notations.
   #[local] Open Scope free_scope.
 
-  Inductive t_equiv : Equiv t :=
-  | refl l : l ≡ l
-  | sym l r : l ≡ r -> r ≡ l
-  | trans a b c : a ≡ b -> b ≡ c -> a ≡ c
-
-  | delete_ref ty p : delete (Tref ty) p ≡ delete (Trv_ref ty) p
-
-  | seqA x y z : x >*> (y >*> z) ≡ (x >*> y) >*> z
-  | seq_id_unitL l : 1 >*> l ≡ l
-  | seq_id_unitR l : l >*> 1 ≡ l
-  | seq_proper_ : ∀ {a b}, a ≡ b -> ∀ {c d}, c ≡ d -> a >*> c ≡ b >*> d
-
-  | parC l r : l |*| r ≡ r |*| l
-  | parA x y z : x |*| (y |*| z) ≡ (x |*| y) |*| z
-  | par_id_unitL l : 1 |*| l ≡ l
-  | par_proper_ : ∀ {a b}, a ≡ b -> ∀ {c d}, c ≡ d -> a |*| c ≡ b |*| d
-  .
-  Notation t_eq := (≡@{t}) (only parsing).
-
-  #[global] Existing Instance t_equiv.
-  #[global] Instance t_equivalence : Equivalence t_eq :=
-    Build_Equivalence _ refl sym trans.
-
-  #[global] Instance seq_assoc : Assoc equiv seq := seqA.
-  #[global] Instance seq_left_id : LeftId equiv id seq := seq_id_unitL.
-  #[global] Instance seq_right_id : RightId equiv id seq := seq_id_unitR.
-  #[global] Instance seq_proper : Proper (t_eq ==> t_eq ==> t_eq) seq := @seq_proper_.
-
-  #[global] Instance par_comm : Comm equiv par := parC.
-  #[global] Instance par_left_id : LeftId equiv id par := par_id_unitL.
-  #[global] Instance par_right_id : RightId equiv id par.
-  Proof. intros x. by rewrite comm left_id. Qed.
-  #[global] Instance par_proper : Proper (t_eq ==> t_eq ==> t_eq) par := @par_proper_.
 
   (**
-  [pars ls] is the [FreeTemp] representing the destruction of each
-  element in [ls] *in non-deterministic order*.
-  *)
+    [pars ls] is the [FreeTemp] representing the destruction of each
+    element in [ls] *in non-deterministic order*.
+   *)
   Definition pars : list t -> t := foldr par 1.
 
   (**
-  [seqs ls] is the [FreeTemp] representing the destruction of each
-  element in [ls] sequentially from left-to-right, i.e. the first
-  element in the list is run first.
-  *)
+    [seqs ls] is the [FreeTemp] representing the destruction of each
+    element in [ls] sequentially from left-to-right, i.e. the first
+    element in the list is run first.
+   *)
   Definition seqs : list t -> t := foldr seq 1.
 
   (**
-  [seqs_rev ls] is the [FreeTemp] representing the destruction of each
-  element in [ls] sequentially from right-to-left, i.e. the first
-  element in the list is destructed last.
-  *)
+    [seqs_rev ls] is the [FreeTemp] representing the destruction of each
+    element in [ls] sequentially from right-to-left, i.e. the first
+    element in the list is destructed last.
+   *)
   Definition seqs_rev : list t -> t := foldl (fun a b => seq b a) 1.
+
+  #[global] Instance seq_assoc : Assoc eq seq. Proof. Admitted.
+  #[global] Instance seq_left_id : LeftId eq id seq. Proof. Admitted.
+  #[global] Instance seq_right_id : RightId eq id seq. Proof. Admitted.
+  #[global] Instance seq_proper : Proper (eq ==> eq ==> eq) seq. Proof. Admitted.
+
+  #[global] Instance par_comm : Comm eq par. Proof. Admitted.
+  #[global] Instance par_left_id : LeftId eq id par. Proof. Admitted.
+  #[global] Instance par_right_id : RightId eq id par.
+  Proof. intros x. by rewrite par_comm par_left_id. Qed.
+  #[global] Instance par_proper : Proper (eq ==> eq ==> eq) par. Proof. Admitted.
+
 End FreeTemps.
 Export FreeTemps.notations.
 Notation FreeTemps := FreeTemps.t.
@@ -200,7 +379,7 @@ Section with_cpp.
        the equivalence.
    *)
   #[global] Instance M_equiv [T] : Equiv (M T) :=
-    (pointwise_relation _ ((≡) ==> (⊣⊢)) ==> (⊣⊢))%signature.
+    (pointwise_relation _ (pointwise_relation _ (⊣⊢)) ==> (⊣⊢))%signature.
   #[global] Instance M_equiv_refl {T} : Reflexive (≡@{M T}).
   Proof.
     repeat red. intros.
@@ -211,37 +390,13 @@ Section with_cpp.
   #[global] Instance M_equiv_sym {T} : Symmetric (≡@{M T}).
   Proof.
     do 4 red; simpl; intros. symmetry. apply H.
-    red. red. intros. symmetry. apply H0. symmetry; eauto.
+    red. red. intros. symmetry. apply H0.
   Qed.
   #[global] Instance M_equiv_trans {T} : Transitive (≡@{M T}).
   Proof.
     do 4 red; simpl; intros. etrans. eapply H.  eapply H1.
-    eapply H0. red. red.
-    (* NOT PROVABLE! *)
+    eapply H0. red. red. intros. reflexivity.
   Qed.
-
-
-  (* The canonical notation of approximation/entailment
-     Effectively, [a ⊆ b] if all behaviors of [a] are included in [b].
-   *)
-  #[global] Instance M_subseteq {T} : SubsetEq (M T) :=
-    (pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))%signature.
-
-  #[program]
-  Definition Mproduce (P : mpred) : M unit :=
-    {| _val := fun K => P -* K () FreeTemps.id |}.
-  Next Obligation.
-    intros; simpl. iIntros "X Y P". iApply "X". iApply "Y". iApply "P".
-  Qed.
-  #[program]
-  Definition Mconsume (P : mpred) : M unit :=
-    {| _val := fun K => P ** K () FreeTemps.id |}.
-  Next Obligation.
-    intros; simpl. iIntros "X [$ K]". iApply "X". iApply "K".
-  Qed.
-
-  Definition Massume (P : Prop) : M unit := Mproduce [| P |].
-  Definition Mrequire (P : Prop) : M unit := Mconsume [| P |].
 
   #[program]
   Definition Mret {t : Type} (v : t) : M t :=
@@ -272,9 +427,9 @@ Section with_cpp.
     red. rewrite /M_equiv/Mbind/Mret/=. red. simpl; intros.
     split'.
     { iApply _ok; iIntros (??).
-      rewrite H; eauto. apply FreeTemps.seq_id_unitR. }
+      rewrite H; eauto. rewrite FreeTemps.seq_right_id. eauto. }
     { iApply _ok; iIntros (??).
-      rewrite H; eauto. apply FreeTemps.seq_id_unitR. }
+      rewrite H; eauto. rewrite FreeTemps.seq_right_id. eauto. }
   Qed.
 
   Lemma mbind_mret {T} (m : M T) : Mbind m Mret ≡ m.
@@ -282,9 +437,9 @@ Section with_cpp.
     red; rewrite /M_equiv/Mbind/Mret; red; simpl; intros.
     split'.
     { iApply _ok; iIntros (??).
-      rewrite H. eauto. apply FreeTemps.seq_id_unitL. }
+      rewrite H FreeTemps.seq_left_id; eauto. }
     { iApply _ok; iIntros (??).
-      rewrite H. eauto. apply FreeTemps.seq_id_unitL. }
+      rewrite H FreeTemps.seq_left_id; eauto. }
   Qed.
 
   Lemma mbind_mbind {T U V} (m : M T) (k1 : T -> M U) (k2 : U -> M V) :
@@ -294,8 +449,32 @@ Section with_cpp.
     split';
       iApply _ok; iIntros (??); iApply _ok; iIntros (??); iApply _ok; iIntros (??);
       rewrite H; eauto.
-    all: by rewrite FreeTemps.seq_assoc.
+    all: rewrite FreeTemps.seq_assoc; eauto.
   Qed.
+
+  (* The canonical notation of approximation/entailment
+     Effectively, [a ⊆ b] if all behaviors of [a] are included in [b].
+   *)
+  #[global] Instance M_subseteq {T} : SubsetEq (M T) :=
+    (pointwise_relation _ (pointwise_relation _ (⊢)) ==> (⊢))%signature.
+
+  #[program]
+    Definition Mproduce (P : mpred) : M unit :=
+    {| _val := fun K => P -* K () FreeTemps.id |}.
+  Next Obligation.
+    intros; simpl. iIntros "X Y P". iApply "X". iApply "Y". iApply "P".
+  Qed.
+  #[program]
+    Definition Mconsume (P : mpred) : M unit :=
+    {| _val := fun K => P ** K () FreeTemps.id |}.
+  Next Obligation.
+    intros; simpl. iIntros "X [$ K]". iApply "X". iApply "K".
+  Qed.
+
+  Definition Massume (P : Prop) : M unit := Mproduce [| P |].
+  Definition Mrequire (P : Prop) : M unit := Mconsume [| P |].
+
+
 
   #[program]
   Definition Mnd (t : Type) : M t :=
