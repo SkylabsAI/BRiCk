@@ -37,7 +37,6 @@ Reserved Infix ">*>" (at level 30).
 Require bedrock.lang.bi.linearity.
 Module FreeTemps.
 
-  Module raw.
     (* BEGIN FreeTemps.t *)
     Inductive t : Set :=
     | id (* = fun x => x *)
@@ -68,14 +67,14 @@ Module FreeTemps.
       induction a; simpl; intros; eauto.
     *)
 
-    #[local] Declare Scope raw_scope.
+    #[local] Declare Scope free_scope.
     Module Import notations.
-      Bind Scope raw_scope with t.
-      Notation "1" := id : raw_scope.
-      Infix ">*>" := seq : raw_scope.
-      Infix "|*|" := par : raw_scope.
+      Bind Scope free_scope with t.
+      Notation "1" := id : free_scope.
+      Infix ">*>" := seq : free_scope.
+      Infix "|*|" := par : free_scope.
     End notations.
-    #[local] Open Scope raw_scope.
+    #[local] Open Scope free_scope.
 
     Inductive t_equiv : Equiv t :=
     | refl l : l ≡ l
@@ -214,6 +213,15 @@ Module FreeTemps.
     #[global] Instance t_dec : EqDecision t.
     Admitted.
 
+    Class IsCanonical (free : t) : Prop :=
+      is_canon : Is_true (bool_decide (free = canon free)).
+
+    #[global] Instance id_IsCanonical : IsCanonical id.
+    Proof. Admitted.
+
+    #[global] Instance canon_IsCanonical free : IsCanonical (canon free).
+    Proof. Admitted.
+
     #[global] Existing Instance t_equiv.
     #[global] Instance t_equivalence : Equivalence t_eq :=
       Build_Equivalence _ refl sym trans.
@@ -228,66 +236,6 @@ Module FreeTemps.
     #[global] Instance par_right_id : RightId equiv id par.
     Proof. intros x. by rewrite comm left_id. Qed.
     #[global] Instance par_proper : Proper (t_eq ==> t_eq ==> t_eq) par := @par_proper_.
-
-  End raw.
-
-  Record t :=
-    { r : raw.t ; _pf : if bool_decide (raw.canon r = r) then True else False }.
-
-  #[program]
-  Definition id : t :=
-    {| r := raw.id |}.
-  Next Obligation. Admitted.
-
-  Definition seq (a b : t) : t.
-  Admitted.
-  Definition par (a b : t) : t.
-  Admitted.
-  Definition delete (ty : type) (p : ptr) : t.
-  Admitted.
-  Definition delete_va (ty : list (type * ptr)) (p : ptr) : t.
-  Admitted.
-
-  Module Import notations.
-    Bind Scope free_scope with t.
-    Notation "1" := id : free_scope.
-    Infix ">*>" := seq : free_scope.
-    Infix "|*|" := par : free_scope.
-  End notations.
-  #[local] Open Scope free_scope.
-
-
-  (**
-    [pars ls] is the [FreeTemp] representing the destruction of each
-    element in [ls] *in non-deterministic order*.
-   *)
-  Definition pars : list t -> t := foldr par 1.
-
-  (**
-    [seqs ls] is the [FreeTemp] representing the destruction of each
-    element in [ls] sequentially from left-to-right, i.e. the first
-    element in the list is run first.
-   *)
-  Definition seqs : list t -> t := foldr seq 1.
-
-  (**
-    [seqs_rev ls] is the [FreeTemp] representing the destruction of each
-    element in [ls] sequentially from right-to-left, i.e. the first
-    element in the list is destructed last.
-   *)
-  Definition seqs_rev : list t -> t := foldl (fun a b => seq b a) 1.
-
-  #[global] Instance seq_assoc : Assoc eq seq. Proof. Admitted.
-  #[global] Instance seq_left_id : LeftId eq id seq. Proof. Admitted.
-  #[global] Instance seq_right_id : RightId eq id seq. Proof. Admitted.
-  #[global] Instance seq_proper : Proper (eq ==> eq ==> eq) seq. Proof. Admitted.
-
-  #[global] Instance par_comm : Comm eq par. Proof. Admitted.
-  #[global] Instance par_left_id : LeftId eq id par. Proof. Admitted.
-  #[global] Instance par_right_id : RightId eq id par.
-  Proof. intros x. by rewrite par_comm par_left_id. Qed.
-  #[global] Instance par_proper : Proper (eq ==> eq ==> eq) par. Proof. Admitted.
-
 End FreeTemps.
 Export FreeTemps.notations.
 Notation FreeTemps := FreeTemps.t.
@@ -360,8 +308,8 @@ Section with_cpp.
   Import linearity.
   (* the monad for expression evaluation *)
   Record M {t : Type} :=
-    { _val : (t -> FreeTemps.t -> mpred) -> mpred
-    ; _ok : forall K1 K2, (Forall x free, K1 x free -* K2 x free) |-- _val K1 -* _val K2 }.
+    { _val : (t -> forall free : FreeTemps.t, FreeTemps.IsCanonical free -> mpred) -> mpred
+    ; _ok : forall K1 K2, (Forall x free pf, K1 x free pf -* K2 x free pf) |-- _val K1 -* _val K2 }.
   #[global] Arguments M _ : clear implicits.
   #[local] Coercion _val : M >-> Funclass.
 
@@ -379,28 +327,29 @@ Section with_cpp.
        the equivalence.
    *)
   #[global] Instance M_equiv [T] : Equiv (M T) :=
-    (pointwise_relation _ (pointwise_relation _ (⊣⊢)) ==> (⊣⊢))%signature.
+    fun a b =>
+      forall K1 K2, (forall x y z, K1 x y z ⊣⊢ K2 x y z) -> a K1 ⊣⊢ b K2.
   #[global] Instance M_equiv_refl {T} : Reflexive (≡@{M T}).
   Proof.
     repeat red. intros.
     split'.
-    { iApply _ok; iIntros (??). rewrite H; eauto. }
-    { iApply _ok; iIntros (??). rewrite H; eauto. }
+    { iApply _ok; iIntros (???). rewrite H; eauto. }
+    { iApply _ok; iIntros (???). rewrite H; eauto. }
   Qed.
   #[global] Instance M_equiv_sym {T} : Symmetric (≡@{M T}).
   Proof.
-    do 4 red; simpl; intros. symmetry. apply H.
-    red. red. intros. symmetry. apply H0.
+    do 3 red; simpl; intros. symmetry; apply H.
+    intros; symmetry. apply H0.
   Qed.
   #[global] Instance M_equiv_trans {T} : Transitive (≡@{M T}).
   Proof.
-    do 4 red; simpl; intros. etrans. eapply H.  eapply H1.
-    eapply H0. red. red. intros. reflexivity.
+    do 3 red; simpl; intros. etrans. eapply H. eapply H1.
+    eapply H0. intros. reflexivity.
   Qed.
 
   #[program]
   Definition Mret {t : Type} (v : t) : M t :=
-    {| _val K := K v FreeTemps.id |}.
+    {| _val K := K v FreeTemps.id _ |}.
   Next Obligation.
     intros; simpl. iIntros "X"; iApply "X".
   Qed.
@@ -415,31 +364,66 @@ Section with_cpp.
   Qed.
 
   #[program] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
-    {| _val K := c (fun v f => k v (fun v' f' => K v' (f' >*> f)%free)) |}.
+    {| _val K := c (fun v f _ => k v (fun v' f' _ => K v' (FreeTemps.canon $ f' >*> f)%free _)) |}.
   Next Obligation.
     simpl; intros. iIntros "K"; iApply _ok.
-    iIntros (??). iApply _ok. iIntros (??); iApply "K".
+    iIntros (???). iApply _ok. iIntros (???); iApply "K".
   Qed.
   Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
+
+  #[local] Opaque FreeTemps.canon.
+  #[global] Instance canon_proper : Proper ((≡) ==> eq) FreeTemps.canon.
+  Proof. Admitted.
+  Lemma IsCanonical_canonical f : ProofIrrel (FreeTemps.IsCanonical f).
+  Proof. apply Is_true_pi. Qed.
+
+  Lemma K_ext {T} : forall (K : forall x : FreeTemps.t, FreeTemps.IsCanonical x -> T),
+    forall free1 free2 pf1 pf2, free1 ≡ free2 -> K free1 pf1 = K free2 pf2.
+  Proof.
+    clear.
+    intros.
+    assert (free1 = FreeTemps.canon free1).
+    { clear -pf1. eapply bool_decide_unpack. apply pf1. }
+    assert (free2 = FreeTemps.canon free2).
+    { clear -pf2. eapply bool_decide_unpack. apply pf2. }
+    apply FreeTemps.canon_canonical in H.
+    unfold FreeTemps.IsCanonical in *.
+    assert (free1 = free2).
+    { by rewrite H0 H -H1. }
+    revert H1. revert H. revert pf2.
+    destruct H2.
+    intros.
+    by rewrite (Is_true_pi _ pf1 pf2).
+  Qed.
+
+  Lemma K_entails (K : forall free : FreeTemps.t, FreeTemps.IsCanonical free -> mpred)
+                  free1 free2 pf1 pf2 :
+    free1 ≡ free2 -> K free1 pf1 |-- K free2 pf2.
+  Proof. intros. rewrite K_ext; eauto. Qed.
+
+  Lemma canon_equiv f : FreeTemps.canon f ≡ f.
+  Proof. Admitted.
 
   Lemma mret_mbind {T U} v (k : T -> M U) : Mbind (Mret v) k ≡ k v.
   Proof.
     red. rewrite /M_equiv/Mbind/Mret/=. red. simpl; intros.
     split'.
-    { iApply _ok; iIntros (??).
-      rewrite H; eauto. rewrite FreeTemps.seq_right_id. eauto. }
-    { iApply _ok; iIntros (??).
-      rewrite H; eauto. rewrite FreeTemps.seq_right_id. eauto. }
+    { iApply _ok; iIntros (???) "?"; iStopProof.
+      rewrite H; apply K_entails.
+      by rewrite canon_equiv FreeTemps.seq_id_unitR. }
+    { iApply _ok; iIntros (???) "?"; iStopProof.
+      rewrite H; apply K_entails.
+      by rewrite canon_equiv FreeTemps.seq_id_unitR. }
   Qed.
 
   Lemma mbind_mret {T} (m : M T) : Mbind m Mret ≡ m.
   Proof.
     red; rewrite /M_equiv/Mbind/Mret; red; simpl; intros.
     split'.
-    { iApply _ok; iIntros (??).
-      rewrite H FreeTemps.seq_left_id; eauto. }
-    { iApply _ok; iIntros (??).
-      rewrite H FreeTemps.seq_left_id; eauto. }
+    { iApply _ok; iIntros (???) "?"; iStopProof.
+      rewrite H; apply K_entails. rewrite canon_equiv FreeTemps.seq_left_id; eauto. }
+    { iApply _ok; iIntros (???) "?"; iStopProof.
+      rewrite H; apply K_entails; rewrite canon_equiv FreeTemps.seq_left_id; eauto. }
   Qed.
 
   Lemma mbind_mbind {T U V} (m : M T) (k1 : T -> M U) (k2 : U -> M V) :
@@ -447,9 +431,9 @@ Section with_cpp.
   Proof.
     red; rewrite /M_equiv/Mbind; red; simpl; intros.
     split';
-      iApply _ok; iIntros (??); iApply _ok; iIntros (??); iApply _ok; iIntros (??);
-      rewrite H; eauto.
-    all: rewrite FreeTemps.seq_assoc; eauto.
+      iApply _ok; iIntros (???); iApply _ok; iIntros (???); iApply _ok; iIntros (???);
+      rewrite H; eauto; iIntros; iStopProof; apply K_entails.
+    all: rewrite !canon_equiv FreeTemps.seq_assoc; eauto.
   Qed.
 
   (* The canonical notation of approximation/entailment
