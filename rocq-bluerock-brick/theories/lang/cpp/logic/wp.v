@@ -21,14 +21,6 @@ Require Import bedrock.lang.bi.errors.
 
 #[local] Set Primitive Projections.
 
-(* expression continuations
- * - in full C++, this includes exceptions, but our current semantics
- *   doesn't treat those.
- *)
-Definition epred `{cpp_logic} := mpred.
-Notation epredO := mpredO (only parsing).
-Bind Scope bi_scope with epred.
-
 Declare Scope free_scope.
 Delimit Scope free_scope with free.
 Reserved Infix "|*|" (at level 30).
