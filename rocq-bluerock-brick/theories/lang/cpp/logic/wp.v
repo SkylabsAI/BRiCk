@@ -128,7 +128,7 @@ Variant ReturnType : Set :=
 | ReturnVal (_ : ptr)
 | ReturnVoid
 .
-#[global] Instance ReturnType_ihn : Inhabited ReturnType.
+#[global] Instance ReturnType_inh : Inhabited ReturnType.
 Proof. repeat constructor. Qed.
 
 Canonical Structure rt_biIndex : biIndex :=
