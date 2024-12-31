@@ -1032,24 +1032,23 @@ emp] is not provable unless [Q] is affine.
 *)
 (* BEGIN interp *)
 #[local] Definition interp_body `{Σ : cpp_logic, σ : genv}
-    (interp : translation_unit -> FreeTemps.raw.t -> mpred -> mpred)
-    (tu : translation_unit) (free : FreeTemps.raw.t) (Q : mpred) : mpred :=
+    (interp : translation_unit -> FreeTemps.t -> mpred -> mpred)
+    (tu : translation_unit) (free : FreeTemps.t) (Q : mpred) : mpred :=
   match free with
-  | FreeTemps.raw.id => |={top}=> Q
-  | FreeTemps.raw.seq f g => interp tu f $ interp tu g Q
-  | FreeTemps.raw.par f g => |={top}=> Exists Qf Qg, interp tu f Qf ** interp tu g Qg ** (Qf -* Qg -* |={top}=> Q)
-  | FreeTemps.raw.delete ty addr => destroy_val tu ty addr Q
-  | FreeTemps.raw.delete_va va addr => |={top}=> addr |-> varargsR va ** Q
+  | FreeTemps.id => |={top}=> Q
+  | FreeTemps.seq f g => interp tu f $ interp tu g Q
+  | FreeTemps.par f g => |={top}=> Exists Qf Qg, interp tu f Qf ** interp tu g Qg ** (Qf -* Qg -* |={top}=> Q)
+  | FreeTemps.delete ty addr => destroy_val tu ty addr Q
+  | FreeTemps.delete_va va addr => |={top}=> addr |-> varargsR va ** Q
   end.
 
-mlock Definition interp `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (free : FreeTemps)
-    : mpred -> mpred :=
-  (fix interp tu free := interp_body interp tu free) tu free.(FreeTemps._raw).
+mlock Definition interp `{Σ : cpp_logic, σ : genv}
+    : translation_unit -> FreeTemps.t -> mpred -> mpred :=
+  (fix interp tu free := interp_body interp tu free).
 #[global] Arguments interp {_ _ _ _} _ free Q : assert.	(* set names *)
 (* END interp *)
 (* ^^ These BEGIN/END markers matter to our documentation *)
 
-(*
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
   Implicit Types Q : mpred.
@@ -1067,13 +1066,11 @@ Ltac interp_unfold :=
   | |- context [interp _ ?f] => rewrite !(interp_unfold f)
   | _ => fail "[interp] not found"
   end.
-*)
 
 Section temps.
   Context `{Σ : cpp_logic, σ : genv}.
   Implicit Types Q : mpred.
 
-  (*
   Lemma interp_intro free tu Q :
     match free with
     | FreeTemps.id => Q
@@ -1089,29 +1086,28 @@ Section temps.
       iExists Qf, Qg. iFrame "Qf Qg". iIntros "!> Qf Qg".
       iApply ("HQ" with "Qf Qg"). }
   Qed.
-  *)
 
   Lemma interp_intro_id tu Q : Q |-- interp tu 1 Q.
-  Proof. rewrite /FreeTemps.id interp.unlock/=. eauto. Qed.
+  Proof. by rewrite -interp_intro. Qed.
 
   Lemma interp_intro_seq tu f g Q :
     interp tu f (interp tu g Q) |-- interp tu (f >*> g) Q.
-  Proof. (* rewrite /FreeTemps.seq interp.unlock/=. eauto. Qed. *) Admitted.
+  Proof. by rewrite -(interp_intro (f >*> g)). Qed.
 
   Lemma interp_intro_par tu f g Q :
     Exists Qf Qg, interp tu f Qf ** interp tu g Qg ** (Qf -* Qg -* Q)
     |-- interp tu (f |*| g) Q.
-  Proof. (* by rewrite -interp_intro. Qed. *) Admitted.
+  Proof. by rewrite -interp_intro. Qed.
 
   Lemma interp_intro_delete tu ty addr Q :
     destroy_val tu ty addr Q
     |-- interp tu (FreeTemps.delete ty addr) Q.
-  Proof. (* by rewrite -interp_intro. Qed. *) Admitted.
+  Proof. by rewrite -interp_intro. Qed.
 
   Lemma interp_intro_delete_va tu va (addr : ptr) Q :
     addr |-> varargsR va ** Q
     |-- interp tu (FreeTemps.delete_va va addr) Q.
-  Proof. (* by rewrite -interp_intro. Qed. *) Admitted.
+  Proof. by rewrite -interp_intro. Qed.
 
   (** Elimination rules *)
 
@@ -1216,7 +1212,7 @@ Section temps.
     { done. }
     { by rewrite IHi. }
     { by rewrite IHi IHi0. }
-    { by rewrite !interp_unfold destroy_val_ref. }
+(*    { by rewrite !interp_unfold destroy_val_ref. } *)
     { by rewrite !(interp_unfold (_ >*> _)). }
     { rewrite (interp_unfold (_ >*> _)) (interp_unfold 1).
       by rewrite fupd_interp. }
@@ -1294,15 +1290,12 @@ Section temps.
     Qed.
   End proofmode.
 End temps.
-*)
 #[program]
 Definition Mfree_all `{Σ : cpp_logic} {σ : genv} (tu : translation_unit) {t} (m : M t) : M t :=
-  {| _val K := m.(_val) (fun v free => interp tu free $ K v FreeTemps.id) |}.
+  {| _wp K := m.(_wp) (fun v free _ => interp tu free $ K v FreeTemps.id _) |}.
 Next Obligation.
-  simpl; intros. iIntros "K". iApply _ok. iIntros (??).
-(*  iApply interp_frame. iApply "K".
-Qed. *) Admitted.
+  simpl; intros. iIntros "K". iApply _ok. iIntros (???).
+  iApply interp_frame. iApply "K".
+Qed.
 
-(*
 #[global] Hint Resolve interp_intro_id : core.
-*)

@@ -594,7 +594,7 @@ Section wp_initialize.
 
   #[local] Notation VAL_INIT u tu ρ cv ty addr init := (Cbn (
     let cv' := cv in (* to establish scopes *)
-    if q_volatile cv' then Merror "unsupported"
+    if q_volatile cv' then Merror "volatile"
     else
       letWP* v := wp_operand tu ρ init in
       let qf := cQp.mk (q_const cv') 1 in
@@ -609,12 +609,18 @@ Section wp_initialize.
     VAL_INIT false tu ρ cv ty addr init
     ⊆ wp_initialize_unqualified tu ρ cv ty addr init.
   Proof.
-    intros Hty ??. rewrite -wp_initialize_unqualified_intro.
+    intros Hty ??.
+    #[global] Instance: forall T, RewriteRelation (⊆@{M T}) := {}.
+    rewrite -wp_initialize_unqualified_intro.
     case_match; eauto.
     destruct ty; try solve [ inversion H0 | eauto ].
-    (* void *)
-    iIntros "wp /=".
-    iStopProof.
+    { (* void *)
+      red. red. intros. simpl.
+
+      Search "_ ⊆ _" Mbind.
+      repeat intro; simpl.
+      iIntros "wp /=".
+      iStopProof.
       
 
     iApply wp_operand_well_typed.

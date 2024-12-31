@@ -18,6 +18,7 @@ Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.heap_pred.
 Require Import bedrock.lang.cpp.logic.translation_unit.
 Require Export bedrock.lang.cpp.logic.monad.
+Require Export bedrock.lang.cpp.logic.free_temps.
 
 Require Import bedrock.lang.bi.errors.
 
@@ -113,7 +114,7 @@ Section with_cpp.
   Parameter wp_lval
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
   (* END wp_lval *)
- 
+
   Notation SupportsFupd x := (Mnon_atomically x ⊆ x) (only parsing).
   Notation RefResult t x :=
     ((letWP* v := x in
@@ -188,9 +189,6 @@ Section with_cpp.
     }.
 
   Axiom wp_lval_models : forall {σ:genv} ρ e, WithCode (fun tu => wp_lval tu ρ e).
-
-  Instance M_Dist {T} : Dist (M T) :=
-    fun n a b => (pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)%signature a.(_val) b.(_val).
 
   (*
   Section wp_lval_proper.
