@@ -23,8 +23,8 @@ Require Import bedrock.lang.bi.errors.
 
 Declare Scope free_scope.
 Delimit Scope free_scope with free.
-Reserved Infix "|*|" (at level 30).
-Reserved Infix ">*>" (at level 30).
+Reserved Infix "|*|" (at level 31, left associativity).
+Reserved Infix ">*>" (at level 30, right associativity).
 
 Module FreeTemps.
 
