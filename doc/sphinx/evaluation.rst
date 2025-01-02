@@ -28,7 +28,7 @@ In the course of evaluating C++ programs, the language can construct objects tha
 C++ semantics guarantees that the lifetime of temporaries is well-bracketed, meaning that objects will be destroyed in the reverse order that they were constructed.
 In |project| we capture the stack of objects to be destroyed using the type |link:bedrock.lang.cpp.logic.wp#FreeTemps.t|.
 
-.. literalinclude:: ../../rocq-bluerock-brick/theories/lang/cpp/logic/wp.v
+.. literalinclude:: ../../rocq-bluerock-brick/theories/lang/cpp/logic/free_temps.v
    :start-after: (* BEGIN FreeTemps.t *)
    :end-before: (* END FreeTemps.t *)
    :dedent:
