@@ -121,17 +121,17 @@ End wp_gen.
 (** ** Destroying primitives *)
 
 #[local] Definition wp_destroy_prim_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (cv : type_qualifiers) (ty : type) (this : ptr) (Q : epred) : mpred :=
+    (cv : type_qualifiers) (ty : type) (this : ptr) (Q : mpred) : mpred :=
   |={top}=> (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) v) ** Q.
 
 mlock Definition wp_destroy_prim `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (cv : type_qualifiers) (ty : type) (this : ptr) (Q : epred) : mpred :=
+    (cv : type_qualifiers) (ty : type) (this : ptr) (Q : mpred) : mpred :=
   wp_destroy_prim_body tu cv ty this Q.
 #[global] Arguments wp_destroy_prim {_ _ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destroy_prim_unfold ty tu :
     wp_destroy_prim tu ty = Reduce (wp_destroy_prim_body tu ty).
@@ -149,7 +149,7 @@ Ltac wp_destroy_prim_unfold :=
 
 Section prim.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destroy_prim_intro tu cv ty (this : ptr) Q :
     (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) v) ** Q
@@ -209,7 +209,7 @@ Section prim.
     intros * Q1 Q2 HQ. split'; by apply wp_destroy_prim_mono; rewrite HQ.
   Qed.
 
-  Lemma wp_destroy_prim_frame tu tu' cv ty this (Q Q' : epred) :
+  Lemma wp_destroy_prim_frame tu tu' cv ty this (Q Q' : mpred) :
     Q -* Q' |-- wp_destroy_prim tu cv ty this Q -* wp_destroy_prim tu' cv ty this Q'.
   Proof. wp_destroy_prim_unfold. iIntros "HQ >[$ Q]". by iApply "HQ". Qed.
 
@@ -235,7 +235,7 @@ End prim.
 invoking the destructor [dtor] for type [ty] on [this].
 *)
 #[local] Definition wp_destructor_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
+    (ty : type) (dtor : ptr) (this : ptr) (Q : mpred) : mpred :=
   (*
   NOTE: Using [Tfunction Tvoid nil] implicitly requires all
   destructors to have C calling convention. Arguments [this :: nil] is
@@ -250,7 +250,7 @@ invoking the destructor [dtor] for type [ty] on [this].
   Q.
 
 mlock Definition wp_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
+    (ty : type) (dtor : ptr) (this : ptr) (Q : mpred) : mpred :=
   wp_destructor_body tu ty dtor this Q.
 #[global] Arguments wp_destructor {_ _ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
@@ -260,7 +260,7 @@ mlock Definition wp_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_un
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destructor_unfold ty tu :
     wp_destructor tu ty = Reduce (wp_destructor_body tu ty).
@@ -278,7 +278,7 @@ Ltac wp_destructor_unfold :=
 
 Section dtor.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destructor_intro tu ty dtor this Q :
     Reduce (wp_destructor_body tu ty dtor this Q) |--
@@ -336,7 +336,7 @@ End dtor.
 (** ** Destroying structures and unions *)
 
 #[local] Definition wp_destroy_named_body `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (cls : globname) (this : ptr) (Q : epred) : mpred :=
+    (cls : globname) (this : ptr) (Q : mpred) : mpred :=
   match tu.(types) !! cls with
   | Some (Gstruct s) =>
     (*
@@ -363,13 +363,13 @@ End dtor.
   end.
 
 mlock Definition wp_destroy_named `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-    (cls : globname) (this : ptr) (Q : epred) : mpred :=
+    (cls : globname) (this : ptr) (Q : mpred) : mpred :=
   wp_destroy_named_body tu cls this Q.
 #[global] Arguments wp_destroy_named {_ _ _ _} _ _ _ _ : assert.	(* mlock bug *)
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destroy_named_unfold cls tu :
     wp_destroy_named tu cls = Reduce (wp_destroy_named_body tu cls).
@@ -404,10 +404,10 @@ Proof. intros -><-. by iIntros "? >?". Qed.
 
 Section named.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Let wp_destroy_named_intro_body (tu : translation_unit)
-      (cls : globname) (this : ptr) (Q : epred) : mpred :=
+      (cls : globname) (this : ptr) (Q : mpred) : mpred :=
     match tu.(types) !! cls with
     | Some (Gstruct s) => wp_destructor tu (Tnamed cls) (_global s.(s_dtor)) this Q
     | Some (Gunion u) => wp_destructor tu (Tnamed cls) (_global u.(u_dtor)) this Q
@@ -509,15 +509,15 @@ definition, but we could not get the theory to go through.
 *)
 Section body.
   Context `{Σ : cpp_logic, σ : genv}.
-  Context (wp_destroy_val : translation_unit -> type_qualifiers -> type -> ptr -> epred -> mpred).
-  Context (wp_destroy_array : translation_unit -> type_qualifiers -> type -> N -> ptr -> epred -> mpred).
+  Context (wp_destroy_val : translation_unit -> type_qualifiers -> type -> ptr -> mpred -> mpred).
+  Context (wp_destroy_array : translation_unit -> type_qualifiers -> type -> N -> ptr -> mpred -> mpred).
 
   #[local] Definition destroy_val_body (tu : translation_unit)
-      (ty : type) (this : ptr) (Q : epred) : mpred :=
+      (ty : type) (this : ptr) (Q : mpred) : mpred :=
     wp_destroy_val tu QM ty this Q.
 
   #[local] Definition wp_destroy_array_body (tu : translation_unit)
-      (cv : type_qualifiers) (ety : type) (sz : N) (this : ptr) (Q : epred) : mpred :=
+      (cv : type_qualifiers) (ety : type) (sz : N) (this : ptr) (Q : mpred) : mpred :=
     (**
     NOTE array elements are destroyed left-to-right with non-virtual
     dispatch.
@@ -525,7 +525,7 @@ Section body.
     Reduce (wp_gen (fun i => wp_destroy_val tu cv ety (this .[ erase_qualifiers ety ! Z.of_N i ])) sz Q).
 
   #[local] Definition wp_destroy_val_body (tu : translation_unit)
-      (cv : type_qualifiers) (rty : type) (this : ptr) (Q : epred) : mpred :=
+      (cv : type_qualifiers) (rty : type) (this : ptr) (Q : mpred) : mpred :=
     match rty with
     | Tqualified q ty => wp_destroy_val tu (merge_tq cv q) ty this Q
 
@@ -567,7 +567,7 @@ Section body.
 End body.
 
 mlock Definition wp_destroy_val `{Σ : cpp_logic, σ : genv}
-    : ∀ (tu : translation_unit) (cv : type_qualifiers) (ty : type) (p : ptr) (Q : epred), mpred :=
+    : ∀ (tu : translation_unit) (cv : type_qualifiers) (ty : type) (p : ptr) (Q : mpred), mpred :=
   (* Written this way because [mlock Fixpoint ⋯] fails. *)
   fix wp_destroy_val tu q ty :=
     let wp_destroy_array := wp_destroy_array_body wp_destroy_val in
@@ -575,12 +575,12 @@ mlock Definition wp_destroy_val `{Σ : cpp_logic, σ : genv}
 #[global] Arguments wp_destroy_val {_ _ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
 mlock Definition destroy_val `{Σ : cpp_logic, σ : genv}
-    : ∀ (tu : translation_unit) (ty : type) (p : ptr) (Q : epred), mpred :=
+    : ∀ (tu : translation_unit) (ty : type) (p : ptr) (Q : mpred), mpred :=
   destroy_val_body wp_destroy_val.
 #[global] Arguments destroy_val {_ _ _ _} _ _ _ _ : assert.	(* mlock bug *)
 
 mlock Definition wp_destroy_array `{Σ : cpp_logic, σ : genv}
-    (tu : translation_unit) (cv : type_qualifiers) (ety : type) (sz : N) (base : ptr) (Q : epred) : mpred :=
+    (tu : translation_unit) (cv : type_qualifiers) (ety : type) (sz : N) (base : ptr) (Q : mpred) : mpred :=
   wp_destroy_array_body wp_destroy_val tu cv ety sz base Q.
 #[global] Arguments wp_destroy_array {_ _ _ _} _ _ _ _ _ _ : assert.	(* mlock bug *)
 
@@ -589,7 +589,7 @@ mlock Definition wp_destroy_array `{Σ : cpp_logic, σ : genv}
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma wp_destroy_val_unfold ty tu cv : wp_destroy_val tu cv ty = Reduce (V tu cv ty).
   Proof.
@@ -628,7 +628,7 @@ Ltac wp_destroy_array_unfold :=
 
 Section val_array.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
+  Implicit Types (Q : mpred).
 
   Lemma destroy_val_wp_destroy_val ty tu :
     destroy_val tu ty = wp_destroy_val tu QM ty.
@@ -1032,8 +1032,8 @@ emp] is not provable unless [Q] is affine.
 *)
 (* BEGIN interp *)
 #[local] Definition interp_body `{Σ : cpp_logic, σ : genv}
-    (interp : translation_unit -> FreeTemps -> epred -> mpred)
-    (tu : translation_unit) (free : FreeTemps) (Q : epred) : mpred :=
+    (interp : translation_unit -> FreeTemps -> mpred -> mpred)
+    (tu : translation_unit) (free : FreeTemps) (Q : mpred) : mpred :=
   match free with
   | FreeTemps.id => |={top}=> Q
   | FreeTemps.seq f g => interp tu f $ interp tu g Q
@@ -1043,7 +1043,7 @@ emp] is not provable unless [Q] is affine.
   end.
 
 mlock Definition interp `{Σ : cpp_logic, σ : genv}
-    : translation_unit -> FreeTemps -> epred -> mpred :=
+    : translation_unit -> FreeTemps -> mpred -> mpred :=
   fix interp tu free :=
   interp_body interp tu free.
 #[global] Arguments interp {_ _ _ _} _ free Q : assert.	(* set names *)
@@ -1052,7 +1052,7 @@ mlock Definition interp `{Σ : cpp_logic, σ : genv}
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types Q : epred.
+  Implicit Types Q : mpred.
 
   Lemma interp_unfold free tu : interp tu free = Reduce (interp_body interp tu free).
   Proof. rewrite interp.unlock. by destruct free. Qed.
@@ -1070,7 +1070,7 @@ Ltac interp_unfold :=
 
 Section temps.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types Q : epred.
+  Implicit Types Q : mpred.
 
   Lemma interp_intro free tu Q :
     match free with

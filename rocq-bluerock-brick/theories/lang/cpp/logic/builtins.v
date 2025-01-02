@@ -24,11 +24,11 @@ as if they were all evaluated using [wp_operand].
 *)
 Parameter wp_builtin : ∀ `{Σ : cpp_logic, σ : genv}
     (b : BuiltinFn) (fty : functype) (** the type of the builtin *)
-    (args : list val) (Q : val -> epred), mpred.
+    (args : list val) (Q : val -> mpred), mpred.
 
 Section wp_builtin.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : val -> epred).
+  Implicit Types (Q : val -> mpred).
 
   Axiom wp_builtin_frame : ∀ b fty args Q Q',
     Forall v, Q v -* Q' v
@@ -73,7 +73,7 @@ Section wp_builtin.
 
   (* Returns one plus the index of the least significant 1-bit of x,
      or if x is zero, returns zero. *)
-  Definition ffs_spec sz (n : Z) (Q : val -> epred) : mpred :=
+  Definition ffs_spec sz (n : Z) (Q : val -> mpred) : mpred :=
     [| has_type_prop (Vint n) (Tnum sz Signed) |] ** Q (Vint (first_set (int_rank.bitsize sz) n)).
 
   Axiom wp_ffs : forall c Q,
@@ -91,7 +91,7 @@ Section wp_builtin.
   (* Returns the number of trailing 0-bits in x, starting at the least
      significant bit position. If x is 0, the result is undefined. *)
 
-  Definition ctz_spec sz (n : Z) (Q : val -> epred) : mpred :=
+  Definition ctz_spec sz (n : Z) (Q : val -> mpred) : mpred :=
     [| has_type_prop (Vint n) (Tnum sz Unsigned) |] ** [| n <> 0 |] ** Q (Vint (trailing_zeros (int_rank.bitsize sz) n)).
 
   Axiom wp_ctz : forall c Q,
@@ -108,7 +108,7 @@ Section wp_builtin.
 
   (* Returns the number of leading 0-bits in x, starting at the most significant
      bit position. If x is 0, the result is undefined. *)
-  Definition clz_spec sz (n : Z) (Q : val -> epred) : mpred :=
+  Definition clz_spec sz (n : Z) (Q : val -> mpred) : mpred :=
     [| has_type_prop (Vint n) (Tnum sz Unsigned) |] ** [| n <> 0 |] **
     Q (Vint (leading_zeros (int_rank.bitsize sz) n)).
 
@@ -197,7 +197,7 @@ End endian_conversion.
 (** ** Builtin functions *)
 
 Definition read_args `{Σ : cpp_logic, σ : genv} :=
-  fix read_args (targs : list decltype) (ls : list ptr) (Q : list val -> epred) : mpred :=
+  fix read_args (targs : list decltype) (ls : list ptr) (Q : list val -> mpred) : mpred :=
   match targs , ls with
   | nil , nil => Q nil
   | t :: ts , p :: ps =>
@@ -209,7 +209,7 @@ Definition read_args `{Σ : cpp_logic, σ : genv} :=
 
 Section with_Σ.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : list val -> epred).
+  Implicit Types (Q : list val -> mpred).
 
   Lemma read_args_frame targs args Q Q' :
     Forall vs, Q vs -* Q' vs
@@ -247,7 +247,7 @@ calling convention.
 *)
 #[local]
 Definition wp_builtin_func' `{Σ : cpp_logic, σ : genv} (u : bool)
-    (b : BuiltinFn) (fty : functype) (args : list ptr) (Q : ptr -> epred) : mpred :=
+    (b : BuiltinFn) (fty : functype) (args : list ptr) (Q : ptr -> mpred) : mpred :=
   |={top}=>?u
   match fty with
   | Tfunction (FunctionType rty targs) =>
@@ -262,7 +262,7 @@ Definition wp_builtin_func `{Σ : cpp_logic, σ : genv} :=
 
 Section with_Σ.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : ptr -> epred).
+  Implicit Types (Q : ptr -> mpred).
 
   Lemma wp_builtin_func_frame b fty args Q Q' :
     Forall p, Q p -* Q' p

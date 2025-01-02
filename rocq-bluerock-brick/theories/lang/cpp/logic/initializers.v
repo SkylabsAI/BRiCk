@@ -54,8 +54,8 @@ guaranteed to have to initialize a value which will result in an
 *)
 
 #[local] Definition default_initialize_array_body `{Σ : cpp_logic, σ : genv}
-    (u : bool) (default_initialize : ptr -> (FreeTemps -> epred) -> mpred)
-    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
+    (u : bool) (default_initialize : ptr -> (FreeTemps -> mpred) -> mpred)
+    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) (Q : FreeTemps -> mpred) : mpred :=
   let folder i PP :=
     default_initialize (p ,, o_sub _ ty (Z.of_N i)) (fun free' => interp tu free' PP)
   in
@@ -63,9 +63,9 @@ guaranteed to have to initialize a value which will result in an
 
 mlock
 Definition default_initialize_array `{Σ : cpp_logic, σ : genv} :
-  ∀ (default_initialize : ptr -> (FreeTemps -> epred) -> mpred)
+  ∀ (default_initialize : ptr -> (FreeTemps -> mpred) -> mpred)
     (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr)
-    (Q : FreeTemps -> epred), mpred :=
+    (Q : FreeTemps -> mpred), mpred :=
   Cbn (Reduce (default_initialize_array_body true)).
 #[global] Arguments default_initialize_array {_ _ _ _} _ _ _ _ _ _%_I : assert.	(* mlock bug *)
 
@@ -92,9 +92,9 @@ described above.
 
 #[local]
 Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
-    (u : bool) (default_initialize : exprtype -> ptr -> (FreeTemps -> epred) -> mpred)
+    (u : bool) (default_initialize : exprtype -> ptr -> (FreeTemps -> mpred) -> mpred)
     (tu : translation_unit)
-    (ty : exprtype) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
+    (ty : exprtype) (p : ptr) (Q : FreeTemps -> mpred) : mpred :=
   let ERROR := funI m => |={top}=>?u ERROR m in
   let UNSUPPORTED := funI m => |={top}=>?u UNSUPPORTED m in
   match ty with
@@ -136,7 +136,7 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
 
 mlock
   Definition default_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-  : ∀ (ty : exprtype) (p : ptr) (Q : FreeTemps -> epred), mpred :=
+  : ∀ (ty : exprtype) (p : ptr) (Q : FreeTemps -> mpred), mpred :=
   fix default_initialize ty p Q {struct ty} :=
     Cbn (Reduce (default_initialize_body true) default_initialize tu ty p Q).
 #[global] Arguments default_initialize {_ _ _ _} _ _ _ _%_I : assert.	(* mlock bug *)
@@ -161,8 +161,8 @@ Ltac default_initialize_unfold :=
 
 Section default_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : FreeTemps -> epred).
-  Implicit Types (di : ptr -> (FreeTemps -> epred) -> mpred).
+  Implicit Types (Q : FreeTemps -> mpred).
+  Implicit Types (di : ptr -> (FreeTemps -> mpred) -> mpred).
 
   #[local] Notation FRAME di di' :=
     (∀ p Q Q', (Forall f, Q f -* Q' f) |-- di p Q -* di' p Q')
@@ -354,10 +354,12 @@ magic wands.
 #[local] Notation fupd_compatible := false (only parsing).
 
 (* BEGIN wp_initialize *)
+About Kpure.
 #[local] Definition wp_initialize_unqualified_body `{Σ : cpp_logic, σ : genv}
     (u : bool) (tu : translation_unit) (ρ : region)
     (cv : type_qualifiers) (ty : decltype)
-    (addr : ptr) (init : Expr) (Q : FreeTemps -> epred) : mpred :=
+    (addr : ptr) (init : Expr) : M FreeTemps.t :=
+  fun K : Kpred FreeTemps.t =>
   let UNSUPPORTED := funI m => |={top}=>?u UNSUPPORTED m in
   if q_volatile cv then False%I
   else
@@ -371,15 +373,15 @@ magic wands.
         void g() { return f(); }
       >>
       *)
-      letI* v, frees := wp_operand tu ρ init in
-      let qf := cQp.mk (q_const cv) 1 in
-      [| v = Vvoid |] **
+      wp_operand tu ρ init $ Kpure (fun v K =>
+        let qf := cQp.mk (q_const cv) 1 in
+        [| v = Vvoid |] **
 
-      (**
-      [primR] is enough because C++ code never uses the raw bytes
-      underlying an inhabitant of type void.
-      *)
-      (addr |-> primR Tvoid qf Vvoid -* |={top}=>?u Q frees)
+        (**
+        [primR] is enough because C++ code never uses the raw bytes
+        underlying an inhabitant of type void.
+        *)
+        (addr |-> primR Tvoid qf Vvoid -* |={top}=>?u K (FreeTemps.delete Tvoid addr))) K
 
     | Tptr _
     | Tmember_pointer _ _
@@ -389,41 +391,44 @@ magic wands.
     | Tenum _
     | Tfloat_ _
     | Tnullptr =>
-      letI* v, free := wp_operand tu ρ init in
-      let qf := cQp.mk (q_const cv) 1 in
-      addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q free
+      wp_operand tu ρ init $ Kpure (fun v K =>
+        let qf := cQp.mk (q_const cv) 1 in
+        addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -*
+        |={top}=>?u K (FreeTemps.delete ty addr)) K
 
       (* non-primitives are handled via prvalue-initialization semantics *)
     | Tarray _ _
-    | Tnamed _ => wp_init tu ρ (tqualified cv ty) addr init Q
+    | Tnamed _ => wp_init tu ρ (tqualified cv ty) addr init K
     | Tincomplete_array _ => UNSUPPORTED (initializing_type ty init)
     | Tvariable_array _ _ => UNSUPPORTED (initializing_type ty init)
 
     | Tref ty =>
       let rty := Tref $ erase_qualifiers ty in
-      letI* p, free := wp_glval tu ρ init in (* TODO this needs to permit initialization from xval if [ty] is <<const>> *)
-      let qf := cQp.mk (q_const cv) 1 in
-      (*
-      [primR] is enough because C++ code never uses the raw bytes
-      underlying an inhabitant of a reference type.
+      (* TODO this needs to permit initialization from xval if [ty] is <<const>> *)
+      wp_glval tu ρ init $ Kpure (fun p K =>
+        let qf := cQp.mk (q_const cv) 1 in
+        (*
+        [primR] is enough because C++ code never uses the raw bytes
+        underlying an inhabitant of a reference type.
 
-      TODO: [ref]s are never mutable, but we use [qf] here for
-      compatibility with [implicit_destruct_struct]
-      *)
-      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q free
+        TODO: [ref]s are never mutable, but we use [qf] here for
+        compatibility with [implicit_destruct_struct]
+        *)
+        addr |-> primR rty qf (Vref p) -*
+        |={top}=>?u K (FreeTemps.delete (tqualified cv $ Tref ty) addr)) K
 
     | Trv_ref ty =>
       let rty := Tref $ erase_qualifiers ty in
-      letI* p, free := wp_xval tu ρ init in
-      let qf := cQp.mk (q_const cv) 1 in
-      (*
-      [primR] is enough because C++ code never uses the raw bytes
-      underlying an inhabitant of a reference type.
+      wp_xval tu ρ init $ Kpure (fun p K =>
+        let qf := cQp.mk (q_const cv) 1 in
+        (*
+        [primR] is enough because C++ code never uses the raw bytes
+        underlying an inhabitant of a reference type.
 
-      TODO: [ref]s are never mutable, but we use [qf] here for
-      compatibility with [implicit_destruct_struct]
-      *)
-      addr |-> primR rty qf (Vref p) -* |={top}=>?u Q free
+        TODO: [ref]s are never mutable, but we use [qf] here for
+        compatibility with [implicit_destruct_struct]
+        *)
+        addr |-> primR rty qf (Vref p) -* |={top}=>?u K (FreeTemps.delete (tqualified cv $ Tref ty) addr)) K
 
     | Tfunction _ => UNSUPPORTED (initializing_type ty init)
 
@@ -442,13 +447,13 @@ mlock
 Definition wp_initialize_unqualified `{Σ : cpp_logic, σ : genv} :
   ∀ (tu : translation_unit) (ρ : region)
     (cv : type_qualifiers) (ty : decltype)
-    (addr : ptr) (init : Expr) (Q : FreeTemps -> epred), mpred :=
+    (addr : ptr) (init : Expr), M FreeTemps.t :=
   Cbn (Reduce (wp_initialize_unqualified_body fupd_compatible)).
 #[global] Arguments wp_initialize_unqualified {_ _ _ _} _ _ _ _ _ _ _%_I : assert.	(* mlock bug *)
 
 Definition wp_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ : region)
-    (qty : decltype) (addr : ptr) (init : Expr) (Q : FreeTemps -> epred) : mpred :=
-  qual_norm (wp_initialize_unqualified tu ρ) qty addr init Q.
+    (qty : decltype) (addr : ptr) (init : Expr) : M FreeTemps.t :=
+  qual_norm (wp_initialize_unqualified tu ρ) qty addr init.
 #[global] Hint Opaque wp_initialize : typeclass_instances.
 #[global] Arguments wp_initialize {_ _ _ _} _ _ !_ _ _ _ / : assert.
 (* END wp_initialize *)
@@ -459,19 +464,29 @@ Definition heap_type_of (t : type) : type :=
   | t => t
   end.
 
+Arguments Kbind_inner {_ _ _} {_ _} _ _ _ _ /.
+
 Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
-  tu ρ cv ty addr init (Q : FreeTemps.t -> epred) :
-      wp_initialize_unqualified tu ρ cv ty addr init (fun free => reference_to (heap_type_of ty) addr -* Q free)
-  |-- wp_initialize_unqualified tu ρ cv ty addr init Q.
+  tu ρ cv ty addr init Q :
+  wp_initialize_unqualified tu ρ cv ty addr init (Kpure (fun free K => reference_to (heap_type_of ty) addr -* K free) Q)
+    |-- wp_initialize_unqualified tu ρ cv ty addr init Q.
 Proof.
   rewrite wp_initialize_unqualified.unlock.
   case_match; eauto.
   case_match; subst; eauto.
   all: try (iApply wp_operand_frame; [ done | ];
-    iIntros (??) "X Y";
-    iDestruct (observe (reference_to _ _) with "Y") as "#?";
-    iApply ("X" with "Y");
-    rewrite -reference_to_erase; done).
+            iIntros (??) "X Y";
+            iDestruct (observe (reference_to _ _) with "Y") as "#?";
+            iApply ("X" with "Y");
+            rewrite -reference_to_erase; done).
+  { iApply wp_operand_frame; [ done | simpl ].
+    iIntros ([]) "X".
+    case_match; eauto.
+    iIntros "Y".
+    iDestruct (observe (reference_to _ _) with "Y") as "#?".
+    iApply ("X" with "Y $").
+      rewrite -reference_to_erase; done)}
+
   - iApply wp_glval_frame; [ done | ];
       iIntros (??) "X Y";
       iDestruct (observe (reference_to _ _) with "Y") as "#?".
@@ -511,7 +526,7 @@ expression.
 See [https://eel.is/c++draft/class.init#class.base.init-note-2].
 *)
 Definition wpi `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ : region)
-    (cls : globname) (thisp : ptr) (ty : type) (init : Initializer) (Q : epred) : mpred :=
+    (cls : globname) (thisp : ptr) (ty : type) (init : Initializer) (Q : mpred) : mpred :=
   let p' := thisp ,, offset_for cls init.(init_path) in
   letI* free := wp_initialize tu ρ ty p' init.(init_init) in
   letI* := interp tu free in
@@ -528,7 +543,7 @@ right now. So, for the time being, we prove [_frame] lemmas without
 
 Section wp_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : FreeTemps -> epred).
+  Implicit Types (Q : FreeTemps -> mpred).
 
   (** [wp_initialize_unqualified] *)
 
@@ -926,7 +941,7 @@ Section wp_initialize.
 
   (** [wpi] *)
 
-  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : epred) :
+  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : mpred) :
     sub_module tu tu' ->
     Q -* Q' |-- wpi tu ρ cls this ty e Q -* wpi tu' ρ cls this ty e Q'.
   Proof.
@@ -935,7 +950,7 @@ Section wp_initialize.
     by iApply interp_frame_strong.
   Qed.
 
-  Lemma wpi_shift tu ρ cls this ty e (Q : epred) :
+  Lemma wpi_shift tu ρ cls this ty e (Q : mpred) :
     Cbn (|={top}=>?fupd_compatible wpi tu ρ cls this ty e (|={top}=>?fupd_compatible Q))
     |-- wpi tu ρ cls this ty e Q.
   Proof.

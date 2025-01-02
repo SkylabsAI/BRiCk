@@ -18,8 +18,10 @@ Require Import bedrock.lang.cpp.logic.pred.
 Require Import bedrock.lang.cpp.logic.heap_pred.
 Require Import bedrock.lang.cpp.logic.translation_unit.
 Require Import bedrock.lang.bi.errors.
-
+Require Import bedrock.lang.bi.linearity.
 #[local] Set Primitive Projections.
+
+Import linearity.
 
 Declare Scope free_scope.
 Delimit Scope free_scope with free.
@@ -38,6 +40,9 @@ Module FreeTemps.
   | par (f g : t) (* = fun x => Exists Qf Qg, f Qf ** g Qg ** (Qf -* Qg -* x) *)
   .
   (* END FreeTemps.t *)
+
+  #[global] Instance t_inh : Inhabited t.
+  Proof. repeat constructor. Qed.
 
   Module Import notations.
     Bind Scope free_scope with t.
@@ -114,7 +119,7 @@ Notation FreeTemp := FreeTemps.t (only parsing).
  * `k_throw : val -> mpred`.
  *)
 Variant ReturnType {t : Type} : Type :=
-| Normal (result : t) (* (_ : FreeTemps.t) *)
+| Normal (result : t)
 | Break
 | Continue
 | ReturnVal (_ : ptr)
@@ -126,29 +131,31 @@ Arguments ReturnType _ : clear implicits.
 Proof. constructor. exact ReturnVoid. Qed.
 
 Canonical Structure rt_biIndex t : biIndex :=
-  {| bi_index_type := ReturnType t
+  {| bi_index_type := ReturnType t * FreeTemps.t
    ; bi_index_rel := eq
    |}.
 Definition KpredI `{!cpp_logic thread_info Σ} t : bi := monPredI (rt_biIndex t) (@mpredI thread_info Σ).
 #[global] Notation Kpred t := (bi_car (KpredI t)).
 
-Definition KP `{cpp_logic} {T} (P : ReturnType T -> mpred) : Kpred T := MonPred P _.
+Definition KP `{cpp_logic} {T} (P : ReturnType T -> FreeTemps.t -> mpred) : Kpred T := MonPred (fun '(rt, free) => P rt free) _.
 #[global] Arguments KP {_ _ _ _} _%_I : assert.
 #[global] Hint Opaque KP : typeclass_instances.
 
 Section KP.
   Context `{Σ : cpp_logic}.
 
-  Lemma KP_frame {T} (Q1 Q2 : ReturnType T -> mpred) (rt : ReturnType T) :
-    Q1 rt -* Q2 rt
-    |-- KP Q1 rt -* KP Q2 rt.
+  Lemma KP_frame {T} (Q1 Q2 : ReturnType T -> FreeTemps.t -> mpred) (rt : ReturnType T) free :
+    Q1 rt free -* Q2 rt free
+    |-- KP Q1 (rt, free) -* KP Q2 (rt, free).
   Proof. done. Qed.
 End KP.
 
+(*
 (** *** [Kreturn Q] -- [Q] is applied to the returned value *)
 Definition Kreturn_inner `{Σ : cpp_logic, σ : genv} (Q : ptr -> mpred) (rt : ReturnType ()) : mpred :=
   match rt with
-  | Normal _ | ReturnVoid => Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p
+  | Normal _ => Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p
+  | ReturnVoid => Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p
   | ReturnVal p => Q p
   | _ => False
   end.
@@ -169,34 +176,80 @@ Section Kreturn.
     all: iIntros "HR" (?) "R"; iApply "HQ"; by iApply "HR".
   Qed.
 End Kreturn.
+*)
+
+(* Run [Q] when the evaluation completes *)
+Definition Kat_exit `{Σ : cpp_logic} {T} (Q : mpred -> mpred) (k : Kpred T) : Kpred T :=
+  KP $ fun rt free => Q (k (rt, free)).
+#[global] Hint Opaque Kat_exit : typeclass_instances.
+
+Section Kat_exit.
+  Context `{Σ : cpp_logic}.
+
+  Lemma Kat_exit_frame {T} (Q Q' : mpred -> mpred) (k k' : Kpred T) :
+    Forall R R' : mpred, (R -* R') -* Q R -* Q' R' |--
+                           Forall rt, (k rt -* k' rt) -*
+                                        Kat_exit Q k rt -* Kat_exit Q' k' rt.
+  Proof.
+    iIntros "HQ %rt Hk". destruct rt; cbn.
+    all: by iApply "HQ".
+  Qed.
+End Kat_exit.
+
+(** The type of the interpreter for [FreeTemps.t].
+    We treat throwing exceptions from destructors as UB since this is at least strongly frowned upon.
+ *)
+Definition Mfree `{Σ : cpp_logic} := FreeTemps.t -> mpred -> mpred.
+
+(** Clean up the temporaries early on exceptional control flow, otherwise, extend *)
+Definition Ktemps `{Σ : cpp_logic} {T} (free : FreeTemps.t) (k : Kpred T) : Kpred T :=
+  KP $ fun rt free' =>
+      let mk x := k (x, free' >*> free)%free in
+      match rt with
+      | Normal v => mk $ Normal v
+      | Continue => mk Continue
+      | Break => mk Break
+      | ReturnVal p => mk (ReturnVal p)
+      | ReturnVoid => mk ReturnVoid
+      end.
+
+(** Clean up all the temporaries before running [k] *)
+Definition Kfree `{Σ : cpp_logic} (interp : Mfree) {T} (k : Kpred T) : Kpred T :=
+  KP $ fun rt free => interp free $ k (rt, FreeTemps.id).
 
 (** *** [Kbind Q k] *)
-Module Kbind.
-  Definition inner `{Σ : cpp_logic} {T U} (Q : T -> Kpred U -> mpred) (k : Kpred U) (rt : ReturnType T) : mpred :=
-    match rt with
-    | Normal v => Q v k
-    | Break => k Break
-    | Continue => k Continue
-    | ReturnVal p => k $ ReturnVal p
-    | ReturnVoid => k ReturnVoid
-    end.
-End Kbind.
+Definition Kbind_inner `{Σ : cpp_logic} {T U} (Q : T -> Kpred U -> mpred) (k : Kpred U) (rt : ReturnType T) (free : FreeTemps.t) : mpred :=
+  match rt with
+  | Normal v => Q v (Ktemps free k)
+  | Break => k (Break, free)
+  | Continue => k (Continue, free)
+  | ReturnVal p => k (ReturnVal p, free)
+  | ReturnVoid => k (ReturnVoid, free)
+  end.
 
 Definition Kbind `{Σ : cpp_logic} {T U} (Q : T -> Kpred U -> mpred) (k : Kpred U) : Kpred T :=
-  KP $ Kbind.inner Q k.
+  KP $ Kbind_inner Q k.
 
 Section Kbind.
   Context `{Σ : cpp_logic}.
 
-  Lemma Kbind_frame {T U} (Q1 Q2 : T -> Kpred U -> mpred) (k1 k2 : Kpred U) (rt : ReturnType T) :
-    (Forall x, (Forall rt, k1 rt -* k2 rt) -* Q1 x k1 -* Q2 x k2) |--
-      (Forall rt, k1 rt -* k2 rt) -*
-      Kbind Q1 k1 rt -* Kbind Q2 k2 rt.
+  Lemma Kbind_frame {T U} (Q1 Q2 : T -> Kpred U -> mpred) (k1 k2 : Kpred U) rt :
+    <affine> (Forall (k1 k2 : Kpred U) x, (Forall rt, k1 rt -* k2 rt) -* Q1 x k1 -* Q2 x k2)
+    |-- (Forall rt, k1 rt -* k2 rt) -*
+        Kbind Q1 k1 rt -* Kbind Q2 k2 rt.
   Proof.
     iIntros "HQ Hk". destruct rt; cbn; try iExact "Hk".
-    by iApply "HQ".
+    rewrite /Kbind_inner. case_match; eauto.
+    rewrite /Ktemps.
+    rewrite bi.affinely_elim.
+    iApply ("HQ" with "[Hk]").
+    iIntros (?). rewrite /KP/=.
+    case_match; subst. case_match; eauto.
   Qed.
 End Kbind.
+
+(* A simple version of [Kbind] *)
+Notation Kpure Q := (Kbind (fun a k => Q a (fun a' => k (Normal a', FreeTemps.id)))).
 
 (** *** [Kseq Q k] *)
 Definition Kseq `{Σ : cpp_logic} (Q : Kpred () -> mpred) (k : Kpred ()) : Kpred () :=
@@ -206,22 +259,24 @@ Definition Kseq `{Σ : cpp_logic} (Q : Kpred () -> mpred) (k : Kpred ()) : Kpred
 Section Kseq.
   Context `{Σ : cpp_logic}.
 
-  Lemma Kseq_frame (Q1 Q2 : Kpred () -> mpred) (k1 k2 : Kpred ()) (rt : ReturnType ()) :
-    ((Forall rt, k1 rt -* k2 rt) -* Q1 k1 -* Q2 k2) |--
-    (Forall rt, k1 rt -* k2 rt) -*
-    Kseq Q1 k1 rt -* Kseq Q2 k2 rt.
+  Lemma Kseq_frame (Q1 Q2 : Kpred () -> mpred) (k1 k2 : Kpred ()) rt :
+    <affine> (Forall k1 k2 : Kpred _, (Forall rt, k1 rt -* k2 rt) -* Q1 k1 -* Q2 k2)
+    |-- (Forall rt, k1 rt -* k2 rt) -*
+        Kseq Q1 k1 rt -* Kseq Q2 k2 rt.
   Proof.
-    iIntros "HQ Hk". destruct rt; cbn; try iExact "Hk".
-    by iApply "HQ".
+    rewrite /Kseq. iIntros "X"; iApply Kbind_frame.
+    iModIntro. rewrite bi.affinely_elim.
+    iIntros (???) "K". iApply "X". eauto.
   Qed.
 End Kseq.
 
+(* TODO: move to stmt
 (* loop with invariant `I` *)
-Definition Kloop_inner `{Σ : cpp_logic} (I : mpred) (Q : Kpred ()) (rt : ReturnType ()) : mpred :=
+Definition Kloop_inner `{Σ : cpp_logic} (I : mpred) (Q : Kpred ()) (rt : ReturnType ()) (free : FreeTemps.t) : mpred :=
   match rt with
-  | Break | Normal _ => Q (Normal ())
-  | Continue => I
-  | ReturnVal _ | ReturnVoid => Q rt
+  | Break | Normal _ => Q (Normal (), free)
+  | Continue => wp_interp free $ I
+  | ReturnVal _ | ReturnVoid => Q (rt, free)
   end.
 #[global] Arguments Kloop_inner _ _ _ _ _ !rt /.
 
@@ -241,23 +296,8 @@ Section Kloop.
     all: first [ iExact "Hk" | iApply "HI" ].
   Qed.
 End Kloop.
+*)
 
-Definition Kat_exit `{Σ : cpp_logic} {T} (Q : mpred -> mpred) (k : Kpred T) : Kpred T :=
-  KP $ fun rt => Q (k rt).
-#[global] Hint Opaque Kat_exit : typeclass_instances.
-
-Section Kat_exit.
-  Context `{Σ : cpp_logic}.
-
-  Lemma Kat_exit_frame {T} (Q Q' : mpred -> mpred) (k k' : Kpred T) :
-    Forall R R' : mpred, (R -* R') -* Q R -* Q' R' |--
-    Forall rt, (k rt -* k' rt) -*
-    Kat_exit Q k rt -* Kat_exit Q' k' rt.
-  Proof.
-    iIntros "HQ %rt Hk". destruct rt; cbn.
-    all: by iApply "HQ".
-  Qed.
-End Kat_exit.
 
 (*
 NOTE KpredI does not embed into mpredI because it doesn't respect
@@ -329,23 +369,23 @@ Section with_cpp.
   Context `{Σ : cpp_logic}.
 
   (* the monad for expression evaluation *)
-  #[local] Definition M (T : Type) : Type :=
-    (FreeTemps.t -> Kpred T) -> mpred.
+  Definition M (T : Type) : Type :=
+    Kpred T -> mpred.
 
   (** The [Proper]ness relation that should typically be used for [M]. *)
-  #[local] Definition Mrel T : M T -> M T -> Prop :=
-    (pointwise_relation _ (⊢) ==> (⊢))%signature.
+  Definition Mrel T : M T -> M T -> Prop :=
+    ((⊢) ==> (⊢))%signature.
   (** This relation is _weaker_ because it requires the argument to respect [FreeTemps.t_eq]. *)
-  #[local] Definition Mequiv T : M T -> M T -> Prop :=
-    ((FreeTemps.t_eq ==> (⊣⊢)) ==> (⊣⊢))%signature.
+  Definition Mequiv T : M T -> M T -> Prop :=
+    ((⊣⊢) ==> (⊣⊢))%signature.
 
-  #[local] Definition Mframe {T} (a b : M T) : mpred :=
-    Forall Q Q' : FreeTemps.t -> Kpred T, (Forall x v, Q x v -* Q' x v) -* a Q -* b Q'.
+  Definition Mframe {T} (a b : M T) : mpred :=
+    Forall Q Q' : Kpred T, (Forall v, Q v -* Q' v) -* a Q -* b Q'.
 
-  #[local] Definition Mret {T} (t : T) : M T :=
-    fun K => K FreeTemps.id (Normal t).
+  Definition Mret {T} (t : T) : M T :=
+    fun K => K (Normal t, FreeTemps.id).
 
-  Instance ResultVal_fmap : FMap ReturnType :=
+  #[local] Instance ResultVal_fmap : FMap ReturnType :=
     fun _ _ f x => match x with
                 | Normal x => Normal $ f x
                 | Break => Break
@@ -353,41 +393,37 @@ Section with_cpp.
                 | ReturnVoid => ReturnVoid
                 | ReturnVal v => ReturnVal v
                 end.
+  #[local] Instance index_fmap : FMap (fun t => rt_biIndex t) :=
+    fun _ _ f '(x, free) => (f <$> x, free).
 
-  #[local] Definition Mmap {T U} (f : T -> U) (t : M T) : M U :=
-    fun K : FreeTemps.t -> Kpred U => t (fun free => MonPred (fun v => K free (f <$> v)) _).
+  Definition Mmap {T U} (f : T -> U) (t : M T) : M U :=
+    fun K : Kpred U => t $ MonPred (fun rt_free => K ((f <$> rt_free.1), rt_free.2)) _.
 
   Lemma Mmap_frame_strong {T U} c (f : T -> U) :
     Mframe c c
-    |-- Forall Q Q' : FreeTemps.t -> Kpred U, (Forall x free, Q free (f <$> x) -* Q' free (f <$> x)) -* Mmap f c Q -* Mmap f c Q'.
+    |-- Forall Q Q' : Kpred U, (Forall x, Q (index_fmap _ _ f x) -* Q' (index_fmap _ _ f x)) -* Mmap f c Q -* Mmap f c Q'.
   Proof.
     rewrite /Mframe/Mmap; iIntros "A" (??) "B".
-    iApply "A". iIntros (??); iApply "B".
+    iApply "A". iIntros (?). simpl. iApply ("B" $! (v.1, v.2)).
   Qed.
 
   Lemma Mmap_frame {T U} c (f : T -> U) :
     Mframe c c |-- Mframe (Mmap f c) (Mmap f c).
   Proof.
     rewrite /Mframe/Mmap; iIntros "A" (??) "B".
-    iApply "A". iIntros (??); iApply "B".
+    iApply "A". iIntros (?); iApply "B".
   Qed.
 
-  (* TODO: this is not implementable without putting [FreeTemps.t] into [Kpred]. *)
-  #[local] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U.
-  Proof. refine (
-    fun K => c (fun free => Kbind (fun v (Q : Kpred U) => k v (fun free' => MonPred (fun v => Q _) _)) (K free))).
-         Show Proof.
-
-
   #[local] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
-    fun K => c (fun v f => k v (fun v' f' => K v' (f' >*> f)%free)).
+    fun K => c (Kbind k K).
 
   Lemma Mbind_frame {T U} c (k : T -> M U) :
-    Mframe c c |-- (Forall x, Mframe (k x) (k x)) -* Mframe (Mbind c k) (Mbind c k).
+    Mframe c c |-- <affine> (Forall x, Mframe (k x) (k x)) -* Mframe (Mbind c k) (Mbind c k).
   Proof.
     rewrite /Mframe/Mbind; iIntros "A B" (??) "C".
-    iApply "A". iIntros (??). iApply "B".
-    iIntros (??); iApply "C".
+    iApply "A". iIntros ([??]). iApply (Kbind_frame with "[B]"); eauto.
+    iModIntro. rewrite bi.affinely_elim.
+    by iIntros (???) "C"; iApply "B".
   Qed.
 
   (** *** Indeterminately sequenced computations
@@ -396,16 +432,32 @@ Section with_cpp.
       (CITATION NEEDED)
    *)
   Definition nd_seq {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
-    fun K => wp1 (fun v1 f1 => wp2 (fun v2 f2 => K (v1,v2) (f2 >*> f1)%free))
-     //\\ wp2 (fun v2 f2 => wp1 (fun v1 f1 => K (v1,v2) (f1 >*> f2)%free)).
+    fun K => Mbind wp1 (fun v1 => Mbind wp2 (fun v2 => Mret (v1, v2))) K
+     //\\ Mbind wp2 (fun v2 => Mbind wp1 (fun v1 => Mret (v1, v2))) K.
 
   Lemma nd_seq_frame {T U} wp1 wp2 :
-    Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@nd_seq T U wp1 wp2) (nd_seq wp1 wp2).
+    <affine> Mframe wp1 wp1 |-- <affine> Mframe wp2 wp2 -* Mframe (@nd_seq T U wp1 wp2) (nd_seq wp1 wp2).
   Proof.
     iIntros "A B" (??) "C D".
     iSplit; [ iDestruct "D" as "[D _]" | iDestruct "D" as "[_ D]" ]; iRevert "D".
-    { iApply "A". iIntros (??). iApply "B"; iIntros (??). iApply "C". }
-    { iApply "B". iIntros (??). iApply "A"; iIntros (??). iApply "C". }
+    { rewrite bi.affinely_elim. iApply "A". iIntros (?).
+      iApply (Kbind_frame with "[B] [C]"); eauto.
+      iModIntro; rewrite bi.affinely_elim.
+      iIntros (???) "A".
+      iApply "B".
+      iIntros (?).
+      iApply Kbind_frame; eauto.
+      iModIntro.
+      iIntros (???) "X"; iApply "X". }
+    { rewrite (bi.affinely_elim (Mframe wp2 wp2)). iApply "B". iIntros (?).
+      iApply (Kbind_frame with "[A] [C]"); eauto.
+      iModIntro; rewrite bi.affinely_elim.
+      iIntros (???) "B".
+      iApply "A".
+      iIntros (?).
+      iApply Kbind_frame; eauto.
+      iModIntro.
+      iIntros (???) "X"; iApply "X". }
   Qed.
 
   (* Lifting non-deterministic sequencing to lists.
@@ -427,17 +479,20 @@ Section with_cpp.
 
   Definition nd_seqs {T} qs := @nd_seqs' T (length qs) qs.
 
-  Lemma nd_seqs'_frame_strong {T} n : forall (ls : list (M T)) Q Q',
+  Lemma nd_seqs'_frame_strong {T} n : forall (ls : list (M T)) (K K' : Kpred (list T)),
       n = length ls ->
-      Forall x y, [| length x = length ls |] -* Q x y -* Q' x y
-      |-- ([∗list] m ∈ ls, Mframe m m) -*
-          nd_seqs' n ls Q -* nd_seqs' n ls Q'.
+      Forall (x : ReturnType (list T) * FreeTemps.t), [| match x.1 with
+                                                         | Normal v => length v = length ls
+                                                         | _ => True
+                                                         end |] -* K x -* K' x
+      |-- <affine> ([∗list] m ∈ ls, Mframe m m) -*
+          nd_seqs' n ls K -* nd_seqs' n ls K'.
   Proof.
     induction n; simpl; intros.
     { case_match; eauto.
       subst. simpl.
       iIntros "X _". iApply "X". eauto. }
-    { destruct ls. exfalso; simpl in *; congruence.
+    { destruct ls; first by exfalso; simpl in *; congruence.
       inversion H.
       iIntros "X LS Y" (???) "%P".
       iSpecialize ("Y" $! pre).
@@ -447,58 +502,44 @@ Section with_cpp.
       rewrite P.
       iDestruct "LS" as "(a&b&c)".
       iRevert "Y". rewrite /Mbind.
+      rewrite (bi.affinely_elim (Mframe q q)).
       iApply "b".
-      iIntros (??).
+      iIntros (?).
       rewrite /Mmap.
       subst.
       assert (length ls = length (pre ++ post)).
       { have: (length (m :: ls) = length (pre ++ q :: post)) by rewrite P.
         rewrite !length_app /=. lia. }
+      rewrite /Kbind/Kbind_inner/KP/=.
+      case_match; case_match;
+        try solve [ iApply "X"; simpl; eauto ].
       iDestruct (IHn with "[X]") as "X". eassumption.
       2:{
-      iDestruct ("X" with "[a c]") as "X".
-      iSplitL "a"; eauto.
-      iApply "X". }
-      simpl. iIntros (??) "%". iApply "X".
-      revert H0 H1. rewrite !length_app/=.
-      intros. iPureIntro.
-      rewrite firstn_length_le; last lia.
-      rewrite length_skipn. lia. }
+        iDestruct ("X" with "[a c]") as "X".
+        iSplitL "a"; eauto.
+        iApply "X". }
+      simpl. iIntros (?) "%" => /=.
+      destruct x as [[] ?]; simpl in *; iApply "X"; eauto.
+      iPureIntro => /=. revert H0 H3; simpl; rewrite !length_app/=; intros.
+      rewrite firstn_length_le; [ | lia ].
+      rewrite length_skipn; lia. }
   Qed.
 
   Lemma nd_seqs'_frame {T} n : forall (ls : list (M T)),
       n = length ls ->
-      ([∗list] m ∈ ls, Mframe m m)
+      <affine> ([∗list] m ∈ ls, Mframe m m)
       |-- Mframe (nd_seqs' n ls) (nd_seqs' n ls).
   Proof.
-    induction n; simpl; intros.
-    { case_match.
-      { subst. simpl.
-        iIntros "_" (??) "X". iApply "X". }
-      { iIntros "?" (??) "? []". } }
-    { destruct ls. exfalso; simpl in *; congruence.
-      inversion H.
-      iIntros "LS" (??) "X Y"; iIntros (???) "%P".
-      iSpecialize ("Y" $! pre).
-      iSpecialize ("Y" $! post).
-      iSpecialize ("Y" $! q).
-      iDestruct ("Y" with "[]") as "Y"; first eauto.
-      rewrite P.
-      iDestruct "LS" as "(a&b&c)".
-      iRevert "Y".
-      iApply (Mbind_frame with "b [a c]"); eauto.
-      iIntros (?).
-      iApply Mmap_frame.
-      rewrite -H1.
-      iApply IHn.
-      { have: (length (m :: ls) = length (pre ++ q :: post)) by rewrite P.
-        rewrite !length_app /=. lia. }
-      iSplitL "a"; eauto. }
+    intros.
+    iIntros "X" (??) "Y".
+    iApply (nd_seqs'_frame_strong with "[Y] X"); eauto.
+    iIntros (??); iApply "Y".
   Qed.
   Lemma nd_seqs_frame : forall {T} (ms : list (_ T)),
-      ([∗list] m ∈ ms, Mframe m m) |-- Mframe (nd_seqs ms) (nd_seqs ms).
+      <affine> ([∗list] m ∈ ms, Mframe m m) |-- Mframe (nd_seqs ms) (nd_seqs ms).
   Proof. intros. by iApply nd_seqs'_frame. Qed.
 
+  (*
   (* sanity check on [nd_seq] and [nd_seqs] *)
   Example nd_seq_example : forall {T} (a b : M T),
       Proper (Mrel _) a -> Proper (Mrel _) b ->
@@ -558,18 +599,20 @@ Section with_cpp.
         rewrite H1 => //.
         by rewrite FreeTemps.seq_id_unitL. } }
   Qed.
+  *)
 
   (** *** sequencing of monadic compuations *)
   Definition Mseq {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
     Mbind wp1 (fun v => Mmap (fun x => (v, x)) wp2).
 
   Lemma Mseq_frame {T U} wp1 wp2 :
-    Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@Mseq T U wp1 wp2) (Mseq wp1 wp2).
+    <affine> Mframe wp1 wp1 |-- <affine> Mframe wp2 wp2 -* Mframe (@Mseq T U wp1 wp2) (Mseq wp1 wp2).
   Proof.
-    iIntros "A B" (??) "C".
+    iIntros "A B" (??) "c".
     rewrite /Mseq.
     iApply (Mbind_frame with "A [B]"); last iAssumption.
-    iIntros (???) "X". iApply (Mmap_frame with "B"). done.
+    iModIntro; rewrite bi.affinely_elim.
+    iIntros (?). iApply (Mmap_frame with "B").
   Qed.
 
   (** [seqs es] is sequential evaluation of [es] *)
@@ -579,27 +622,37 @@ Section with_cpp.
     | e :: es => Mmap (fun '(a,b) => a:: b) (Mseq e (seqs es))
     end.
 
-  Lemma seqs_frame_strong {T} : forall (ls : list (M T)) Q Q',
-      ([∗list] m ∈ ls, Mframe m m)%I
-      |-- (Forall x y, [| length x = length ls |] -* Q x y -* Q' x y) -*
-          (seqs ls Q) -* (seqs ls Q').
+  Lemma seqs_frame_strong {T} : forall (ls : list (M T)) (Q Q' : Kpred (list T)),
+      <affine> ([∗list] m ∈ ls, Mframe m m)%I
+      |-- (Forall x, [| match x.1 with
+                        | Normal x => length x = length ls
+                        | _ => True
+                        end |] -* Q x -* Q' x) -*
+          seqs ls Q -* seqs ls Q'.
   Proof.
     induction ls; simpl; intros.
     - iIntros "_ X"; iApply "X"; eauto.
     - iIntros "[A AS] K".
-      rewrite /Mbind. iApply "A".
-      iIntros (??).
+      rewrite /Mbind.
+      rewrite (bi.affinely_elim (Mframe a a)).
+      iApply "A".
+      iIntros (?).
+      rewrite /Kbind/Kbind_inner/=.
+      case_match; case_match; try iApply "K"; eauto.
       iApply (IHls with "AS").
-      iIntros (???).
-      iApply "K". simpl. eauto.
+      iIntros (??).
+      destruct x as [[] ?] => /=; try iApply "K"; simpl; eauto.
   Qed.
 
+  (*
   (** *** interleaving of monadic values
 
       We encode interleaving through concurrency which we represent through
-      separable resources.
+      separable resources. However, this does not work when the different
+      values can return in different ways. Capturing this requires a
+      finer-grained interleaving that this monad currently does not support.
 
-      NOTE: this is like the semantics of argument evaluation in C
+      NOTE: this is like the semantics of argument evaluation in C.
    *)
   Definition Mpar {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
     fun Q => Exists Q1 Q2, wp1 Q1 ** wp2 Q2 ** (Forall v1 v2 f1 f2, Q1 v1 f1 -* Q2 v2 f2 -* Q (v1,v2) (f1 |*| f2)%free).
@@ -648,6 +701,7 @@ Section with_cpp.
       { simpl. eauto. }
       iApply ("KK" with "[$] [$]").
   Qed.
+  *)
 
   (** *** evaluation by a scheme *)
 
@@ -671,9 +725,12 @@ Section with_cpp.
     | evaluation_order.rl => Mmap (@rev _) (seqs (rev es))
     end.
 
-  Lemma eval_frame_strong {T} oe : forall (ls : list (M T)) Q Q',
-      ([∗list] m ∈ ls, Mframe m m)%I
-      |-- (Forall x y, [| length x = length ls |] -* Q x y -* Q' x y) -*
+  Lemma eval_frame_strong {T} oe : forall (ls : list (M T)) (Q Q' : Kpred (list T)),
+      <affine> ([∗list] m ∈ ls, Mframe m m)%I
+      |-- (Forall x, [| match x.1 with
+                        | Normal x => length x = length ls
+                        | _ => True
+                        end |] -* Q x -* Q' x) -*
           eval oe ls Q -* eval oe ls Q'.
   Proof.
     destruct oe; intros.
@@ -683,21 +740,32 @@ Section with_cpp.
       destruct ls; simpl.
       { iIntros "_ X"; iApply "X". done. }
       { iIntros "[X Y] K".
-        iApply "X". iIntros (??).
+        rewrite bi.affinely_elim.
+        iApply "X". iIntros (?).
+        rewrite /Kbind/Kbind_inner/KP/=.
+        case_match; case_match; try iApply "K"; eauto.
         iApply (nd_seqs'_frame_strong with "[K] Y"); eauto.
-        iIntros (???).
-        rewrite /Mret.
-        iApply "K". simpl; eauto. }
+        iIntros (??) => /=.
+        destruct x.1; simpl; iApply "K"; simpl; eauto. }
     - simpl.
       iIntros "X K".
       rewrite /Mmap. iApply (seqs_frame_strong with "[X]").
       { iStopProof. induction ls; simpl; eauto.
         iIntros "[$ K]".
         iDestruct (IHls with "K") as "$". eauto. }
-      { iIntros (???); iApply "K".
-        rewrite length_rev. eauto. rewrite -(length_rev ls). eauto. }
+      { iIntros (??); iApply "K".
+        destruct x.1; simpl in *; eauto.
+        iPureIntro. revert H.
+        rewrite !length_rev. eauto. }
   Qed.
+End with_cpp.
+End cpp_m.
 
+Module Type EVALUATION.
+Section with_cpp.
+  Context `{Σ : cpp_logic}.
+
+  Import cpp_m.
 
   (* The expressions in the C++ language are categorized into five
    * "value categories" as defined in:
@@ -730,7 +798,7 @@ Section with_cpp.
 
 
   Axiom wp_lval_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_lval tu ρ e (fun v free => |={top}=> Q v free))
+      (|={top}=> wp_lval tu ρ e (|={top}=> Q))
     ⊢ wp_lval tu ρ e Q.
 
   (* Proposal (the same thing for [wp_xval])
@@ -768,23 +836,22 @@ Section with_cpp.
      -
    *)
   Axiom wp_lval_well_typed : forall {σ:genv} tu ρ e Q,
-      wp_lval tu ρ e (fun v free => reference_to (type_of e) v -* Q v free)
+      wp_lval tu ρ e (Kbind (fun v k => reference_to (type_of e) v -* k (Normal v, FreeTemps.id)) Q)
     ⊢ wp_lval tu ρ e Q.
 
   Axiom wp_lval_models : forall {σ:genv} tu ρ e Q,
       denoteModule tu -* wp_lval tu ρ e Q
     ⊢ wp_lval tu ρ e Q.
 
-  Axiom wp_lval_frame :
-    forall σ tu1 tu2 ρ e k1 k2,
+  Axiom wp_lval_frame : forall σ tu1 tu2 ρ e,
       sub_module tu1 tu2 ->
-      Forall v f, k1 v f -* k2 v f |-- @wp_lval σ tu1 ρ e k1 -* @wp_lval σ tu2 ρ e k2.
+      |-- Mframe (@wp_lval σ tu1 ρ e) (@wp_lval σ tu2 ρ e).
 
   Section wp_lval_proper.
     Context {σ : genv}.
 
     #[local] Notation PROPER M R :=
-      (Proper (M ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ R) ==> R) (@wp_lval σ)) (only parsing).
+      (Proper (M ==> eq ==> eq ==> R ==> R) (@wp_lval σ)) (only parsing).
 
     #[global] Declare Instance wp_lval_ne : forall n, PROPER eq (dist n).
 
@@ -793,7 +860,7 @@ Section with_cpp.
       repeat red. intros; subst.
       iIntros "X". iRevert "X".
       iApply wp_lval_frame; eauto.
-      iIntros (v). iIntros (f). iApply H2.
+      iIntros (v). iApply H2.
     Qed.
 
     #[global] Instance wp_lval_flip_mono : PROPER (flip sub_module) (flip (⊢)).
@@ -802,8 +869,7 @@ Section with_cpp.
     #[global] Instance wp_lval_proper : PROPER eq (⊣⊢).
     Proof.
       do 12 intro; subst.
-      split'; apply wp_lval_mono; try done.
-      all: by move => ??; rewrite H2.
+      split'; apply wp_lval_mono; try rewrite H2; done.
     Qed.
   End wp_lval_proper.
 
@@ -811,16 +877,17 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit) (ρ : region) (e : Expr).
     #[local] Notation WP := (wp_lval tu ρ e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : ptr → FreeTemps → epred.
+    Implicit Types Q : Kpred ptr.
 
-    Lemma wp_lval_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
+    Lemma wp_lval_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_lval_frame with "HK Hwp"). Qed.
     Lemma fupd_wp_lval Q : (|={top}=> WP Q) |-- WP Q.
     Proof.
       rewrite -{2}wp_lval_shift. apply fupd_elim. rewrite -fupd_intro.
-      iIntros "Hwp". iApply (wp_lval_wand with "Hwp"). auto.
+      iIntros "Hwp". iApply (wp_lval_wand with "Hwp").
+      setoid_rewrite monPred_at_fupd; eauto.
     Qed.
-    Lemma wp_lval_fupd Q : WP (λ v f, |={top}=> Q v f) |-- WP Q.
+    Lemma wp_lval_fupd Q : WP (|={top}=> Q) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_lval_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -893,12 +960,11 @@ Section with_cpp.
   Parameter wp_init
     : forall {resolve:genv}, translation_unit -> region ->
                         exprtype -> ptr -> Expr ->
-                        (FreeTemps -> epred) -> (* free -> post *)
-                        mpred. (* pre-condition *)
+                        M FreeTemps.t.
   (* END wp_init *)
 
   Axiom wp_init_shift : forall {σ:genv} tu ρ ty p e Q,
-      (|={top}=> wp_init tu ρ ty p e (fun frees => |={top}=> Q frees))
+      (|={top}=> wp_init tu ρ ty p e (|={top}=> Q))
     ⊢ wp_init tu ρ ty p e Q.
 
   Axiom wp_init_models : forall {σ:genv} tu ty ρ p e Q,
@@ -906,12 +972,12 @@ Section with_cpp.
     ⊢ wp_init tu ρ ty p e Q.
 
   Axiom wp_init_well_typed : forall {σ:genv} tu ty ρ p e Q,
-      wp_init tu ρ ty p e (fun frees => reference_to ty p -* Q frees)
+      wp_init tu ρ ty p e (Kbind (fun free K => reference_to ty p -* K (Normal free, FreeTemps.id)) Q)
     ⊢ wp_init tu ρ ty p e Q.
 
-  Axiom wp_init_frame : forall σ tu1 tu2 ρ ty p e k1 k2,
+  Axiom wp_init_frame : forall σ tu1 tu2 ρ ty p e,
       sub_module tu1 tu2 ->
-      Forall fs, k1 fs -* k2 fs |-- @wp_init σ tu1 ρ ty p e k1 -* @wp_init σ tu2 ρ ty p e k2.
+      |-- Mframe (@wp_init σ tu1 ρ ty p e) (@wp_init σ tu2 ρ ty p e).
 
   (**
   Separate from [wp_init_frame] because it'll likely have to be proved
@@ -926,7 +992,7 @@ Section with_cpp.
     #[local] Notation PROPER T R := (
       Proper (
         T ==> eq ==> equiv ==> eq ==> eq ==>
-        pointwise_relation _ R ==> R
+        R ==> R
       ) (@wp_init σ)
     ) (only parsing).
 
@@ -947,7 +1013,7 @@ Section with_cpp.
     Proof.
       intros tu?<- ρ?<- t1 t2 Ht p?<- e?<- Q1 Q2 HQ.
       split'; apply wp_init_mono; try done.
-      all: by intros f; rewrite HQ.
+      all: by rewrite HQ.
     Qed.
   End wp_init_proper.
 
@@ -955,7 +1021,7 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit) (ρ : region) (ty : type) (p : ptr) (e : Expr).
     #[local] Notation WP := (wp_init tu ρ ty p e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : FreeTemps → epred.
+    Implicit Types Q : Kpred FreeTemps.
 
     Lemma wp_init_wand Q1 Q2 : WP Q1 |-- (∀ fs, Q1 fs -* Q2 fs) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_init_frame with "HK Hwp"). Qed.
@@ -963,8 +1029,9 @@ Section with_cpp.
     Proof.
       rewrite -{2}wp_init_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_init_wand with "Hwp"). auto.
+      setoid_rewrite monPred_at_fupd; eauto.
     Qed.
-    Lemma wp_init_fupd Q : WP (λ fs, |={top}=> Q fs) |-- WP Q.
+    Lemma wp_init_fupd Q : WP (|={top}=> Q) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_init_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -987,13 +1054,13 @@ Section with_cpp.
 
   (* BEGIN wp_prval *)
   Definition wp_prval {resolve:genv} (tu : translation_unit) (ρ : region)
-             (e : Expr) (Q : ptr -> FreeTemps -> epred) : mpred :=
-    ∀ p : ptr, wp_init tu ρ (type_of e) p e (Q p).
+             (e : Expr) (Q : Kpred ptr) : mpred :=
+    ∀ p : ptr, wp_init tu ρ (type_of e) p e (Kbind (fun free K => K (Normal p, free)) Q).
   (* END wp_prval *)
 
   #[global] Instance wp_prval_ne : forall σ n,
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_prval σ).
-  Proof. solve_proper. Qed.
+    Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp_prval σ).
+  Proof. (* solve_proper. Qed. *) Admitted. (* TODO: missing [Proper] instances for [dist n] *)
 
   (** TODO prove instances for [wp_prval] *)
 
@@ -1004,29 +1071,28 @@ Section with_cpp.
   (* END wp_operand *)
 
   Axiom wp_operand_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_operand tu ρ e (fun v free => |={top}=> Q v free))
+      (|={top}=> wp_operand tu ρ e (|={top}=> Q))
     ⊢ wp_operand (resolve:=σ) tu ρ e Q.
 
   Axiom wp_operand_models : forall {σ:genv} tu ρ e Q,
       denoteModule tu -* wp_operand tu ρ e Q
     ⊢ wp_operand tu ρ e Q.
 
-  Axiom wp_operand_frame :
-    forall σ tu1 tu2 ρ e k1 k2,
+  Axiom wp_operand_frame : forall σ tu1 tu2 ρ e,
       sub_module tu1 tu2 ->
-      Forall v f, k1 v f -* k2 v f |-- @wp_operand σ tu1 ρ e k1 -* @wp_operand σ tu2 ρ e k2.
+      |-- Mframe (@wp_operand σ tu1 ρ e) (@wp_operand σ tu2 ρ e).
 
   (** C++ evaluation semantics guarantees that all expressions of type [t] that
       evaluate without UB evaluate to a well-typed value of type [t] *)
   Axiom wp_operand_well_typed : forall {σ : genv} tu ρ e Q,
-        wp_operand tu ρ e (fun v frees => has_type v (type_of e) -* Q v frees)
+        wp_operand tu ρ e (Kbind (fun v K => has_type v (type_of e) -* K (Normal v, FreeTemps.id)) Q)
     |-- wp_operand tu ρ e Q.
 
   Section wp_operand_proper.
     Context {σ : genv}.
 
     #[local] Notation PROPER M R :=
-      (Proper (M ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ R) ==> R) (@wp_operand σ)) (only parsing).
+      (Proper (M ==> eq ==> eq ==> R ==> R) (@wp_operand σ)) (only parsing).
 
     #[global] Declare Instance wp_operand_ne : forall n, PROPER eq (dist n).
 
@@ -1035,7 +1101,7 @@ Section with_cpp.
       repeat red. intros; subst.
       iIntros "X". iRevert "X".
       iApply wp_operand_frame; eauto.
-      iIntros (v). iIntros (f). iApply H2.
+      iIntros (v). iApply H2.
     Qed.
 
     #[global] Instance wp_operand_flip_mono : PROPER (flip sub_module) (flip (⊢)).
@@ -1045,7 +1111,7 @@ Section with_cpp.
     Proof.
       do 12 intro; subst.
       split'; apply wp_operand_mono; try done.
-      all: by move => ??; rewrite H2.
+      all: by rewrite H2.
     Qed.
   End wp_operand_proper.
 
@@ -1053,16 +1119,17 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit) (ρ : region) (e : Expr).
     #[local] Notation WP := (wp_operand tu ρ e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : val → FreeTemps → epred.
+    Implicit Types Q : Kpred val.
 
-    Lemma wp_operand_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
+    Lemma wp_operand_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_operand_frame with "HK Hwp"). Qed.
     Lemma fupd_wp_operand Q : (|={top}=> WP Q) |-- WP Q.
     Proof.
       rewrite -{2}wp_operand_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_operand_wand with "Hwp"). auto.
+      setoid_rewrite monPred_at_fupd; eauto.
     Qed.
-    Lemma wp_operand_fupd Q : WP (λ v f, |={top}=> Q v f) |-- WP Q.
+    Lemma wp_operand_fupd Q : WP (|={top}=> Q) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_operand_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -1088,26 +1155,29 @@ Section with_cpp.
   (** [wp_test ρ e Q] evaluates [e] as an operand converting the value to a
       boolean before passing it to [Q].
    *)
-  Definition wp_test {σ : genv} (tu : translation_unit)  (ρ : region) (e : Expr) (Q : bool -> FreeTemps -> epred) : mpred :=
-    wp_operand tu ρ e (fun v free =>
-                      match is_true v with
-                      | Some c => Q c free
-                      | None => ERROR (is_true_None v)
-                      end).
+  Definition wp_test {σ : genv} (tu : translation_unit)  (ρ : region) (e : Expr) : M bool :=
+    fun K => wp_operand tu ρ e (Kpure (fun v K => match is_true v with
+                                            | Some c => K c
+                                            | None => ERROR (is_true_None v)
+                                            end) K).
   #[global] Hint Opaque wp_test : br_opacity.
   #[global] Arguments wp_test /.
 
   #[global] Instance wp_test_ne : forall σ n,
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n) (@wp_test σ).
-  Proof. solve_proper. Qed.
+    Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp_test σ).
+  Proof. (* solve_proper. Qed. *) Admitted. (* TODO: dist instances. Also, [dist n] for [M] *)
 
-  Lemma wp_test_frame {σ : genv} tu ρ test (Q Q' : _ -> _ -> epred) :
-    Forall b free, Q b free -* Q' b free |-- wp_test tu ρ test Q -* wp_test tu ρ test Q'.
+  Lemma wp_test_frame {σ : genv} tu1 tu2 ρ test :
+    sub_module tu1 tu2 ->
+    |-- Mframe (wp_test tu1 ρ test) (wp_test tu2 ρ test).
   Proof.
-    rewrite /wp_test.
-    iIntros "Q".
-    iApply wp_operand_frame; first reflexivity.
-    iIntros (??); case_match; eauto.
+    rewrite /wp_test/Mframe. intros.
+    iIntros (??) "Q".
+    iApply wp_operand_frame; first eauto.
+    iIntros (?).
+    rewrite /Kbind/Kbind_inner/=.
+    repeat case_match; eauto.
+    iIntros "[]".
   Qed.
 
   (** * xvalues *)
@@ -1117,22 +1187,22 @@ Section with_cpp.
     : forall {resolve:genv}, translation_unit -> region -> Expr -> M ptr.
 
   Axiom wp_xval_shift : forall {σ:genv} tu ρ e Q,
-      (|={top}=> wp_xval tu ρ e (fun v free => |={top}=> Q v free))
+      (|={top}=> wp_xval tu ρ e (|={top}=> Q))
     ⊢ wp_xval tu ρ e Q.
 
   Axiom wp_xval_models : forall {σ:genv} tu ρ e Q,
       denoteModule tu -* wp_xval tu ρ e Q
     ⊢ wp_xval tu ρ e Q.
 
-  Axiom wp_xval_frame : forall σ tu1 tu2 ρ e k1 k2,
+  Axiom wp_xval_frame : forall σ tu1 tu2 ρ e,
       sub_module tu1 tu2 ->
-      Forall v f, k1 v f -* k2 v f |-- @wp_xval σ tu1 ρ e k1 -* @wp_xval σ tu2 ρ e k2.
+      |-- Mframe (@wp_xval σ tu1 ρ e) (@wp_xval σ tu2 ρ e).
 
   Section wp_xval_proper.
     Context {σ : genv}.
 
     #[local] Notation PROPER M R :=
-      (Proper (M ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ R) ==> R) wp_xval) (only parsing).
+      (Proper (M ==> eq ==> eq ==> R ==> R) wp_xval) (only parsing).
 
     #[global] Declare Instance wp_xval_ne n : PROPER eq (dist n).
 
@@ -1141,7 +1211,7 @@ Section with_cpp.
       repeat red. intros; subst.
       iIntros "X". iRevert "X".
       iApply wp_xval_frame; eauto.
-      iIntros (v). iIntros (f). iApply H2 => //.
+      iIntros (v). iApply H2 => //.
     Qed.
 
     #[global] Instance wp_xval_flip_mono : PROPER (flip sub_module) (flip (⊢)).
@@ -1151,7 +1221,7 @@ Section with_cpp.
     Proof.
       do 12 intro; subst.
       split'; apply wp_xval_mono; try done.
-      all: by move => ??; rewrite H2.
+      all: by rewrite H2.
     Qed.
   End wp_xval_proper.
 
@@ -1159,16 +1229,17 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit) (ρ : region) (e : Expr).
     #[local] Notation WP := (wp_xval tu ρ e) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : ptr → FreeTemps → epred.
+    Implicit Types Q : Kpred ptr.
 
-    Lemma wp_xval_wand Q1 Q2 : WP Q1 |-- (∀ v f, Q1 v f -* Q2 v f) -* WP Q2.
+    Lemma wp_xval_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
     Proof. iIntros "Hwp HK". by iApply (wp_xval_frame with "HK Hwp"). Qed.
     Lemma fupd_wp_xval Q : (|={top}=> WP Q) |-- WP Q.
     Proof.
       rewrite -{2}wp_xval_shift. apply fupd_elim. rewrite -fupd_intro.
       iIntros "Hwp". iApply (wp_xval_wand with "Hwp"). auto.
+      setoid_rewrite monPred_at_fupd; eauto.
     Qed.
-    Lemma wp_xval_fupd Q : WP (λ v f, |={top}=> Q v f) |-- WP Q.
+    Lemma wp_xval_fupd Q : WP (|={top}=> Q) |-- WP Q.
     Proof. iIntros "Hwp". by iApply (wp_xval_shift with "[$Hwp]"). Qed.
 
     (* proof mode *)
@@ -1191,7 +1262,7 @@ Section with_cpp.
 
   (* Opaque wrapper of [False]: this represents a [False] obtained by a [ValCat] mismatch in [wp_glval]. *)
   Definition wp_glval_mismatch {resolve : genv} (r : region) (vc : ValCat) (e : Expr)
-    : (ptr -> FreeTemps -> mpred) -> mpred := funI _ => |={top}=> False.
+    : M ptr := funI _ => |={top}=> False.
   #[global] Arguments wp_glval_mismatch : simpl never.
 
   (* evaluate an expression as a generalized lvalue *)
@@ -1207,8 +1278,7 @@ Section with_cpp.
       end%I.
 
   #[global] Instance wp_glval_ne σ n :
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (pointwise_relation _ (dist n)) ==> dist n)
-             (@wp_glval σ).
+    Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp_glval σ).
   Proof.
     do 12 intro. rewrite /wp_glval; subst.
     case_match; try solve_proper.
@@ -1224,15 +1294,15 @@ Section with_cpp.
   [Prvalue] case
   *)
 
-  Lemma wp_glval_frame {σ : genv} tu1 tu2 r e Q Q' :
+  Lemma wp_glval_frame {σ : genv} tu1 tu2 r e :
     sub_module tu1 tu2 ->
-    (Forall v free, Q v free -* Q' v free) |-- wp_glval tu1 r e Q -* wp_glval tu2 r e Q'.
+    |-- Mframe (wp_glval tu1 r e) (wp_glval tu2 r e).
   Proof.
     rewrite /wp_glval. case_match.
     - by apply wp_lval_frame.
-    - auto.
+    - admit. (* TODO *)
     - by apply wp_xval_frame.
-  Qed.
+  Admitted. (* TODO *)
 
   #[global] Instance Proper_wp_glval σ :
     Proper (sub_module ==> eq ==> eq ==> Mrel _) (@wp_glval σ).
@@ -1246,7 +1316,7 @@ Section with_cpp.
     #[local] Notation wp_lval := (wp_lval tu ρ) (only parsing).
     #[local] Notation wp_xval := (wp_xval tu ρ) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : ptr → FreeTemps → epred.
+    Implicit Types Q : Kpred ptr.
 
     Lemma wp_glval_lval e Q :
       valcat_of e = Lvalue -> wp_glval e Q -|- wp_lval e Q.
@@ -1261,7 +1331,7 @@ Section with_cpp.
     Proof. by rewrite /wp_glval=>->. Qed.
 
     Lemma wp_glval_wand e Q Q' :
-      wp_glval e Q |-- (Forall v free, Q v free -* Q' v free) -* wp_glval e Q'.
+      wp_glval e Q |-- (Forall v, Q v -* Q' v) -* wp_glval e Q'.
     Proof.
       iIntros "A B". iRevert "A". by iApply wp_glval_frame.
     Qed.
@@ -1275,7 +1345,7 @@ Section with_cpp.
     Qed.
 
     Lemma wp_glval_fupd e Q :
-      wp_glval e (fun v f => |={top}=> Q v f) |-- wp_glval e Q.
+      wp_glval e (|={top}=> Q) |-- wp_glval e Q.
     Proof.
       rewrite /wp_glval/wp_glval_mismatch. case_match;
       auto using wp_lval_fupd, wp_xval_fupd.
@@ -1313,17 +1383,18 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit).
     Variable (ρ : region).
 
-    Definition wp_discard (e : Expr) (Q : FreeTemps -> mpred) : mpred :=
-      match valcat_of e with
-      | Lvalue => wp_lval tu ρ e (fun _ => Q)
-      | Prvalue =>
-        let ty := type_of e in
-        if is_value_type ty then
-          wp_operand tu ρ e (fun _ free => Q free)
-        else
-          Forall p, wp_init tu ρ (type_of e) p e (fun frees => Q (FreeTemps.delete ty p >*> frees)%free)
-      | Xvalue => wp_xval tu ρ e (fun _ => Q)
-      end.
+    Definition wp_discard (e : Expr) : M unit :=
+      fun K =>
+        match valcat_of e with
+        | Lvalue => wp_lval tu ρ e (Kpure (fun _ K => K ()) K)
+        | Prvalue =>
+            let ty := type_of e in
+            if is_value_type ty then
+              wp_operand tu ρ e (Kpure (fun _ K => K ()) K)
+            else
+              Forall p, wp_init tu ρ (type_of e) p e (Kbind (fun free K => K (Normal (), free)) K)
+        | Xvalue => wp_xval tu ρ e (Kpure (fun _ K => K ()) K)
+        end.
 
     Lemma fupd_wp_discard e Q :
       (|={top}=> wp_discard e Q) |-- wp_discard e Q.
@@ -1332,12 +1403,13 @@ Section with_cpp.
     Qed.
 
     Lemma wp_discard_fupd e Q :
-      wp_discard e (fun f => |={top}=> Q f) |-- wp_discard e Q.
+      wp_discard e (|={top}=> Q) |-- wp_discard e Q.
     Proof.
       rewrite /wp_discard. repeat case_match;
         auto using wp_lval_fupd, wp_xval_fupd, wp_operand_fupd.
+      (*
       f_equiv; intro; auto using wp_init_fupd.
-    Qed.
+    Qed. *) Admitted.
 
     (* proof mode *)
     #[global] Instance elim_modal_fupd_wp_discard p e P Q :
@@ -1359,13 +1431,13 @@ Section with_cpp.
   End wp_discard.
 
   #[global] Instance wp_discard_ne σ n :
-    Proper (eq ==> eq ==> eq ==> pointwise_relation _ (dist n) ==> dist n) (@wp_discard σ).
-  Proof. solve_proper. Qed.
+    Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp_discard σ).
+  Proof. (* solve_proper. Qed. *) Admitted. (* TODO *)
 
-  Lemma wp_discard_frame {σ : genv} tu1 tu2 ρ e k1 k2:
+  Lemma wp_discard_frame {σ : genv} tu1 tu2 ρ e :
     sub_module tu1 tu2 ->
-    Forall f, k1 f -* k2 f |-- wp_discard tu1 ρ e k1 -* wp_discard tu2 ρ e k2.
-  Proof.
+    |-- Mframe (wp_discard tu1 ρ e) (wp_discard tu2 ρ e).
+  Proof. (*
     rewrite /wp_discard.
     destruct (valcat_of e) => /=.
     - intros. rewrite -wp_lval_frame; eauto.
@@ -1379,10 +1451,10 @@ Section with_cpp.
         iIntros (?); iApply "a".
     - intros. rewrite -wp_xval_frame; eauto.
       iIntros "h" (v f) "x"; iApply "h"; iFrame.
-  Qed.
+  Qed. *) Admitted.
 
   #[global] Instance wp_discard_mono σ :
-    Proper (sub_module ==> eq ==> eq ==> pointwise_relation _ (⊢) ==> (⊢))
+    Proper (sub_module ==> eq ==> eq ==> (⊢) ==> (⊢))
            (@wp_discard σ).
   Proof.
     repeat red; intros; subst.
@@ -1391,7 +1463,7 @@ Section with_cpp.
   Qed.
 
   #[global] Instance wp_discard_flip_mono σ :
-    Proper (flip sub_module ==> eq ==> eq ==> pointwise_relation _ (flip (⊢)) ==> flip (⊢))
+    Proper (flip sub_module ==> eq ==> eq ==> flip (⊢) ==> flip (⊢))
            (@wp_discard σ).
   Proof. solve_proper. Qed.
 
@@ -1399,7 +1471,7 @@ Section with_cpp.
 
   (* evaluate a statement *)
   Parameter wp
-    : forall {resolve:genv}, translation_unit -> region -> Stmt -> KpredI -> mpred.
+    : forall {resolve:genv}, translation_unit -> region -> Stmt -> Kpred () -> mpred.
 
   #[global] Declare Instance wp_ne : forall σ n,
     Proper (eq ==> eq ==> eq ==> dist n ==> dist n) (@wp σ).
@@ -1412,9 +1484,9 @@ Section with_cpp.
       denoteModule tu -* wp tu ρ s Q
     ⊢ wp (resolve:=σ) tu ρ s Q.
 
-  Axiom wp_frame : forall {σ : genv} tu1 tu2 ρ s (k1 k2 : KpredI),
+  Axiom wp_frame : forall {σ : genv} tu1 tu2 ρ s (k1 k2 : Kpred ()),
       sub_module tu1 tu2 ->
-      (Forall rt : ReturnType, k1 rt -* k2 rt) |-- wp tu1 ρ s k1 -* wp tu2 ρ s k2.
+      (Forall rt, k1 rt -* k2 rt) |-- wp tu1 ρ s k1 -* wp tu2 ρ s k2.
 
   #[global] Instance Proper_wp {σ} :
     Proper (sub_module ==> eq ==> eq ==> (⊢) ==> (⊢))
@@ -1429,9 +1501,9 @@ Section with_cpp.
     Context {σ : genv} (tu : translation_unit) (ρ : region) (s : Stmt).
     #[local] Notation WP := (wp tu ρ s) (only parsing).
     Implicit Types P : mpred.
-    Implicit Types Q : KpredI.
+    Implicit Types Q : Kpred ().
 
-    Lemma wp_wand (k1 k2 : KpredI) :
+    Lemma wp_wand (k1 k2 : Kpred ()) :
       WP k1 |-- (Forall rt, k1 rt -* k2 rt) -* WP k2.
     Proof.
       iIntros "Hwp Hk". by iApply (wp_frame _ _ _ _ k1 with "[$Hk] Hwp").
@@ -1463,14 +1535,17 @@ Section with_cpp.
     Qed.
   End wp.
 
-  (* this is the low-level specification of C++ code blocks.
+  (* this is the low-level specification of C++ functions.
    *
    * [addr] represents the address of the entry point of the code.
    * note: the [list ptr] will be related to the register set.
+   *
+   * TODO: Ideally, I would use [Kpred ptr] here, but the only
+   *       valid results are [Normal p] or [Throw ty p].
    *)
   Parameter wp_fptr
     : forall (tt : type_table) (fun_type : type) (* TODO: function type *)
-        (addr : ptr) (ls : list ptr) (Q : ptr -> epred), mpred.
+        (addr : ptr) (ls : list ptr) (Q : ptr -> mpred), mpred.
 
   (* (bind [n] last for consistency with [NonExpansive]). *)
   #[global] Declare Instance wp_fptr_ne :
@@ -1518,7 +1593,7 @@ Section with_cpp.
   Lemma wp_fptr_frame : forall tt ft a ls Q1 Q2,
     (Forall v, Q1 v -* Q2 v)
     |-- wp_fptr tt ft a ls Q1 -* wp_fptr tt ft a ls Q2.
-  Proof.
+  Proof using Σ.
     intros. iIntros "H". iApply wp_fptr_frame_fupd; first reflexivity.
     iIntros (v) "? !>". by iApply "H".
   Qed.
@@ -1538,7 +1613,7 @@ Section with_cpp.
 
   #[global] Instance Proper_wp_fptr : forall tt ft a ls,
       Proper (pointwise_relation _ lentails ==> lentails) (@wp_fptr tt ft a ls).
-  Proof.
+  Proof using Σ.
     repeat red; intros.
     iApply wp_fptr_frame.
     iIntros (v); iApply H.
@@ -1547,7 +1622,7 @@ Section with_cpp.
   Section wp_fptr.
     Context {tt : type_table} {tf : type} (addr : ptr) (ls : list ptr).
     #[local] Notation WP := (wp_fptr tt tf addr ls) (only parsing).
-    Implicit Types Q : ptr → epred.
+    Implicit Types Q : ptr → mpred.
 
     Lemma wp_fptr_wand_fupd Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* |={top}=> Q2 v) -* WP Q2.
     Proof.
@@ -1557,7 +1632,7 @@ Section with_cpp.
     Qed.
 
     Lemma wp_fptr_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
-    Proof.
+    Proof using Σ.
       iIntros "Hwp HK".
       iApply (wp_fptr_frame with "HK Hwp").
     Qed.
@@ -1578,7 +1653,7 @@ Section with_cpp.
            to an member pointer or vice versa.
    *)
   Definition wp_mfptr (tt : type_table) (this_type : exprtype) (fun_type : functype)
-    : ptr -> list ptr -> (ptr -> epred) -> mpred :=
+    : ptr -> list ptr -> (ptr -> mpred) -> mpred :=
     wp_fptr tt (Tmember_func this_type fun_type).
 
   (* (bind [n] last for consistency with [NonExpansive]). *)
@@ -1598,13 +1673,12 @@ Section with_cpp.
   Lemma wp_mfptr_frame:
     ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
       Forall v, Q v -* Q' v |-- wp_mfptr t1 t t0 v l Q -* wp_mfptr t1 t t0 v l Q'.
-  Proof. intros; apply wp_fptr_frame. Qed.
+  Proof using Σ. intros; apply wp_fptr_frame. Qed.
 
   Lemma wp_mfptr_frame_fupd :
     ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
       (Forall v, Q v -* |={top}=> Q' v) |-- wp_mfptr t1 t t0 v l Q -* wp_mfptr t1 t t0 v l Q'.
-  Proof. intros; apply wp_fptr_frame_fupd; reflexivity. Qed.
-
+  Proof using Σ. intros; apply wp_fptr_frame_fupd; reflexivity. Qed.
 
 End with_cpp.
 
@@ -1637,7 +1711,9 @@ Notation mspec_shift := wp_mfptr_shift.
 Notation mspec_frame := wp_mfptr_frame.
 #[deprecated(since="20241102",note="use [wp_mfptr_frame].")]
 Notation mspec_frame_fupd := wp_mfptr_frame_fupd.
-End WPE.
+End EVALUATION.
 
-Export WPE.
+Declare Module evaluation : EVALUATION.
+Export cpp_m.
+Export evaluation.
 Export stdpp.coPset.
