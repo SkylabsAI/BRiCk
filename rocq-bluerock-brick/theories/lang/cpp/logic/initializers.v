@@ -135,11 +135,18 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
   end%bs%I.
 
 mlock
-  Definition default_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
+Definition default_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
   : ∀ (ty : exprtype) (p : ptr) (Q : FreeTemps -> epred), mpred :=
   fix default_initialize ty p Q {struct ty} :=
     Cbn (Reduce (default_initialize_body true) default_initialize tu ty p Q).
 #[global] Arguments default_initialize {_ _ _ _} _ _ _ _%_I : assert.	(* mlock bug *)
+
+#[program]
+Definition Mdefault_initialize `{Σ : cpp_logic, σ : genv} tu ty p : M FreeTemps.t :=
+  {| _wp K := default_initialize tu ty p $ fun free => K free FreeTemps.id _ |}.
+Next Obligation.
+  simpl; repeat intro. (* TODO: need [default_initialize_frame] *)
+Admitted.
 
 Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
@@ -468,6 +475,130 @@ Definition heap_type_of (t : type) : type :=
   | t => t
   end.
 
+Instance equiv_subseteq_subrelation `{Σ : cpp_logic} {T} : @subrelation (M T) (≡) (⊆).
+Proof.
+  red. intros. repeat intro.
+  do 2 red in H. rewrite H. iApply _ok. 2: reflexivity.
+  iIntros (???). iApply H0.
+Qed.
+
+Instance equiv_subseteq_proper `{Σ : cpp_logic} {T} : Proper ((⊆) --> (⊆) ==> Basics.impl) (⊆@{M T}).
+Proof. repeat intro. red in H. Admitted.
+Instance equiv_subseteq_proper_equiv `{Σ : cpp_logic} {T} : Proper ((≡) ==> (≡) ==> Basics.impl) (⊆@{M T}).
+Proof. repeat intro. red in H. Admitted.
+
+Instance equiv_RR `{Σ : cpp_logic} {T} : RewriteRelation (≡@{M T}) := {}.
+Instance subseteq_RR `{Σ : cpp_logic} {T} : RewriteRelation (⊆@{M T}) := {}.
+
+
+Definition WP `{Σ : cpp_logic} {T} (m : M T) := _wp m.
+
+Instance WP_proper `{Σ : cpp_logic} {T}
+  : Proper ((≡) ==> eq ==> flip (⊢)) (WP (T:=T)).
+Proof. Admitted.
+
+Instance Mbind_proper `{Σ : cpp_logic} {T U}
+  : Proper ((⊆@{M T}) ==> pointwise_relation _ (⊆@{M U}) ==> (⊆)) Mbind.
+Proof.
+  repeat intro.
+  rewrite /Mbind/=. apply H. intros. apply H0. intros. apply H1.
+Qed.
+
+Instance WP_subseteq_proper `{Σ : cpp_logic} {T}
+  : Proper ((⊆) ==> eq ==> (⊢)) (WP (T:=T)).
+Proof.
+  repeat intro. subst. rewrite /WP. apply H. eauto.
+Qed.
+Instance WP_subseteq_proper' `{Σ : cpp_logic} {T}
+  : Proper (flip (⊆) ==> eq ==> flip (⊢)) (WP (T:=T)).
+Proof.
+  repeat intro. subst. rewrite /WP. apply H. eauto.
+Qed.
+Instance Mbind_subseteq_proper `{Σ : cpp_logic} {T U}
+  : Proper (flip (⊆@{M T}) ==> pointwise_relation _ (flip (⊆@{M U})) ==> flip (⊆)) Mbind.
+Proof.
+  repeat intro.
+  rewrite /Mbind/=. apply H. intros. apply H0. intros. apply H1.
+Qed.
+
+Definition by_WP `{Σ : cpp_logic} {T} (m1 m2 : M T) :
+  (forall k, WP m1 k |-- WP m2 k) ->
+  m1 ⊆ m2.
+Proof.
+  rewrite /WP. repeat intro.
+  rewrite H. iApply _ok. iIntros (???). iApply H0.
+Qed.
+
+Typeclasses Opaque equiv bi_entails subseteq WP Mbind.
+
+#[local] Opaque FreeTemps.canon.
+Instance: forall `{Σ : cpp_logic} {T} K k P, FromWand (WP (Mbind (Mproduce P) k) K) P (WP (T:=T) (k ()) K).
+Proof.
+  intros. red.
+  rewrite /Mbind/WP/=.
+  f_equiv.
+  iApply _ok. iIntros (???).
+  iApply monad.K_entails.
+  by rewrite FreeTemps.canon_equiv right_id.
+Qed.
+
+Instance: forall `{Σ : cpp_logic} {T} K k P, IntoWand false false (WP (Mbind (Mproduce P) k) K) P (WP (T:=T) (k ()) K).
+Proof.
+  intros. red.
+  rewrite /Mbind/WP/=.
+  f_equiv.
+  iApply _ok. iIntros (???).
+  iApply monad.K_entails.
+  by rewrite FreeTemps.canon_equiv right_id.
+Qed.
+
+Lemma WP_Mbind_Mfupd `{Σ : cpp_logic} {T} E1 E2 k K :
+  WP (Mbind (Mfupd E1 E2) k) K -|- |={E1,E2}=> WP (T:=T) (k ()) K.
+Proof.
+  rewrite /WP/Mfupd/=. f_equiv.
+  iSplit;
+    by iApply _ok; iIntros (???); iApply monad.K_entails; rewrite FreeTemps.canon_equiv right_id.
+Qed.
+Lemma WP_Mret `{Σ : cpp_logic} {T} (v : T) K :
+  WP (Mret v) K -|- K v FreeTemps.id _.
+Proof. rewrite /WP/Mret/=. done. Qed.
+Lemma WP_Mbind_Mret `{Σ : cpp_logic} {T U} (v : T) (k : T -> M U) K :
+  WP (Mbind (Mret v) k) K -|- WP (k v) K.
+Proof.
+  rewrite /WP/Mbind/Mret/=.
+  iSplit;
+    by iApply _ok; iIntros (???); iApply monad.K_entails; rewrite FreeTemps.canon_equiv right_id.
+Qed.
+Lemma WP_Mbind_Mproduce `{Σ : cpp_logic} {T} P k K :
+  WP (Mbind (Mproduce P) k) K -|- P -* WP (T:=T) (k ()) K.
+Proof.
+  rewrite /WP/Mproduce/=. f_equiv.
+  iSplit;
+    by iApply _ok; iIntros (???); iApply monad.K_entails; rewrite FreeTemps.canon_equiv right_id.
+Qed.
+
+Instance Mbind_params : Params (@Mbind) 4 := {}.
+Instance bi_entails_params : Params (@bi_entails) 1 := {}.
+
+Definition Kfree `{Σ : cpp_logic} {T} (free : FreeTemps.t) (K : T -> forall free, FreeTemps.IsCanonical free -> mpred) : T -> forall free, FreeTemps.IsCanonical free -> mpred :=
+  fun x f _ => K x (FreeTemps.canon (f >*> free)) _.
+Lemma WP_Mbind_frame `{Σ : cpp_logic} {T U} (m : M T) (k1 k2 : T -> M U) K1 K2 :
+  (Forall x free, WP (k1 x) (Kfree free K1) -* WP (k2 x) (Kfree free K2))
+    |-- WP (Mbind m k1) K1 -* WP (Mbind m k2) K2.
+Proof.
+  rewrite /WP/Mbind/=.
+  iIntros "k"; iApply _ok; iIntros (???). iApply "k".
+Qed.
+Hint Opaque Kfree : typeclass_instances.
+Lemma WP_Mbind_Mbind `{Σ : cpp_logic} {T U V} m1 (m2 : T -> M U) (m3 : U -> M V) K :
+  WP (Mbind (Mbind m1 m2) m3) K -|- WP (Mbind m1 (fun x => Mbind (m2 x) m3)) K.
+Proof.
+  rewrite /Mbind/WP/=.
+  iSplit;
+    iApply _ok; iIntros (???); iApply _ok; iIntros (???); iApply _ok; iIntros (???);
+    iApply monad.K_entails; by rewrite !FreeTemps.canon_equiv assoc.
+Qed.
+
 Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
   tu ρ cv ty addr init :
       (letWP* free := wp_initialize_unqualified tu ρ cv ty addr init in
@@ -476,7 +607,18 @@ Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
   ⊆ wp_initialize_unqualified tu ρ cv ty addr init.
 Proof.
   rewrite wp_initialize_unqualified.unlock.
-  case_match; eauto. (*
+  case_match; eauto.
+  { red. red. intros. simpl. eauto. }
+  case_match; try solve [ do 2 red; simpl; intros; eauto ].
+  { apply by_WP => ?.
+    rewrite -{2}wp_operand_well_typed.
+    rewrite !(WP_Mbind_Mbind, WP_Mbind_Mproduce, WP_Mbind_Mret, WP_Mbind_Mfupd, WP_Mret).
+    iApply WP_Mbind_frame; iIntros (??).
+    rewrite !(WP_Mbind_Mbind, WP_Mbind_Mproduce, WP_Mbind_Mret, WP_Mbind_Mfupd, WP_Mret).
+    iIntros "X #? OWN".
+    iDestruct (observe (reference_to _ _) with "OWN") as "#?".
+    iApply ("X" with "OWN"); eauto. }
+(*
   case_match; subst; eauto.
   all: try (iApply wp_operand_frame; [ done | ];
     iIntros (??) "X Y";
@@ -536,6 +678,7 @@ right now. So, for the time being, we prove [_frame] lemmas without
 [genv] weakening.
 *)
 
+(*
 Section wp_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
   Implicit Types (Q : FreeTemps -> epred).
@@ -986,3 +1129,4 @@ Section wp_initialize.
   #[global] Instance wpi_proper : WPI equiv.
   Proof. intros * Q1 Q2 HQ. by split'; apply wpi_mono; rewrite HQ. Qed.
 End wp_initialize.
+*)
