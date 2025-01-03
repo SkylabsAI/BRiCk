@@ -468,6 +468,65 @@ Definition heap_type_of (t : type) : type :=
   | t => t
   end.
 
+Instance equiv_subseteq_subrelation `{Σ : cpp_logic} {T} : @subrelation (M T) (≡) (⊆).
+Proof.
+  red. intros. repeat intro.
+  do 2 red in H. rewrite H. iApply _ok. 2: reflexivity.
+  iIntros (???). iApply H0.
+Qed.
+
+Instance equiv_subseteq_proper `{Σ : cpp_logic} {T} : Proper ((⊆) --> (⊆) ==> Basics.impl) (⊆@{M T}).
+Proof. repeat intro. red in H. Admitted.
+Instance equiv_subseteq_proper_equiv `{Σ : cpp_logic} {T} : Proper ((≡) ==> (≡) ==> Basics.impl) (⊆@{M T}).
+Proof. repeat intro. red in H. Admitted.
+
+Instance equiv_RR `{Σ : cpp_logic} {T} : RewriteRelation (≡@{M T}) := {}.
+Instance subseteq_RR `{Σ : cpp_logic} {T} : RewriteRelation (⊆@{M T}) := {}.
+
+
+Definition WP `{Σ : cpp_logic} {T} (m : M T) := _wp m.
+
+Instance WP_proper `{Σ : cpp_logic} {T}
+  : Proper ((≡) ==> eq ==> flip (⊢)) (WP (T:=T)).
+Proof. Admitted.
+
+Instance Mbind_proper `{Σ : cpp_logic} {T U}
+  : Proper ((⊆@{M T}) ==> pointwise_relation _ (⊆@{M U}) ==> (⊆)) Mbind.
+Proof.
+  repeat intro.
+  rewrite /Mbind/=. apply H. intros. apply H0. intros. apply H1.
+Qed.
+
+Instance WP_subseteq_proper `{Σ : cpp_logic} {T}
+  : Proper ((⊆) ==> eq ==> (⊢)) (WP (T:=T)).
+Proof.
+  repeat intro. subst. rewrite /WP. apply H. eauto.
+Qed.
+Instance WP_subseteq_proper' `{Σ : cpp_logic} {T}
+  : Proper (flip (⊆) ==> eq ==> flip (⊢)) (WP (T:=T)).
+Proof.
+  repeat intro. subst. rewrite /WP. apply H. eauto.
+Qed.
+Instance Mbind_subseteq_proper `{Σ : cpp_logic} {T U}
+  : Proper (flip (⊆@{M T}) ==> pointwise_relation _ (flip (⊆@{M U})) ==> flip (⊆)) Mbind.
+Proof.
+  repeat intro.
+  rewrite /Mbind/=. apply H. intros. apply H0. intros. apply H1.
+Qed.
+
+Definition by_WP `{Σ : cpp_logic} {T} (m1 m2 : M T) :
+  (forall k, WP m1 k |-- WP m2 k) ->
+  m1 ⊆ m2.
+Proof.
+  rewrite /WP. repeat intro.
+  rewrite H. iApply _ok. iIntros (???). iApply H0.
+Qed.
+
+Typeclasses Opaque equiv bi_entails subseteq WP Mbind.
+
+(* Instance: forall {T} (K : Kpred T) k P, FromWand (WP (Mbind (Mproduce P) k) K). *)
+
+
 Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
   tu ρ cv ty addr init :
       (letWP* free := wp_initialize_unqualified tu ρ cv ty addr init in
@@ -476,7 +535,24 @@ Lemma wp_initialize_unqualified_well_typed `{Σ : cpp_logic, σ : genv}
   ⊆ wp_initialize_unqualified tu ρ cv ty addr init.
 Proof.
   rewrite wp_initialize_unqualified.unlock.
-  case_match; eauto. (*
+  case_match; eauto.
+  { red. red. intros. simpl. eauto. }
+  case_match; try solve [ do 2 red; simpl; intros; eauto ].
+  { apply by_WP => ?.
+    rewrite -mbind_mbind.
+    Instance Mbind_params : Params (@Mbind) 4 := {}.
+    Instance bi_entails_params : Params (@bi_entails) 1 := {}.
+    rewrite -{2}wp_operand_well_typed -!mbind_mbind.
+    f_equiv. f_equiv. intro.
+    rewrite -!mbind_mbind.
+    apply by_WP => ?.
+    iIntros "X".
+
+
+    Search wp_operand.
+
+Set Printing Implicit. }
+(*
   case_match; subst; eauto.
   all: try (iApply wp_operand_frame; [ done | ];
     iIntros (??) "X Y";
