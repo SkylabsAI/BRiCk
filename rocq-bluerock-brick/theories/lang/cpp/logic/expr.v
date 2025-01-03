@@ -81,9 +81,14 @@ Module Type Expr.
           WPE.wp_operand tu (Remp None None (Tenum gn)) e (fun v frees => interp frees $ Q v FreeTemps.id)
       |-- wp_operand (Eenum_const gn id) Q.
 
-    (* integer literals are prvalues *)
+    (* integer literals are prvalues.
+
+       The C++ standard states that the program is ill-formed if the value
+       is not representable in the type <https://eel.is/c++draft/lex.icon#4>.
+       Therefore, we do not need to check that the value is representable.
+     *)
     Axiom wp_operand_int : forall n ty Q,
-      [! has_type_prop (Vint n) (drop_qualifiers ty) !] //\\ Q (Vint n) FreeTemps.id
+          Q (Vint n) FreeTemps.id
       |-- wp_operand (Eint n ty) Q.
 
     (* NOTE: character literals represented in the AST as 32-bit unsigned integers
