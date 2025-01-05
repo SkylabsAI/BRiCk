@@ -671,6 +671,7 @@ right now. So, for the time being, we prove [_frame] lemmas without
 [genv] weakening.
 *)
 
+(*
 Section wp_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
   Implicit Types (Q : FreeTemps -> epred).
@@ -1121,3 +1122,4 @@ Section wp_initialize.
   #[global] Instance wpi_proper : WPI equiv.
   Proof. intros * Q1 Q2 HQ. by split'; apply wpi_mono; rewrite HQ. Qed.
 End wp_initialize.
+*)

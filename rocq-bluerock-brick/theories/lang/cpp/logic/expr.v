@@ -25,12 +25,12 @@ Require Import bedrock.lang.cpp.logic.call.
 Require Import bedrock.lang.cpp.logic.core_string.
 Require Import bedrock.lang.cpp.logic.translation_unit.
 Require Import bedrock.lang.cpp.logic.dispatch.
-Require Import bedrock.lang.cpp.logic.func.
+(*Require Import bedrock.lang.cpp.logic.func. *)
 Require Import bedrock.lang.bi.errors.
 
 Module Type Expr.
   (* Needed for [Unfold wp_test] *)
-  #[local] Arguments wp_test [_ _ _ _] _ _ _.
+  #[local] Arguments wp_test {_ _ _ _} _ _.
   #[local] Open Scope free_scope.
 
   (**
@@ -53,7 +53,7 @@ Module Type Expr.
     Variables (tu : translation_unit) (ρ : region).
 
 
-    #[local] Notation M := (wp.WPE.M).
+    #[local] Notation M := (monad.M).
     #[local] Notation wp_lval := (wp_lval tu ρ).
     #[local] Notation wp_xval := (wp_xval tu ρ).
     #[local] Notation wp_init := (wp_init tu ρ).
@@ -71,7 +71,7 @@ Module Type Expr.
     #[local] Notation size_of := (@size_of resolve) (only parsing).
 
 
-    Definition to_M {t : Set} (m : M t) : MI t :=
+    Definition to_M {t : Set} (m : M t) : M t :=
       MonPred (I:=M_index t) m _.
     Coercion to_M : M >-> bi_car.
 
