@@ -1,7 +1,12 @@
-Require Import NArith.
+(*
+ * Copyright (c) 2025 BlueRock Security, Inc.
+ * This software is distributed under the terms of the BedRock Open-Source License.
+ * See the LICENSE-BedRock file in the repository root for details.
+ *)
+Require Import Stdlib.NArith.NArith.
 
 Section with_F.
-  Context {T : Type}.
+  Variable T : Type.
 
   Fixpoint pow (F : Type -> Type) (p : positive) : Type :=
     match p with
@@ -21,6 +26,5 @@ Section with_F.
 
 End with_F.
 
-Definition list_for T p := @gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
-
-Definition map_for K V p := @gather (list (K * V)) (fun x => K -> V -> x) (fun _ K xs k v => K (cons (k,v) xs)) p nil.
+(* NOTE: this reverses the order of the list. *)
+Definition list_for T p := gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
