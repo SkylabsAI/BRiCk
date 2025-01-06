@@ -107,13 +107,37 @@ Section with_cpp.
     free1 ≡ free2 -> K free1 pf1 |-- K free2 pf2.
   Proof. intros. rewrite FreeTemps.K_ext; eauto. Qed.
 
+  (*
   (* the monad for expression evaluation *)
   Record M {t : Type} := mk
     { _wp : (t -> forall free : FreeTemps.t, FreeTemps.IsCanonical free -> mpred) -> mpred
     ; _ok : forall K1 K2, (Forall x free pf, K1 x free pf -* K2 x free pf) |-- _wp K1 -* _wp K2 }.
   #[global] Arguments M _ : clear implicits.
   #[local] Coercion _wp : M >-> Funclass.
+*)
 
+  #[program]
+  Canonical Structure K_biIndex {T : Type} : biIndex :=
+    {| bi_index_type := T -> forall free : FreeTemps.t, FreeTemps.IsCanonical free -> mpred
+     ; bi_index_rel := forall_relation (fun _ => forall_relation (fun _ => forall_relation (fun _ => (⊢))))
+     |}.
+  Next Obligation.
+    intros. constructor. intros. apply emp.
+  Qed.
+  Next Obligation.
+    intros. rewrite /sqsubseteq.
+    constructor.
+    { constructor. intros; auto. }
+    { constructor. intros.
+      etrans. eapply H. eapply H0. }
+  Qed.
+  #[global] Arguments K_biIndex _ : clear implicits.
+
+  Definition MI (T : Type) : bi :=
+    monPredI (K_biIndex T) mpredI.
+  Notation M T := (bi_car (MI T)).
+
+  (*
   (* The canonical notion of equivalence on [M _]
 
      This definition doesn't work, but it isn't clear how to fix it.
@@ -169,65 +193,76 @@ Section with_cpp.
   #[global] Instance M_Dist {T} : Dist (M T) :=
     fun n a b =>
       forall K1 K2, (forall x y z, K1 x y z ≡{n}≡ K2 x y z) -> a K1 ≡{n}≡ b K2.
+   *)
 
   (** ** Monad Operators *)
 
   #[program]
   Definition Mret {t : Type} (v : t) : M t :=
-    {| _wp K := K v FreeTemps.id _ |}.
-  Next Obligation.
-    intros; simpl. iIntros "X"; iApply "X".
-  Qed.
+    MonPred (fun K => K v FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
+  Next Obligation. simpl; repeat intro. apply H. Qed.
 
   #[program]
   Definition Mmap {t u : Type} (f : t -> u) (m : M t) : M u :=
-    {| _wp K := m.(_wp) (fun t => K (f t)) |}.
+    MonPred (fun K => m (fun t => K (f t))) _.
   Next Obligation.
-    intros; simpl.
-    iIntros "X"; iApply _ok.
-    iIntros (??); iApply "X".
+    simpl; repeat intro.
+    eapply monPred_mono.
+    repeat intro; simpl. apply H.
   Qed.
 
-  (* Question: Should we implement [ap]? *)
-
-  #[program] Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
-    {| _wp K := c (fun v f _ => k v (fun v' f' _ => K v' (FreeTemps.canon $ f' >*> f)%free _)) |}.
+  #[program]
+  Definition Mbind {T U} (c : M T) (k : T -> M U) : M U :=
+    MonPred (fun K => c (fun v f _ => k v (fun v' f' _ => K v' (FreeTemps.canon $ f' >*> f)%free _))) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    simpl; intros. iIntros "K"; iApply _ok.
-    iIntros (???). iApply _ok. iIntros (???); iApply "K".
+    simpl; repeat intro.
+    eapply monPred_mono.
+    repeat intro; simpl.
+    eapply monPred_mono.
+    repeat intro; simpl.
+    eapply H.
   Qed.
   Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
 
   (**  These operations actually form a monad *)
   Lemma mret_mbind {T U} v (k : T -> M U) : Mbind (Mret v) k ≡ k v.
   Proof.
-    red. rewrite /M_equiv/Mbind/Mret/=. red. simpl; intros.
+    constructor => K.
+    rewrite /Mbind/Mret/=.
     split'.
-    { iApply _ok; iIntros (???) "?"; iStopProof.
-      rewrite H; apply K_entails.
+    { apply monPred_mono.
+      simpl; repeat intro.
+      apply K_entails.
       by rewrite FreeTemps.canon_equiv FreeTemps.seq_id_unitR. }
-    { iApply _ok; iIntros (???) "?"; iStopProof.
-      rewrite H; apply K_entails.
+    { apply monPred_mono.
+      simpl; repeat intro.
+      apply K_entails.
       by rewrite FreeTemps.canon_equiv FreeTemps.seq_id_unitR. }
   Qed.
 
   Lemma mbind_mret {T} (m : M T) : Mbind m Mret ≡ m.
   Proof.
-    red; rewrite /M_equiv/Mbind/Mret; red; simpl; intros.
+    constructor => K.
+    rewrite /Mbind/Mret; red; simpl; intros.
     split'.
-    { iApply _ok; iIntros (???) "?"; iStopProof.
-      rewrite H; apply K_entails. rewrite FreeTemps.canon_equiv FreeTemps.seq_left_id; eauto. }
-    { iApply _ok; iIntros (???) "?"; iStopProof.
-      rewrite H; apply K_entails; rewrite FreeTemps.canon_equiv FreeTemps.seq_left_id; eauto. }
+    { apply monPred_mono; simpl; repeat intro.
+      apply K_entails.
+      rewrite FreeTemps.canon_equiv FreeTemps.seq_left_id; eauto. }
+    { apply monPred_mono; simpl; repeat intro.
+      apply K_entails.
+      rewrite FreeTemps.canon_equiv FreeTemps.seq_left_id; eauto. }
   Qed.
 
   Lemma mbind_mbind {T U V} (m : M T) (k1 : T -> M U) (k2 : U -> M V) :
     Mbind m (fun x => Mbind (k1 x) k2) ≡ Mbind (Mbind m k1) k2.
   Proof.
-    red; rewrite /M_equiv/Mbind; red; simpl; intros.
+    constructor => K.
+    rewrite /Mbind/=; intros.
     split';
-      iApply _ok; iIntros (???); iApply _ok; iIntros (???); iApply _ok; iIntros (???);
-      rewrite H; eauto; iIntros; iStopProof; apply K_entails.
+      apply monPred_mono; repeat intro; apply monPred_mono; repeat intro; apply monPred_mono; repeat intro;
+      apply K_entails.
     all: rewrite !FreeTemps.canon_equiv FreeTemps.seq_assoc; eauto.
   Qed.
 
@@ -237,19 +272,17 @@ Section with_cpp.
   Definition WP {T} (m : M T) (Q : T -> FreeTemps.t -> mpred) : mpred :=
     m (fun x f _ => Q x f).
 
-  Definition Knormal {T U} (k : T -> M U) (Q : U -> FreeTemps.t -> mpred) : T -> FreeTemps.t -> mpred :=
+  Definition Knormal {T U} (k : T -> M U) (Q : U -> FreeTemps.t -> mpred)
+    : T -> FreeTemps.t -> mpred :=
     fun t free => k t (fun u free' _ => Q u (FreeTemps.canon (free' >*> free))).
 
   Lemma WP_Mbind {T U} (m : M T) (k : T -> M U) Q :
     WP m (Knormal k Q) |-- WP (Mbind m k) Q.
-  Proof.
-    rewrite /Mbind/WP/Knormal/=.
-    iApply _ok; iIntros (???). eauto.
-  Qed.
+  Proof. reflexivity. Qed.
 
   Lemma WP_ret {T} (v : T) Q :
     Q v FreeTemps.id |-- WP (Mret v) Q.
-  Proof. by rewrite /WP/Mret/=. Qed.
+  Proof. reflexivity. Qed.
 
   (** ** The Effects of the Monad
 
@@ -263,15 +296,18 @@ Section with_cpp.
 
   #[program]
   Definition Mproduce (P : mpred) : M unit :=
-    {| _wp := fun K => P -* K () FreeTemps.id _ |}.
+    MonPred (fun K => P -* K () FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    intros; simpl. iIntros "X Y P". iApply "X". iApply "Y". iApply "P".
+    simpl; repeat intro. f_equiv. apply H.
   Qed.
+
   #[program]
-    Definition Mconsume (P : mpred) : M unit :=
-    {| _wp := fun K => P ** K () FreeTemps.id _ |}.
+  Definition Mconsume (P : mpred) : M unit :=
+    MonPred (fun K => P ** K () FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    intros; simpl. iIntros "X [$ K]". iApply "X". iApply "K".
+    simpl; repeat intro. f_equiv. apply H.
   Qed.
 
   Lemma WP_produce P Q :
@@ -281,80 +317,85 @@ Section with_cpp.
     P ** Q () FreeTemps.id |-- WP (Mconsume P) Q.
   Proof. reflexivity. Qed.
 
-  Definition Massume (P : Prop) : M unit := Mproduce [| P |].
-  Definition Mrequire (P : Prop) : M unit := Mconsume [| P |].
+  Notation Massume P := (Mproduce [| P%type |]).
+  Notation Mrequire P := (Mconsume [| P%type |]).
 
   #[program]
   Definition Mnd (t : Type) : M t :=
-    {| _wp K := ∀ x : t, K x FreeTemps.id _ |}%I.
+    MonPred (funI K => ∀ x : t, K x FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    simpl; intros.
-    iIntros "K X" (?); iApply "K"; eauto.
+    simpl; repeat intro. f_equiv; repeat intro. apply H.
   Qed.
   #[program]
   Definition Mangelic (t : Type) : M t :=
-    {| _wp K := ∃ x : t, K x FreeTemps.id _ |}%I.
+    MonPred (funI K => ∃ x : t, K x FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    simpl; intros.
-    iIntros "K X"; iDestruct "X" as (?) "X"; iExists _; iApply "K"; eauto.
+    simpl; repeat intro. f_equiv; repeat intro. apply H.
   Qed.
 
   #[program]
   Definition Mub {t : Type} : M t :=
-    {| _wp _ := False%I |}.
-  Next Obligation. simpl; intros. iIntros "? []". Qed.
+    MonPred (funI _K => False) _.
   #[program]
   Definition Many {t : Type} : M t :=
-    {| _wp _ := True%I |}.
-  Next Obligation. simpl; intros; iIntros "? ?". iApply bi.pure_intro; [ trivial | ]. iStopProof. reflexivity. Qed.
+    MonPred (funI _K => True) _.
 
-  #[program]
+  #[program] (* TODO: lock this *)
   Definition Merror {t : Type} {ERR : Type} (err : ERR) : M t :=
-    {| _wp _ := ERROR err |}.
-  Next Obligation. simpl; intros. rewrite ERROR_False. iIntros "? []". Qed.
+    MonPred (funI _K => False) _.
 
   #[program]
   Definition Mpush_free (f : FreeTemps.t) : M () :=
-    {| _wp K := K () (FreeTemps.canon f) _ |}.
-  Next Obligation. simpl; intros. iIntros "K"; iApply "K". Qed.
+    MonPred (funI K => K () (FreeTemps.canon f) _) _.
+  Next Obligation. refine _. Qed.
+  Next Obligation. simpl; repeat intro. apply H. Qed.
+
+  (*
+  Fixpoint tele_append_nd (TT : tele) (TT' : tele) : tele :=
+    match TT with
+    | TeleO => TT'
+    | @TeleS t f => TeleS (fun x : t => tele_append_nd (f x) TT')
+    end.
+  Fixpoint tele_build
+  Require Import bedrock.lang.bi.atomic_commit.
 
   #[program]
-  Definition Matomically {t} (m : M t) : M t :=
-    {| _wp K := |={top,∅}=> m.(_wp) (fun r free _ => |={∅,top}=> K r free _) |}%I.
-  Next Obligation.
-    simpl; intros. iIntros "K >X !>"; iRevert "X".
-    iApply _ok. iIntros (???) ">X !>"; iRevert "X"; iApply "K".
-  Qed.
+  Definition Mac
+    {TT: tele} (Apre : TT -t> mpred) (step : bool) (Eouter Einner : coPset)
+    {TT' : tele} (Apost : TT -t> TT' -t> mpred) : M (tele_append_nd TT TT') :=
+    MonPred (funI K =>
+           atomic_commit (TA:=TT) (TB:=TT') step Eouter Einner
+                         (fun x => tele_app Apre x)
+                         (fun x y => tele_app (tele_app Apost x) y)
+                         (fun x y => K _ FreeTemps.id _)) _.
+  Next Obligation. Admitted.
+  Next Obligation. Admitted.
+  *)
+
 
   #[program]
   Definition Mnon_atomically {t} (m : M t) : M t :=
-    {| _wp K := |={top}=> m.(_wp) (fun r free _ => |={top}=> K r free _) |}%I.
+    MonPred (funI K => |={top}=> m (fun r free pf => |={top}=> K r free pf)) _.
   Next Obligation.
-    simpl; intros. iIntros "K >X !>"; iRevert "X".
-    iApply _ok. iIntros (???) ">X !>"; iRevert "X"; iApply "K".
+    simpl; repeat intro.
+    f_equiv. apply monPred_mono; repeat intro; f_equiv. apply H.
   Qed.
 
   #[program]
   Definition Mfupd (E1 E2 : coPset): M unit :=
-    {| _wp K := |={E1,E2}=> K () FreeTemps.id _ |}%I.
+    MonPred (funI K => |={E1,E2}=> K () FreeTemps.id _) _.
+  Next Obligation. refine _. Qed.
   Next Obligation.
-    simpl; intros. iIntros "K >X !>"; iRevert "X"; iApply "K".
+    simpl; repeat intro; f_equiv; apply H.
   Qed.
 
   #[program]
-  Definition Mstable : M unit :=
-    {| _wp K := |={top}=> K () FreeTemps.id _ |}%I.
-  Next Obligation.
-    simpl; intros. iIntros "K >X !>"; iRevert "X"; iApply "K".
-  Qed.
+  Definition Mstable : M unit := |={top}=> Mret ().
 
   #[program]
-  Definition Mboth {t} (a b : M t) : M t :=
-    {| _wp K := a K //\\ b K |}.
-  Next Obligation.
-    simpl; intros. iIntros "K X".
-    iSplit; [ iDestruct "X" as "[X _]" | iDestruct "X" as "[_ X]" ]; iRevert "X"; iApply _ok; iIntros (??); iApply "K".
-  Qed.
+  Definition Mboth {t} (a b : M t) : M t := a //\\ b.
 
   (*
   Definition Mread {t} (R : t -> mpred) : M t :=
@@ -363,40 +404,43 @@ Section with_cpp.
     MonPred (I:=M_index TT) (fun K => ∃.. v, tele_app R v ** (tele_app R v -* K v FreeTemps.id))%I _.
    *)
 
-  Definition Mframe {T} (a b : M T) : mpred :=
+  (* NOTE: this is weaker than [monPred_mono] because it allows
+     using resources.
+   *)
+  Definition MframeI {T} (a b : M T) : mpred :=
     Forall Q Q', (Forall x y z, Q x y z -* Q' x y z) -* a Q -* b Q'.
 
+  Definition Mframe {T} (a b : M T) : Prop :=
+    forall Q Q', (Forall x y z, Q x y z -* Q' x y z) ⊢ a Q -* b Q'.
 
-  Definition Mimpl {T} (a b : M T) : mpred :=
-    ∀ Q, a Q -* b Q.
-
-  Lemma WP_impl {T} (a b : M T) Q : Mimpl a b |-- WP a Q -* WP b Q.
-  Proof. rewrite /Mimpl. iIntros "X". iApply "X". Qed.
-
-  Lemma Mmap_frame_strong {T U} c (f : T -> U) :
-    Mframe c c
-    |-- Forall Q Q', (Forall x y pf, Q (f x) y pf -* Q' (f x) y pf) -* Mmap f c Q -* Mmap f c Q'.
+  Lemma Mmap_frame_strong {T U} c (f : T -> U) Q Q' :
+    MframeI c c
+    |-- (Forall x y pf, Q (f x) y pf -* Q' (f x) y pf) -*
+        Mmap f c Q -* Mmap f c Q'.
   Proof.
-    rewrite /Mframe/Mmap; iIntros "A" (??) "B".
+    rewrite /Mframe/Mmap; iIntros "A B".
     iApply "A". iIntros (??); iApply "B".
   Qed.
 
   Lemma Mmap_frame {T U} c1 c2 (f : T -> U) :
-    Mframe c1 c2 |-- Mframe (Mmap f c1) (Mmap f c2).
+    MframeI c1 c2 |-- MframeI (Mmap f c1) (Mmap f c2).
   Proof.
     rewrite /Mframe/Mmap; iIntros "A" (??) "B".
     iApply "A". iIntros (??); iApply "B".
   Qed.
 
-
-  Lemma Mframe_refl {T} (m : M T) : |-- Mframe m m.
+  Lemma Mframe_trans {T} (m1 m2 m3 : M T) :
+    MframeI m1 m2 |-- MframeI m2 m3 -* MframeI m1 m3.
   Proof.
-    rewrite /Mframe. iIntros (??) "X".
-    iApply _ok. eauto.
+    rewrite /Mframe.
+    iIntros "A B" (??) "K M1".
+    iApply "B". eauto.
+    iRevert "M1". iApply "A". eauto.
   Qed.
 
   Lemma Mbind_frame {T U} c1 c2 (k1 k2 : T -> M U) :
-    Mframe c1 c2 |-- (Forall x, Mframe (k1 x) (k2 x)) -* Mframe (Mbind c1 k1) (Mbind c2 k2).
+    MframeI c1 c2
+    |-- (Forall x, MframeI (k1 x) (k2 x)) -* MframeI (Mbind c1 k1) (Mbind c2 k2).
   Proof.
     rewrite /Mframe/Mbind; iIntros "A B" (??) "C".
     iApply "A". iIntros (???). iApply "B".
@@ -418,7 +462,7 @@ Section with_cpp.
            Mret (v1,v2)).
 
   Lemma nd_seq_frame {T U} wp1 wp2 :
-    Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@nd_seq T U wp1 wp2) (nd_seq wp1 wp2).
+    MframeI wp1 wp1 |-- MframeI wp2 wp2 -* MframeI (@nd_seq T U wp1 wp2) (nd_seq wp1 wp2).
   Proof.
     iIntros "A B" (??) "C D".
     iSplit; [ iDestruct "D" as "[D _]" | iDestruct "D" as "[_ D]" ]; iRevert "D".
@@ -586,7 +630,7 @@ Section with_cpp.
     Mbind wp1 (fun v => Mmap (fun x => (v, x)) wp2).
 
   Lemma Mseq_frame {T U} wp1 wp2 :
-    Mframe wp1 wp1 |-- Mframe wp2 wp2 -* Mframe (@Mseq T U wp1 wp2) (Mseq wp1 wp2).
+    MframeI wp1 wp1 |-- MframeI wp2 wp2 -* MframeI (@Mseq T U wp1 wp2) (Mseq wp1 wp2).
   Proof.
     iIntros "A B" (??) "C".
     rewrite /Mseq.
@@ -602,7 +646,7 @@ Section with_cpp.
     end.
 
   Lemma seqs_frame_strong {T} : forall (ls : list (M T)) Q Q',
-      ([∗list] m ∈ ls, Mframe m m)%I
+      ([∗list] m ∈ ls, MframeI m m)%I
       |-- (Forall x y pf, [| length x = length ls |] -* Q x y pf -* Q' x y pf) -*
           (seqs ls Q) -* (seqs ls Q').
   Proof.
@@ -616,6 +660,7 @@ Section with_cpp.
       iApply "K". simpl. eauto.
   Qed.
 
+  (**
   (** *** interleaving of monadic values
 
       We encode interleaving through concurrency which we represent through
@@ -625,7 +670,7 @@ Section with_cpp.
    *)
   #[program]
   Definition Mpar {T U} (wp1 : M T) (wp2 : M U) : M (T * U) :=
-    {| _wp K := Exists Q1 Q2, wp1 Q1 ** wp2 Q2 ** (Forall v1 v2 f1 f2 pf1 pf2, Q1 v1 f1 pf1 -* Q2 v2 f2 pf2 -* K (v1,v2) (FreeTemps.canon (f1 |*| f2)) _) |}.
+    MonPred (fun K =>    {| _wp K := Exists Q1 Q2, wp1 Q1 ** wp2 Q2 ** (Forall v1 v2 f1 f2 pf1 pf2, Q1 v1 f1 pf1 -* Q2 v2 f2 pf2 -* K (v1,v2) (FreeTemps.canon (f1 |*| f2)) _) |}.
   Next Obligation.
     simpl; intros.
     iIntros "K X". iDestruct "X" as (??) "[? [? Q]]".
@@ -675,6 +720,7 @@ Section with_cpp.
       { simpl. eauto. }
       iApply ("KK" $! v1 v2 f1 f2 pf1 pf2 with "[$] [$]").
   Qed.
+  *)
 
   (** *** evaluation by a scheme *)
 
@@ -699,7 +745,7 @@ Section with_cpp.
     end.
 
   Lemma eval_frame_strong {T} oe : forall (ls : list (M T)) Q Q',
-      ([∗list] m ∈ ls, Mframe m m)%I
+      ([∗list] m ∈ ls, MframeI m m)%I
       |-- (Forall x y pf, [| length x = length ls |] -* Q x y pf -* Q' x y pf) -*
           eval oe ls Q -* eval oe ls Q'.
   Proof. (*
@@ -732,7 +778,8 @@ Section with_cpp.
     end.
 
   (* TODO: this is the heterogeneous extension of [eval] *)
-  Parameter heval : forall (eo : evaluation_order.t) {ts} (x : tuple (M <$> ts)), M (tuple ts).
+  Parameter heval : forall (eo : evaluation_order.t) {ts}
+                      (x : tuple ((fun x => M x) <$> ts)), M (tuple ts).
 End with_cpp.
 
 Notation "'letWP*' v := e 'in' k" := (Mbind e (fun v => k)) (at level 0, v binder, k at level 200).
