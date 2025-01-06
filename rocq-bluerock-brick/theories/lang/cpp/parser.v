@@ -7,6 +7,8 @@ Require Ltac2.Ltac2.
 Require Export bedrock.prelude.base.	(* for, e.g., <<::>> *)
 Require Export bedrock.prelude.bytestring.	(* for <<%bs>> *)
 Require Import bedrock.prelude.avl.
+Require bedrock.prelude.funlist.
+
 Require Export bedrock.lang.cpp.syntax. (* NOTE: too much *)
 Require bedrock.lang.cpp.semantics.sub_module.
 Require Export bedrock.lang.cpp.parser.stmt.
@@ -17,7 +19,6 @@ Require Import bedrock.lang.cpp.parser.expr.
 Require Import bedrock.lang.cpp.parser.decl.
 Require Import bedrock.lang.cpp.parser.notation.
 Require Import bedrock.lang.cpp.parser.reduction.
-Require Import bedrock.lang.cpp.parser.funlist.
 
 #[local] Definition parser_lang : lang.t := lang.cpp.
 Include ParserName.
@@ -88,8 +89,7 @@ Module Import translation_unit.
     | d :: ds => fun s t a dups k => d s t a dups (fun s t a dups' => decls' ds s t a dups' k)
     end.
 
-  Definition decls : forall p : positive, @funlist.pow (list t) (fun X => t -> X) p :=
-    funlist.list_for t.
+  Definition decls := funlist.list_for t.
 
   (*
   Definition the_tu (result : translation_unit * list name)

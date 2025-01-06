@@ -5,6 +5,7 @@
  *)
 Require Import Stdlib.NArith.NArith.
 
+Module binary.
 Section with_F.
   Variable T : Type.
 
@@ -25,6 +26,28 @@ Section with_F.
      end.
 
 End with_F.
+End binary.
+
+Module unary.
+  Section with_F.
+    Variable T : Type.
+
+    Fixpoint pow (F : Type -> Type) (p : nat) : Type :=
+      match p with
+      | O => T
+      | S p => F (pow F p)
+      end.
+
+    Fixpoint gather (F : Type -> Type)
+      (interp : forall U, (T -> U) -> T -> F U)
+      (p : nat) : T -> pow F p :=
+      match p as p return T -> pow F p with
+      | O => id
+      | S p => interp _ (gather _ interp p)
+      end.
+
+  End with_F.
+End unary.
 
 (* NOTE: this reverses the order of the list. *)
-Definition list_for T p := gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
+Definition list_for T p := unary.gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
