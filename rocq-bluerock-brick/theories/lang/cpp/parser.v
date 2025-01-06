@@ -17,6 +17,7 @@ Require Import bedrock.lang.cpp.parser.expr.
 Require Import bedrock.lang.cpp.parser.decl.
 Require Import bedrock.lang.cpp.parser.notation.
 Require Import bedrock.lang.cpp.parser.reduction.
+Require Import bedrock.lang.cpp.parser.funlist.
 
 #[local] Definition parser_lang : lang.t := lang.cpp.
 Include ParserName.
@@ -87,14 +88,8 @@ Module Import translation_unit.
     | d :: ds => fun s t a dups k => d s t a dups (fun s t a dups' => decls' ds s t a dups' k)
     end.
 
-  Definition decls (ds : list t) (e : endian) : translation_unit * list name :=
-    decls' ds ∅ ∅ ∅ [] $ fun s t a => pair {|
-      symbols := NM.from_raw s;
-      types := NM.from_raw t;
-      aliases := NM.from_raw a;
-      initializer := nil;	(** TODO *)
-      byte_order := e;
-    |}.
+  Definition decls : forall p : positive, @funlist.pow (list t) (fun X => t -> X) p :=
+    funlist.list_for t.
 
   (*
   Definition the_tu (result : translation_unit * list name)
@@ -113,12 +108,21 @@ Module Import translation_unit.
 
     Ltac2 Type exn ::= [DuplicateSymbols (constr)].
 
+    Definition make (ds : list t) (e : endian) : translation_unit * list name :=
+      decls' ds ∅ ∅ ∅ [] $ fun s t a => pair {|
+                                            symbols := NM.from_raw s;
+                                            types := NM.from_raw t;
+                                            aliases := NM.from_raw a;
+                                            initializer := nil;	(** TODO *)
+                                            byte_order := e;
+                                          |}.
+
     (* [check_translation_unit tu]
      *)
     Ltac2 check_translation_unit (tu : preterm) (en : preterm) :=
       let endian := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(endian)) en in
       let tu := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(list t)) tu in
-      let term := Constr.Unsafe.make (Constr.Unsafe.App ('decls) (Array.of_list [tu; endian])) in
+      let term := Constr.Unsafe.make (Constr.Unsafe.App ('make) (Array.of_list [tu; endian])) in
       let rtu := Std.eval_vm None term in
       lazy_match! rtu with
       | pair ?tu nil => Std.exact_no_check tu
@@ -172,6 +176,9 @@ Definition Denum_constant (n : globname)
   let v := match v with inl n => Echar n ut | inr z => Eint z ut end in
   let t := Tenum gn in
   Gconstant t $ Some $ Ecast (Cintegral t) v.
+
+Definition Dignore : K :=
+  _skip.
 
 Definition Dtypedef (n : globname) (t : type) : K :=
   _aliases n t.

@@ -161,19 +161,30 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 			print.output() << "Definition module : translation_unit := "
 						   << fmt::indent << fmt::line
 						   << "translation_unit.check " << fmt::nbsp;
+			print.ctor("decls", false);
 
-			print.begin_list();
+			auto total = mod.declarations().size() + mod.definitions().size() +
+						 mod.asserts().size();
+
+			print.output() << total << fmt::nbsp;
+
+			auto printDecl = [&](auto& decl) {
+				if (cprint.withDecl(decl).printDecl(print, decl))
+					print.output() << fmt::nbsp;
+				else
+					print.output() << "Dignore" << fmt::nbsp;
+			};
+
 			for (auto decl : mod.declarations()) {
-				printDecl(decl, print, cprint);
+				printDecl(decl);
 			}
 			for (auto decl : mod.definitions()) {
-				printDecl(decl, print, cprint);
+				printDecl(decl);
 			}
 			for (auto decl : mod.asserts()) {
-				printDecl(decl, print, cprint);
+				printDecl(decl);
 			}
-			print.end_list();
-			print.output() << fmt::nbsp;
+			print.end_ctor() << fmt::nbsp;
 			if (ctxt->getTargetInfo().isBigEndian()) {
 				print.output() << "Big";
 			} else {
