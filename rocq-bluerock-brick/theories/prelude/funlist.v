@@ -40,10 +40,10 @@ Module unary.
 
     Fixpoint gather (F : Type -> Type)
       (interp : forall U, (T -> U) -> T -> F U)
-      (p : nat) : T -> pow F p :=
-      match p as p return T -> pow F p with
-      | O => id
-      | S p => interp _ (gather _ interp p)
+      (p : nat) (acc : T) : pow F p :=
+      match p as p return pow F p with
+      | O => acc
+      | S p => interp _ (fun acc => gather _ interp p acc) acc
       end.
 
   End with_F.
