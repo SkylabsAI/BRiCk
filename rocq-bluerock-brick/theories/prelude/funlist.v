@@ -20,8 +20,8 @@ Section with_F.
     (interp : forall {U}, (T -> U) -> T -> F U)
     (p : positive) : T -> pow F p :=
      match p as p return T -> pow F p with
-     | xO p => gather (fun x : Type => F (F x)) (fun (U : Type) (k : T -> U) => interp (interp k)) p
-     | xI p => interp (gather (fun x : Type => F (F x)) (fun (U : Type) (k : T -> U) => interp (interp k)) p)
+     | xO p => gather (fun x : Type => F (F x)) (fun U k acc => interp (fun acc => interp k acc) acc) p
+     | xI p => interp (gather (fun x : Type => F (F x)) (fun U k acc => interp (fun acc => interp k acc) acc) p)
      | xH => interp id
      end.
 
