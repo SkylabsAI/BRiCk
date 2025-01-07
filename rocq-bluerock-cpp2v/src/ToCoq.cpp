@@ -158,21 +158,13 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 				print.output() << fmt::line;
 			}
 
-			print.output() << "Definition module : translation_unit := "
-						   << fmt::indent << fmt::line
-						   << "translation_unit.check " << fmt::nbsp;
-			print.ctor("decls", false);
-
-			auto total = mod.declarations().size() + mod.definitions().size() +
-						 mod.asserts().size();
-
-			print.output() << total << fmt::nbsp;
+			int current = 0;
 
 			auto printDecl = [&](auto& decl) {
-				if (cprint.withDecl(decl).printDecl(print, decl))
-					print.output() << fmt::nbsp;
-				else
-					print.output() << "Dignore" << fmt::nbsp;
+				print.output() << "#[local] Notation x" << current++ << " := (";
+				if (not cprint.withDecl(decl).printDecl(print, decl))
+					print.output() << "Dignore";
+				print.output() << ") (only parsing)." << fmt::line;
 			};
 
 			for (auto decl : mod.declarations()) {
@@ -184,6 +176,16 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 			for (auto decl : mod.asserts()) {
 				printDecl(decl);
 			}
+
+			print.output() << "Definition module : translation_unit := "
+						   << fmt::indent << fmt::line
+						   << "translation_unit.check " << fmt::nbsp;
+			print.ctor("decls", false);
+			print.output() << current << fmt::nbsp;
+			while (current) {
+				print.output() << "x" << --current << fmt::nbsp;
+			}
+
 			print.end_ctor() << fmt::nbsp;
 			if (ctxt->getTargetInfo().isBigEndian()) {
 				print.output() << "Big";
