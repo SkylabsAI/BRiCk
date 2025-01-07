@@ -31,19 +31,19 @@ End binary.
 Module unary.
   Section with_F.
     Variable T : Type.
+    Variable F : Type -> Type.
 
-    Fixpoint pow (F : Type -> Type) (p : nat) : Type :=
+    Fixpoint pow (p : nat) : Type :=
       match p with
       | O => T
-      | S p => F (pow F p)
+      | S p => F (pow p)
       end.
 
-    Fixpoint gather (F : Type -> Type)
-      (interp : forall U, (T -> U) -> T -> F U)
-      (p : nat) (acc : T) : pow F p :=
-      match p as p return pow F p with
+    Variable (interp : forall U, (T -> U) -> T -> F U).
+    Fixpoint gather (p : nat) (acc : T) : pow p :=
+      match p as p return pow p with
       | O => acc
-      | S p => interp _ (fun acc => gather _ interp p acc) acc
+      | S p => interp _ (fun acc => gather p acc) acc
       end.
 
   End with_F.
