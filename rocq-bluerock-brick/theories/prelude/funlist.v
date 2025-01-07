@@ -39,10 +39,11 @@ Module unary.
       | S p => F (pow p)
       end.
 
-    Variable (interp : forall U, (T -> U) -> T -> F U).
-    Fixpoint gather (p : nat) (acc : T) : pow p :=
+    Context {A} (interp : forall U, (A -> U) -> A -> F U).
+    Variable finish : A -> T.
+    Fixpoint gather (p : nat) (acc : A) : pow p :=
       match p as p return pow p with
-      | O => acc
+      | O => finish acc
       | S p => interp _ (fun acc => gather p acc) acc
       end.
 
@@ -52,4 +53,8 @@ End unary.
 (* NOTE: this reverses the order of the list. *)
 Definition list_for T p : unary.pow (list T) (fun x => T -> x) p :=
   Eval cbv beta iota zeta delta [ unary.gather ] in
-    unary.gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
+    unary.gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) (fun x => x) p nil.
+
+Definition combine {T A U} (f : A -> U) (op : T -> A -> A) (acc : A) p : unary.pow U (fun x => T -> x) p :=
+  Eval cbv beta iota zeta delta [ unary.gather ] in
+    unary.gather U (fun x => T -> x) (fun _ K xs x => K (op x xs)) f p acc.
