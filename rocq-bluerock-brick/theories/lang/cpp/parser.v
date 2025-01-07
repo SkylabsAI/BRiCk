@@ -39,6 +39,7 @@ Module Import translation_unit.
 
   #[global] Instance raw_structured_insert : forall {T}, Insert globname T (NM.Raw.t T) := _.
 
+  #[projections(primitive)]
   Record t : Type := mk
     { r_symbols : raw_symbol_table
     ; r_types : raw_type_table
