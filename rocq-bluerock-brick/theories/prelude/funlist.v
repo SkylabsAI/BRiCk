@@ -50,4 +50,6 @@ Module unary.
 End unary.
 
 (* NOTE: this reverses the order of the list. *)
-Definition list_for T p := unary.gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
+Definition list_for T p : unary.pow (list T) (fun x => T -> x) p :=
+  Eval cbv beta iota zeta delta [ unary.gather ] in
+    unary.gather (list T) (fun x => T -> x) (fun _ K xs x => K (cons x xs)) p nil.
