@@ -43,51 +43,6 @@ Variant ReturnType {T : Type} : Type :=
 #[global] Instance ReturnType_inh {T} : Inhabited (ReturnType T).
 Proof. constructor; apply Break. Qed.
 
-(*
-Canonical Structure rt_biIndex : biIndex :=
-  {| bi_index_type := ReturnType
-   ; bi_index_rel := eq
-   |}.
-Definition KpredI `{!cpp_logic thread_info Σ} : bi := monPredI rt_biIndex (@mpredI thread_info Σ).
-#[global] Notation Kpred := (bi_car KpredI).
-
-Definition KP `{cpp_logic} (P : ReturnType -> mpred) : Kpred := MonPred P _.
-#[global] Arguments KP {_ _ _} _%_I : assert.
-#[global] Hint Opaque KP : typeclass_instances.
-
-Section KP.
-  Context `{Σ : cpp_logic}.
-
-  Lemma KP_frame (Q1 Q2 : ReturnType -> mpred) (rt : ReturnType) :
-    Q1 rt -* Q2 rt
-    |-- KP Q1 rt -* KP Q2 rt.
-  Proof. done. Qed.
-End KP.
-
-Definition Kat_exit `{Σ : cpp_logic} (Q : mpred -> mpred) (k : Kpred) : Kpred :=
-  KP $ fun rt => Q (k rt).
-#[global] Hint Opaque Kat_exit : typeclass_instances.
-
-Section Kat_exit.
-  Context `{Σ : cpp_logic}.
-
-  Lemma Kat_exit_frame (Q Q' : mpred -> mpred) (k k' : Kpred) :
-    Forall R R' : mpred, (R -* R') -* Q R -* Q' R' |--
-    Forall rt : ReturnType, (k rt -* k' rt) -*
-    Kat_exit Q k rt -* Kat_exit Q' k' rt.
-  Proof.
-    iIntros "HQ %rt Hk". destruct rt; cbn.
-    all: by iApply "HQ".
-  Qed.
-End Kat_exit.
-
-(*
-NOTE KpredI does not embed into mpredI because it doesn't respect
-existentials.
-*)
-#[global] Instance mpred_Kpred_BiEmbed `{Σ : cpp_logic} : BiEmbed mpredI KpredI := _.
-*)
-
 Section with_cpp.
   Context `{Σ : cpp_logic}.
 
@@ -109,29 +64,19 @@ Section with_cpp.
   #[global] Arguments M _ : clear implicits.
   #[local] Coercion _wp : M >-> Funclass.
 
+  (* The monad used for evaluating C++ code.
+     It supports control flow such as <<break>>, <<continue>>, and <<return>>
+   *)
   Definition Mlocal T := M (ReturnType T).
 
   (* The global monad used for functions.
-     NOTE: this actually does not have [FreeTemps.t]
+     NOTE: this actually does not need [FreeTemps.t]
    *)
   Definition Mglobal T := M T.
 
-  (* The canonical notion of equivalence on [M _]
-
-     This definition doesn't work, but it isn't clear how to fix it.
-     The issues:
-     - if you use pointwise equivalence for the [FreeTemps.t], then you
-       lose the monad laws.
-       You can get the bind-ret and ret-bind laws if you reify the unit,
-       but you can not get bind-bind.
-       **Idea**: use smart constructors that can canonicalize the definitions.
-     - if you use the equivalence on [FreeTemps.t], then you can not prove
-       this relation transitive because it requires that all functions satisfy
-       the equivalence.
-   *)
+  (* The canonical notion of equivalence on [M _] *)
   #[global] Instance M_equiv [T] : Equiv (M T) :=
-    fun a b =>
-      forall K1 K2, (forall x y z, K1 x y z ⊣⊢ K2 x y z) -> a K1 ⊣⊢ b K2.
+    fun a b => forall K1 K2, (forall x y z, K1 x y z ⊣⊢ K2 x y z) -> a K1 ⊣⊢ b K2.
   #[global] Instance M_equiv_refl {T} : Reflexive (≡@{M T}).
   Proof.
     repeat red. intros.
