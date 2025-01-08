@@ -403,7 +403,7 @@ Section with_cpp.
              (e : Expr) : Mlocal ptr :=
     letWP* p := M2local $ Mnd ptr in
     letWP* free := wp_init tu ρ (type_of e) p e in
-    letWP* '() := M2local $ Mpush_free free in
+    letWP* '() := Mpush_free free in
     mret p.
   (* END wp_prval *)
 
@@ -731,7 +731,7 @@ Section with_cpp.
         else
           letWP* p := M2local $ Mnd ptr in
           letWP* free := wp_init tu ρ (type_of e) p e in
-          letWP* '() := M2local $ Mpush_free free in
+          letWP* '() := Mpush_free free in
           mret ()
       | Xvalue => (fun _ => tt) <$> wp_xval tu ρ e
       end%I.
@@ -1052,7 +1052,7 @@ Notation mspec_shift := wp_mfptr_shift (only parsing).
 #[deprecated(since="20241102",note="use [wp_mfptr_frame].")]
 Notation mspec_frame := wp_mfptr_frame (only parsing).
 #[deprecated(since="20241102",note="use [wp_mfptr_frame].")]
-Notation mspec_frame_fupd := wp_mfptr_frame_fupd.
+Notation mspec_frame_fupd := wp_mfptr_frame_fupd (only parsing).
 End EVALUATION.
 
 Declare Module evaluation : EVALUATION.
