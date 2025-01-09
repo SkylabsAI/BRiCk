@@ -12,11 +12,15 @@ Implicit Types (σ : genv) (p : ptr) (o : offset).
 (** ** Object derivations
     The path from the object to its complete object.
   *)
-mlock
-Definition derivationR `{Σ : cpp_logic} {σ : genv} (cls : globname) (mdc : list globname)
-  (q : cQp.t) : Rep :=
-    as_Rep (mdc_path cls mdc q).
-#[global] Arguments derivationR {_ _ Σ σ} _ _ _.
+Module Export derivationR.
+  mlock
+  Definition derivationR `{Σ : cpp_logic} {σ : genv} (cls : globname) (mdc : list globname)
+    (q : cQp.t) : Rep :=
+      as_Rep (mdc_path cls mdc q).
+  #[global] Arguments derivationR {_ _ Σ σ} _ _ _.
+End derivationR.
+(* This works around the lack of [%cpp_name] working in [Arguments] lines *)
+#[global] Notation derivationR cls mdc := (derivationR cls mdc%cpp_name%list) (only parsing).
 
 mlock
 Definition alignedR `{Σ : cpp_logic} (al : N) : Rep :=
