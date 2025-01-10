@@ -96,11 +96,11 @@ Section with_resolve.
            not observable.
    *)
   #[local]
-  Definition wp_arg (ty : decltype) e : M ptr :=
-    letWP* p := Mnd ptr in
+  Definition wp_arg (ty : decltype) e : Mlocal ptr :=
+    letWP* p := M2local $ Mnd ptr in
     letWP* free := wp_initialize tu ρ ty p e in
     letWP* '() := Mpush_free free in
-    Mret p.
+    mret p.
   #[global] Arguments wp_arg _ _ /.
 
   (*
@@ -156,7 +156,7 @@ Section with_resolve.
   Definition Malloc_va (va_info : list (type * ptr)) : M ptr :=
     letWP* p := Mnd ptr in
     letWP* '() := Mproduce (p |-> varargsR va_info) in
-    Mret p.
+    mret p.
 
   (**
      [wp_args eo pre ts_ar es] evaluates [pre ++ es] according to the evaluation order [eo].
@@ -173,9 +173,9 @@ Section with_resolve.
      different ways that it can be used, e.g. to evaluate the object in [o.f()] (which is evaluated
      as a gl-value) or to evaluate the function in [f()] (which is evaluated as a pointer-typed operand).
    *)
-  Definition wp_args (eo : evaluation_order.t) (pre : list (M ptr))
+  Definition wp_args (eo : evaluation_order.t) (pre : list (Mlocal ptr))
       (ts_ar : list decltype * function_arity) (es : list Expr)
-      : M (list ptr * list ptr) :=
+      : Mlocal (list ptr * list ptr) :=
     (let '(ts,ar) := ts_ar in
      if check_arity ts ar es then
        let '(tes, va_info) := setup_args ts ar es in
@@ -187,9 +187,9 @@ Section with_resolve.
              let types := map fst $ skipn non_va tes in
              let va_info := zip types vargs in
              letWP* p := Malloc_va va_info in
-             Mret (pre, real ++ [p])
+             mret (pre, real ++ [p])
          | None =>
-             Mret (pre, ps)
+             mret (pre, ps)
          end
      else
        Mub)%I.
@@ -313,7 +313,7 @@ Section receive.
   Context `{Σ : cpp_logic, σ : genv}.
 
   Lemma xval_receive_frame ty res :
-    monad.Frame (xval_receive ty res) (xval_receive ty res).
+    monad.Frame (xval_receive ty res) (xval_receive ty res) Q'.
   Proof.
     rewrite /xval_receive. iIntros "X Y"; iDestruct "Y" as (x) "[? ?]"; iExists x; iFrame; by iApply "X".
   Qed.

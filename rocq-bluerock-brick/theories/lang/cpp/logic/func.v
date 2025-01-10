@@ -35,6 +35,38 @@ Proof. iIntros "Q W R". iApply ("Q" with "(W R)"). Qed.
 #[local] Arguments UNSUPPORTED {_ _} _%_bs.
 #[local] Arguments wpi : simpl never.
 
+
+Definition Kreturn_inner `{Σ : cpp_logic, σ : genv} (Q : ptr -> mpred) (rt : ReturnType ()) : mpred :=
+  match rt with
+  | Normal _ | ReturnVoid => Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p
+  | ReturnVal p => Q p
+  | _ => False
+  end.
+
+#[program]
+  Definition Mhandle_return `{Σ : cpp_logic} {σ : genv} (m : Mlocal ()) : Mglobal ptr :=
+  {| _wp K := m.(_wp) (funI rt free _ => Kreturn_inner (fun p => K p free _) rt) |}.
+Next Obligation.
+  simpl; intros.
+  iIntros "K"; iApply _ok; iIntros (???); case_match; eauto.
+  all: iIntros "X" (?) "P"; iApply "K"; iApply "X"; eauto.
+Qed.
+
+
+#[program]
+Definition Mhandle_return `{Σ : cpp_logic} {σ : genv} (m : Mlocal ()) : Mglobal ptr :=
+  {| _wp K := m.(_wp) (funI rt free _ =>
+          match rt with
+          | Normal _ | ReturnVoid => Forall p : ptr, p |-> primR Tvoid (cQp.m 1) Vvoid -* K p free _
+          | ReturnVal p => K p free _
+          | _ => False
+          end) |}.
+Next Obligation.
+  simpl; intros.
+  iIntros "K"; iApply _ok; iIntros (???); case_match; eauto.
+  all: iIntros "X" (?) "P"; iApply "K"; iApply "X"; eauto.
+Qed.
+
 Definition Kreturn_inner `{Σ : cpp_logic, σ : genv} (Q : ptr -> mpred) (rt : ReturnType) : mpred :=
   match rt with
   | Normal | ReturnVoid => Forall p : ptr, p |-> primR Tvoid (cQp.mut 1) Vvoid -* Q p

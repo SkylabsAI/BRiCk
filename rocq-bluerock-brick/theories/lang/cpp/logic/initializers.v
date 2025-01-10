@@ -54,8 +54,8 @@ guaranteed to have to initialize a value which will result in an
 *)
 
 #[local] Definition default_initialize_array_body `{Σ : cpp_logic, σ : genv}
-    (u : bool) (default_initialize : ptr -> (FreeTemps -> epred) -> mpred)
-    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
+    (u : bool) (default_initialize : ptr -> (FreeTemps -> mpred) -> mpred)
+    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) (Q : FreeTemps -> mpred) : mpred :=
   let folder i PP :=
     default_initialize (p ,, o_sub _ ty (Z.of_N i)) (fun free' => interp tu free' PP)
   in
@@ -63,9 +63,9 @@ guaranteed to have to initialize a value which will result in an
 
 mlock
 Definition default_initialize_array `{Σ : cpp_logic, σ : genv} :
-  ∀ (default_initialize : ptr -> (FreeTemps -> epred) -> mpred)
+  ∀ (default_initialize : ptr -> (FreeTemps -> mpred) -> mpred)
     (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr)
-    (Q : FreeTemps -> epred), mpred :=
+    (Q : FreeTemps -> mpred), mpred :=
   Cbn (Reduce (default_initialize_array_body true)).
 #[global] Arguments default_initialize_array {_ _ _ _} _ _ _ _ _ _%_I : assert.	(* mlock bug *)
 
@@ -92,9 +92,9 @@ described above.
 
 #[local]
 Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
-    (u : bool) (default_initialize : exprtype -> ptr -> (FreeTemps -> epred) -> mpred)
+    (u : bool) (default_initialize : exprtype -> ptr -> (FreeTemps -> mpred) -> mpred)
     (tu : translation_unit)
-    (ty : exprtype) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
+    (ty : exprtype) (p : ptr) (Q : FreeTemps -> mpred) : mpred :=
   let ERROR := funI m => |={top}=>?u ERROR m in
   let UNSUPPORTED := funI m => |={top}=>?u UNSUPPORTED m in
   match ty with
@@ -136,7 +136,7 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
 
 mlock
 Definition default_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
-  : ∀ (ty : exprtype) (p : ptr) (Q : FreeTemps -> epred), mpred :=
+  : ∀ (ty : exprtype) (p : ptr) (Q : FreeTemps -> mpred), mpred :=
   fix default_initialize ty p Q {struct ty} :=
     Cbn (Reduce (default_initialize_body true) default_initialize tu ty p Q).
 #[global] Arguments default_initialize {_ _ _ _} _ _ _ _%_I : assert.	(* mlock bug *)
@@ -168,8 +168,8 @@ Ltac default_initialize_unfold :=
 
 Section default_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : FreeTemps -> epred).
-  Implicit Types (di : ptr -> (FreeTemps -> epred) -> mpred).
+  Implicit Types (Q : FreeTemps -> mpred).
+  Implicit Types (di : ptr -> (FreeTemps -> mpred) -> mpred).
 
   #[local] Notation FRAME di di' :=
     (∀ p Q Q', (Forall f, Q f -* Q' f) |-- di p Q -* di' p Q')
@@ -559,7 +559,7 @@ right now. So, for the time being, we prove [_frame] lemmas without
 (*
 Section wp_initialize.
   Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : FreeTemps -> epred).
+  Implicit Types (Q : FreeTemps -> mpred).
 
   (** [wp_initialize_unqualified] *)
 
@@ -969,7 +969,7 @@ Section wp_initialize.
 
   (** [wpi] *)
 
-  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : epred) :
+  Lemma wpi_frame tu tu' ρ cls this ty e (Q Q' : mpred) :
     sub_module tu tu' ->
     Q -* Q' |-- wpi tu ρ cls this ty e Q -* wpi tu' ρ cls this ty e Q'.
   Proof.
@@ -978,7 +978,7 @@ Section wp_initialize.
     by iApply interp_frame_strong.
   Qed.
 
-  Lemma wpi_shift tu ρ cls this ty e (Q : epred) :
+  Lemma wpi_shift tu ρ cls this ty e (Q : mpred) :
     Cbn (|={top}=>?fupd_compatible wpi tu ρ cls this ty e (|={top}=>?fupd_compatible Q))
     |-- wpi tu ρ cls this ty e Q.
   Proof.

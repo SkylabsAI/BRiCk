@@ -886,7 +886,7 @@ Section with_cpp.
    *)
   Parameter wp_fptr
     : forall (tt : type_table) (fun_type : type) (* TODO: function type *)
-        (addr : ptr) (ls : list ptr) (Q : ptr -> epred), mpred.
+        (addr : ptr) (ls : list ptr) (Q : ptr -> mpred), mpred.
 
   (* (bind [n] last for consistency with [NonExpansive]). *)
   #[global] Declare Instance wp_fptr_ne :
@@ -934,7 +934,7 @@ Section with_cpp.
   Lemma wp_fptr_frame : forall tt ft a ls Q1 Q2,
     (Forall v, Q1 v -* Q2 v)
     |-- wp_fptr tt ft a ls Q1 -* wp_fptr tt ft a ls Q2.
-  Proof.
+  Proof using Σ.
     intros. iIntros "H". iApply wp_fptr_frame_fupd; first reflexivity.
     iIntros (v) "? !>". by iApply "H".
   Qed.
@@ -954,7 +954,7 @@ Section with_cpp.
 
   #[global] Instance Proper_wp_fptr : forall tt ft a ls,
       Proper (pointwise_relation _ lentails ==> lentails) (@wp_fptr tt ft a ls).
-  Proof.
+  Proof using Σ.
     repeat red; intros.
     iApply wp_fptr_frame.
     iIntros (v); iApply H.
@@ -963,7 +963,7 @@ Section with_cpp.
   Section wp_fptr.
     Context {tt : type_table} {tf : type} (addr : ptr) (ls : list ptr).
     #[local] Notation WP := (wp_fptr tt tf addr ls) (only parsing).
-    Implicit Types Q : ptr → epred.
+    Implicit Types Q : ptr → mpred.
 
     Lemma wp_fptr_wand_fupd Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* |={top}=> Q2 v) -* WP Q2.
     Proof.
@@ -973,7 +973,7 @@ Section with_cpp.
     Qed.
 
     Lemma wp_fptr_wand Q1 Q2 : WP Q1 |-- (∀ v, Q1 v -* Q2 v) -* WP Q2.
-    Proof.
+    Proof using Σ.
       iIntros "Hwp HK".
       iApply (wp_fptr_frame with "HK Hwp").
     Qed.
@@ -994,7 +994,7 @@ Section with_cpp.
            to an member pointer or vice versa.
    *)
   Definition wp_mfptr (tt : type_table) (this_type : exprtype) (fun_type : functype)
-    : ptr -> list ptr -> (ptr -> epred) -> mpred :=
+    : ptr -> list ptr -> (ptr -> mpred) -> mpred :=
     wp_fptr tt (Tmember_func this_type fun_type).
 
   (* (bind [n] last for consistency with [NonExpansive]). *)
@@ -1014,7 +1014,7 @@ Section with_cpp.
   Lemma wp_mfptr_frame:
     ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
       Forall v, Q v -* Q' v |-- wp_mfptr t1 t t0 v l Q -* wp_mfptr t1 t t0 v l Q'.
-  Proof. intros; apply wp_fptr_frame. Qed.
+  Proof using Σ. intros; apply wp_fptr_frame. Qed.
 
   Lemma wp_mfptr_frame_fupd :
     ∀ (t : type) (l : list ptr) (v : ptr) (t0 : type) (t1 : type_table) (Q Q' : ptr -> _),
