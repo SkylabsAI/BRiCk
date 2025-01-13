@@ -1044,20 +1044,20 @@ Module Type Expr.
     Axiom wp_operand_sizeof : forall ety ty Q,
         Exists sz,
           [| size_of (drop_reference $ get_type ety) = Some sz |] **
-          [| has_type_prop sz Tsize_t |] **
+          [| has_type_prop sz ty |] **
           Q (Vn sz) FreeTemps.id
         |-- wp_operand (Esizeof ety ty) Q.
 
     (** `alignof(e)`
         https://eel.is/c++draft/expr.alignof
 
-        NOTE: We do not require [has_type] in [wp_operand_alignof], this is guaranteed
-        by the compiler.
+        NOTE: it should be safe to omit the [has_type_prop] check on the
+              result, but we don't want to assume that compilers enforce this.
      *)
     Axiom wp_operand_alignof : forall ety ty Q,
         Exists align,
           [| align_of (drop_reference $ get_type ety) = Some align |] **
-          [| has_type_prop align Tsize_t |] **
+          [| has_type_prop align ty |] **
           Q (Vn align) FreeTemps.id
         |-- wp_operand (Ealignof ety ty) Q.
 
