@@ -39,3 +39,9 @@ Proof. reflexivity. Qed.
  *)
 Goal "test_e()"%cpp_name = (Nglobal (Nfunction function_qualifiers.N (Nf "test_e") nil)).
 Proof. reflexivity. Qed.
+
+Import name_notation.
+
+(* [Import name_notation.] does re-enable the global notation! *)
+Goal "test(INT, SINT)"%cpp_name = (Nglobal (Nfunction function_qualifiers.N (Nf "test") (Tint :: Tint :: nil))).
+Proof. Fail reflexivity. Abort.
