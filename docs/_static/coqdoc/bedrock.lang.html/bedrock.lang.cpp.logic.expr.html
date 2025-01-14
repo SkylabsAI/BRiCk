@@ -1597,8 +1597,8 @@ Gets the type used in an expression like `sizeof` and `alignof`
 
         NOTE that the AST *must* insert implicit casts for casting qualifiers so
              that the types match up exactly up to top-level qualifiers, e.g.
-             <span class="inlinecode"><span class="id" title="var">foo</span>(<a class="idref" href="bedrock.lang.cpp.syntax.core.html#cast_style.const"><span class="id" title="constructor">const</span></a></span> <span class="inlinecode"><span class="id" title="var">int</span>)</span> will be passed a value of type <span class="inlinecode"><span class="id" title="var">int</span></span> (not <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#cast_style.const"><span class="id" title="constructor">const</span></a></span>
-             <span class="inlinecode"><span class="id" title="var">int</span></span>). the issue with type-level qualifiers is addressed through
+             <span class="inlinecode"><span class="id" title="var">foo</span>(<a class="idref" href="bedrock.lang.cpp.syntax.core.html#cast_style.const"><span class="id" title="constructor">const</span></a></span> <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Numbers.Cyclic.Int63.Uint63.html#int"><span class="id" title="abbreviation">int</span></a>)</span> will be passed a value of type <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Numbers.Cyclic.Int63.Uint63.html#int"><span class="id" title="abbreviation">int</span></a></span> (not <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#cast_style.const"><span class="id" title="constructor">const</span></a></span>
+             <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Numbers.Cyclic.Int63.Uint63.html#int"><span class="id" title="abbreviation">int</span></a></span>). the issue with type-level qualifiers is addressed through
              the use of <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.types.html#normalize_type"><span class="id" title="abbreviation">normalize_type</span></a></span> below. 
 </div>
 <div class="code">
@@ -1837,7 +1837,7 @@ Pseudo destructors arise from calling the destructor on
 
 <div class="paragraph"> </div>
 
-        with <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.handler.html#lens.T"><span class="id" title="variable">T</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode"><span class="id" title="var">int</span></span>.
+        with <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.handler.html#lens.T"><span class="id" title="variable">T</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Numbers.Cyclic.Int63.Uint63.html#int"><span class="id" title="abbreviation">int</span></a></span>.
 
 <div class="paragraph"> </div>
 
