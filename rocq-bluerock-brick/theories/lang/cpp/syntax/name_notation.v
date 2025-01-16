@@ -22,18 +22,25 @@ Bind Scope cpp_name_scope with core.obj_name.
 
 (* the parser for fields adds a sanity check that it starts with [Nscoped] *)
 #[local]
-Definition field_parser (ls : PrimString.string) : option core.field :=
+Definition parse_field_with check (ls : PrimString.string) : option core.field :=
+  match parser.parse_name_with check ls with
+  | Some (core.Nscoped _ _) as x => x
+  | _ => None
+  end.
+
+#[local]
+Definition parse_field (ls : PrimString.string) : option core.field :=
   match parse_name ls with
   | Some (core.Nscoped _ _) as x => x
   | _ => None
   end.
 #[local]
-Definition field_printer (f : core.field) : option PrimString.string :=
+Definition print_field (f : core.field) : option PrimString.string :=
   match f with
   | core.Nscoped _ _ => print_name f
   | _ => None
   end.
-String Notation core.field field_parser field_printer : cpp_field_scope.
+String Notation core.field parse_field print_field : cpp_field_scope.
 
 Fail Check "foo"%cpp_field.
 Succeed Example _0 : "foo"%cpp_name = "foo"%cpp_name := eq_refl.

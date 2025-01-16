@@ -10,6 +10,4 @@
    The notations defined here connect to the notations generated
    by the <<xxx_names.v>> files produced by <<cpp2v>>.
  *)
-
 Declare Custom Entry cppglobal.
-

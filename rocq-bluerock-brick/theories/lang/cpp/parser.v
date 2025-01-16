@@ -188,3 +188,6 @@ Definition Dstatic_assert (msg : option PrimString.string) (e : Expr) : K :=
 Definition Qconst_volatile : type -> type := tqualified QCV.
 Definition Qconst : type -> type := tqualified QC.
 Definition Qvolatile : type -> type := tqualified QV.
+
+(** Generating notation *)
+Require bedrock.lang.cpp.syntax.name_notation.

@@ -117,7 +117,8 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 	};
 
 	auto bytestring = [&](CoqPrinter& print) -> auto& {
-		return print.output() << "#[local] Open Scope pstring_scope." << fmt::line;
+		return print.output()
+			   << "#[local] Open Scope pstring_scope." << fmt::line;
 	};
 
 	with_open_file(
@@ -184,6 +185,29 @@ ToCoqConsumer::toCoqModule(clang::ASTContext* ctxt,
 			// TODO I still need to generate the initializer
 
 			print.output() << "." << fmt::outdent << fmt::line;
+
+			// A Rocq bug prevents us from using [Include] to generate [String Notation].
+			// See:	https://github.com/coq/coq/issues/20067
+			// print.output() << "Include parser.string_notation." << fmt::line;
+
+			// Therefore, we have to generate the declaration inline.
+
+			// generate the string notation
+			print.output()
+				<< "Module Export notation.\n"
+				   "  Definition parse_name := parser.parse_name_with module.\n"
+				   "  Definition parse_type := parser.parse_type_with module.\n"
+				   "  Definition parse_field := name_notation.parse_field_with "
+				   "module.\n"
+				   "\n"
+				   "  String Notation core.name parse_name printer.print_name "
+				   ": cpp_name_scope.\n"
+				   "  String Notation core.type parse_type printer.print_type "
+				   ": cpp_type_scope.\n"
+				   "  String Notation core.field parse_field "
+				   "name_notation.print_field : cpp_field_scope.\n"
+
+				   "End notation.";
 
 			if (check_types_) {
 				print.output()
