@@ -411,14 +411,14 @@ Module internal.
       in
       let* t :=
         basic_type <|>
-        (exact "$" *> (Tparam <$> ident)) <|>
-        (let* e := exact "#" <|> keyword "enum" in
-         let* n := parse_name () in
-         name_for_parse Tenum (Some e) n) <|>
-        (let* kw := optional (keyword "struct" <|> keyword "class") in
-         let* n := parse_name () in
-         name_for_parse Tnamed kw n) <|>
-        (parens (parse_type ()))
+        (commit (exact "(") (fun _ => parse_type () <* exact ")")
+         $ commit (exact "$") (fun _ => Tparam <$> ident)
+         $ commit (exact "#" <|> keyword "enum")
+                (fun e => let* n := parse_name () in
+                     name_for_parse Tenum (Some e) n)
+         $ let* kw := optional (keyword "struct" <|> keyword "class") in
+           let* n := parse_name () in
+           name_for_parse Tnamed kw n)
       in
       let* post := parse_postfix_type in
       mret $ post (List.fold_right (fun f x => f x) t quals).
