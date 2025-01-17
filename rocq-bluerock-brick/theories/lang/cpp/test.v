@@ -9,8 +9,9 @@ Definition symbol_names :=
 
 Arguments Atype {_ _ _} _%_cpp_type.
 
+Optimize Heap.
 Instructions
-Check
+Definition s : list name :=
 ["__gnu_cxx::__alloc_traits<std::allocator<int>, int>::rebind<int>";
         "__gnu_cxx::__alloc_traits<std::allocator<char>, char>::rebind<char>";
         "__gnu_cxx::__alloc_traits<std::allocator<wchar_t>, wchar_t>::rebind<wchar_t>";
@@ -29,89 +30,14 @@ Check
         "__gnu_cxx::__alloc_traits<std::allocator<char16_t>, char16_t>";
         "__gnu_cxx::__alloc_traits<std::allocator<char32_t>, char32_t>";
         "__gnu_cxx::__alloc_traits<std::allocator<std::_List_node<std::vector<int, std::allocator<int>>>>, std::_List_node<std::vector<int, std::allocator<int>>>>";
-        "__gnu_cxx::__alloc_traits<std::allocator<std::vector<int, std::allocator<int>>>, std::vector<int, std::allocator<int>>>";
-        Ninst "__gnu_cxx::__conditional_type"
-          [Avalue (Eint 1 "bool"); Atype "unsigned long"; Atype "unsigned long long"];
-        "__gnu_cxx::__is_integer_nonstrict<short>"; "__gnu_cxx::__is_integer_nonstrict<int>";
-        "__gnu_cxx::__is_integer_nonstrict<unsigned int>"; "__gnu_cxx::__is_integer_nonstrict<long>";
-        "__gnu_cxx::__is_integer_nonstrict<unsigned long>"; "__gnu_cxx::__is_integer_nonstrict<unsigned long long>";
-        "__gnu_cxx::__is_integer_nonstrict<char>";
-        "__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int>>>";
-        "__gnu_cxx::__normal_iterator<char*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>";
-        "__gnu_cxx::__normal_iterator<wchar_t*, std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>";
-        "__gnu_cxx::__normal_iterator<char16_t*, std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>";
-        "__gnu_cxx::__normal_iterator<char32_t*, std::__cxx11::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>";
-        "__gnu_cxx::__normal_iterator<const int*, std::vector<int, std::allocator<int>>>";
-        "__gnu_cxx::__normal_iterator<const char*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>";
-        "__gnu_cxx::__normal_iterator<const wchar_t*, std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>";
-        "__gnu_cxx::__normal_iterator<const char16_t*, std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>";
-        "__gnu_cxx::__normal_iterator<const char32_t*, std::__cxx11::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>";
-        "__gnu_cxx::__numeric_traits<short>"; "__gnu_cxx::__numeric_traits<int>";
-        "__gnu_cxx::__numeric_traits<long>"; "__gnu_cxx::__numeric_traits<unsigned long>";
-        "__gnu_cxx::__numeric_traits<char>"; "__gnu_cxx::__numeric_traits<float>";
-        "__gnu_cxx::__numeric_traits<double>"; "__gnu_cxx::__numeric_traits<long double>";
-        "__gnu_cxx::__numeric_traits_floating<float>"; "__gnu_cxx::__numeric_traits_floating<double>";
-        "__gnu_cxx::__numeric_traits_floating<long double>"; "__gnu_cxx::__numeric_traits_integer<short>";
-        "__gnu_cxx::__numeric_traits_integer<int>"; "__gnu_cxx::__numeric_traits_integer<unsigned int>";
-        "__gnu_cxx::__numeric_traits_integer<long>"; "__gnu_cxx::__numeric_traits_integer<unsigned long>";
-        "__gnu_cxx::__numeric_traits_integer<unsigned long long>"; "__gnu_cxx::__numeric_traits_integer<char>";
-        Ninst "__gnu_cxx::__promote" [Atype "float"; Avalue (Eint 0 "bool")];
-        Ninst "__gnu_cxx::__promote" [Atype "double"; Avalue (Eint 0 "bool")];
-        Ninst "__gnu_cxx::__promote" [Atype "long double"; Avalue (Eint 0 "bool")];
-        "__gnu_cxx::__remove_unsigned<unsigned char>"; "__gnu_cxx::__remove_unsigned<unsigned short>";
-        "__gnu_cxx::__remove_unsigned<unsigned int>"; "__gnu_cxx::__remove_unsigned<unsigned long>";
-        "__gnu_cxx::__remove_unsigned<unsigned long long>"; "__gnu_cxx::__remove_unsigned<char>";
-        "__gnu_cxx::__remove_unsigned<wchar_t>"; "__gnu_cxx::__remove_unsigned<bool>";
-        "__gnu_cxx::char_traits<char>"; "__gnu_cxx::char_traits<wchar_t>";
-        Ninst "std::_Destroy_aux" [Avalue (Eint 1 "bool")]; Ninst "std::_Destroy_n_aux" [Avalue (Eint 1 "bool")];
-        Ninst "std::_Index_tuple" [Apack []]; "std::_List_const_iterator<std::vector<int, std::allocator<int>>>";
-        "std::_List_iterator<std::vector<int, std::allocator<int>>>";
-        "std::_List_node<std::vector<int, std::allocator<int>>>"; "std::_Vector_base<int, std::allocator<int>>";
-        "std::__add_lvalue_reference_helper<int* const, void>";
-        "std::__add_lvalue_reference_helper<const int* const, void>"; "std::__add_rvalue_reference_helper<int, void>";
-        "std::__allocated_ptr<std::allocator<std::_List_node<std::vector<int, std::allocator<int>>>>>";
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_class<std::basic_ostream<char, std::char_traits<char>>&>";
-              Atype "std::__not_<std::is_same<std::basic_ostream<char, std::char_traits<char>>&, std::ios_base>>";
-              Atype "std::is_convertible<std::basic_ostream<char, std::char_traits<char>>*, std::ios_base*>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<char* const&, std::basic_string_view<char, std::char_traits<char>>>";
-              Atype
-                "std::__not_<std::is_convertible<char* const*, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*>>";
-              Atype "std::__not_<std::is_convertible<char* const&, const char*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char* const&, std::basic_string_view<char, std::char_traits<char>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char* const*, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*>>";
-              Atype "std::__not_<std::is_convertible<const char* const&, const char*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char* const&, std::basic_string_view<wchar_t, std::char_traits<wchar_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char* const*, const std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const char* const&, const wchar_t*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const wchar_t* const&, std::basic_string_view<wchar_t, std::char_traits<wchar_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const wchar_t* const*, const std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const wchar_t* const&, const wchar_t*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char16_t* const&, std::basic_string_view<char16_t, std::char_traits<char16_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char16_t* const*, const std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const char16_t* const&, const char16_t*>>"]];
-        "std::locale::._S_categories_size::_S_categories_size"]%cpp_name.
-(* Finished transaction in 95809460106 instructions (successful) *)
+        "__gnu_cxx::__alloc_traits<std::allocator<std::vector<int, std::allocator<int>>>, std::vector<int, std::allocator<int>>>"]%cpp_name.
 
 Import foo_cpp.
 
+
+Optimize Heap.
 Instructions
-Check
+Definition t : list name :=
 ["__gnu_cxx::__alloc_traits<std::allocator<int>, int>::rebind<int>";
         "__gnu_cxx::__alloc_traits<std::allocator<char>, char>::rebind<char>";
         "__gnu_cxx::__alloc_traits<std::allocator<wchar_t>, wchar_t>::rebind<wchar_t>";
@@ -130,84 +56,7 @@ Check
         "__gnu_cxx::__alloc_traits<std::allocator<char16_t>, char16_t>";
         "__gnu_cxx::__alloc_traits<std::allocator<char32_t>, char32_t>";
         "__gnu_cxx::__alloc_traits<std::allocator<std::_List_node<std::vector<int, std::allocator<int>>>>, std::_List_node<std::vector<int, std::allocator<int>>>>";
-        "__gnu_cxx::__alloc_traits<std::allocator<std::vector<int, std::allocator<int>>>, std::vector<int, std::allocator<int>>>";
-        Ninst "__gnu_cxx::__conditional_type"
-          [Avalue (Eint 1 "bool"); Atype "unsigned long"; Atype "unsigned long long"];
-        "__gnu_cxx::__is_integer_nonstrict<short>"; "__gnu_cxx::__is_integer_nonstrict<int>";
-        "__gnu_cxx::__is_integer_nonstrict<unsigned int>"; "__gnu_cxx::__is_integer_nonstrict<long>";
-        "__gnu_cxx::__is_integer_nonstrict<unsigned long>"; "__gnu_cxx::__is_integer_nonstrict<unsigned long long>";
-        "__gnu_cxx::__is_integer_nonstrict<char>";
-        "__gnu_cxx::__normal_iterator<int*, std::vector<int, std::allocator<int>>>";
-        "__gnu_cxx::__normal_iterator<char*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>";
-        "__gnu_cxx::__normal_iterator<wchar_t*, std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>";
-        "__gnu_cxx::__normal_iterator<char16_t*, std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>";
-        "__gnu_cxx::__normal_iterator<char32_t*, std::__cxx11::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>";
-        "__gnu_cxx::__normal_iterator<const int*, std::vector<int, std::allocator<int>>>";
-        "__gnu_cxx::__normal_iterator<const char*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>>";
-        "__gnu_cxx::__normal_iterator<const wchar_t*, std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>";
-        "__gnu_cxx::__normal_iterator<const char16_t*, std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>";
-        "__gnu_cxx::__normal_iterator<const char32_t*, std::__cxx11::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>";
-        "__gnu_cxx::__numeric_traits<short>"; "__gnu_cxx::__numeric_traits<int>";
-        "__gnu_cxx::__numeric_traits<long>"; "__gnu_cxx::__numeric_traits<unsigned long>";
-        "__gnu_cxx::__numeric_traits<char>"; "__gnu_cxx::__numeric_traits<float>";
-        "__gnu_cxx::__numeric_traits<double>"; "__gnu_cxx::__numeric_traits<long double>";
-        "__gnu_cxx::__numeric_traits_floating<float>"; "__gnu_cxx::__numeric_traits_floating<double>";
-        "__gnu_cxx::__numeric_traits_floating<long double>"; "__gnu_cxx::__numeric_traits_integer<short>";
-        "__gnu_cxx::__numeric_traits_integer<int>"; "__gnu_cxx::__numeric_traits_integer<unsigned int>";
-        "__gnu_cxx::__numeric_traits_integer<long>"; "__gnu_cxx::__numeric_traits_integer<unsigned long>";
-        "__gnu_cxx::__numeric_traits_integer<unsigned long long>"; "__gnu_cxx::__numeric_traits_integer<char>";
-        Ninst "__gnu_cxx::__promote" [Atype "float"; Avalue (Eint 0 "bool")];
-        Ninst "__gnu_cxx::__promote" [Atype "double"; Avalue (Eint 0 "bool")];
-        Ninst "__gnu_cxx::__promote" [Atype "long double"; Avalue (Eint 0 "bool")];
-        "__gnu_cxx::__remove_unsigned<unsigned char>"; "__gnu_cxx::__remove_unsigned<unsigned short>";
-        "__gnu_cxx::__remove_unsigned<unsigned int>"; "__gnu_cxx::__remove_unsigned<unsigned long>";
-        "__gnu_cxx::__remove_unsigned<unsigned long long>"; "__gnu_cxx::__remove_unsigned<char>";
-        "__gnu_cxx::__remove_unsigned<wchar_t>"; "__gnu_cxx::__remove_unsigned<bool>";
-        "__gnu_cxx::char_traits<char>"; "__gnu_cxx::char_traits<wchar_t>";
-        Ninst "std::_Destroy_aux" [Avalue (Eint 1 "bool")]; Ninst "std::_Destroy_n_aux" [Avalue (Eint 1 "bool")];
-        Ninst "std::_Index_tuple" [Apack []]; "std::_List_const_iterator<std::vector<int, std::allocator<int>>>";
-        "std::_List_iterator<std::vector<int, std::allocator<int>>>";
-        "std::_List_node<std::vector<int, std::allocator<int>>>"; "std::_Vector_base<int, std::allocator<int>>";
-        "std::__add_lvalue_reference_helper<int* const, void>";
-        "std::__add_lvalue_reference_helper<const int* const, void>"; "std::__add_rvalue_reference_helper<int, void>";
-        "std::__allocated_ptr<std::allocator<std::_List_node<std::vector<int, std::allocator<int>>>>>";
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_class<std::basic_ostream<char, std::char_traits<char>>&>";
-              Atype "std::__not_<std::is_same<std::basic_ostream<char, std::char_traits<char>>&, std::ios_base>>";
-              Atype "std::is_convertible<std::basic_ostream<char, std::char_traits<char>>*, std::ios_base*>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<char* const&, std::basic_string_view<char, std::char_traits<char>>>";
-              Atype
-                "std::__not_<std::is_convertible<char* const*, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*>>";
-              Atype "std::__not_<std::is_convertible<char* const&, const char*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char* const&, std::basic_string_view<char, std::char_traits<char>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char* const*, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>>*>>";
-              Atype "std::__not_<std::is_convertible<const char* const&, const char*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char* const&, std::basic_string_view<wchar_t, std::char_traits<wchar_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char* const*, const std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const char* const&, const wchar_t*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const wchar_t* const&, std::basic_string_view<wchar_t, std::char_traits<wchar_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const wchar_t* const*, const std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const wchar_t* const&, const wchar_t*>>"]];
-        Ninst "std::__and_"
-          [Apack
-             [Atype "std::is_convertible<const char16_t* const&, std::basic_string_view<char16_t, std::char_traits<char16_t>>>";
-              Atype
-                "std::__not_<std::is_convertible<const char16_t* const*, const std::__cxx11::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>*>>";
-              Atype "std::__not_<std::is_convertible<const char16_t* const&, const char16_t*>>"]];
-        "std::locale::._S_categories_size::_S_categories_size"]%cpp_name.
-(* Finished transaction in 655117410949 instructions (successful) *)
+        "__gnu_cxx::__alloc_traits<std::allocator<std::vector<int, std::allocator<int>>>, std::vector<int, std::allocator<int>>>"]%cpp_name.
 
 
 
