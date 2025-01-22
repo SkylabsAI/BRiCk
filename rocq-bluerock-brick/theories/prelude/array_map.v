@@ -51,7 +51,7 @@ Module map (Import K : KEY).
         | Gt => next (mid + 1)%uint63 max
         end.
 
-    Definition find (m : t) (needle : key) : option value :=
+    Definition find (needle : key) (m : t) : option value :=
       let max := PArray.length m.(keys) in
       match find_key m.(keys) needle (Z.to_nat $ to_Z $ PArray.length m.(keys)) 0 max with
       | None => None
@@ -95,11 +95,26 @@ Module map (Import K : KEY).
     Definition find_any (f : key -> value -> bool) (m : t) :=
       find_any_to f m (Z.to_nat $ to_Z $ PArray.length m.(keys)) (PArray.length m.(keys) - 1)%uint63.
 
-    Lemma find_any_ok : True.
+    Definition copy (m : t) : t :=
+      mk (PArray.copy m.(keys)) (PArray.copy m.(values)).
+
+    Definition cardinal (m : t) : nat :=
+      Z.to_nat $ to_Z $ PArray.length m.(keys).
+
+    Definition MapsTo (k : key) (v : value) (m : t) :=
+      find k m = Some v.
+
+    Lemma find_1 : forall x e (m : t), MapsTo x e m -> find x m = Some e.
+    Proof. done. Qed.
+    Lemma find_2 : forall x e m, find x m = Some e -> MapsTo x e m.
+    Proof. done. Qed.
+
+    Lemma find_any_ok b (m : t) :
+      if find_any b m
+      then exists k v, MapsTo k v m /\ b k v = true
+      else forall k v, MapsTo k v m -> b k v = false.
     Proof. Admitted.
 
-    Definition copy (x : t) : t :=
-      mk (PArray.copy x.(keys)) (PArray.copy x.(values)).
   End with_value.
   #[global] Arguments t : clear implicits.
 End map.

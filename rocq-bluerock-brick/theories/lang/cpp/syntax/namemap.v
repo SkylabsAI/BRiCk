@@ -7,6 +7,7 @@
 Require Import Stdlib.Structures.OrderedTypeAlt.
 Require Import Stdlib.FSets.FMapAVL.
 Require Import bedrock.prelude.avl.
+Require Import bedrock.prelude.array_map.
 Require Import bedrock.prelude.compare.
 Require Import bedrock.lang.cpp.syntax.prelude.
 Require Import bedrock.lang.cpp.syntax.core.
@@ -33,12 +34,23 @@ Module Import internal.
       #[local] Lemma compare_trans c x y z : (x ?= y) = c -> (y ?= z) = c -> (x ?= z) = c.
       Proof. exact: base.compare_trans. Qed.
     End Compare.
-    Module Key := OrderedType_from_Alt Compare.
-    Lemma eqL : forall a b, Key.eq a b -> @eq _ a b.
-    Proof. apply leibniz_cmp_eq; refine _. Qed.
-    Include FMapAVL.Make Key.
-    Include FMapExtra.MIXIN Key.
-    Include FMapExtra.MIXIN_LEIBNIZ Key.
+    Definition key := name' Lang.lang.
+    Definition inh : Inhabited key := _.
+    Definition compare := Compare.compare.
+
+    Module AVL.
+      Module Key := OrderedType_from_Alt Compare.
+      Lemma eqL : forall a b, Key.eq a b -> @eq _ a b.
+      Proof. apply name_leibniz_comparison. Qed.
+
+      Include FMapAVL.Make Key.
+      Include FMapExtra.MIXIN Key.
+      Include FMapExtra.MIXIN_LEIBNIZ Key.
+    End AVL.
+
+    Include array_map.map.
+    #[global] Instance t_lookup {A} : Lookup key A (t A) :=
+      fun k (m : t A) => find k m.
   End NameMap.
 
 End internal.

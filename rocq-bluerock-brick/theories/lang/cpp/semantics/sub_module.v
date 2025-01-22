@@ -60,7 +60,7 @@ Section compat_le.
       exists x. unfold lookup in *.
       apply negb_true_iff in H1.
       erewrite NM.find_1; eauto.
-    - unfold lookup, NM.map_lookup.
+    - unfold lookup, NM.t_lookup.
       destruct (NM.find k l) eqn:Heq; eauto.
       apply NM.find_2 in Heq.
       eapply H0 in Heq.

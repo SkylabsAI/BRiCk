@@ -13,7 +13,6 @@ Require Export bedrock.lang.cpp.syntax.decl.
 
 
 (** ** Template-only top-level declarations emitted by cpp2v *)
-
 Module Import Mtranslation_unit.
 
   (**
@@ -21,10 +20,10 @@ Module Import Mtranslation_unit.
   efficiency.
   *)
 
-  Definition raw_symbol_table : Type := TM.Raw.tree (template MObjValue).
-  Definition raw_type_table : Type := TM.Raw.tree (template MGlobDecl).
-  Definition raw_alias_table : Type := TM.Raw.tree (template Mtype).
-  Definition raw_instance_table : Type := NM.Raw.tree Mtpreinst.
+  Definition raw_symbol_table : Type := TM.AVL.Raw.tree (template MObjValue).
+  Definition raw_type_table : Type := TM.AVL.Raw.tree (template MGlobDecl).
+  Definition raw_alias_table : Type := TM.AVL.Raw.tree (template Mtype).
+  Definition raw_instance_table : Type := NM.AVL.Raw.tree Mtpreinst.
   (* Definition raw_name_table : Type := TM.Raw.tree Mname. *)
 
   Definition t : Type :=
@@ -57,11 +56,14 @@ Module Import Mtranslation_unit.
   TODO: Do we still need <<map_canon>>?
   *)
   Definition decls (ds : list t) : Mtranslation_unit :=
+    let from_raw {T} {inh : Inhabited T} (s : TM.AVL.Raw.tree T) :=
+      TM.of_sorted_list $ TM.AVL.Raw.elements s
+    in
     decls' ds ∅ ∅ ∅ ∅ $ fun s t a i => {|
-      msymbols := TM.from_raw s;
-      mtypes := TM.from_raw t;
-      maliases := TM.from_raw a;
-      minstances := NM.from_raw i;
+      msymbols := from_raw s;
+      mtypes := from_raw t;
+      maliases := from_raw a;
+      minstances := NM.of_sorted_list $ NM.AVL.Raw.elements i;
     |}.
 
 End Mtranslation_unit.

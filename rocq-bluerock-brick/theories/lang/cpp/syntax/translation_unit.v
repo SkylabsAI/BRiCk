@@ -33,6 +33,8 @@ Variant GlobDecl' {lang} : Set :=
 #[global] Arguments Gconstant _ & _ _ : assert.
 #[global] Arguments Gtypedef _ & _ : assert.
 #[global] Arguments Gunsupported _ & _ : assert.
+#[global] Instance GlobDecl_inh {lang} : Inhabited (GlobDecl' lang).
+Proof. repeat constructor. Qed.
 #[global] Instance: forall {lang}, EqDecision (GlobDecl' lang).
 Proof. solve_decision. Defined.
 Notation GlobDecl := (GlobDecl' lang.cpp).
@@ -106,6 +108,9 @@ Variant ObjValue' {lang} : Set :=
 #[global] Arguments Omethod _ & _ : assert.
 #[global] Arguments Oconstructor _ & _ : assert.
 #[global] Arguments Odestructor _ & _ : assert.
+
+#[global] Instance ObjValue_inh {lang} : Inhabited (ObjValue' lang).
+Proof. constructor; apply Odestructor. constructor; apply inhabitant. Qed.
 #[global] Instance: forall {lang}, EqDecision (ObjValue' lang).
 Proof. solve_decision. Defined.
 Notation ObjValue := (ObjValue' lang.cpp).
@@ -159,6 +164,9 @@ Variant GlobalInit' {lang} : Set :=
 | FunctionInit (at_most_once : bool).
 #[global] Arguments GlobalInit' : clear implicits.
 #[global] Arguments ExprInit _ & _ : assert.
+
+#[global] Instance GlobalInit_inh {lang : lang.t} : Inhabited (GlobalInit' lang).
+Proof. constructor; apply ZeroInit. Qed.
 #[global] Instance: forall {lang}, EqDecision (GlobalInit' lang).
 Proof. solve_decision. Defined.
 Notation GlobalInit := (GlobalInit' lang.cpp).

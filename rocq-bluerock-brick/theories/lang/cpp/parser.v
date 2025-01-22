@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2024 BlueRock Security, Inc.
+ * Copyright (c) 2025 BlueRock Security, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -31,11 +31,9 @@ Module Import translation_unit.
   efficiency.
   *)
 
-  Definition raw_symbol_table : Type := NM.Raw.t ObjValue.
-  Definition raw_type_table : Type := NM.Raw.t GlobDecl.
-  Definition raw_alias_table : Type := NM.Raw.t type.
-
-  #[global] Instance raw_structured_insert : forall {T}, Insert globname T (NM.Raw.t T) := _.
+  Definition raw_symbol_table : Type := NM.AVL.Raw.t ObjValue.
+  Definition raw_type_table : Type := NM.AVL.Raw.t GlobDecl.
+  Definition raw_alias_table : Type := NM.AVL.Raw.t type.
 
   Definition t : Type :=
     raw_symbol_table -> raw_type_table -> raw_alias_table -> list name ->
@@ -89,24 +87,12 @@ Module Import translation_unit.
 
   Definition decls (ds : list t) (e : endian) : translation_unit * list name :=
     decls' ds ∅ ∅ ∅ [] $ fun s t a => pair {|
-      symbols := NM.from_raw s;
-      types := NM.from_raw t;
-      aliases := NM.from_raw a;
+      symbols := NM.of_sorted_list $ NM.AVL.Raw.elements s;
+      types := NM.of_sorted_list $ NM.AVL.Raw.elements t;
+      aliases := NM.of_sorted_list $ NM.AVL.Raw.elements a;
       initializer := nil;	(** TODO *)
       byte_order := e;
     |}.
-
-  (*
-  Definition the_tu (result : translation_unit * list name)
-    : match result.2 with
-      | [] => translation_unit
-      | _ => unit
-      end :=
-    match result.2 as X return match X with [] => translation_unit | _ => unit end with
-    | [] => result.1
-    | _ => tt
-    end.
-   *)
 
   Module make.
     Import Ltac2.Ltac2.
