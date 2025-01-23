@@ -141,12 +141,7 @@ Compute the actual raw offsets in Z.
 <span class="comment">(*<br/>
 Utility&nbsp;function,&nbsp;used&nbsp;to&nbsp;emulate&nbsp;<span class="inlinecode"><span class="id" title="var">global_ptr</span></span>&nbsp;without&nbsp;a&nbsp;linker.<br/>
 This&nbsp;is&nbsp;a&nbsp;really&nbsp;bad&nbsp;model&nbsp;and&nbsp;it'd&nbsp;fail&nbsp;a&nbsp;bunch&nbsp;of&nbsp;sanity&nbsp;checks.<br/>
-<br/>
-Caveat:&nbsp;a&nbsp;model&nbsp;this&nbsp;to&nbsp;model&nbsp;<span class="inlinecode"><span class="id" title="var">global_ptr</span></span>&nbsp;isn't&nbsp;correct,&nbsp;beyond&nbsp;proving<br/>
-<span class="inlinecode"><span class="id" title="var">global_ptr</span></span>'s&nbsp;isn't&nbsp;contradictory.<br/>
-This&nbsp;model&nbsp;would&nbsp;fail&nbsp;proving&nbsp;that&nbsp;objects&nbsp;are&nbsp;disjoint&nbsp;or&nbsp;that<br/>
-<span class="inlinecode"><span class="id" title="var">global_ptr</span></span> <span class="inlinecode"><span class="id" title="var">tu1</span></span> <span class="inlinecode">&quot;<span class="id" title="var">staticR</span>&quot;</span> <span class="inlinecode">|-&gt;</span> <span class="inlinecode"><span class="id" title="var">anyR</span></span> <span class="inlinecode"><span class="id" title="var">T</span></span> <span class="inlinecode">1%<span class="id" title="var">Qp</span></span>  <span class="inlinecode">...</span> <span class="inlinecode">∗</span>
-  <span class="inlinecode"><span class="id" title="var">global_ptr</span></span> <span class="inlinecode"><span class="id" title="var">tu2</span></span> <span class="inlinecode">&quot;<span class="id" title="var">staticR</span>&quot;</span> <span class="inlinecode">|-&gt;</span> <span class="inlinecode"><span class="id" title="var">anyR</span></span> <span class="inlinecode"><span class="id" title="var">T</span></span> <span class="inlinecode">1%<span class="id" title="var">Qp</span></span>  <span class="inlinecode">...</span>&nbsp;actually&nbsp;holds&nbsp;at&nbsp;startup.<br/>
+See&nbsp;comments&nbsp;around&nbsp;<span class="inlinecode"><span class="id" title="var">global_ptr</span></span>&nbsp;in&nbsp;<span class="inlinecode"><span class="id" title="var">simple_pointers.v</span></span>.<br/>
 *)</span><br/>
 
 <br/>
