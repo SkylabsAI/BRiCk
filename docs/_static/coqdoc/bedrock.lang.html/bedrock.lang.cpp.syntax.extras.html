@@ -56,14 +56,14 @@
 
 <br/>
 #[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span> <a id="function_qualifiers_comparison" class="idref" href="#function_qualifiers_comparison"><span class="id" title="instance">function_qualifiers_comparison</span></a> : <span class="id" title="class">Comparison</span> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#function_qualifiers.compare"><span class="id" title="definition">function_qualifiers.compare</span></a>.<br/>
-<span class="id" title="keyword">Proof</span>. <span class="id" title="tactic">eapply</span> <a class="idref" href="bedrock.lang.cpp.syntax.extras.html#by_tag_comparison"><span class="id" title="definition">by_tag_comparison</span></a>. <span class="id" title="keyword">Qed</span>.<br/>
+<span class="id" title="keyword">Proof</span>. <span class="comment">(*&nbsp;eapply&nbsp;by_tag_comparison.&nbsp;Qed.&nbsp;*)</span> <span class="id" title="var">Admitted</span>.<br/>
 
 <br/>
 #[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span> <a id="function_qualifiers_leibniz_cmp" class="idref" href="#function_qualifiers_leibniz_cmp"><span class="id" title="instance">function_qualifiers_leibniz_cmp</span></a> : <a class="idref" href="bedrock.lang.cpp.syntax.compare.html#LeibnizComparison"><span class="id" title="class">LeibnizComparison</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#function_qualifiers.compare"><span class="id" title="definition">function_qualifiers.compare</span></a>.<br/>
 <span class="id" title="keyword">Proof</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <a class="idref" href="bedrock.lang.cpp.syntax.compare.html#by_tag_leibniz"><span class="id" title="definition">by_tag_leibniz</span></a>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">compute</span>. <span class="id" title="tactic">destruct</span> <span class="id" title="var">x</span>, <span class="id" title="var">y</span>; <span class="id" title="tactic">congruence</span>.<br/>
-<span class="id" title="keyword">Qed</span>.<br/>
+<span class="comment">(*&nbsp;&nbsp;apply&nbsp;by_tag_leibniz.<br/>
+&nbsp;&nbsp;compute.&nbsp;destruct&nbsp;x,&nbsp;y;&nbsp;congruence.<br/>
+Qed.&nbsp;*)</span> <span class="id" title="var">Admitted</span>.<br/>
 
 <br/>
 #[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span> <a id="function_quailfiers_eq_dec" class="idref" href="#function_quailfiers_eq_dec"><span class="id" title="instance">function_quailfiers_eq_dec</span></a> : <a class="idref" href="https://plv.mpi-sws.org/coqdoc/stdpp//stdpp.base.html#EqDecision"><span class="id" title="abbreviation">EqDecision</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#function_qualifiers.t"><span class="id" title="inductive">function_qualifiers.t</span></a> :=<br/>
