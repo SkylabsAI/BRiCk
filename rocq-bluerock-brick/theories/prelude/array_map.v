@@ -33,6 +33,10 @@ Module map (Import K : KEY).
       ; values : array value
       }.
 
+    Definition empty {inh : Inhabited value} : t :=
+      {| keys := PArray.make 0 inhabitant
+       ; values := PArray.make 0 inhabitant |}.
+
     #[local] Fixpoint find_key (a : array key) (needle : key) (fuel : nat) (min max : int)
       : option int :=
       if (max =? min)%uint63 then None
@@ -72,6 +76,16 @@ Module map (Import K : KEY).
       let values : array value := PArray.make l inhabitant in
       let '(keys, values) := fill ls 0%uint63 keys values in
       mk keys values.
+
+    #[local]
+    Fixpoint fold_to {A} (f : key -> value -> A -> A) (m : t) (count : nat) (i : int) (acc : A) : A :=
+      match count with
+      | 0 => acc
+      | S count => fold_to f m count (i + 1)%uint63 (f (PArray.get m.(keys) i) (PArray.get m.(values) i) acc)
+      end.
+
+    Definition fold {A} (f : key -> value -> A -> A) (m : t) (acc : A) : A :=
+      fold_to f m (Z.to_nat $ to_Z $ PArray.length m.(keys)) 0 acc.
 
     #[local]
     Fixpoint elements_to (m : t) (count : nat) (i : int) (acc : list (key * value)) : list (key * value) :=

@@ -51,6 +51,10 @@ Module Import internal.
     Include array_map.map.
     #[global] Instance t_lookup {A} : Lookup key A (t A) :=
       fun k (m : t A) => find k m.
+
+    #[global] Instance t_empty `{inh : Inhabited A} : Empty (t A) :=
+      @empty _ _.
+
   End NameMap.
 
 End internal.
