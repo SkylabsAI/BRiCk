@@ -20,7 +20,7 @@ Next Obligation. intros; intro. eapply eqb_complete in H. congruence. Qed.
 
 Module map (Import K : KEY).
   Section with_value.
-    Context {value : Type}.
+    Context {elt : Type}.
 
     (** The representation of arrays is two parallel arrays, one with keys and one with values.
         This representation is more space efficient than a single array of pairs (in expectation).
@@ -30,10 +30,10 @@ Module map (Import K : KEY).
      *)
     Record t := mk
       { keys : array key
-      ; values : array value
+      ; values : array elt
       }.
 
-    Definition empty {inh : Inhabited value} : t :=
+    Definition empty {inh : Inhabited elt} : t :=
       {| keys := PArray.make 0 inhabitant
        ; values := PArray.make 0 inhabitant |}.
 
@@ -55,50 +55,50 @@ Module map (Import K : KEY).
         | Gt => next (mid + 1)%uint63 max
         end.
 
-    Definition find (needle : key) (m : t) : option value :=
+    Definition find (needle : key) (m : t) : option elt :=
       let max := PArray.length m.(keys) in
       match find_key m.(keys) needle (Z.to_nat $ to_Z $ PArray.length m.(keys)) 0 max with
       | None => None
       | Some idx => Some (PArray.get m.(values) idx)
       end.
 
-    #[local] Fixpoint fill (ls : list (key * value)) (i : int)
-      (keys : array key) (values : array value) : array key * array value :=
+    #[local] Fixpoint fill (ls : list (key * elt)) (i : int)
+      (keys : array key) (values : array elt) : array key * array elt :=
       match ls with
       | nil => (keys, values)
       | (k, v) :: ls =>
           fill ls (i + 1)%uint63 (PArray.set keys i k) (PArray.set values i v)
       end.
 
-    Definition of_sorted_list {inh : Inhabited value} (ls : list (key * value)) : t :=
+    Definition of_sorted_list {inh : Inhabited elt} (ls : list (key * elt)) : t :=
       let l := List.fold_left (fun a _ => a + 1)%uint63 ls 0%uint63 in
       let keys : array key := PArray.make l inhabitant in
-      let values : array value := PArray.make l inhabitant in
+      let values : array elt := PArray.make l inhabitant in
       let '(keys, values) := fill ls 0%uint63 keys values in
       mk keys values.
 
     #[local]
-    Fixpoint fold_to {A} (f : key -> value -> A -> A) (m : t) (count : nat) (i : int) (acc : A) : A :=
+    Fixpoint fold_to {A} (f : key -> elt -> A -> A) (m : t) (count : nat) (i : int) (acc : A) : A :=
       match count with
       | 0 => acc
       | S count => fold_to f m count (i + 1)%uint63 (f (PArray.get m.(keys) i) (PArray.get m.(values) i) acc)
       end.
 
-    Definition fold {A} (f : key -> value -> A -> A) (m : t) (acc : A) : A :=
+    Definition fold {A} (f : key -> elt -> A -> A) (m : t) (acc : A) : A :=
       fold_to f m (Z.to_nat $ to_Z $ PArray.length m.(keys)) 0 acc.
 
     #[local]
-    Fixpoint elements_to (m : t) (count : nat) (i : int) (acc : list (key * value)) : list (key * value) :=
+    Fixpoint elements_to (m : t) (count : nat) (i : int) (acc : list (key * elt)) : list (key * elt) :=
       match count with
       | 0 => acc
       | S count => elements_to m count (i - 1)%uint63 ((PArray.get m.(keys) i, PArray.get m.(values) i) :: acc)
       end.
 
-    Definition elements (m : t) : list (key * value) :=
+    Definition elements (m : t) : list (key * elt) :=
       elements_to m (Z.to_nat $ to_Z $ PArray.length m.(keys)) (PArray.length m.(keys) - 1)%uint63 nil.
 
     #[local]
-    Fixpoint find_any_to (f : key -> value -> bool) (m : t) (count : nat) (i : int) : bool :=
+    Fixpoint find_any_to (f : key -> elt -> bool) (m : t) (count : nat) (i : int) : bool :=
       match count with
       | 0 => false
       | S count =>
@@ -106,7 +106,7 @@ Module map (Import K : KEY).
           else find_any_to f m count (i - 1)%uint63
       end.
 
-    Definition find_any (f : key -> value -> bool) (m : t) :=
+    Definition find_any (f : key -> elt -> bool) (m : t) :=
       find_any_to f m (Z.to_nat $ to_Z $ PArray.length m.(keys)) (PArray.length m.(keys) - 1)%uint63.
 
     Definition copy (m : t) : t :=
@@ -115,7 +115,10 @@ Module map (Import K : KEY).
     Definition cardinal (m : t) : nat :=
       Z.to_nat $ to_Z $ PArray.length m.(keys).
 
-    Definition MapsTo (k : key) (v : value) (m : t) :=
+    Lemma cardinal_1 : forall m, cardinal m = length (elements m).
+    Proof. Admitted.
+
+    Definition MapsTo (k : key) (v : elt) (m : t) :=
       find k m = Some v.
 
     Lemma find_1 : forall x e (m : t), MapsTo x e m -> find x m = Some e.
