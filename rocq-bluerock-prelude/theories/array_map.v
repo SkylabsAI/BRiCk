@@ -23,7 +23,73 @@ End KEY.
 Next Obligation. apply eqb_correct. Qed.
 Next Obligation. intros; intro. eapply eqb_complete in H. congruence. Qed.
 
+
+Module Type SEARCH (Import K : KEY).
+  Parameter idx : Type.
+  Parameter of_pos : positive -> idx.
+  Parameter add : idx -> idx -> idx.
+  Parameter zero : idx.
+  Parameter succ : idx -> idx.
+
+  Parameter haystack : Type.
+  Parameter get : haystack -> idx -> key.
+End SEARCH.
+
+Module BinarySearch (Import K : KEY) (Import S : SEARCH K).
+
+  Inductive bisection :=
+  | Split (n : idx) : (unit -> bisection) -> (unit -> bisection) -> bisection
+  | Here (n : idx) : bisection.
+
+  Fixpoint bisect_pos (offset : idx) (p : positive) : bisection :=
+    match p return bisection with
+    | xH => Here offset
+    | xI p =>
+        let l _ := bisect_pos offset p in
+        let r _ := bisect_pos (add offset (succ $ of_pos p))%N p in
+        Split (add offset $ of_pos p) l r
+    | xO p =>
+        let l _ := bisect_pos offset p in
+        let r _ := bisect_pos (add offset $ of_pos p)%N p in
+        Split (add offset $ of_pos p) l r
+    end.
+
+  Definition bisect_N (n : N) : bisection :=
+    match n with
+    | N0 => Here zero
+    | Npos p => bisect_pos zero p
+    end.
+
+  Definition binary_search (arr : haystack) (needle : key) : bisection -> option idx :=
+    fix go b :=
+      match b with
+      | Here n =>
+          let k' := get arr n in
+          if compare needle k' is Eq then
+            Some n
+          else
+            None
+      | Split n l r =>
+          let k' := get arr n in
+          match compare needle k' with
+          | Lt => go (l ())
+          | Eq => Some n
+          | Gt => go (r ())
+          end
+      end.
+End BinarySearch.
+
 Module map (Import K : KEY).
+
+  Definition idx := int.
+  Definition of_pos := of_pos.
+  Definition add := add.
+  Definition zero := 0%uint63.
+  Definition succ := add 1%uint63.
+  Definition haystack := array key.
+  Definition get := @get key.
+  Include BinarySearch K.
+
   Section with_value.
     Context {elt : Type}.
 
@@ -42,32 +108,43 @@ Module map (Import K : KEY).
       {| keys := PArray.make 0 inhabitant
        ; values := PArray.make 0 inhabitant |}.
 
-    #[local] Fixpoint find_key (a : array key) (needle : key) (fuel : nat) (min max : int)
-      : option int :=
-      if (max =? min)%uint63 then None
-      else
-        let mid := (min + (max - min) / 2)%uint63 in
-        let k_mid := PArray.get a mid in
-        let next min max :=
-          match fuel with
-          | O => None
-          | S fuel => find_key a needle fuel min max
-          end
-        in
-        match compare needle k_mid with
-        | Eq => Some mid
-        | Lt => next min mid
-        | Gt => next (mid + 1)%uint63 max
-        end.
+    Definition find_key (needle : key) (m : t) : option idx :=
+      Eval lazy match iota beta delta [Z.to_N] in
+      let len := Z.to_N (to_Z (PArray.length m.(keys))) in
+      binary_search m.(keys) needle $ bisect_N len.
 
     Definition find (needle : key) (m : t) : option elt :=
-      let max := PArray.length m.(keys) in
-      (* Guard fuel on [m.(keys)] *)
-      let fuel := if (max =? 0)%uint63 then 0 else 63 in
-      match find_key m.(keys) needle fuel 0 max with
+      match find_key needle m with
+      | Some i => Some (PArray.get m.(values) i)
       | None => None
-      | Some idx => Some (PArray.get m.(values) idx)
       end.
+
+    (* #[local] Fixpoint find_key (a : array key) (needle : key) (fuel : nat) (min max : int) *)
+    (*   : option int := *)
+    (*   if (max =? min)%uint63 then None *)
+    (*   else *)
+    (*     let mid := (min + (max - min) / 2)%uint63 in *)
+    (*     let k_mid := PArray.get a mid in *)
+    (*     let next min max := *)
+    (*       match fuel with *)
+    (*       | O => None *)
+    (*       | S fuel => find_key a needle fuel min max *)
+    (*       end *)
+    (*     in *)
+    (*     match compare needle k_mid with *)
+    (*     | Eq => Some mid *)
+    (*     | Lt => next min mid *)
+    (*     | Gt => next (mid + 1)%uint63 max *)
+    (*     end. *)
+
+    (* Definition find (needle : key) (m : t) : option elt := *)
+    (*   let max := PArray.length m.(keys) in *)
+    (*   (* Guard fuel on [m.(keys)] *) *)
+    (*   let fuel := if (max =? 0)%uint63 then 0 else 63 in *)
+    (*   match find_key m.(keys) needle fuel 0 max with *)
+    (*   | None => None *)
+    (*   | Some idx => Some (PArray.get m.(values) idx) *)
+    (*   end. *)
 
     #[local] Fixpoint fill (ls : list (key * elt)) (i : int)
       (keys : array key) (values : array elt) : array key * array elt :=
