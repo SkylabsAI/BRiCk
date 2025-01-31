@@ -57,7 +57,9 @@ Module map (Import K : KEY).
 
     Definition find (needle : key) (m : t) : option elt :=
       let max := PArray.length m.(keys) in
-      match find_key m.(keys) needle (Z.to_nat $ to_Z $ PArray.length m.(keys)) 0 max with
+      (* Guard fuel on [m.(keys)] *)
+      let fuel := if (max =? 0)%uint63 then 0 else 63 in
+      match find_key m.(keys) needle fuel 0 max with
       | None => None
       | Some idx => Some (PArray.get m.(values) idx)
       end.
