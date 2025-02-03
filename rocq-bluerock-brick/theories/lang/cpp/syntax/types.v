@@ -445,6 +445,7 @@ Fixpoint erase_qualifiers (t : type) : type :=
   | Tmember_pointer cls t => Tmember_pointer cls (erase_qualifiers t)
   | Tqualified _ t => erase_qualifiers t
   | Tnullptr => Tnullptr
+  | Tatomic t => Tatomic $ erase_qualifiers t
   | Tarch sz nm => Tarch sz nm
   | Tunsupported msg => Tunsupported msg
   | Tparam _
@@ -809,6 +810,7 @@ Fixpoint normalize_type' (cv : type_qualifiers) (t : type) : type :=
   | Tptr t => tqualified cv $ Tptr (normalize_type t)
   | Tref t => Tref (normalize_type t)
   | Trv_ref t => Trv_ref (normalize_type t)
+  | Tatomic t => Tatomic (normalize_type t)
   | Tarray t n => Tarray (normalize_type' cv t) n
   | Tincomplete_array t => Tincomplete_array (normalize_type' cv t)
   | Tvariable_array t e => Tvariable_array (normalize_type' cv t) e

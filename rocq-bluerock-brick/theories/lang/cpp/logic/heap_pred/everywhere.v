@@ -125,6 +125,11 @@ Section with_cpp.
       | Tenum _
       | Tmember_pointer _ _
       | Tarch _ _ => R q t
+      | Tatomic ty =>
+          if scalar_type ty then
+            R q (Tatomic ty)
+          else False
+
       | Tnamed nm =>
           match tu.(types) !! nm with
           | Some (Gstruct s) =>
@@ -163,9 +168,8 @@ Section with_cpp.
     #[local] Instance typeR_valid
       (TprimR : forall q ty, Observe validR (R q ty)) : forall q ty, Observe validR (typeR q ty).
     Proof.
-      move=> q ty; revert q; induction ty; simpl; intros; refine _.
-      rewrite /struct_defR/union_defR.
-      repeat (case_match; refine _).
+      move=> q ty; revert q; induction ty; simpl; intros;
+      repeat first [ by refine _ | case_match ].
     Qed.
 
     #[local] Instance typeR_nonnull
@@ -183,6 +187,7 @@ Section with_cpp.
         case_match; refine _. }
       { intros. eapply IHty.
         by rewrite -zero_sized_array_qual in H. }
+      { simpl; intros; case_match; refine _. }
     Qed.
 
     #[local] Instance typeR_cfractional
@@ -235,6 +240,7 @@ Section with_cpp.
         { case_match; refine _. eapply derivationR_cfractional. } } }
       { intro. intros.
         rewrite qualify_plus. apply IHty. }
+      { case_match; refine _. }
     Qed.
 
   End typeR.
@@ -292,6 +298,7 @@ Section with_cpp.
           iApply IHl.
           iFrame "#∗". }
     - iApply IHty; eauto.
+    - case_match; eauto.
   Qed.
 
   Lemma typeR_mono R R' rec rec' tu tu' :

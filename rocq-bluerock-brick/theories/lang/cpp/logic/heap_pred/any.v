@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2023 BlueRock Security, Inc.
+ * Copyright (c) 2023-2025 BlueRock Security, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -96,6 +96,7 @@ Section with_cpp.
       { by erewrite zero_sized_array_qual. }
       { rewrite qualify_frac in H0.
         eauto. } }
+    { case_match; refine _. }
   Qed.
 
   #[global] Instance anyR_as_fractional ty : AsCFractional0 (anyR ty).
@@ -210,6 +211,18 @@ Section with_cpp.
     rewrite /primitiveR/=. eauto.
   Qed.
 
+  Lemma anyR_tptstoR_atomic t q :
+    scalar_type t ->
+    anyR (Tatomic t) q -|- Exists v, tptstoR (Tatomic (erase_qualifiers t)) q v.
+  Proof.
+    (* todo: should be derived for [typeR] *)
+    intros.
+    rewrite anyR.unlock.
+    rewrite everywhereR_unfold/=.
+    rewrite /primitiveR/=.
+    by case_match; eauto.
+  Qed.
+
   Lemma initializedR_anyR : ∀ t q v,
       initializedR t q v |-- anyR t q.
   Proof.
@@ -268,6 +281,7 @@ Section with_cpp.
     { inversion H. }
     { case_match; refine _.
       case_match; refine _. }
+    { destruct (scalar_type ty); refine _. }
   Qed.
 
   #[global]

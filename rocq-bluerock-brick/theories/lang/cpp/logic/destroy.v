@@ -558,6 +558,11 @@ Section body.
     | Tmember_pointer _ _
     | Tvoid =>
       wp_destroy_prim tu cv rty this Q
+    | Tatomic ty =>
+        if scalar_type ty then
+          let cv := qual_norm' (fun cv _ => cv) cv ty in
+          wp_destroy_prim tu cv rty this Q
+        else |={top}=> UNSUPPORTED ("wp_destroy_val: atomic non-scalar")
 
     | Tfunction _ => |={top}=> UNSUPPORTED ("wp_destroy_val: function type", rty)
     | Tarch _ _ => |={top}=> UNSUPPORTED ("wp_destroy_val: arch type", rty)
@@ -591,14 +596,16 @@ Section unfold.
   Context `{Σ : cpp_logic, σ : genv}.
   Implicit Types (Q : epred).
 
-  Lemma wp_destroy_val_unfold ty tu cv : wp_destroy_val tu cv ty = Reduce (V tu cv ty).
+  Lemma wp_destroy_val_unfold ty tu cv :
+    wp_destroy_val tu cv ty = Reduce (V tu cv ty).
   Proof.
     trans (V tu cv ty); last done.
     rewrite wp_destroy_array.unlock wp_destroy_val.unlock.
     by destruct ty.
   Qed.
 
-  Lemma destroy_val_unfold ty tu : destroy_val tu ty = Cbn (Reduce (V tu QM ty)).
+  Lemma destroy_val_unfold ty tu :
+    destroy_val tu ty = Cbn (Reduce (V tu QM ty)).
   Proof.
     rewrite {1}destroy_val.unlock. apply wp_destroy_val_unfold.
   Qed.
@@ -688,9 +695,12 @@ Section val_array.
   Proof.
     move: tu tu' cv this Q Q'. induction ty=>tu tu' cv this Q Q' Htu.
     all: wp_destroy_val_unfold; auto.
-    all: iIntros "? >wp !> !>"; iRevert "wp"; iStopProof.
+    1,2: iIntros "? >wp !> !>"; iRevert "wp"; iStopProof.
     { (* array *) wp_destroy_array_unfold. apply wp_gen_frame; auto. }
     { (* named *) destruct (q_const cv); [rewrite -wp_const_frame|cbn]; auto. }
+    { case_match.
+      - by iIntros "Q"; iApply wp_destroy_prim_frame.
+      - iIntros "? >[]". }
   Qed.
   Lemma destroy_val_frame tu tu' ty this Q Q' :
     TULE tu tu' ->
@@ -712,7 +722,7 @@ Section val_array.
     move: tu cv this Q. induction ty=>tu cv this Q.
     all: wp_destroy_val_unfold; auto using wp_destroy_prim_shift.
     (* Laters *)
-    all: iIntros ">>wp !> !>".
+    1,2: iIntros ">>wp !> !>".
     { (* array *)
       wp_destroy_array_unfold.
       iApply (wp_gen_shift with "wp"); auto. intros.
@@ -722,6 +732,9 @@ Section val_array.
         [ iApply wp_const_shift; iIntros "!>"; iApply (wp_const_frame with "[] wp"); first done; iIntros "wp !>"
         | cbn ].
       all: by iApply wp_destroy_named_shift; auto. }
+    { case_match; last by iIntros ">>[]".
+      iIntros "X"; iApply fupd_wp_destroy_prim; iMod "X"; iModIntro.
+      by iApply wp_destroy_prim_fupd. }
   Qed.
   Lemma destroy_val_shift tu ty this Q :
     (|={top}=> destroy_val tu ty this (|={top}=> Q))
@@ -934,6 +947,36 @@ Section val_array.
     destruct (decompose_type ty) as [cv' rty]; cbn=>??.
     rewrite -wp_destroy_val_intro. destruct rty; try done.
     all: by rewrite -wp_destroy_prim_intro.
+  Qed.
+
+  Lemma anyR_wp_destroy_val_atomic tu cv ty (this : ptr) Q :
+    scalar_type ty ->
+    let c := qual_norm' (fun cv _ => q_const cv) cv ty in
+    this |-> anyR (Tatomic $ erase_qualifiers ty) (cQp.mk c 1) ** Q
+    |-- wp_destroy_val tu cv (Tatomic ty) this Q.
+  Proof.
+    cbn. intros.
+    rewrite wp_destroy_val.unlock/=.
+    case_match => //.
+    rewrite -wp_destroy_prim_intro.
+    iIntros "[X $]".
+    rewrite anyR_tptstoR_atomic.
+    rewrite erase_qualifiers_idemp.
+    iDestruct "X" as (v) "X"; iExists v.
+    iStopProof. f_equiv. f_equiv.
+    by rewrite -qual_norm'_bind.
+    by rewrite scalar_type_erase H0.
+  Qed.
+  Lemma anyR_destroy_val_atomic tu ty (this : ptr) Q :
+    scalar_type ty ->
+    let cv := qual_norm (fun cv _ => cv) ty in
+    this |-> anyR (Tatomic $ erase_qualifiers ty) (cQp.mk (q_const cv) 1) ** Q
+      |-- destroy_val tu (Tatomic ty) this Q.
+  Proof.
+    rewrite destroy_val_decompose_type/=. intros.
+    rewrite -anyR_wp_destroy_val_atomic => //.
+    f_equiv. f_equiv. f_equiv. f_equal.
+    by rewrite -qual_norm'_bind.
   Qed.
 
   Lemma anyR_wp_destroy_val_ref tu cv ty (this : ptr) Q :

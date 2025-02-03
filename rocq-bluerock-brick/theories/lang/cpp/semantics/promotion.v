@@ -159,6 +159,7 @@ Definition promote_integral {σ : genv} (tu : translation_unit) (ty : type) : op
         scoped enumerations, so we do not need to check this fact.
           *)
   | Tbool => Some Tint
+  | Tatomic _
   | Tptr _
   | Tref _
   | Trv_ref _

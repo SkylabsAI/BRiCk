@@ -218,6 +218,7 @@ Section with_lang.
     | Tptr t => printT t ++ "*"
     | Tref t => printT t ++ "&"
     | Trv_ref t => printT t ++ "&&"
+    | Tatomic t => "_Atomic " ++ printT t
     | Tmember_pointer cls t => printT t ++ " " ++ printT cls ++ "::*"
     | Tqualified q t =>
         concat $ join_sep " " $ (printT t :: (if q_const q then ["const"] else []) ++

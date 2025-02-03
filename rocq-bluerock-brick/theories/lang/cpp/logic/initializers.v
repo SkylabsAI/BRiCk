@@ -108,6 +108,14 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
     let rty := erase_qualifiers ty in
     p |-> uninitR rty (cQp.m 1) -* |={top}=>?u Q FreeTemps.id
 
+  | Tatomic ty =>
+      let '(cv, aty) := decompose_type ty in
+      if q_volatile cv then UNSUPPORTED "default initialize volatile"
+      else if q_const cv then ERROR "default initialize const"
+           else if scalar_type aty then
+                  p |-> uninitR aty (cQp.m 1) -* |={top}=>?u Q FreeTemps.id
+                else ERROR "non-scalar atomic"
+
   | Tarray ety sz =>
     default_initialize_array (default_initialize ety) tu ety sz p (fun _ => Q FreeTemps.id)
   | Tincomplete_array _ => ERROR "default initialize incomplete array"
@@ -219,6 +227,8 @@ Section default_initialize.
       case_match; eauto.
       case_match; first by iMod "wp"; iExFalso; rewrite ERROR_elim.
       iApply (IHty with "HQ wp"). }
+    { repeat (case_match; eauto).
+      iIntros "X"; iApply "HQ"; iApply "wp"; done. }
   Qed.
 
   Lemma default_initialize_array_frame tu tu' ty sz Q Q' (p : ptr) :
@@ -240,6 +250,8 @@ Section default_initialize.
       intros. exact: default_initialize_frame. }
     { (* qualifiers *)
       do 2 (case_match; auto using fupd_elim, fupd_intro). }
+    { repeat (case_match; eauto); try iIntros ">$".
+      iIntros "X Y". iMod "X". iDestruct ("X" with "Y") as ">X"; done. }
   Qed.
 
   Lemma default_initialize_array_shift tu ty sz p Q :
@@ -311,6 +323,11 @@ Section default_initialize.
     { (* qualifiers *)
       destruct (q_volatile q); auto using fupd_intro.
       destruct (q_const q); auto using fupd_intro. }
+    { destruct (decompose_type ty) eqn:Hdecompose.
+      f_equiv; try iIntros "[]".
+      f_equiv; try iIntros "[]".
+      f_equiv; try iIntros "[]".
+      iIntros "X Y !>"; iApply "X"; eauto. }
   Qed.
   Lemma default_initialize_elim tu ty (p : ptr) Q :
     default_initialize tu ty p Q
@@ -392,6 +409,14 @@ magic wands.
       letI* v, free := wp_operand tu ρ init in
       let qf := cQp.mk (q_const cv) 1 in
       addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q free
+
+    | Tatomic ty =>
+        let aty := erase_qualifiers ty in
+        if scalar_type aty then
+          letI* v , free := wp_operand tu ρ init in
+          let qf := cQp.mk (q_const cv) 1 in
+          addr |-> tptsto_fuzzyR (Tatomic aty) qf v -* |={top}=>?u Q free
+        else ERROR "non-scalar atomic"
 
       (* non-primitives are handled via prvalue-initialization semantics *)
     | Tarray _ _
@@ -497,6 +522,11 @@ Proof.
     rewrite (reference_to_erase (Tnamed gn)).
     rewrite reference_to_erase/=/tqualified'.
     destruct cv; simpl; eauto.
+  - case_match; eauto.
+    iApply wp_operand_frame; first by reflexivity.
+    iIntros (??) "Q X".
+    iDestruct (observe (reference_to _ _) with "X") as "#?".
+    iApply ("Q" with "X"); eauto.
 Qed.
 
 (**
@@ -674,6 +704,7 @@ Section wp_initialize.
         | idtac ].
     (* void *)
     iIntros (??) "($ & HQ) ?". iApply "HQ'". by iApply "HQ".
+    iIntros "[]".
   Qed.
 
   Lemma wp_initialize_unqualified_shift tu ρ cv ty obj e Q :
@@ -794,7 +825,9 @@ Section wp_initialize.
       { rewrite 2!qual_norm_map. simpl. inversion H0. done. }
       reflexivity. }
     by rewrite decompose_type_equiv.
-  (* Qed. *) Admitted. (* TODO *)
+    rewrite qual_norm_decompose_type /=.
+    by apply is_qualified_decompose_type.
+  Qed.
 
   Lemma wp_initialize_frame tu tu' ρ obj ty e Q Q' :
     sub_module tu tu' ->
@@ -851,10 +884,18 @@ Section wp_initialize.
                                let qf := cQp.mk (q_const cv) 1 in
                                addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* Q free
                            )
+  | WpInitAtomic cv ty' : scalar_type ty' ->
+                          (cv, Tatomic ty') = decompose_type ty ->
+                          ~~q_volatile cv ->
+                          wp_initialize_decomp_spec tu ρ ty addr init Q (
+                              letI* v, free := wp_operand tu ρ init in
+                                let qf := cQp.mk (q_const cv) 1 in
+                                addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* Q free
+                            )
   | WpInitRef cv ty' : drop_qualifiers ty = Tref ty' ->
                       wp_initialize_decomp_spec tu ρ ty addr init Q (
                           let rty := Tref $ erase_qualifiers ty' in
-                          letI* p, free := wp_lval tu ρ init in
+                          letI* p, free := wp_glval tu ρ init in
                             let qf := cQp.mk (q_const cv) 1 in
                             addr |-> primR rty qf (Vref p) -* Q free
                         )
@@ -880,19 +921,28 @@ Section wp_initialize.
                              wp_init tu ρ (tqualified cv ty') addr init Q
                            )
   | WpInitFuncArch cv ty' : match ty' with
-                        | Tfunction _
-                        | Tarch _ _
-                        | Tincomplete_array _
-                        | Tvariable_array _ _ => true
-                        | _ => false
-                        end ->
+                            | Tfunction _
+                            | Tarch _ _
+                            | Tincomplete_array _
+                            | Tvariable_array _ _ => true
+                            | _ => false
+                            end ->
                          (cv, ty') = decompose_type ty ->
                          ~~q_volatile cv ->
                         wp_initialize_decomp_spec tu ρ ty addr init Q (
                             UNSUPPORTED (initializing_type ty' init)
                           )
+  | WpInitAtomicInvalid cv ty' : ~scalar_type ty' ->
+                          (cv, Tatomic ty') = decompose_type ty ->
+                          ~~q_volatile cv ->
+                          wp_initialize_decomp_spec tu ρ ty addr init Q False
   | WpInitUnsupported cv msg : decompose_type ty = (cv, Tunsupported msg) ->
                           wp_initialize_decomp_spec tu ρ ty addr init Q False
+  | WpInitDecltype cv e : (decompose_type ty = (cv, Tdecltype e) \/
+                           decompose_type ty = (cv, Texprtype e)) ->
+                          wp_initialize_decomp_spec tu ρ ty addr init Q False
+  | WpInitDependent : is_dependentT (decompose_type ty).2 ->
+                       wp_initialize_decomp_spec tu ρ ty addr init Q False
   .
 
   Lemma wp_initialize_decomp_ok tu ρ ty addr e Q :
@@ -905,24 +955,27 @@ Section wp_initialize.
     all: try (rewrite [decompose_type _]surjective_pairing=>[][Hq Hty];
       rewrite Hty -erase_qualifiers_decompose_type;
       econstructor; [ | rewrite [decompose_type _]surjective_pairing -Hq -Hty // | rewrite H ]; eauto).
-
-
-(*    all: try by rewrite [decompose_type _]surjective_pairing=>[][Hq Hty];
-      rewrite Hty -erase_qualifiers_decompose_type;
-      econstructor; last rewrite [decompose_type _]surjective_pairing -Hq -Hty //. *)
     all: try by rewrite [decompose_type _]surjective_pairing=>[][Hq Hty];
       econstructor;
       rewrite Hty; apply: drop_qualifiers_decompose_type.
     all: try by rewrite [decompose_type _]surjective_pairing=>[][Hq Hty]; econstructor;
       try solve [ done | rewrite //= [decompose_type _]surjective_pairing -Hq -Hty // | rewrite H // ].
-    (*
-    { (* Tqualified *)
-      rewrite [decompose_type _]surjective_pairing;
-        move: (is_qualified_decompose_type ty)=>/[swap][][] _ <-.
-      by simpl. }
-    { (* Tunsupported *)
-      intros. rewrite UNSUPPORTED.unlock. exact: WpInitUnsupported. }
-  Qed. *) Admitted. (* TODO: this would be improved by eliminating these cases using dependency *)
+    all: try by intros; rewrite UNSUPPORTED.unlock; apply WpInitDependent; rewrite -e0.
+    3,4:  intros; rewrite UNSUPPORTED.unlock; eapply WpInitDecltype; rewrite -e0; eauto.
+    3: intros; rewrite UNSUPPORTED.unlock; eapply WpInitUnsupported; rewrite -e0; eauto.
+    { intros. generalize (is_qualified_decompose_type ty); rewrite -e0. simpl; tauto. }
+    { case_match.
+      { intros.
+        match goal with
+        | |- context [ erase_qualifiers ?X ] => have->: (Tatomic (erase_qualifiers X) = erase_qualifiers ty)
+        end.
+        { by symmetry; rewrite erase_qualifiers_decompose_type -e0 /=. }
+        eapply WpInitAtomic; [ | eauto | rewrite H; eauto ].
+        revert H0; rewrite scalar_type_erase; eauto. }
+      { rewrite ERROR.unlock. intros.
+        eapply WpInitAtomicInvalid; [ | eauto | rewrite H]; eauto.
+        rewrite -scalar_type_erase H0; auto. } }
+  Qed.
 
   (** [wpi] *)
 

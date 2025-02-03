@@ -170,6 +170,7 @@ Module MTraverse.
       | Tnamed gn => hT.(handle_Tnamed) gn (fun _ => traverseN gn)
       | Tref t => hT.(handle_Tref) t (fun _ => traverseT t)
       | Trv_ref t => hT.(handle_Trv_ref) t (fun _ => traverseT t)
+      | Tatomic t => Tatomic <$> traverseT t
       | Tqualified cv t => hT.(handle_Tqualified) cv t (fun _ => traverseT t)
 
       (**

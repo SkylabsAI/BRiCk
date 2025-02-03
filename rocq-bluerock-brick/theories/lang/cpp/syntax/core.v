@@ -384,6 +384,11 @@ with type' {lang : lang.t} : Set :=
 | Tfloat_ (_ : float_type.t)
 | Tqualified (q : type_qualifiers) (t : type')
 | Tnullptr
+| Tatomic (_ : type')
+  (* ^^ <<_Atomic _>> is a marking in C that is used in C++ code.
+     BRiCk inherits the semantics of C.
+     Note that this type can only be applied to scalar types.
+   *)
 | Tarch (osz : option bitsize) (name : PrimString.string)
 | Tdecltype (_ : Expr')
   (* ^^ this is <<decltype(e)>> when <<e>> is an expression, including a parenthesized expression.
@@ -929,6 +934,7 @@ with is_dependentT {lang} (t : type' lang) : bool :=
   | Tfunction ft => function_type.existsb is_dependentT ft
   | Tbool => false
   | Tmember_pointer gn t => is_dependentT gn || is_dependentT t
+  | Tatomic t => is_dependentT t
   | Tfloat_ _ => false
   | Tqualified _ t => is_dependentT t
   | Tnullptr

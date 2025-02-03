@@ -1264,54 +1264,18 @@ Module type.
       | 10 => function_type' lang
       | 11 => box_Tmember_pointer
       | 12 => box_Tarch
-      | 13 | 14 => Expr
-      | 15 | 16 => ident
-      | 17 => name
-      | 18 => box_Tresult_unop
-      | 19 => box_Tresult_binop
-      | 20 => box_Tresult_call
-      | 21 => box_Tresult_member_call
-      | 22 => box_Tresult_parenlist
-      | 23 => box_Tresult_member
+      | 13 => type
+      | 14 | 15 => Expr
+      | 16 | 17 => ident
+      | 18 => name
+      | 19 => box_Tresult_unop
+      | 20 => box_Tresult_binop
+      | 21 => box_Tresult_call
+      | 22 => box_Tresult_member_call
+      | 23 => box_Tresult_parenlist
+      | 24 => box_Tresult_member
       | _ => PrimString.string
       end.
-
-    (*
-    Definition tag' (t : type) : PrimInt63.int + positive :=
-      match t with
-      | Tnum r Unsigned => tag_direct (FIRST_INT_TAG + int_rank.prim_tag r * 2)%uint63
-      | Tnum r Signed => tag_direct (FIRST_INT_TAG + int_rank.prim_tag r * 2 + 1)%uint63
-      | Tchar_ ct => tag_direct (FIRST_CHAR_TAG + char_type.prim_tag ct)%uint63
-      | Tfloat_ ft => tag_direct (FIRST_FLOAT_TAG + prim_tagFT ft)
-      | Tvoid => tag_direct 0
-      | Tnullptr => tag_direct 1
-      | Tbool => tag_direct 2
-      | Tnamed _ => inr 1
-      | Tenum _ => inr 2
-      | Tptr _ => inr 3
-      | Tref _ => inr 4
-      | Trv_ref _ => inr 5
-      | Tqualified _ _ => inr 6
-      | Tarray _ _ => inr 7
-      | Tincomplete_array _ => inr 8
-      | Tvariable_array _ _ => inr 9
-      | Tfunction _ => inr 10
-      | Tmember_pointer _ _ => inr 11
-      | Tarch _ _ => inr 12
-      | Tdecltype _ => inr 13
-      | Texprtype _ => inr 14
-      | Tparam _ => inr 15
-      | Tresult_param _ => inr 16
-      | Tresult_global _ => inr 17
-      | Tresult_unop _ _ => inr 18
-      | Tresult_binop _ _ _ => inr 19
-      | Tresult_call _ _ => inr 20
-      | Tresult_member_call _ _ _ => inr 21
-      | Tresult_parenlist _ _ => inr 22
-      | Tresult_member _ _ => inr 23
-      | Tunsupported _ => inr 24
-      end.
-      *)
 
     Definition data {T} (t : type) (k : int -> T) (kp : forall p, car p -> T) : T :=
       match t with
@@ -1334,18 +1298,19 @@ Module type.
       | Tfunction ft => kp 10 ft
       | Tmember_pointer a b => kp 11 $ Box_Tmember_pointer a b
       | Tarch a b => kp 12 $ Box_Tarch a b
-      | Tdecltype e => kp 13 e
-      | Texprtype e => kp 14 e
-      | Tparam n => kp 15 n
-      | Tresult_param n => kp 16 n
-      | Tresult_global n => kp 17 n
-      | Tresult_unop a b => kp 18 $ Box_Tresult_unop a b
-      | Tresult_binop a b c => kp 19 $ Box_Tresult_binop a b c
-      | Tresult_call a b => kp 20 $ Box_Tresult_call a b
-      | Tresult_member_call a b c => kp 21 $ Box_Tresult_member_call a b c
-      | Tresult_parenlist a b => kp 22 $ Box_Tresult_parenlist a b
-      | Tresult_member a b => kp 23 $ Box_Tresult_member a b
-      | Tunsupported msg => kp 24 msg
+      | Tatomic t => kp 13 t
+      | Tdecltype e => kp 14 e
+      | Texprtype e => kp 15 e
+      | Tparam n => kp 16 n
+      | Tresult_param n => kp 17 n
+      | Tresult_global n => kp 18 n
+      | Tresult_unop a b => kp 19 $ Box_Tresult_unop a b
+      | Tresult_binop a b c => kp 20 $ Box_Tresult_binop a b c
+      | Tresult_call a b => kp 21 $ Box_Tresult_call a b
+      | Tresult_member_call a b c => kp 22 $ Box_Tresult_member_call a b c
+      | Tresult_parenlist a b => kp 23 $ Box_Tresult_parenlist a b
+      | Tresult_member a b => kp 24 $ Box_Tresult_member a b
+      | Tunsupported msg => kp 25 msg
       end.
 
     Definition compare_data (p : positive) : car p -> car p -> comparison :=
@@ -1359,15 +1324,16 @@ Module type.
       | 10 => function_type.compare compareT
       | 11 => box_Tmember_pointer_compare
       | 12 => box_Tarch_compare
-      | 13 | 14 => compareE
-      | 15 | 16 => PrimString.compare
-      | 17 => compareN
-      | 18 => box_Tresult_unop_compare
-      | 19 => box_Tresult_binop_compare
-      | 20 => box_Tresult_call_compare
-      | 21 => box_Tresult_member_call_compare
-      | 22 => box_Tresult_parenlist_compare
-      | 23 => box_Tresult_member_compare
+      | 13 => compareT
+      | 14 | 15 => compareE
+      | 16 | 17 => PrimString.compare
+      | 18 => compareN
+      | 19 => box_Tresult_unop_compare
+      | 20 => box_Tresult_binop_compare
+      | 21 => box_Tresult_call_compare
+      | 22 => box_Tresult_member_call_compare
+      | 23 => box_Tresult_parenlist_compare
+      | 24 => box_Tresult_member_compare
       | _ => PrimString.compare
       end.
 

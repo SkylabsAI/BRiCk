@@ -458,16 +458,24 @@ Module Type Expr.
                    (a |-> primR ety (cQp.mut 1) v **
                       (a |-> primR ety (cQp.mut 1) v' -* Q a free))).
 
+    Definition non_atomically_accessible (ty : type) : bool :=
+      match (decompose_type ty).2 with
+      | Tatomic _ => false
+      | _ => scalar_type ty
+      end.
+
     (** `++e`
         https://eel.is/c++draft/expr.pre.incr#1
      *)
     Axiom wp_lval_preinc : forall e ty Q,
+        non_atomically_accessible ty ->
         pre_op Badd ty e Q |-- wp_lval (Epreinc e ty) Q.
 
     (** `--e`
         https://eel.is/c++draft/expr.pre.incr#2
      *)
     Axiom wp_lval_predec : forall e ty Q,
+        non_atomically_accessible ty ->
         pre_op Bsub ty e Q |-- wp_lval (Epredec e ty) Q.
 
     Definition post_op (b : BinOp) (ty : type) (e : Expr) (Q : val -> FreeTemps.t -> mpred) : mpred :=
@@ -481,12 +489,14 @@ Module Type Expr.
         https://eel.is/c++draft/expr.post.incr#1
      *)
     Axiom wp_operand_postinc : forall e ty Q,
+        non_atomically_accessible ty ->
         post_op Badd ty e Q |-- wp_operand (Epostinc e ty) Q.
 
     (** `e--`
         https://eel.is/c++draft/expr.post.incr#2
      *)
     Axiom wp_operand_postdec : forall e ty Q,
+        non_atomically_accessible ty ->
         post_op Bsub ty e Q |-- wp_operand (Epostdec e ty) Q.
 
     (** * Binary Operators *)
@@ -504,6 +514,7 @@ Module Type Expr.
        P0145R3 (C++17).
      *)
     Axiom wp_lval_assign : forall ty l r Q,
+        non_atomically_accessible (type_of l) ->
         (letI* '(la, rv), free :=
            eval2 (evaluation_order.order_of OOEqual) (wp_lval l) (wp_operand r) in
             la |-> anyR (erase_qualifiers ty) (cQp.mut 1) **
@@ -511,6 +522,7 @@ Module Type Expr.
         |-- wp_lval (Eassign l r ty) Q.
 
     Axiom wp_lval_bop_assign : forall ty o l r Q,
+        non_atomically_accessible (type_of l) ->
             match convert_type_op tu o (type_of l) (type_of r) with
             | Some (tl, tr, resultT) =>
               letI* '(la, rv), free :=
@@ -584,22 +596,22 @@ Module Type Expr.
     https://eel.is/c++draft/basic.lval#11.
     *)
     Axiom wp_operand_cast_l2r : forall e Q,
-        (
-          letI* a, free := wp_glval e in
-          Exists v,
-          (Exists q, a |-> initializedR (erase_qualifiers $ type_of e) q v ** True) //\\
-          Q v free
-        ) |-- wp_operand (Ecast Cl2r e) Q.
+        non_atomically_accessible (type_of e) ->
+        (letI* a, free := wp_glval e in
+         Exists v,
+         (Exists q, a |-> initializedR (erase_qualifiers $ type_of e) q v ** True) //\\
+         Q v free)
+      |-- wp_operand (Ecast Cl2r e) Q.
 
     Lemma wp_operand_cast_l2r_prim e Q :
-        (
-          letI* a, free := wp_glval e in
+      non_atomically_accessible (type_of e) ->
+        (letI* a, free := wp_glval e in
           Exists v,
           (Exists q, a |-> primR (erase_qualifiers $ type_of e) q v ** True) //\\
-          Q v free
-        ) |-- wp_operand (Ecast Cl2r e) Q.
+          Q v free)
+        |-- wp_operand (Ecast Cl2r e) Q.
     Proof.
-      intros. rewrite -wp_operand_cast_l2r. iIntros "wp".
+      intros. rewrite -wp_operand_cast_l2r => //. iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "?".
       iStopProof. f_equiv; intro. f_equiv. f_equiv; intro.
       f_equiv. rewrite _at_primR _at_initializedR.
@@ -613,7 +625,8 @@ Module Type Expr.
          (Exists q, a |-> rawR q r ** True) //\\ Q (Vraw r) free)
       |-- wp_operand (Ecast Cl2r e) Q.
     Proof.
-      intros. rewrite -wp_operand_cast_l2r /=. iIntros "wp".
+      intros. rewrite -wp_operand_cast_l2r /=; last by rewrite H.
+      iIntros "wp".
       iApply (wp_glval_wand with "wp"). iIntros (p f) "(%r & H)".
       iExists (Vraw r). rewrite H.
       iStopProof. f_equiv. f_equiv; intro. f_equiv.
@@ -1807,8 +1820,10 @@ Module Type Expr.
           wp_lval tu ρ (Evar (localname.opaque n) ty) Q
       |-- wp_xval tu ρ (Eopaque_ref n (Trv_ref ty)) Q.
 
-    (* Maybe do something similar to what was suggested for `wp_lval_opaque_ref` above. *)
+    (* Maybe do something similar to what was suggested for
+       `wp_lval_opaque_ref` above. *)
     Axiom wp_operand_arrayloop_index : forall ρ level ty Q,
+      non_atomically_accessible ty ->
           Exists v,
             ((Exists q, _local ρ (localname.arrayloop_index level)
                                |-> primR (erase_qualifiers ty) q v) **
