@@ -113,7 +113,7 @@ Definition default_initialize_body `{Σ : cpp_logic, σ : genv}
       let aty := erase_qualifiers aty in
       if q_volatile cv then UNSUPPORTED "default initialize volatile"
       else if q_const cv then ERROR "default initialize const"
-           else if scalar_type aty then
+           else if is_scalar_type aty then
                   p |-> uninitR aty (cQp.m 1) -* |={top}=>?u Q FreeTemps.id
                 else ERROR "non-scalar atomic"
 
@@ -412,7 +412,7 @@ magic wands.
       addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* |={top}=>?u Q free
 
     | Tatomic ty =>
-        if scalar_type ty then
+        if is_scalar_type ty then
           let '(cv, aty) := qual_norm' (fun cv ty => (cv, erase_qualifiers ty)) cv ty in
           letI* v , free := wp_operand tu ρ init in
           let qf := cQp.mk (q_const cv) 1 in
@@ -882,7 +882,7 @@ Section wp_initialize.
   | WpInitVolatile cv ty' : (cv, ty') = decompose_type ty ->
                             q_volatile cv ->
                           wp_initialize_decomp_spec tu ρ ty addr init Q False
-  | WpInitScalar cv ty' : scalar_type ty' ->
+  | WpInitScalar cv ty' : is_scalar_type ty' ->
                          (cv, ty') = decompose_type ty ->
                          ~~q_volatile cv ->
                          wp_initialize_decomp_spec tu ρ ty addr init Q (
@@ -890,7 +890,7 @@ Section wp_initialize.
                                let qf := cQp.mk (q_const cv) 1 in
                                addr |-> tptsto_fuzzyR (erase_qualifiers ty) qf v -* Q free
                            )
-  | WpInitAtomic cv ty' : scalar_type ty' ->
+  | WpInitAtomic cv ty' : is_scalar_type ty' ->
                           (cv, Tatomic ty') = decompose_type ty ->
                           ~~q_volatile cv ->
                           wp_initialize_decomp_spec tu ρ ty addr init Q (
@@ -939,7 +939,7 @@ Section wp_initialize.
                         wp_initialize_decomp_spec tu ρ ty addr init Q (
                             UNSUPPORTED (initializing_type ty' init)
                           )
-  | WpInitAtomicInvalid cv ty' : ~scalar_type ty' ->
+  | WpInitAtomicInvalid cv ty' : ~~is_scalar_type ty' ->
                           (cv, Tatomic ty') = decompose_type ty ->
                           ~~q_volatile cv ->
                           wp_initialize_decomp_spec tu ρ ty addr init Q False
