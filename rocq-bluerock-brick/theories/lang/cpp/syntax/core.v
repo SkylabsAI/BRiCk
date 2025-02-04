@@ -388,6 +388,7 @@ with type' {lang : lang.t} : Set :=
   (* ^^ <<_Atomic _>> is a marking in C that is used in C++ code.
      BRiCk inherits the semantics of C.
      Note that this type can only be applied to scalar types.
+     [Tatomic t] is a value type, but is not a scalar type.
    *)
 | Tarch (osz : option bitsize) (name : PrimString.string)
 | Tdecltype (_ : Expr')

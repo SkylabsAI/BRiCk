@@ -143,11 +143,6 @@ applied to an array type attach to the underlying element type."
 | Tqualified_array q t n : Tqualified q (Tarray t n) ≡ Tarray (Tqualified q t) n
 
 (*
-  <<const (_Atomic T)>> is the same as <<_Atomic (const T)>>
- *)
-| Tqualified_atomic q t : Tqualified q (Tatomic t) ≡ Tatomic (Tqualified q t)
-
-(*
 "A function or reference type is always cv-unqualified."
 <https://www.eel.is/c++draft/basic.type.qualifier#1>
 *)
@@ -162,6 +157,12 @@ function type."
 *)
 | Tqualified_func_param cc ar ret q t args args' :
   Tfunction (@FunctionType _ cc ar ret (args ++ Tqualified q t :: args')) ≡ Tfunction (@FunctionType _ cc ar ret (args ++ t :: args'))
+
+(* Atomic
+   <<const (_Atomic T)>> is the same as <<_Atomic (const T)>> *)
+| Tqualified_atomic q t : Tqualified q (Tatomic t) ≡ Tatomic (Tqualified q t)
+| Tatomic_proper : Proper (equiv ==> equiv) Tatomic
+
 
 (* Equivalence *)
 | type_equiv_refl t : t ≡ t
@@ -983,8 +984,8 @@ Proof. rewrite /is_scalar_type. induction ty; simpl; auto. Qed.
 [is_value_type t] returns [true] if [t] has value semantics. A value
 type is one that can be represented by [val].
 
-NOTE: The only difference between a value type and a scalar type is
-that [Tvoid] is a value type and not a scalar type.
+NOTE: Value types include all scalar types as well as
+[Tatomic] and [Tvoid]
  *)
 Definition is_value_type (t : type) : bool :=
   match drop_qualifiers t with
@@ -1001,12 +1002,13 @@ Definition is_value_type (t : type) : bool :=
   *)
   | Tenum _ (* enum types are value types *)
   | Tvoid => true
+  | Tatomic ty => is_scalar_type ty
   | _ => false
   end.
 
 Lemma is_value_type_erase_qualifiers ty :
   is_value_type (erase_qualifiers ty) = is_value_type ty.
-Proof. induction ty; cbn; auto. Qed.
+Proof. induction ty; cbn; auto. by rewrite scalar_type_erase. Qed.
 Lemma is_value_type_drop_qualifiers ty :
   is_value_type (drop_qualifiers ty) = is_value_type ty.
 Proof. induction ty; cbn; auto. Qed.
@@ -1203,6 +1205,20 @@ Lemma drop_reference_non_ref (t : type' lang) u :
 Proof.
   move=><-. destruct t; first [done|cbn]. by case_match.
 Qed.
+
+(** ** Atomic Types
+
+    Atomic types are a C construct.
+ *)
+
+Definition is_atomic_type (ty : type) : bool :=
+  if erase_qualifiers ty is Tatomic _ then true else false.
+Lemma is_atomic_type_erase ty : is_atomic_type (erase_qualifiers ty) = is_atomic_type ty.
+Proof. induction ty; simpl; eauto. Qed.
+Lemma is_atomic_type_drop ty : is_atomic_type (drop_qualifiers ty) = is_atomic_type ty.
+Proof. induction ty; simpl; eauto. Qed.
+Lemma is_atomic_type_decompose ty : is_atomic_type (decompose_type ty).2 = is_atomic_type ty.
+Proof. rewrite -drop_qualifiers_decompose_type. apply is_atomic_type_drop. Qed.
 
 (** ** Heap Types
 

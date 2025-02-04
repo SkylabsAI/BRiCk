@@ -848,18 +848,27 @@ Section val_array.
       | Tmember_pointer _ _
       | Tvoid =>
         wp_destroy_prim tu cv rty this Q
+      | Tatomic ty =>
+          if scalar_type ty then
+            let cv := qual_norm' (fun cv _ => cv) cv ty in
+            wp_destroy_prim tu cv (Tatomic $ erase_qualifiers ty) this Q
+          else False
       | Tincomplete_array _ => False
       | Tvariable_array _ _ => False
       | Tfunction _
       | Tarch _ _ => False
       | Tunsupported _ => False
       | _ => False
-      end.
+      end%I.
 
     Lemma wp_destroy_val_intro rty tu cv this Q :
       Reduce (intro_body tu cv rty this Q)
       |-- wp_destroy_val tu cv rty this Q.
-    Proof. wp_destroy_val_unfold. destruct rty; cbn; auto. Qed.
+    Proof.
+      wp_destroy_val_unfold. destruct rty; cbn; auto.
+      case_match => //.
+      by rewrite -(wp_destroy_prim_erase_qualifiers _ _ (Tatomic rty)).
+    Qed.
     Lemma destroy_val_intro ty tu this Q :
       Cbn (Reduce (intro_body tu QM ty this Q))
       |-- destroy_val tu ty this Q.
@@ -890,31 +899,32 @@ Section val_array.
   Qed.
 
   Lemma wp_destroy_val_intro_val tu cv ty (this : ptr) Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~ is_atomic_type ty ->
     let c := qual_norm' (fun cv _ => q_const cv) cv ty in
     (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk c 1) v) ** Q
     |-- wp_destroy_val tu cv ty this Q.
   Proof.
-    cbn. rewrite is_value_type_decompose_type erase_qualifiers_decompose_type.
+    cbn.
+    rewrite is_value_type_decompose_type -is_atomic_type_decompose erase_qualifiers_decompose_type.
     rewrite qual_norm'_decompose_type wp_destroy_val_decompose_type.
     have := is_qualified_decompose_type ty.
-    destruct (decompose_type ty) as [cv' rty]; cbn=>??.
+    destruct (decompose_type ty) as [cv' rty]; cbn=>???.
     rewrite -wp_destroy_val_intro. destruct rty; try done.
-    all: by rewrite -wp_destroy_prim_intro.
+    all: try by rewrite -wp_destroy_prim_intro.
   Qed.
   Lemma destroy_val_intro_val tu ty (this : ptr) Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~ is_atomic_type ty ->
     let cv := qual_norm (fun cv _ => cv) ty in
     (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) v) ** Q
     |-- destroy_val tu ty this Q.
   Proof.
-    rewrite is_value_type_decompose_type qual_norm_decompose_type.
+    rewrite is_value_type_decompose_type -is_atomic_type_decompose qual_norm_decompose_type.
     rewrite erase_qualifiers_decompose_type destroy_val_decompose_type.
     cbn. intros. by rewrite -wp_destroy_val_intro_val ?qual_norm'_unqual.
   Qed.
 
   Lemma anyR_wp_destroy_val_val tu cv ty (this : ptr) Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~is_atomic_type ty ->
     let c := qual_norm' (fun cv _ => q_const cv) cv ty in
     this |-> anyR (erase_qualifiers ty) (cQp.mk c 1) ** Q
     |-- wp_destroy_val tu cv ty this Q.
@@ -925,12 +935,12 @@ Section val_array.
     by rewrite _at_exists.
   Qed.
   Lemma anyR_destroy_val_val tu ty (this : ptr) Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~is_atomic_type ty ->
     let cv := qual_norm (fun cv _ => cv) ty in
     this |-> anyR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) ** Q
     |-- destroy_val tu ty this Q.
   Proof.
-    rewrite is_value_type_decompose_type qual_norm_decompose_type.
+    rewrite is_value_type_decompose_type -is_atomic_type_decompose qual_norm_decompose_type.
     rewrite erase_qualifiers_decompose_type destroy_val_decompose_type.
     cbn. intros. by rewrite -anyR_wp_destroy_val_val ?qual_norm'_unqual.
   Qed.
@@ -1001,7 +1011,7 @@ Section val_array.
   Qed.
 
   Lemma anyR_wp_destroy_array tu cv ety n (p : ptr) Q :
-    is_value_type ety ->
+    is_value_type ety -> ~~is_atomic_type ety ->
     let c := qual_norm' (fun cv _ => q_const cv) cv ety in
     p |-> anyR (Tarray (erase_qualifiers ety) n) (cQp.mk c 1) ** Q
     |-- wp_destroy_array tu cv ety n p Q.
@@ -1024,7 +1034,7 @@ Section val_array.
   Proof. by destroy_val_unfold. Qed.
 
   Lemma wp_destroy_val_value_type_elim tu cv ty this Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~is_atomic_type ty ->
     wp_destroy_val tu cv ty this Q |--
       qual_norm' (fun cv ty =>
         wp_destroy_prim tu cv ty this Q
@@ -1033,10 +1043,10 @@ Section val_array.
     rewrite {1}wp_destroy_val_qual_norm'.
     elim: (qual_norm'_ok _ cv ty); [|done]. move=>? rty *.
     rewrite qual_norm'_unqual//. wp_destroy_val_unfold.
-    by destruct rty.
+    destruct rty => //.
   Qed.
   Lemma destroy_val_value_type_elim tu ty this Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~is_atomic_type ty ->
     destroy_val tu ty this Q |--
       qual_norm (fun cv ty =>
         wp_destroy_prim tu cv ty this Q

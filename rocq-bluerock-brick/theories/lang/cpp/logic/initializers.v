@@ -600,6 +600,8 @@ Section wp_initialize.
   [can_init ty e] is a side-condition for introducing [wp_initialize]
   with value type [ty] and expression [e], serving the conjunct [v =
   Vvoid] in [wp_initialize_unqualified]'s [Tvoid] case.
+
+  TODO: unify this with [typed.can_initialize].
   *)
   Definition can_init (ty : type) (e : Expr) : bool :=
     bool_decide (ty = Tvoid) ==>
@@ -622,13 +624,13 @@ Section wp_initialize.
 
   Lemma wp_initialize_unqualified_intro_val tu ρ cv ty (addr : ptr) init Q :
     can_init ty init ->
-    ~~ is_qualified ty -> is_value_type ty ->
+    ~~ is_qualified ty -> is_value_type ty -> ~~ is_atomic_type ty ->
     VAL_INIT false tu ρ cv ty addr init Q
     |-- wp_initialize_unqualified tu ρ cv ty addr init Q.
   Proof.
-    intros Hty ??. rewrite -wp_initialize_unqualified_intro.
+    intros Hty ???. rewrite -wp_initialize_unqualified_intro.
     case_match; eauto.
-    destruct ty; try solve [ inversion H0 | eauto ].
+    destruct ty; try solve [ inversion H0 | inversion H1 | eauto ].
     (* void *)
     iIntros "wp /=".
     iApply wp_operand_well_typed.
@@ -638,7 +640,7 @@ Section wp_initialize.
   Qed.
 
   Lemma wp_initialize_unqualified_elim_val tu ρ cv ty addr init Q :
-    ~~ is_qualified ty -> is_value_type ty ->
+    ~~ is_qualified ty -> is_value_type ty -> ~~ is_atomic_type ty ->
     wp_initialize_unqualified tu ρ cv ty addr init Q
     |-- VAL_INIT fupd_compatible tu ρ cv ty addr init Q.
   Proof.
@@ -782,7 +784,7 @@ Section wp_initialize.
   uniformly.
   *)
   Lemma wp_initialize_intro_val tu ρ ty (addr : ptr) init Q :
-    can_init (drop_qualifiers ty) init -> is_value_type ty ->
+    can_init (drop_qualifiers ty) init -> is_value_type ty -> ~~ is_atomic_type ty ->
     VAL_INIT false tu ρ (qual_norm (fun cv _ => cv) ty) ty addr init Q
     |-- wp_initialize tu ρ ty addr init Q.
   Proof.
@@ -790,15 +792,16 @@ Section wp_initialize.
     rewrite is_value_type_decompose_type wp_initialize_decompose_type.
     rewrite qual_norm_decompose_type erase_qualifiers_decompose_type.
     have := is_qualified_decompose_type (type_of init). cbn. intros.
-    by rewrite -wp_initialize_unqualified_intro_val.
+    rewrite -wp_initialize_unqualified_intro_val => //.
+    by rewrite is_atomic_type_decompose.
   Qed.
 
   Lemma wp_initialize_elim_val tu ρ ty addr init Q :
-    is_value_type ty ->
+    is_value_type ty -> ~~is_atomic_type ty ->
     wp_initialize tu ρ ty addr init Q
     |-- VAL_INIT fupd_compatible tu ρ (qual_norm (fun cv _ => cv) ty) ty addr init Q.
   Proof.
-    rewrite is_value_type_decompose_type wp_initialize_decompose_type.
+    rewrite is_value_type_decompose_type -is_atomic_type_decompose wp_initialize_decompose_type.
     rewrite qual_norm_decompose_type erase_qualifiers_decompose_type.
     have := is_qualified_decompose_type ty.
     apply wp_initialize_unqualified_elim_val.

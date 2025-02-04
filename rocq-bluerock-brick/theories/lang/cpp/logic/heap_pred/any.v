@@ -162,6 +162,15 @@ Section with_cpp.
       iExists v; iStopProof. f_equiv.
       rewrite /is_heap_type in H.
       case_bool_decide; auto. exfalso; done. }
+    { (* atomic *)
+      iIntros (??) "H".
+      iDestruct (observe [| is_heap_type _ |] with "H") as "%H".
+      rewrite anyR.unlock everywhereR_unfold/primitiveR/=.
+      rewrite /is_heap_type /is_value_type /= in H.
+      destruct (andb_prop_elim _ _ H) as [? Hor].
+      case_match; last done.
+      iExists v. case_bool_decide; last done.
+      by rewrite -H2. }
   Qed.
 
   Lemma anyR_tptstoR_val : ∀ t q,
@@ -192,6 +201,14 @@ Section with_cpp.
       rewrite decompose_type_qual/=.
       by rewrite qualify_merge_tq merge_tq_comm.
       Transparent decompose_type. }
+    { intros; simpl. clear IHt.
+      rewrite anyR.unlock/everywhereR/=.
+      iIntros "X"; iDestruct "X" as (?) "X".
+      destruct f; first by iDestruct "X" as "[]".
+      simpl.
+      rewrite /is_value_type/= in H.
+      case_match; last done.
+      rewrite /primitiveR/=. eauto. }
   Qed.
   Lemma anyR_tptstoR_ref t q :
       anyR (Tref t) q -|- Exists v, tptstoR (Tref (erase_qualifiers t)) q v.
