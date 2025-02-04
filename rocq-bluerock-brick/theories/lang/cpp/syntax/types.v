@@ -141,6 +141,12 @@ applied to an array type attach to the underlying element type."
 <https://www.eel.is/c++draft/basic.type.qualifier#3>
 *)
 | Tqualified_array q t n : Tqualified q (Tarray t n) ≡ Tarray (Tqualified q t) n
+
+(*
+  <<const (_Atomic T)>> is the same as <<_Atomic (const T)>>
+ *)
+| Tqualified_atomic q t : Tqualified q (Tatomic t) ≡ Tatomic (Tqualified q t)
+
 (*
 "A function or reference type is always cv-unqualified."
 <https://www.eel.is/c++draft/basic.type.qualifier#1>
