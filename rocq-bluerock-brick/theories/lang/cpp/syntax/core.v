@@ -605,6 +605,8 @@ with Cast' {lang : lang.t} : Set :=
      A cast from <<A>> to <<D>> will be [Cbase2derived ["C";"B"] "D"].
      - <<A>> comes from the type of the sub-expression.
  *)
+| C2atomic (_ : type')
+| C2non_atomic (_ : type')
 | Cunsupported (_ : bs) (_ : type')
 .
 #[global] Arguments Cast' : clear implicits.
@@ -663,6 +665,8 @@ Module Cast.
     | C2void => false
     | Cuser => false
     | Cdynamic t => T t
+    | C2atomic t => T t
+    | C2non_atomic t => T t
     | Cunsupported _ t => T t
     end.
 

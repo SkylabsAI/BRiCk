@@ -203,7 +203,6 @@ public:
 						 ClangPrinter& cprint) {
 		guard::ctor _{print, "Tatomic", false};
 		cprint.printQualType(print, type->getValueType(), loc::of(type));
-		print.end_ctor();
 	}
 
 	void VisitParenType(const ParenType* type, CoqPrinter& print,

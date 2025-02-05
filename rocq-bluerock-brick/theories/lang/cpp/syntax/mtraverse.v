@@ -357,6 +357,8 @@ Module MTraverse.
       | C2void => mret C2void
       | Cuser => mret Cuser
       | Cdynamic gn => Cdynamic <$> traverseT gn
+      | C2atomic t => C2atomic <$> traverseT t
+      | C2non_atomic t => C2non_atomic <$> traverseT t
       | Cunsupported msg t => Cunsupported msg <$> traverseT t
       end.
 

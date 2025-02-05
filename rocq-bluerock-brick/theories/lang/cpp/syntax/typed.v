@@ -339,8 +339,6 @@ Module decltype.
               if is_const dt
               then ref_conv dt t
               else mfail
-          | Tatomic dt , t =>
-              let* _ := guard (dt = t) in mret ()
           | dt , t =>
               let* _ := guard (dt = t) in mret ()
           end.
@@ -505,6 +503,10 @@ Module decltype.
         | C2void => mret Tvoid
         | Cuser => mret base
         | Cdynamic to => mret to
+        | C2atomic to => mret to
+        | C2non_atomic to =>
+            let* _ := guard (erase_qualifiers base = erase_qualifiers (Tatomic to)) in
+            mret to
         | Cunsupported _ to => mret to
         end.
 

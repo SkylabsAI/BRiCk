@@ -938,7 +938,9 @@ Module Cast.
       | Cdynamic _ => 20
       | Cderived2base _ _ => 21
       | Cbase2derived _ _ => 22
-      | Cunsupported _ _ => 26
+      | C2atomic _ => 26
+      | C2non_atomic _ => 27
+      | Cunsupported _ _ => 28
       end.
     Definition car (t : positive) : Set :=
       match t with
@@ -955,7 +957,8 @@ Module Cast.
       | 20 => type
       | 21 | 22 => list type * type
       | 23 | 24 | 25 => type
-      | 26 => bs * type
+      | 26 | 27 => type
+      | 28 => bs * type
       | _ => unit
       end.
     Definition data (c : Cast) : car (tag c) :=
@@ -983,6 +986,8 @@ Module Cast.
       | Cctor t => t
       | Cuser => tt
       | Cdynamic t => t
+      | C2atomic t => t
+      | C2non_atomic t => t
       | Cunsupported err t => (err, t)
       | _ => ()
       end.
@@ -1003,6 +1008,8 @@ Module Cast.
       | 23 => _compare | 24 => _compare
       | 25 => _compare
       | 26 => _compare
+      | 27 => _compare
+      | 28 => _compare
       | _ => compare_unit
       end.
 
@@ -1038,6 +1045,8 @@ Module Cast.
       | C2void => compare_tag (Reduce (TAG C2void))
       | Cuser => COMP (Cuser : Cast)
       | Cdynamic cls => COMP (Cdynamic cls : Cast)
+      | C2atomic t => COMP (C2atomic t)
+      | C2non_atomic t => COMP (C2non_atomic t)
       | Cunsupported err t => COMP (Cunsupported err t : Cast)
       end.
   End compare.

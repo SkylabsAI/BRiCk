@@ -759,6 +759,15 @@ public:
 		};
 		auto without_type = [&](const char* c) { print.output() << c; };
 
+		auto unsupported = [&]() {
+			logging::unsupported()
+				<< "unsupported cast kind \"" << ce->getCastKindName() << "\""
+				<< " (at " << cprint.sourceRange(ce->getSourceRange()) << ")\n";
+			print.ctor("Cunsupported", false);
+			print.str(ce->getCastKindName()) << fmt::nbsp;
+			done(ce, Done::DT);
+		};
+
 		switch (ce->getCastKind()) {
 #define CASE_NO_TYPE(a, b)                                                     \
 	case CastKind::CK_##a:                                                     \
@@ -800,6 +809,8 @@ public:
 			CASE_WITH_TYPE(FloatingCast, Cfloat)
 
 			CASE_WITH_TYPE(Dependent, Cdependent)
+			CASE_WITH_TYPE(AtomicToNonAtomic, C2non_atomic)
+			CASE_WITH_TYPE(NonAtomicToAtomic, C2atomic)
 #undef CASE_NO_TYPE
 #undef CASE_WITH_TYPE
 
@@ -832,12 +843,7 @@ public:
 			done(ce, Done::DT);
 			break;
 		default:
-			logging::unsupported()
-				<< "unsupported cast kind \"" << ce->getCastKindName() << "\""
-				<< " (at " << cprint.sourceRange(ce->getSourceRange()) << ")\n";
-			print.ctor("Cunsupported", false);
-			print.str(ce->getCastKindName()) << fmt::nbsp;
-			done(ce, Done::DT);
+			unsupported();
 		}
 	}
 

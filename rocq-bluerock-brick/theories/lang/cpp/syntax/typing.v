@@ -150,6 +150,8 @@ Module decltype.
         | C2void => mret Tvoid
         | Cuser => mret base
         | Cdynamic to => mret to
+        | C2atomic to => mret to
+        | C2non_atomic to => mret to
         | Cunsupported _ t => mret t
         end.
 
