@@ -126,7 +126,7 @@ Section with_cpp.
       | Tmember_pointer _ _
       | Tarch _ _ => R q t
       | Tatomic ty =>
-          if scalar_type ty then
+          if is_scalar_type ty then
             R q (Tatomic ty)
           else False
 

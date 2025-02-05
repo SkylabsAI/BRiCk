@@ -559,7 +559,7 @@ Section body.
     | Tvoid =>
       wp_destroy_prim tu cv rty this Q
     | Tatomic ty =>
-        if scalar_type ty then
+        if is_scalar_type ty then
           let cv := qual_norm' (fun cv _ => cv) cv ty in
           wp_destroy_prim tu cv rty this Q
         else |={top}=> UNSUPPORTED ("wp_destroy_val: atomic non-scalar")
@@ -849,7 +849,7 @@ Section val_array.
       | Tvoid =>
         wp_destroy_prim tu cv rty this Q
       | Tatomic ty =>
-          if scalar_type ty then
+          if is_scalar_type ty then
             let cv := qual_norm' (fun cv _ => cv) cv ty in
             wp_destroy_prim tu cv (Tatomic $ erase_qualifiers ty) this Q
           else False
@@ -960,7 +960,7 @@ Section val_array.
   Qed.
 
   Lemma anyR_wp_destroy_val_atomic tu cv ty (this : ptr) Q :
-    scalar_type ty ->
+    is_scalar_type ty ->
     let c := qual_norm' (fun cv _ => q_const cv) cv ty in
     this |-> anyR (Tatomic $ erase_qualifiers ty) (cQp.mk c 1) ** Q
     |-- wp_destroy_val tu cv (Tatomic ty) this Q.
@@ -978,7 +978,7 @@ Section val_array.
     by rewrite scalar_type_erase H0.
   Qed.
   Lemma anyR_destroy_val_atomic tu ty (this : ptr) Q :
-    scalar_type ty ->
+    is_scalar_type ty ->
     let cv := qual_norm (fun cv _ => cv) ty in
     this |-> anyR (Tatomic $ erase_qualifiers ty) (cQp.mk (q_const cv) 1) ** Q
       |-- destroy_val tu (Tatomic ty) this Q.

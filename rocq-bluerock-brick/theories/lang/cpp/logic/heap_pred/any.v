@@ -229,7 +229,7 @@ Section with_cpp.
   Qed.
 
   Lemma anyR_tptstoR_atomic t q :
-    scalar_type t ->
+    is_scalar_type t ->
     anyR (Tatomic t) q -|- Exists v, tptstoR (Tatomic (erase_qualifiers t)) q v.
   Proof.
     (* todo: should be derived for [typeR] *)
@@ -298,7 +298,7 @@ Section with_cpp.
     { inversion H. }
     { case_match; refine _.
       case_match; refine _. }
-    { destruct (scalar_type ty); refine _. }
+    { destruct (is_scalar_type ty); refine _. }
   Qed.
 
   #[global]
