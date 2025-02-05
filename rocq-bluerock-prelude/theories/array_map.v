@@ -200,7 +200,17 @@ Module map (Import K : KEY).
       Z.to_nat $ to_Z $ PArray.length m.(keys).
 
     Lemma cardinal_1 : forall m, cardinal m = length (elements m).
-    Proof. Admitted.
+    Proof.
+      rewrite /cardinal/elements.
+      intros.
+      move L: (PArray.length (keys m)) => len.
+      move : (to_nat len) => n.
+      have {1}-> : n = n + @length (key * elt) [] by done.
+      move: (len - 1)%uint63 => i.
+      move: [] => acc.
+      elim: n N i acc => [|n IH] N i acc //.
+      rewrite -IH //=.
+    Qed.
 
     Definition MapsTo (k : key) (v : elt) (m : t) :=
       find k m = Some v.
