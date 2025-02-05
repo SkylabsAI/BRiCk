@@ -339,6 +339,8 @@ Module decltype.
               if is_const dt
               then ref_conv dt t
               else mfail
+          | Tatomic dt , t =>
+              let* _ := guard (dt = t) in mret ()
           | dt , t =>
               let* _ := guard (dt = t) in mret ()
           end.
