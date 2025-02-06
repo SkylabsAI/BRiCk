@@ -62,6 +62,15 @@ End internal.
 Module NM.
   #[local] Definition lang := lang.cpp.
   Include NameMap.
+
+  #[global] Arguments NM.t_lookup _ !_ !_.
+  #[global] Arguments NM.find _ !_ !_.
+  #[global] Arguments NM.find_key _ !_ !_.
+  #[global] Arguments array_map.Uint63_Fast.to_Z_pos !_.
+  #[global] Arguments array_map.Uint63_Fast.to_pos_rec !_ !_ !_.
+  #[global] Arguments NM.binary_search !_ !_ !_.
+  #[global] Arguments NM.bisect_N !_.
+  #[global] Arguments NM.bisect_pos !_ !_.
 End NM.
 
 Module TM.
