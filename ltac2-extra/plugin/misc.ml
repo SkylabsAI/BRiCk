@@ -339,11 +339,11 @@ module RelDecl = struct
 
   let repr = Tac2ffi.make_repr to_val of_val
 
-  let make_evar : bool -> t list -> Evd.econstr -> (Evd.evar_map * EConstr.t Constr.pexistential) tactic =
-      fun typeclass_candidate rds goal_ty ->
+  let make_evar : bool -> bool -> t list -> Evd.econstr -> (Evd.evar_map * EConstr.t Constr.pexistential) tactic =
+      fun empty typeclass_candidate rds goal_ty ->
     Goal.enter_one @@ fun gl ->
     let sigma = Goal.sigma gl in
-    let env = Proofview.Goal.env gl in
+    let env = if empty then Environ.empty_env else Proofview.Goal.env gl in
     let fresh_id =
       let count = ref 0 in
       fun () ->
@@ -381,7 +381,7 @@ module RelDecl = struct
             let id = Context.map_annot_relevance_het (EConstr.ERelevance.kind sigma) id in
             let ty = to_constr ty in
             let t  = to_constr t  in
-            LocalDef(id, t, ty)
+            LocalDef(id, ty, t)
       in
       let id = Context.Named.Declaration.get_id assum in
       (EConstr.mkVar id :: subst, Environ.push_named assum env)
@@ -396,9 +396,9 @@ module RelDecl = struct
 
   let _ =
     define "make_evar_in_level_env"
-      (bool @-> list repr @-> constr @-> tac (pair evar (array constr)))
-      @@ fun b rds t ->
-    make_evar b rds t >>= fun (sigma, (ev, args)) ->
+      (bool @-> bool @-> list repr @-> constr @-> tac (pair evar (array constr)))
+      @@ fun emp b rds t ->
+    make_evar emp b rds t >>= fun (sigma, (ev, args)) ->
     let args = Evd.expand_existential sigma (ev,args) in
     Proofview.tclUNIT (ev, Array.of_list args)
 
