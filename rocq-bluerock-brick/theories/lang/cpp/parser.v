@@ -129,7 +129,7 @@ Module Import translation_unit.
 
   Notation check tu_ en_ :=
     (match tu_, en_ with
-     | tu, en => ltac2:(translation_unit.make.check_translation_unit constr:(&tu : list t) constr:(&en : endian))
+     | tu, en => ltac2:(translation_unit.make.check_translation_unit (Control.hyp (@tu)) (Control.hyp @en))
      end) (only parsing).
 
 End translation_unit.
