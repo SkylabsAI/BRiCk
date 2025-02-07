@@ -115,9 +115,7 @@ Module Import translation_unit.
 
     (* [check_translation_unit tu]
      *)
-    Ltac2 check_translation_unit (tu : preterm) (en : preterm) :=
-      let endian := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(endian)) en in
-      let tu := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(list t)) tu in
+    Ltac2 check_translation_unit (tu : constr) (endian : constr) :=
       let term := Constr.Unsafe.make (Constr.Unsafe.App ('decls) (Array.of_list [tu; endian])) in
       let rtu := Std.eval_vm None term in
       lazy_match! rtu with
@@ -129,8 +127,10 @@ Module Import translation_unit.
 
   End make.
 
-  Notation check tu en :=
-    ltac2:(translation_unit.make.check_translation_unit tu en) (only parsing).
+  Notation check tu_ en_ :=
+    (match tu_, en_ with
+     | tu, en => ltac2:(translation_unit.make.check_translation_unit constr:(&tu : list t) constr:(&en : endian))
+     end) (only parsing).
 
 End translation_unit.
 Export translation_unit(decls).
