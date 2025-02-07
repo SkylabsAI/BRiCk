@@ -129,10 +129,24 @@ the several function-like things in the language, with quirky rules
 <div class="doc">
 <a id="lab240"></a><h2 class="section">Templates</h2>
 
+<div class="paragraph"> </div>
+
+ Template parameters
+<ul class="doclist">
+<li> <code>typename T</code> would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Ptype"><span class="id" title="constructor">Ptype</span></a></span> <span class="inlinecode">&quot;<a class="idref" href="bedrock.lang.cpp.syntax.handler.html#lens.T"><span class="id" title="variable">T</span></a>&quot;</span>
+
+</li>
+<li> <code>int X</code> would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Pvalue"><span class="id" title="constructor">Pvalue</span></a></span> <span class="inlinecode">&quot;<a class="idref" href="bedrock.lang.cpp.model.inductive_pointers_utils.html#merge_elems.merge_elem.X"><span class="id" title="variable">X</span></a>&quot;</span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Tint"><span class="id" title="abbreviation">Tint</span></a></span>
+
+</li>
+</ul>
+
+<div class="paragraph"> </div>
+
+    <code>typename T...</code> and <code>int X...</code> are not currently supported.
+ 
 </div>
 <div class="code">
-
-<br/>
 <span class="id" title="keyword">Variant</span> <a id="temp_param_" class="idref" href="#temp_param_"><span class="id" title="inductive">temp_param_</span></a> {<a id="type:29" class="idref" href="#type:29"><span class="id" title="binder">type</span></a> : <span class="id" title="keyword">Set</span>} : <span class="id" title="keyword">Set</span> :=<br/>
 | <a id="Ptype" class="idref" href="#Ptype"><span class="id" title="constructor">Ptype</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.preliminary.html#ident"><span class="id" title="definition">ident</span></a>)<br/>
 | <a id="Pvalue" class="idref" href="#Pvalue"><span class="id" title="constructor">Pvalue</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.preliminary.html#ident"><span class="id" title="definition">ident</span></a>) (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#type:29"><span class="id" title="variable">type</span></a>)<br/>
@@ -462,10 +476,34 @@ Errors
 | <a id="Nscoped" class="idref" href="#Nscoped"><span class="id" title="constructor">Nscoped</span></a> (<a id="n:121" class="idref" href="#n:121"><span class="id" title="binder">n</span></a> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#name':102"><span class="id" title="inductive">name'</span></a>) (<a id="c:122" class="idref" href="#c:122"><span class="id" title="binder">c</span></a> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#atomic_name_"><span class="id" title="inductive">atomic_name_</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#type':104"><span class="id" title="inductive">type'</span></a>)	<span class="comment">(*&nbsp;&lt;&lt;n::c&gt;&gt;&nbsp;*)</span><br/>
 | <a id="Nunsupported" class="idref" href="#Nunsupported"><span class="id" title="constructor">Nunsupported</span></a> (<span class="id" title="var">_</span> : <span class="id" title="var">PrimString.string</span>)<br/>
 <br/>
+</div>
+
+<div class="doc">
+Template arguments
+<ul class="doclist">
+<li> <code>int</code> would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atype"><span class="id" title="constructor">Atype</span></a></span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Tint"><span class="id" title="abbreviation">Tint</span></a></span>
+
+</li>
+<li> <code>1</code> would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Avalue"><span class="id" title="constructor">Avalue</span></a></span> <span class="inlinecode">(<a class="idref" href="bedrock.lang.cpp.syntax.core.html#Eint"><span class="id" title="constructor">Eint</span></a></span> <span class="inlinecode">1</span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Tint"><span class="id" title="abbreviation">Tint</span></a>)</span>
+
+</li>
+<li> <code>int, char</code> as the instantiation of a template parameter pack
+      would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Apack"><span class="id" title="constructor">Apack</span></a></span> <span class="inlinecode">[<a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atype"><span class="id" title="constructor">Atype</span></a></span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Tint"><span class="id" title="abbreviation">Tint</span></a>;</span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atype"><span class="id" title="constructor">Atype</span></a></span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Tchar"><span class="id" title="abbreviation">Tchar</span></a>]</span>.
+      C++ requires these to be uniform, i.e. you can not mix <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Avalue"><span class="id" title="constructor">Avalue</span></a></span> and <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atype"><span class="id" title="constructor">Atype</span></a></span>.
+      We can enforce this if we want in the future.
+
+</li>
+<li> <code>T</code> for <code>T</code> of template type would be represented as <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atemplate"><span class="id" title="constructor">Atemplate</span></a></span> <span class="inlinecode"><a class="idref" href="bedrock.lang.cpp.syntax.handler.html#lens.T"><span class="id" title="variable">T</span></a></span>
+
+</li>
+</ul>
+ 
+</div>
+<div class="code">
 <span class="id" title="keyword">with</span> <a id="temp_arg'" class="idref" href="#temp_arg'"><span class="id" title="definition, inductive"><span id="temp_arg'_rect" class="id"><span id="temp_arg'_ind" class="id"><span id="temp_arg'_rec" class="id"><span id="temp_arg'_sind" class="id">temp_arg'</span></span></span></span></span></a> {<span class="id" title="var">lang</span> : <span class="id" title="var">lang.t</span>} : <span class="id" title="keyword">Set</span> :=<br/>
 | <a id="Atype" class="idref" href="#Atype"><span class="id" title="constructor">Atype</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#type':104"><span class="id" title="inductive">type'</span></a>)<br/>
 | <a id="Avalue" class="idref" href="#Avalue"><span class="id" title="constructor">Avalue</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Expr':105"><span class="id" title="inductive">Expr'</span></a>)<br/>
-| <a id="Apack_expansion" class="idref" href="#Apack_expansion"><span class="id" title="constructor">Apack_expansion</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#temp_arg':103"><span class="id" title="inductive">temp_arg'</span></a>) <span class="comment">(*&nbsp;TODO:&nbsp;this&nbsp;is&nbsp;incorrect,&nbsp;it&nbsp;needs&nbsp;a&nbsp;pack&nbsp;expansion&nbsp;pattern&nbsp;*)</span><br/>
+| <a id="Apack" class="idref" href="#Apack"><span class="id" title="constructor">Apack</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#temp_arg':103"><span class="id" title="inductive">temp_arg'</span></a>) <span class="comment">(*&nbsp;See&nbsp;&lt;https://en.cppreference.com/w/cpp/language/pack&gt;&nbsp;*)</span><br/>
 | <a id="Atemplate" class="idref" href="#Atemplate"><span class="id" title="constructor">Atemplate</span></a> (<span class="id" title="var">_</span> : <a class="idref" href="bedrock.lang.cpp.syntax.core.html#name':102"><span class="id" title="inductive">name'</span></a>)<br/>
 | <a id="Aunsupported" class="idref" href="#Aunsupported"><span class="id" title="constructor">Aunsupported</span></a> (<span class="id" title="var">_</span> : <span class="id" title="var">PrimString.string</span>)<br/>
 <br/>
@@ -1156,7 +1194,7 @@ Proof.&nbsp;rewrite&nbsp;/field_name.t.&nbsp;refine&nbsp;_.&nbsp;Defined.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#t:326"><span class="id" title="variable">t</span></a> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atype"><span class="id" title="constructor">Atype</span></a> <span class="id" title="var">t</span> =&gt; <a class="idref" href="bedrock.lang.cpp.syntax.core.html#is_dependentT:339"><span class="id" title="definition">is_dependentT</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#t:326"><span class="id" title="variable">t</span></a><br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Avalue"><span class="id" title="constructor">Avalue</span></a> <span class="id" title="var">e</span> =&gt; <a class="idref" href="bedrock.lang.cpp.syntax.core.html#is_dependentE:340"><span class="id" title="definition">is_dependentE</span></a> <span class="id" title="var">e</span><br/>
-&nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Apack_expansion"><span class="id" title="constructor">Apack_expansion</span></a> <span class="id" title="var">tas</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Lists.List.html#existsb"><span class="id" title="definition">List.existsb</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#is_dependentTA:338"><span class="id" title="definition">is_dependentTA</span></a> <span class="id" title="var">tas</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Apack"><span class="id" title="constructor">Apack</span></a> <span class="id" title="var">tas</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Lists.List.html#existsb"><span class="id" title="definition">List.existsb</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#is_dependentTA:338"><span class="id" title="definition">is_dependentTA</span></a> <span class="id" title="var">tas</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Atemplate"><span class="id" title="constructor">Atemplate</span></a> <span class="id" title="var">nm</span> =&gt; <a class="idref" href="bedrock.lang.cpp.syntax.core.html#is_dependentN:337"><span class="id" title="definition">is_dependentN</span></a> <span class="id" title="var">nm</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Aunsupported"><span class="id" title="constructor">Aunsupported</span></a> <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
 &nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
@@ -1303,6 +1341,9 @@ Proof.&nbsp;rewrite&nbsp;/field_name.t.&nbsp;refine&nbsp;_.&nbsp;Defined.<br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Sgoto"><span class="id" title="constructor">Sgoto</span></a> <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
 &nbsp;&nbsp;| <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Sunsupported"><span class="id" title="constructor">Sunsupported</span></a> <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>,<span class="id" title="var">deprecated</span>(<span class="id" title="var">note</span>="use [Apack].",<span class="id" title="var">since</span>="20250206")] <span class="id" title="keyword">Notation</span> <a id="Apack_expansion" class="idref" href="#Apack_expansion"><span class="id" title="abbreviation">Apack_expansion</span></a> := <a class="idref" href="bedrock.lang.cpp.syntax.core.html#Apack"><span class="id" title="constructor">Apack</span></a> (<span class="id" title="var">only</span> <span class="id" title="var">parsing</span>).<br/>
 </div>
 <!--
 -- Copyright (c) 2020 BedRock Systems, Inc.
