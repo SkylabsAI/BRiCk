@@ -529,12 +529,18 @@ There's no need to substitute in <span class="inlinecode"><span class="id" title
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">make_evar_in_level_env_ocaml</span> :<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">bool</span> -&gt; <span class="id" title="var">rel_decl</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="tactic">evar</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">bool</span> -&gt; <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">rel_decl</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="tactic">evar</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "make_evar_in_level_env".<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_evar_in_level_env</span> (<span class="id" title="var">tc_cand</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">env</span> : <span class="id" title="var">t</span>) (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_evar_in_level_env_ocaml</span> <span class="id" title="var">tc_cand</span> (<span class="id" title="var">env</span>.(<span class="id" title="var">decls</span>)) <span class="id" title="var">ty</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_evar_in_level_env_ocaml</span> <span class="id" title="var">false</span> <span class="id" title="var">tc_cand</span> (<span class="id" title="var">env</span>.(<span class="id" title="var">decls</span>)) <span class="id" title="var">ty</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_evar_in_level_env_no_goal</span> (<span class="id" title="var">tc_cand</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">env</span> : <span class="id" title="var">t</span>) (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_evar_in_level_env_ocaml</span> <span class="id" title="var">true</span> <span class="id" title="var">tc_cand</span> (<span class="id" title="var">env</span>.(<span class="id" title="var">decls</span>)) <span class="id" title="var">ty</span>.<br/>
+
+<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bedrock.ltac2.extra.internal.level_env.html#LevelEnv"><span class="id" title="module">LevelEnv</span></a>.<br/>
 </div>
 </div>
