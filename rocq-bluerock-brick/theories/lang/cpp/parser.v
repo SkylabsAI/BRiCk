@@ -111,19 +111,26 @@ Module Import translation_unit.
   Module make.
     Import Ltac2.Ltac2.
 
-    Ltac2 Type exn ::= [DuplicateSymbols (constr)].
+    Ltac2 Type exn ::= [Ill_typed_term_please_report | DuplicateSymbols (constr)].
 
     (* [check_translation_unit tu]
      *)
     Ltac2 check_translation_unit (tu : preterm) (en : preterm) :=
       let endian := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(endian)) en in
-      let tu := Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(list t)) tu in
+      let tu :=
+        orelse
+          (fun _ => Constr.Pretype.pretype Constr.Pretype.Flags.constr_flags (Constr.Pretype.expected_oftype '(list t)) tu)
+          (fun _ =>
+             let _ :=
+               Message.print (Message.of_string "The translation unit is ill-typed. Pelase report to github.com/bluerock-io/brick.") in
+             Control.throw Ill_typed_term_please_report)
+      in
       let term := Constr.Unsafe.make (Constr.Unsafe.App ('decls) (Array.of_list [tu; endian])) in
       let rtu := Std.eval_vm None term in
       lazy_match! rtu with
       | pair ?tu nil => Std.exact_no_check tu
       | pair _ ?dups =>
-          let _ := Message.print (Message.concat (Message.of_string "Duplicate symbols found in translation unit: ") (Message.of_constr dups)) in
+          let _ := Message.print (Message.concat (Message.of_string "duplicate symbols found in translation unit: ") (Message.of_constr dups)) in
           Control.throw (DuplicateSymbols dups)
       end.
 
