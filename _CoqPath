@@ -1,0 +1,10 @@
+-Q rocq-bluerock-brick/theories/prelude/ bedrock.prelude
+-Q rocq-bluerock-brick/theories/lang/ bedrock.lang
+-Q rocq-bluerock-brick/theories/noimport/ bedrock.noimport
+-Q rocq-lens/Lens/ Lens
+-Q rocq-upoly/upoly/ bedrock.upoly
+-Q rocq-bluerock-brick/tests/ bedrocktest
+-Q ltac2-extra/theories/ bedrock.ltac2.extra
+-Q ltac2-extra/tests/ bedrock_tests.ltac2.extra
+-Q ltac2-logger/theories/ bedrock.ltac2.logger
+-Q elpi-extra/extra/ bedrock.elpi.extra
