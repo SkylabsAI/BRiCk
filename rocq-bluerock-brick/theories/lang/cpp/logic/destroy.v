@@ -253,30 +253,12 @@ invoking the destructor [dtor] for type [ty] on [this].
 
 mlock Definition wp_destructor `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
     (ty : type) (dtor : ptr) (this : ptr) (Q : epred) : mpred :=
-  wp_destructor_body tu ty dtor this Q.
+  Reduce (wp_destructor_body tu ty dtor this Q).
 #[global] Arguments wp_destructor {_ _ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
 
 (** Note: All we need in this file is [type_table_le]. *)
 #[local] Notation TULE tu tu' := (sub_module tu tu') (only parsing).
 #[local] Hint Resolve types_compat : core.
-
-Section unfold.
-  Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
-
-  Lemma wp_destructor_unfold ty tu :
-    wp_destructor tu ty = Reduce (wp_destructor_body tu ty).
-  Proof. by rewrite wp_destructor.unlock. Qed.
-End unfold.
-
-(**
-Unfold for one type, failing if there's nothing to do.
-*)
-Ltac wp_destructor_unfold :=
-  lazymatch goal with
-  | |- context [wp_destructor _ ?ty] => rewrite !(wp_destructor_unfold ty)
-  | _ => fail "[wp_destructor] not found"
-  end.
 
 Section dtor.
   Context `{Σ : cpp_logic, σ : genv}.
@@ -285,12 +267,12 @@ Section dtor.
   Lemma wp_destructor_intro tu ty dtor this Q :
     Reduce (wp_destructor_body tu ty dtor this Q) |--
     wp_destructor tu ty dtor this Q.
-  Proof. by wp_destructor_unfold. Qed.
+  Proof. by rewrite wp_destructor.unlock. Qed.
 
   Lemma wp_destructor_elim tu ty dtor this Q :
     wp_destructor tu ty dtor this Q |--
     Reduce (wp_destructor_body tu ty dtor this Q).
-  Proof. by wp_destructor_unfold. Qed.
+  Proof. by rewrite wp_destructor.unlock. Qed.
 
   #[global] Instance: Params (@wp_destructor) 8 := {}.
   #[local] Notation PROPER R := (
@@ -308,7 +290,7 @@ Section dtor.
     TULE tu tu' ->
     Q -* Q' |-- wp_destructor tu ty dtor this Q -* wp_destructor tu' ty dtor this Q'.
   Proof.
-    intros. wp_destructor_unfold. iIntros "HQ".
+    intros. rewrite wp_destructor.unlock. iIntros "HQ".
     iApply wp_mfptr_frame_fupd_strong; first by auto.
     iIntros "%p (%v & V & B & Q)". iExists v. iFrame "V B". by iApply "HQ".
   Qed.
@@ -317,7 +299,7 @@ Section dtor.
     (|={top}=> wp_destructor tu ty dtor this (|={top}=> Q))
     |-- wp_destructor tu ty dtor this Q.
   Proof.
-    wp_destructor_unfold. iIntros "wp".
+    rewrite wp_destructor.unlock. iIntros "wp".
     iApply wp_mfptr_shift. iMod "wp".
     iApply (wp_mfptr_frame with "[] wp").
     iIntros (p). iIntros "(%v & V & B & >Q) !>".
