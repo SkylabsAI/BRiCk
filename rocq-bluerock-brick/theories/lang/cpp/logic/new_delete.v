@@ -498,7 +498,7 @@ Module Type Expr__newdelete.
       this' |-> new_token.R 1 (new_token.mk cv_mdc storage_ptr overhead) ** [| cv_compat cv_mdc mdc_ty |] **
       [| array_compatible array cv_mdc |] **
       Exists tu', denoteModule tu' **
-      letI* := destroy_val tu' cv_mdc this' (* << invoke the destructor *) in
+      letI* := wp_destroy tu' cv_mdc this' (* << invoke the destructor *) in
         Exists (sz : N), [| size_of mdc_ty = Some sz |] **
           (storage_ptr .[ Tuchar ! -overhead ] |-> blockR (overhead + sz) (cQp.m 1)
             -* delete_val tu' delete_fn mdc_ty (storage_ptr .[ Tuchar ! -overhead ]) (Q Vvoid)).
@@ -523,7 +523,7 @@ Module Type Expr__newdelete.
         iDestruct "Y" as "[$[$[$Y]]]".
         iDestruct "Y" as (?) "Y".
         iExists _; iDestruct "Y" as "[$ Y]".
-        iRevert "Y"; iApply destroy_val_frame; first reflexivity.
+        iRevert "Y"; iApply wp_destroy_frame; first reflexivity.
         iIntros "Y"; iDestruct "Y" as (?) "Y"; iExists _; iDestruct "Y" as "[$ Y]".
         iIntros "Z"; iSpecialize ("Y" with "Z").
         iRevert "Y"; iApply delete_val_frame. eauto.
