@@ -130,24 +130,8 @@ End wp_gen.
 
 mlock Definition wp_destroy_prim `{Σ : cpp_logic, σ : genv} (tu : translation_unit)
     (cv : type_qualifiers) (ty : type) (this : ptr) (Q : epred) : mpred :=
-  wp_destroy_prim_body tu cv ty this Q.
+  Reduce (wp_destroy_prim_body tu cv ty this Q).
 #[global] Arguments wp_destroy_prim {_ _ _ _} _ _ _ _ _ : assert.	(* mlock bug *)
-
-Section unfold.
-  Context `{Σ : cpp_logic, σ : genv}.
-  Implicit Types (Q : epred).
-
-  Lemma wp_destroy_prim_unfold ty tu :
-    wp_destroy_prim tu ty = Reduce (wp_destroy_prim_body tu ty).
-  Proof. by rewrite wp_destroy_prim.unlock. Qed.
-End unfold.
-
-(** Unfold for one type, failing if there's nothing to do. *)
-Ltac wp_destroy_prim_unfold :=
-  lazymatch goal with
-  | |- context [wp_destroy_prim _ ?ty] => rewrite !(wp_destroy_prim_unfold ty)
-  | _ => fail "[wp_destroy_prim] not found"
-  end.
 
 Section prim.
   Context `{Σ : cpp_logic, σ : genv}.
@@ -156,7 +140,7 @@ Section prim.
   Lemma wp_destroy_prim_intro tu cv ty (this : ptr) Q :
     (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) v) ** Q
     |-- wp_destroy_prim tu cv ty this Q.
-  Proof. wp_destroy_prim_unfold. by iIntros "[$$]". Qed.
+  Proof. rewrite wp_destroy_prim.unlock. by iIntros "[$$]". Qed.
 
   Lemma anyR_wp_destroy_prim_val tu cv ty (p : ptr) Q :
     is_value_type ty ->
@@ -181,13 +165,13 @@ Section prim.
   Lemma wp_destroy_prim_elim tu cv ty this Q :
     wp_destroy_prim tu cv ty this Q
     |-- |={top}=> (Exists v, this |-> tptstoR (erase_qualifiers ty) (cQp.mk (q_const cv) 1) v) ** Q.
-  Proof. by wp_destroy_prim_unfold. Qed.
+  Proof. by rewrite wp_destroy_prim.unlock. Qed.
 
   Lemma wp_destroy_prim_erase_qualifiers tu cv ty :
     wp_destroy_prim tu cv (erase_qualifiers ty) =
     wp_destroy_prim tu cv ty.
   Proof.
-    by rewrite !wp_destroy_prim_unfold erase_qualifiers_idemp.
+    by rewrite !wp_destroy_prim.unlock erase_qualifiers_idemp.
   Qed.
 
   (**
@@ -213,12 +197,12 @@ Section prim.
 
   Lemma wp_destroy_prim_frame tu tu' cv ty this (Q Q' : epred) :
     Q -* Q' |-- wp_destroy_prim tu cv ty this Q -* wp_destroy_prim tu' cv ty this Q'.
-  Proof. wp_destroy_prim_unfold. iIntros "HQ >[$ Q]". by iApply "HQ". Qed.
+  Proof. rewrite wp_destroy_prim.unlock. iIntros "HQ >[$ Q]". by iApply "HQ". Qed.
 
   Lemma wp_destroy_prim_shift tu cv ty this Q :
     (|={top}=> wp_destroy_prim tu cv ty this (|={top}=> Q)) |--
     wp_destroy_prim tu cv ty this Q.
-  Proof. wp_destroy_prim_unfold. by iIntros ">>[$ >$]". Qed.
+  Proof. rewrite wp_destroy_prim.unlock. by iIntros ">>[$ >$]". Qed.
 
   Lemma fupd_wp_destroy_prim tu cv ty this Q :
     (|={top}=> wp_destroy_prim tu cv ty this Q) |--
