@@ -145,45 +145,45 @@
            genv → (val → epred) → mpred
   
   Arguments NOTATION_wp_builtin_cons_wrap ti _Σ Σ σ Q%function_scope
-  NOTATION_wp_destroy_val_nowrap =
+  NOTATION_wp_destroy_qual_nowrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (p : ptr) (E : epred),
-    ::destroy_val {pointer: p; qualifiers: const; type: {?: "void*"}}
+    ::wp_destroy_qual {pointer: p; qualifiers: const; type: {?: "void*"}}
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → ptr → epred → mpred
   
-  Arguments NOTATION_wp_destroy_val_nowrap ti _Σ Σ σ tu p E%bi_scope
-  NOTATION_wp_destroy_val_wrap =
+  Arguments NOTATION_wp_destroy_qual_nowrap ti _Σ Σ σ tu p E%bi_scope
+  NOTATION_wp_destroy_qual_wrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (E : epred) (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr),
-    ::destroy_val
+    ::wp_destroy_qual
       {pointer: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
           qualifiers: const;
           type: {?: "void*"}}
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → epred → ptr → mpred
   
-  Arguments NOTATION_wp_destroy_val_wrap ti _Σ Σ σ tu 
-    E%bi_scope
+  Arguments NOTATION_wp_destroy_qual_wrap ti _Σ Σ σ 
+    tu E%bi_scope
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  NOTATION_destroy_val_nowrap =
+  NOTATION_wp_destroy_nowrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (p : ptr) (E : epred),
-    ::destroy_val {pointer: p; type: {?: "void*"}}
+    ::wp_destroy {pointer: p; type: {?: "void*"}}
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → ptr → epred → mpred
   
-  Arguments NOTATION_destroy_val_nowrap ti _Σ Σ σ tu p E%bi_scope
-  NOTATION_destroy_val_wrap =
+  Arguments NOTATION_wp_destroy_nowrap ti _Σ Σ σ tu p E%bi_scope
+  NOTATION_wp_destroy_wrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (E : epred) (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr),
-    ::destroy_val
+    ::wp_destroy
       {pointer: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
           type: {?: "void*"}}
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → epred → ptr → mpred
   
-  Arguments NOTATION_destroy_val_wrap ti _Σ Σ σ tu E%bi_scope
+  Arguments NOTATION_wp_destroy_wrap ti _Σ Σ σ tu E%bi_scope
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   NOTATION_interp_nowrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
@@ -668,25 +668,25 @@
            genv → (val → epred) → mpred
   
   Arguments NOTATION_wp_builtin_cons_wrap ti _Σ Σ σ Q%function_scope
-  NOTATION_destroy_val_nowrap =
+  NOTATION_wp_destroy_nowrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (p : ptr) (E : epred),
-    ::destroy_val {pointer: p; type: {?: "void*"}} E
+    ::wp_destroy {pointer: p; type: {?: "void*"}} E
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → ptr → epred → mpred
   
-  Arguments NOTATION_destroy_val_nowrap ti _Σ Σ σ tu p E%bi_scope
-  NOTATION_destroy_val_wrap =
+  Arguments NOTATION_wp_destroy_nowrap ti _Σ Σ σ tu p E%bi_scope
+  NOTATION_wp_destroy_wrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 
     (σ : genv) (tu : translation_unit) (E : epred) (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr),
-    ::destroy_val
+    ::wp_destroy
       {pointer: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
           type: {?: "void*"}}
       E
        : ∀ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ),
            genv → translation_unit → epred → ptr → mpred
   
-  Arguments NOTATION_destroy_val_wrap ti _Σ Σ σ tu E%bi_scope
+  Arguments NOTATION_wp_destroy_wrap ti _Σ Σ σ tu E%bi_scope
     aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   NOTATION_interp_nowrap =
   λ (ti : biIndex) (_Σ : gFunctors) (Σ : cpp_logic ti _Σ) 

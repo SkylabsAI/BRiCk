@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2022-2023 BlueRock Security, Inc.
+ * Copyright (c) 2022-2025 BlueRock Security, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -57,15 +57,15 @@ Module WpTestDefns.
   End Special.
 
   Section Cleanup.
-    Definition NOTATION_wp_destroy_val_nowrap :=
-      wp_destroy_val tu cv ty p E.
-    Definition NOTATION_wp_destroy_val_wrap (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr) :=
-      wp_destroy_val tu cv ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
+    Definition NOTATION_wp_destroy_qual_nowrap :=
+      wp_destroy_qual tu cv ty p E.
+    Definition NOTATION_wp_destroy_qual_wrap (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr) :=
+      wp_destroy_qual tu cv ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
 
-    Definition NOTATION_destroy_val_nowrap :=
-      destroy_val tu ty p E.
-    Definition NOTATION_destroy_val_wrap (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr) :=
-      destroy_val tu ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
+    Definition NOTATION_wp_destroy_nowrap :=
+      wp_destroy tu ty p E.
+    Definition NOTATION_wp_destroy_wrap (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa : ptr) :=
+      wp_destroy tu ty aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa E.
 
     Definition NOTATION_interp_nowrap :=
       interp tu free E.
@@ -164,8 +164,8 @@ Section TEST_COMPACT_WP_NOTATIONS.
   Print NOTATION_wp_atomic_nil. Print NOTATION_wp_atomic_cons_nowrap. Print NOTATION_wp_atomic_cons_wrap.
   Print NOTATION_wp_builtin_nil. Print NOTATION_wp_builtin_cons_nowrap. Print NOTATION_wp_builtin_cons_wrap.
 
-  Print NOTATION_wp_destroy_val_nowrap. Print NOTATION_wp_destroy_val_wrap.
-  Print NOTATION_destroy_val_nowrap. Print NOTATION_destroy_val_wrap.
+  Print NOTATION_wp_destroy_qual_nowrap. Print NOTATION_wp_destroy_qual_wrap.
+  Print NOTATION_wp_destroy_nowrap. Print NOTATION_wp_destroy_wrap.
   Print NOTATION_interp_nowrap. Print NOTATION_interp_wrap.
 
   Print NOTATION_wp_lval_nowrap. Print NOTATION_wp_lval_wrap.
@@ -194,7 +194,7 @@ Section TEST_VERBOSE_WP_NOTATIONS.
   Print NOTATION_wp_atomic_nil. Print NOTATION_wp_atomic_cons_nowrap. Print NOTATION_wp_atomic_cons_wrap.
   Print NOTATION_wp_builtin_nil. Print NOTATION_wp_builtin_cons_nowrap. Print NOTATION_wp_builtin_cons_wrap.
 
-  Print NOTATION_destroy_val_nowrap. Print NOTATION_destroy_val_wrap.
+  Print NOTATION_wp_destroy_nowrap. Print NOTATION_wp_destroy_wrap.
   Print NOTATION_interp_nowrap. Print NOTATION_interp_wrap.
 
   Print NOTATION_wp_lval_nowrap. Print NOTATION_wp_lval_wrap.

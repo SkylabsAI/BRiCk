@@ -122,18 +122,18 @@ Module Export Compact.
          , only printing).
 
   (* Destruction/cleanup-interpretation of temporaries *)
-  Notation "'::destroy_val' '{pointer:' p ';' 'type:' ty '}'"
-      := (destroy_val _ ty%cpp_type p _)
+  Notation "'::wp_destroy' '{pointer:' p ';' 'type:' ty '}'"
+      := (wp_destroy _ ty%cpp_type p _)
          ( at level 10
          , ty custom CPP_type at level 200
-         , format "'[hv  ' ::destroy_val  '/' '[hv   ' {pointer:  p ; '/'  type:  ty } ']' ']'"
+         , format "'[hv  ' ::wp_destroy  '/' '[hv   ' {pointer:  p ; '/'  type:  ty } ']' ']'"
          , only printing).
-  Notation "'::destroy_val' '{pointer:' p ';' 'qualifiers:' cv ';' 'type:' ty '}'"
-      := (wp_destroy_val _ cv%cpp_type ty%cpp_type p _)
+  Notation "'::wp_destroy_qual' '{pointer:' p ';' 'qualifiers:' cv ';' 'type:' ty '}'"
+      := (wp_destroy_qual _ cv%cpp_type ty%cpp_type p _)
          ( at level 10
          , cv custom CPP_type at level 200
          , ty custom CPP_type at level 200
-         , format "'[hv  ' ::destroy_val  '/' '[hv   ' {pointer:  p ; '/'  qualifiers:  cv ; '/'  type:  ty } ']' ']'"
+         , format "'[hv  ' ::wp_destroy_qual  '/' '[hv   ' {pointer:  p ; '/'  qualifiers:  cv ; '/'  type:  ty } ']' ']'"
          , only printing).
   (* NOTE (JH): large [free]s are printed a bit strangely (cf. [NOTATIONS_interp_wrap]) *)
   Notation "'::interp' { free }"
@@ -294,21 +294,21 @@ Module Verbose.
          , only printing).
 
   (* Destruction/cleanup-interpretation of temporaries *)
-  Notation "'::destroy_val' '{pointer:' p ';' 'type:' ty '}' E"
-      := (destroy_val _ ty%cpp_type p E)
+  Notation "'::wp_destroy' '{pointer:' p ';' 'type:' ty '}' E"
+      := (wp_destroy _ ty%cpp_type p E)
          ( at level 10
          , E at level 0
          , ty custom CPP_type at level 200
-         , format "'[hv  ' ::destroy_val  '/' '[hv   ' {pointer:  p ; '/'  type:  ty } ']'  '/' E ']'"
+         , format "'[hv  ' ::wp_destroy  '/' '[hv   ' {pointer:  p ; '/'  type:  ty } ']'  '/' E ']'"
          , only printing).
   (* Destruction/cleanup-interpretation of temporaries *)
-  Notation "'::destroy_val' '{pointer:' p ';' 'qualifiers:' cv ';' 'type:' ty '}' E"
-      := (wp_destroy_val _ cv%cpp_type ty%cpp_type p E)
+  Notation "'::wp_destroy_qual' '{pointer:' p ';' 'qualifiers:' cv ';' 'type:' ty '}' E"
+      := (wp_destroy_qual _ cv%cpp_type ty%cpp_type p E)
          ( at level 10
          , E at level 0
          , cv custom CPP_type at level 200
          , ty custom CPP_type at level 200
-         , format "'[hv  ' ::destroy_val  '/' '[hv   ' {pointer:  p ; '/'  qualifiers:  cv ; '/'  type:  ty } ']'  '/' E ']'"
+         , format "'[hv  ' ::wp_destroy_qual  '/' '[hv   ' {pointer:  p ; '/'  qualifiers:  cv ; '/'  type:  ty } ']'  '/' E ']'"
          , only printing).
   (* NOTE (JH): large [free]s are printed a bit strangely (cf. [NOTATIONS_interp_wrap]) *)
   Notation "'::interp' { free } E"
