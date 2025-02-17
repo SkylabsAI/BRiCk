@@ -29,12 +29,9 @@ let check_no_comp () =
       panic "Error: %s can only have value \"true\" or \"false\"." _NO_COMP
 
 let coqc_command : string list -> string = fun args ->
-  let coqc =
-    match Sys.getenv_opt "DUNE_SOURCEROOT" with
-    | None       -> "coqc"
-    | Some(root) -> Filename.concat root "_build/install/default/bin/coqc"
+  let coqc = "opam"
   in
-  Filename.quote_command coqc args
+  Filename.quote_command coqc ("exec" :: "--" :: "coqc" :: args)
 
 type files = {
   glob : string;

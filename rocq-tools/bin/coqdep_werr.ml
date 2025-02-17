@@ -19,12 +19,9 @@ open Rocq_tools
 open Rocq_tools.Extra
 
 let coqdep_command : string list -> string = fun args ->
-  let coqc =
-    match Sys.getenv_opt "DUNE_SOURCEROOT" with
-    | None       -> "coqdep"
-    | Some(root) -> Filename.concat root "_build/install/default/bin/coqdep"
+  let coqc = "opam"
   in
-  Filename.quote_command coqc args
+  Filename.quote_command coqc ("exec" :: "--" :: "coqdep" :: args)
 
 let _ =
   let args = List.tl (Array.to_list Sys.argv) in
