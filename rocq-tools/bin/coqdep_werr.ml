@@ -19,9 +19,7 @@ open Rocq_tools
 open Rocq_tools.Extra
 
 let coqdep_command : string list -> string = fun args ->
-  let coqc = "opam"
-  in
-  Filename.quote_command coqc ("exec" :: "--" :: "coqdep" :: args)
+  Filename.quote_command "opam" ("exec" :: "--" :: "coqdep" :: args)
 
 let _ =
   let args = List.tl (Array.to_list Sys.argv) in
