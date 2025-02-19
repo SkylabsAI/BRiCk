@@ -1,4 +1,39 @@
 (library
  (name rocq_tools)
  (public_name rocq-tools)
+ (modules :standard \ realpath_helper)
  (libraries yojson camlzip))
+
+(rule
+  (target realpath_helper.ml)
+  (action
+   (with-stdout-to %{target}
+     (echo "let _ = Printf.printf \"%s\" (Unix.realpath (Sys.argv.(1)))")
+   )
+  )
+)
+
+(executable
+  (public_name realpath_helper)
+  (modules realpath_helper)
+  (libraries unix)
+)
+
+(rule
+ (target is_coq_opam_installed.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "
+      let is_coq_opam_installed =
+        let workspace = \"")
+      (run realpath_helper "%{workspace_root}/..")
+      (echo "\" in
+        let coqlib = \"")
+      (run realpath_helper "%{coq:coqlib}")
+      (echo "\" in
+        if String.starts_with ~prefix:workspace coqlib then
+          false
+        else
+          true
+      ")))))

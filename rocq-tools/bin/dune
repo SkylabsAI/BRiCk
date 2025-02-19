@@ -122,3 +122,11 @@
  (public_name filter-dune-output)
  (modules filter_dune_output)
  (package rocq-tools))
+
+; Test [is_coq_opam_installed] library
+(executable
+ (name test_is_coq_opam_installed)
+ (public_name test-is-coq-opam-installed)
+ (modules test_is_coq_opam_installed)
+ (package rocq-tools)
+ (libraries rocq_tools))
