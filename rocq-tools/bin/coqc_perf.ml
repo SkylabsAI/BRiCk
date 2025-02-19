@@ -30,9 +30,12 @@ let check_no_comp () =
 
 let coqc_command : string list -> string = fun args ->
   let coqc =
-    match Sys.getenv_opt "DUNE_SOURCEROOT" with
-    | None       -> "coqc"
-    | Some(root) -> Filename.concat root "_build/install/default/bin/coqc"
+    if Is_coq_opam_installed.is_coq_opam_installed then
+      "coqc"
+    else
+      match Sys.getenv_opt "DUNE_SOURCEROOT" with
+      | None       -> failwith "DUNE_SOURCEROOT is unset"
+      | Some(root) -> Filename.concat root "_build/install/default/bin/coqc"
   in
   Filename.quote_command coqc args
 

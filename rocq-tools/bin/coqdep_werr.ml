@@ -20,9 +20,12 @@ open Rocq_tools.Extra
 
 let coqdep_command : string list -> string = fun args ->
   let coqc =
-    match Sys.getenv_opt "DUNE_SOURCEROOT" with
-    | None       -> "coqdep"
-    | Some(root) -> Filename.concat root "_build/install/default/bin/coqdep"
+    if Is_coq_opam_installed.is_coq_opam_installed then
+      "coqdep"
+    else
+      match Sys.getenv_opt "DUNE_SOURCEROOT" with
+      | None       -> failwith "DUNE_SOURCEROOT is unset"
+      | Some(root) -> Filename.concat root "_build/install/default/bin/coqdep"
   in
   Filename.quote_command coqc args
 
