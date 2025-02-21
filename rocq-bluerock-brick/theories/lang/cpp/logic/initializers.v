@@ -18,6 +18,7 @@ Require Import bluerock.lang.cpp.logic.destroy.
 Require Import bluerock.lang.cpp.logic.const.
 
 #[local] Set Printing Coercions.
+Import UPoly.
 
 (**
 The C++ language provides several types of initialization:
@@ -54,12 +55,14 @@ guaranteed to have to initialize a value which will result in an
 *)
 
 #[local] Definition default_initialize_array_body `{Σ : cpp_logic, σ : genv}
-    (u : bool) (default_initialize : ptr -> (FreeTemps -> epred) -> mpred)
-    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) (Q : FreeTemps -> epred) : mpred :=
-  let folder i PP :=
-    default_initialize (p ,, o_sub _ ty (Z.of_N i)) (fun free' => interp tu free' PP)
+    (u : bool) (default_initialize : ptr -> Mlocal ())
+    (tu : translation_unit) (ty : exprtype) (len : N) (p : ptr) : Mlocal () :=
+  let folder i :=
+    Mfree_all tu $ default_initialize (p ,, o_sub _ ty (Z.of_N i))
   in
-  foldr folder (p |-> type_ptrR (Tarray ty len) -* |={top}=>?u Q FreeTemps.id) (seqN 0 len).
+  letWP* _ := traverse folder (seqN 0 len) in
+  letWP* _ := Mproduce (p |-> type_ptrR (Tarray ty len)) in
+  letWP* _ := Mstable in mret ().
 
 mlock
 Definition default_initialize_array `{Σ : cpp_logic, σ : genv} :
