@@ -778,6 +778,19 @@ the record value to which the projection is applied.
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">of_projection</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">projection_info</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "decompose_proj".<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bedrock.ltac2.extra.internal.constr.html#Constr.Unsafe.Destruct"><span class="id" title="module">Destruct</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<span class="inlinecode"><span class="id" title="var">compare</span></span> is an unsafe comparison operator that is also used in
+        <span class="inlinecode"><span class="id" title="var">ConstrSet</span></span> and <span class="inlinecode"><span class="id" title="var">ConstrMap</span></span>. Use at your own peril. 
+</div>
+<div class="code">
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">compare</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">int</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.Constr" "compare".<br/>
+
+<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bedrock.ltac2.extra.internal.constr.html#Constr.Unsafe"><span class="id" title="module">Unsafe</span></a>.<br/>
 
 <br/>
