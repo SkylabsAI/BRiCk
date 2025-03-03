@@ -1,0 +1,2 @@
+set(PACKAGE_VERSION "17.0")
+

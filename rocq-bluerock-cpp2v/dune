@@ -62,6 +62,7 @@
    ;
    ../Makefile
    ../CMakeLists.txt
+   (source_tree ../cmake-helpers)
    (source_tree ../include)
    (source_tree ../llvm-include)
    (source_tree ../src)
