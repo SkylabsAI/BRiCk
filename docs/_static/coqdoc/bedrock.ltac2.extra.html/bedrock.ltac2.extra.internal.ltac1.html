@@ -34,7 +34,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 </div>
 <div class="code">
 <span class="id" title="keyword">Module</span> <a id="Ltac1" class="idref" href="#Ltac1"><span class="id" title="module">Ltac1</span></a>.<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Classes.Init.html#"><span class="id" title="module">Init</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Classes.Init.html#"><span class="id" title="module">Init</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Export</span> <span class="id" title="module">Ltac2.Ltac1</span>.<br/>
 
 <br/>
@@ -56,8 +56,8 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 &nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">to_bool</span> (<span class="id" title="var">v</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">bool</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">to_bool_constr</span> <span class="id" title="var">c</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lazy_match</span>! <span class="id" title="var">c</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  =&gt; <span class="id" title="var">Some</span> <span class="id" title="var">true</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> =&gt; <span class="id" title="var">Some</span> <span class="id" title="var">false</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  =&gt; <span class="id" title="var">Some</span> <span class="id" title="var">true</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> =&gt; <span class="id" title="var">Some</span> <span class="id" title="var">false</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span>     =&gt; <span class="id" title="var">None</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">in</span><br/>

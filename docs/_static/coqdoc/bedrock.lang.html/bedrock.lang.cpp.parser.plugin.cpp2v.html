@@ -43,8 +43,8 @@
 &nbsp;*&nbsp;This&nbsp;software&nbsp;is&nbsp;distributed&nbsp;under&nbsp;the&nbsp;terms&nbsp;of&nbsp;the&nbsp;BedRock&nbsp;Open-Source&nbsp;License.<br/>
 &nbsp;*&nbsp;See&nbsp;the&nbsp;LICENSE-BedRock&nbsp;file&nbsp;in&nbsp;the&nbsp;repository&nbsp;root&nbsp;for&nbsp;details.<br/>
 &nbsp;*)</span><br/>
-<span class="id" title="keyword">Require</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Array.PArray.html#"><span class="id" title="library">Stdlib.Array.PArray</span></a>.<br/>
-<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Numbers.Cyclic.Int63.PrimInt63.html#"><span class="id" title="library">Stdlib.Numbers.Cyclic.Int63.PrimInt63</span></a>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="library">Stdlib.Array.PArray</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Stdlib.Numbers.Cyclic.Int63.PrimInt63</span>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="bedrock.lang.cpp.parser.html#"><span class="id" title="library">bedrock.lang.cpp.parser</span></a>.<br/>
 
 <br/>
@@ -58,11 +58,11 @@
 
 <br/>
 <span class="comment">(*&nbsp;NOTE:&nbsp;This&nbsp;is&nbsp;a&nbsp;hack&nbsp;to&nbsp;get&nbsp;a&nbsp;universe&nbsp;instance&nbsp;*)</span><br/>
-<span class="id" title="keyword">Definition</span> <a id="empty_array" class="idref" href="#empty_array"><span class="id" title="definition">empty_array</span></a> := <span class="id" title="var">PArray.make</span> 0%<span class="id" title="var">uint63</span> <a class="idref" href="bedrock.lang.cpp.parser.html#translation_unit._skip"><span class="id" title="definition">parser.translation_unit._skip</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a id="empty_array" class="idref" href="#empty_array"><span class="id" title="definition">empty_array</span></a> := <span class="id" title="abbreviation">PArray.make</span> 0%<span class="id" title="var">uint63</span> <a class="idref" href="bedrock.lang.cpp.parser.html#translation_unit._skip"><span class="id" title="definition">parser.translation_unit._skip</span></a>.<br/>
 <span class="id" title="keyword">Register</span> <span class="id" title="var">empty_array</span> <span class="id" title="keyword">as</span> <span class="id" title="var">bedrock.lang.cpp.parser.translation_unit.empty_array</span>.<br/>
 
 <br/>
-<span class="id" title="keyword">Definition</span> <a id="result_type" class="idref" href="#result_type"><span class="id" title="definition">result_type</span></a> : <span class="id" title="keyword">Type</span> := <a class="idref" href="bedrock.lang.cpp.syntax.translation_unit.html#translation_unit"><span class="id" title="record">translation_unit</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">*</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.0+alpha/stdlib//Stdlib.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#name"><span class="id" title="abbreviation">name</span></a>.<br/>
+<span class="id" title="keyword">Definition</span> <a id="result_type" class="idref" href="#result_type"><span class="id" title="definition">result_type</span></a> : <span class="id" title="keyword">Type</span> := <a class="idref" href="bedrock.lang.cpp.syntax.translation_unit.html#translation_unit"><span class="id" title="record">translation_unit</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">*</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="bedrock.lang.cpp.syntax.core.html#name"><span class="id" title="abbreviation">name</span></a>.<br/>
 <span class="id" title="keyword">Register</span> <span class="id" title="var">result_type</span> <span class="id" title="keyword">as</span> <span class="id" title="var">bedrock.lang.cpp.parser.translation_unit.result_type</span>.<br/>
 
 <br/>
