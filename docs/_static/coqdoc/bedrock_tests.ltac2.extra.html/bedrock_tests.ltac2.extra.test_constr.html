@@ -108,6 +108,29 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Goal</span> <a id="DecomposeProj_Tests.Prim.Unnamed_thm0" class="idref" href="#DecomposeProj_Tests.Prim.Unnamed_thm0"><span class="id" title="definition">True</span></a>. <span class="id" title="var">test</span> '<a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#DecomposeProj_Tests.Prim.t2"><span class="id" title="abbreviation">t2</span></a>. <span class="id" title="keyword">Qed</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#DecomposeProj_Tests.Prim"><span class="id" title="module">Prim</span></a>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#DecomposeProj_Tests"><span class="id" title="module">DecomposeProj_Tests</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Module</span> <a id="Vars_Test" class="idref" href="#Vars_Test"><span class="id" title="module">Vars_Test</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">printf.Printf</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;#[<span class="id" title="var">projections</span>(<span class="id" title="var">primitive</span>)]<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Record</span> <a id="Vars_Test.ty" class="idref" href="#Vars_Test.ty"><span class="id" title="record">ty</span></a> (<a id="u:9" class="idref" href="#u:9"><span class="id" title="binder">u</span></a> : <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#unit"><span class="id" title="inductive">unit</span></a>) := <span class="id" title="var">R</span> { <a id="Vars_Test.f" class="idref" href="#Vars_Test.f"><span class="id" title="projection">f</span></a> : <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#unit"><span class="id" title="inductive">unit</span></a> }.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <a id="Vars_Test.test" class="idref" href="#Vars_Test.test"><span class="id" title="lemma">test</span></a> <a id="u:12" class="idref" href="#u:12"><span class="id" title="binder">u</span></a> (<a id="r:13" class="idref" href="#r:13"><span class="id" title="binder">r</span></a> : <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#Vars_Test.ty"><span class="id" title="record">ty</span></a> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#u:12"><span class="id" title="variable">u</span></a>) : @<a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#Vars_Test.f"><span class="id" title="projection">f</span></a> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#u:12"><span class="id" title="variable">u</span></a> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#r:13"><span class="id" title="variable">r</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#tt"><span class="id" title="constructor">tt</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.enter</span> (<span class="id" title="keyword">fun</span> () =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">g</span> := <span class="id" title="var">Control.goal</span> () <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">v</span> := <span class="id" title="var">Constr.Vars.vars_really_needed</span> <span class="id" title="var">g</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.assert_true</span> (<span class="id" title="var">FSet.mem</span> @<span class="id" title="var">u</span> <span class="id" title="var">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;).<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Abort</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="bedrock_tests.ltac2.extra.test_constr.html#Vars_Test"><span class="id" title="module">Vars_Test</span></a>.<br/>
 </div>
 </div>
 
