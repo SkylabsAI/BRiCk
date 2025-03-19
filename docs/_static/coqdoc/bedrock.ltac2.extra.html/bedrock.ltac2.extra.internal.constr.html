@@ -21,6 +21,7 @@
 <div class="code">
 
 <br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="library">Ltac2.Pstring</span>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="bedrock.ltac2.extra.internal.plugin.html#"><span class="id" title="library">bedrock.ltac2.extra.internal.plugin</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="bedrock.ltac2.extra.internal.init.html#"><span class="id" title="library">bedrock.ltac2.extra.internal.init</span></a>.<br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="bedrock.ltac2.extra.internal.misc.html#"><span class="id" title="library">bedrock.ltac2.extra.internal.misc</span></a>.<br/>
@@ -486,6 +487,16 @@ Primitive projection <span class="inlinecode"><span class="id" title="var">t</sp
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_array</span> (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) (<span class="id" title="var">cs</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">def</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Array</span> <span class="id" title="var">u</span> <span class="id" title="var">cs</span> <span class="id" title="var">def</span> <span class="id" title="var">t</span>).<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_string</span> (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Pstring.of_string</span> <span class="id" title="var">s</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">p</span> =&gt; <span class="id" title="var">make</span> (<span class="id" title="var">String</span> <span class="id" title="var">p</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> =&gt; <span class="id" title="var">Control.throw_invalid_argument</span> "Invalid primitive string: %s" <span class="id" title="var">s</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_pstring</span> (<span class="id" title="var">p</span> : <span class="id" title="var">pstring</span>) := <span class="id" title="var">make</span> (<span class="id" title="var">String</span> <span class="id" title="var">p</span>).<br/>
 
 <br/>
 </div>
