@@ -18,7 +18,7 @@
 (env
  (release
   (env-vars
-   (BUILD_TYPE Release)
+   (BUILD_TYPE Debug)
    (BUILD_ARGS "")))
  (_
   (env-vars
