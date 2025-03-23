@@ -5,25 +5,25 @@
  *)
 (** Definitions for the semantics
  *)
-Require Import bedrock.prelude.base.
-Require Import bedrock.upoly.base.
+Require Import bluerock.prelude.base.
+Require Import bluerock.upoly.base.
 
 Require Import stdpp.coPset.
 Require Import iris.bi.monpred.
-Require Import bedrock.lang.proofmode.proofmode.
+Require Import bluerock.iris.extra.proofmode.proofmode.
 Require Import iris.proofmode.classes.
 
-Require Import bedrock.lang.cpp.syntax.
-Require Import bedrock.lang.cpp.semantics.
-Require Import bedrock.lang.cpp.logic.pred.
-Require Import bedrock.lang.cpp.logic.heap_pred.
-Require Import bedrock.lang.cpp.logic.translation_unit.
-Require Import bedrock.lang.cpp.logic.free_temps.
-Require Import bedrock.lang.bi.errors.
+Require Import bluerock.lang.cpp.syntax.
+Require Import bluerock.lang.cpp.semantics.
+Require Import bluerock.lang.cpp.logic.pred.
+Require Import bluerock.lang.cpp.logic.heap_pred.
+Require Import bluerock.lang.cpp.logic.translation_unit.
+Require Import bluerock.lang.cpp.logic.free_temps.
+Require Import bluerock.iris.extra.bi.errors.
 
 #[local] Set Primitive Projections.
 
-Require bedrock.lang.bi.linearity.
+Require bluerock.iris.extra.bi.linearity.
 
 
 (*
@@ -110,7 +110,7 @@ Module sumT.
 End sumT.
 
 
-Require Import bedrock.prelude.telescopes.
+Require Import bluerock.prelude.telescopes.
 
 (* TODO: the names here probably need to be in a module *)
 Class WpMonad (PROP : bi) {F : BiFUpd PROP} (M : Type -> Type) : Type :=
@@ -776,6 +776,10 @@ Section with_temps.
                                                    ; _canon := _ |}) (k r.(_result)).(Compose._prun)) x.(Compose._prun)).
 
   #[global] Typeclasses Opaque M.
+  #[global] Declare Instance _WpMonad {_ : BiFUpd PROP} : WpMonad PROP M. (* TODO: implement *)
+
+  Definition from_M {T} (m : M.M PROP T) : M T :=
+    mk $ mret (M:=Result) <$> m.
 
   Definition push_free (f : FreeTemps.t) : M () :=
     Compose.mk $ mret {| _result := ()
@@ -864,6 +868,12 @@ Section Mglobal.
 
   #[global] Typeclasses Opaque M.
   #[global] Declare Instance _WpMonad : WpMonad PROP M.
+
+  Definition from_M {T} (m : M.M mpredI T) : M T :=
+    fmap (M:=M.M mpredI) Mglobal.Normal m.
+
+  Definition from_temps {T} (m : with_temps.M mpredI T) : M (FreeTemps.t * T) :=
+    fmap (M:=M.M mpredI) (fun x => Normal (x.(with_temps._free), x.(with_temps._result))) (with_temps.prun m).
 
   Definition eval : evaluation_order.t -> forall {T}, list (M T) -> M (list T) := @eval M _ _ demonic.
 
@@ -1001,6 +1011,7 @@ Section Mexpr.
   #[global] Declare Instance _WpMonad : WpMonad PROP M.
 
   Definition eval : evaluation_order.t -> forall {T}, list (M T) -> M (list T) := @eval M _ _ demonic.
+  Definition eval2 : evaluation_order.t -> forall {T U}, M T -> M U -> M (T * U) := @eval2 M _ _ demonic.
   Definition nd_seq : forall {T U}, M T -> M U -> M (T * U) := @nd_seq M _ _ demonic.
 
   Definition push_free (f : FreeTemps.t) : M () :=

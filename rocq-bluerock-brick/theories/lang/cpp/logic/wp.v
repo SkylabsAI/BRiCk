@@ -17,7 +17,7 @@ Require Import bluerock.lang.cpp.semantics.
 Require Import bluerock.lang.cpp.logic.pred.
 Require Import bluerock.lang.cpp.logic.heap_pred.
 Require Import bluerock.lang.cpp.logic.translation_unit.
-Require Import bluerock.lang.cpp.logic.monad.
+Require Export bluerock.lang.cpp.logic.monad.
 Require Export bluerock.lang.cpp.logic.free_temps.
 
 Require Import bluerock.iris.extra.bi.errors.
