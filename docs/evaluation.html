@@ -148,7 +148,6 @@ mlock Definition interp `{Σ : cpp_logic, σ : genv}
     : translation_unit -&gt; FreeTemps -&gt; epred -&gt; mpred :=
   fix interp tu free :=
   interp_body interp tu free.
-#[global] Arguments interp {_ _ _ _} _ free Q : assert.	(* set names *)
 </pre></div>
 </div>
 </div>
@@ -338,7 +337,6 @@ Definition wp_initialize_unqualified `{Σ : cpp_logic, σ : genv} :
     (cv : type_qualifiers) (ty : decltype)
     (addr : ptr) (init : Expr) (Q : FreeTemps -&gt; epred), mpred :=
   Cbn (Reduce (wp_initialize_unqualified_body fupd_compatible)).
-#[global] Arguments wp_initialize_unqualified {_ _ _ _} _ _ _ _ _ _ _%_I : assert.	(* mlock bug *)
 
 Definition wp_initialize `{Σ : cpp_logic, σ : genv} (tu : translation_unit) (ρ : region)
     (qty : decltype) (addr : ptr) (init : Expr) (Q : FreeTemps -&gt; epred) : mpred :=
