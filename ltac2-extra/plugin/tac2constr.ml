@@ -33,6 +33,22 @@ let evar_tag : _ Tac2core.map_tag =
     let valmap_eq = Util.Refl
   end)
 
+(* [evar_ctx] returns the context of an evar *)
+let _ =
+  define Tac2expr.{ mltac_plugin = "br.Constr"; mltac_tactic = "evar_context" } (evar @-> eret (list (triple ident (option constr) constr))) @@ fun e _ sigma ->
+    let (EvarInfo e) = Evd.find sigma e in
+    let ctx = Evd.evar_context e in
+    (* let vars = Context.Named.instance (fun x -> x) ctx in *)
+    (* Array.iter (fun v -> Feedback.msg_debug (Names.Id.print v)) vars; *)
+    let fn acc decl =
+      let open Context.Named.Declaration in
+      (get_id decl,
+       get_value decl,
+       get_type decl) :: acc
+    in
+    let r = Context.Named.fold_inside fn ~init:[] ctx in
+    r
+
 (* [compare] must be kept in sync with whatever is used in [ConstrSet] and [ConstrMap] *)
 let _ =
   define Tac2expr.{ mltac_plugin = "br.Constr"; mltac_tactic = "compare" } (valexpr @-> valexpr @-> eret int) @@ fun c1 c2 _ sigma ->
