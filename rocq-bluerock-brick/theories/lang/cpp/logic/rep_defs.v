@@ -133,14 +133,20 @@ Module TEST (U : UNIT).
     *)
     Abort.
 
-    Goal ∀ (R : Rep) (σ : genv) f p,
+    Fail Goal ∀ (R : Rep) (σ : genv) f p,
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+    Goal ∀ (R : Rep) (σ : genv) f (p : ptr),
       ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
     Proof.
       simpl.
 
     Abort.
 
-    Goal ∀ (R : Rep) (σ : genv) f p (m : gmap N _),
+    Fail Goal ∀ (R : Rep) (σ : genv) f p (m : gmap N _),
+      rev_lookup m p = None ->
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+
+    Goal ∀ (R : Rep) (σ : genv) f (p : ptr) (m : gmap N _),
       rev_lookup m p = None ->
       ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
     Proof.

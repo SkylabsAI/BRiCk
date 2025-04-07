@@ -38,24 +38,21 @@ Module Type PTRS_SYNTAX_INPUTS.
 End PTRS_SYNTAX_INPUTS.
 
 Module Type PTRS_SYNTAX_MIXIN (Import Inputs : PTRS_SYNTAX_INPUTS).
-  Class Dot (LHS Result : Type) := MkDot {
-    _dot : LHS -> offset -> Result
-  }.
-  #[global] Hint Opaque _dot : br_opacity typeclass_instances.
-  #[global] Arguments _dot : simpl never.
-  #[global] Arguments _dot {_ _ _} _ _ : assert.
-  #[global] Arguments _dot {_ _ DOT} _ _ : rename.
+  Structure DOT : Type :=
+    { #[canonical=yes] DOT_from : Type
+    ; #[canonical=yes] DOT_to :> Type
+    ; #[canonical=no] DOT_dot : DOT_from -> offset -> DOT_to }.
+  #[global] Arguments DOT_dot {DOT} _ _ : rename, simpl never.
+  Canonical Structure DOT_ptr_offset : DOT :=
+    {| DOT_from := ptr; DOT_to := ptr; DOT_dot p o := __offset_ptr p o |}.
+  Canonical Structure DOT_offset_offset : DOT :=
+    {| DOT_from := offset; DOT_to := offset; DOT_dot o1 o2 := __o_dot o1 o2 |}.
 
-  #[global] Instance ptr_dot : Dot ptr ptr :=
-    {| _dot := __offset_ptr |}.
-  #[global] Notation DOT_ptr_offset := ptr_dot (only parsing).
+  mlock Definition _dot := @DOT_dot.
+  #[global] Arguments _dot {DOT} _ _ : rename, simpl never.
 
-  #[global] Instance offset_dot : Dot offset offset :=
-    {| _dot := __o_dot |}.
-  #[global] Notation DOT_offset_offset := offset_dot (only parsing).
-
-  #[global] Notation _offset_ptr := (_dot (DOT := ptr_dot)) (only parsing).
-  #[global] Notation o_dot := (_dot (DOT := offset_dot)) (only parsing).
+  #[global] Notation _offset_ptr := (@_dot DOT_ptr_offset) (only parsing).
+  #[global] Notation o_dot := (@_dot DOT_offset_offset) (only parsing).
 
   #[global] Notation "p ,, o" := (_dot p o)
     (at level 11, left associativity, format "p  ,,  o") : stdpp_scope.
@@ -64,7 +61,8 @@ Module Type PTRS_SYNTAX_MIXIN (Import Inputs : PTRS_SYNTAX_INPUTS).
     Definition True_pred {A} (a : A) := True.
     Context (o1 o2 : offset).
 
-    Goal ∀ p, True_pred (p ,, o1 ,, o2).
+    Fail Goal ∀ p, True_pred (p ,, o1 ,, o2).
+    Goal ∀ (p : ptr), True_pred (p ,, o1 ,, o2).
       done.
     Abort.
   End with_offsets.
