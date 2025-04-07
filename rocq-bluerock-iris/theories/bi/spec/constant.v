@@ -26,7 +26,7 @@ Class Constant {A} {PROP : bi} (I : PROP) (P : A → PROP) : Prop := {
   #[global] constant_inv_knowledge :: Knowledge I;
   #[global] constant_exist :: Observe (Exists x, P x) I;
 
-  #[global] constant_unique x y :: Observe2 [| x = y |] (P x) (P y);
+  #[global] constant_unique :: Agree1 P;
   #[global] constant_knowledge x :: Knowledge (P x);
   #[global] constant_timeless x :: Timeless (P x);
 }.
