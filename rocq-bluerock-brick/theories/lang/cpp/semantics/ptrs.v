@@ -56,6 +56,16 @@ Module Type PTRS_SYNTAX_MIXIN (Import Inputs : PTRS_SYNTAX_INPUTS).
 
   #[global] Notation "p ,, o" := (_dot p o)
     (at level 11, left associativity, format "p  ,,  o") : stdpp_scope.
+
+  Section with_offsets.
+    Definition True_pred {A} (a : A) := True.
+    Context (o1 o2 : offset).
+
+    Fail Goal ∀ p, True_pred (p ,, o1 ,, o2).
+    Goal ∀ (p : ptr), True_pred (p ,, o1 ,, o2).
+      done.
+    Abort.
+  End with_offsets.
 End PTRS_SYNTAX_MIXIN.
 
 Module Type PTRS.

@@ -102,19 +102,56 @@ Module INTERNAL.
   Proof. by unfold_at. Qed.
 End INTERNAL.
 
-Section inference_test.
-Context `{Σ : cpp_logic}.
+Module Type UNIT.
+End UNIT.
 
-Goal ∀ (R : Rep), ⊢@{mpredI} Exists p, p |-> R.
-(**
-forall R : @Rep thread_info _Σ Σ,
-@bi_emp_valid (@mpredI thread_info _Σ)
-  (@bi_exist (AT_bi (@AT_Result _ _ _ (@ptrA thread_info _Σ Σ))) (@AT_LHS _ _ _ (@ptrA thread_info _Σ Σ))
-     (fun p : @AT_LHS _ _ _ (@ptrA thread_info _Σ Σ) => @__at.body thread_info _Σ Σ (@ptrA thread_info _Σ Σ) p R))
+Module TEST (U : UNIT).
 
-forall R : @Rep thread_info _Σ Σ,
-@bi_emp_valid (@mpredI thread_info _Σ)
-  (@bi_exist (@mpredI thread_info _Σ) ptr (fun p : ptr => @__at _ _ _ _ _ (@ptrA thread_info _Σ Σ) p R))
-*)
-Abort.
-End inference_test.
+  Definition rev_lookup `{Countable K} `{EqDecision V} (m : gmap K V) (v : V) : option K.
+  Admitted.
+
+  Section inference_test.
+    Context `{Σ : cpp_logic}.
+
+    Goal ∀ (R : Rep), ⊢@{mpredI} Exists p, p |-> R.
+    (**
+    forall R : @Rep thread_info _Σ Σ,
+    @bi_emp_valid (@mpredI thread_info _Σ)
+      (@bi_exist (AT_bi (@AT_Result _ _ _ (@ptrA thread_info _Σ Σ))) (@AT_LHS _ _ _ (@ptrA thread_info _Σ Σ))
+        (fun p : @AT_LHS _ _ _ (@ptrA thread_info _Σ Σ) => @__at.body thread_info _Σ Σ (@ptrA thread_info _Σ Σ) p R))
+
+    forall R : @Rep thread_info _Σ Σ,
+    @bi_emp_valid (@mpredI thread_info _Σ)
+      (@bi_exist (@mpredI thread_info _Σ) ptr (fun p : ptr => @__at _ _ _ _ _ (@ptrA thread_info _Σ Σ) p R))
+
+    Goal ∀ (R : Rep) (σ : genv) f, ⊢@{mpredI} Exists p, p ,, o_field _ f |-> R.
+    Goal ∀ (R : Rep) (σ : genv) f p,
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+    Proof.
+      simpl.
+
+    *)
+    Abort.
+
+    Fail Goal ∀ (R : Rep) (σ : genv) f p,
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+    Goal ∀ (R : Rep) (σ : genv) f (p : ptr),
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+    Proof.
+      simpl.
+
+    Abort.
+
+    Fail Goal ∀ (R : Rep) (σ : genv) f p (m : gmap N _),
+      rev_lookup m p = None ->
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+
+    Goal ∀ (R : Rep) (σ : genv) f (p : ptr) (m : gmap N _),
+      rev_lookup m p = None ->
+      ⊢@{mpredI} p ,, o_field _ f ,, o_field σ f |-> R.
+    Proof.
+      simpl.
+
+    Abort.
+  End inference_test.
+End TEST.
