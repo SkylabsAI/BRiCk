@@ -15,7 +15,7 @@ Require Import bluerock.lang.cpp.semantics.values.
 Require Import bluerock.lang.cpp.logic.mpred.
 
 Import ChargeNotation.
-Implicit Types (σ : genv) (p : ptr) (o : offset).
+Implicit Types (σ : genv).
 
 (** Representation predicates are implicitly indexed by a location, and should be used to
   * assert properties of the heap
@@ -60,12 +60,20 @@ mlock Definition offsetR_aux `{Σ : cpp_logic} (o : offset) (R : Rep) : Rep :=
 #[global] Instance: Params (@at_aux) 4 := {}.
 #[global] Instance: Params (@offsetR_aux) 4 := {}.
 
+Structure tagged_lhs := TagLHS { #[reversible=no] untag_lhs :> Type }.
+Definition offset_lhs_tag ty := TagLHS ty.
+Canonical ptr_lhs_tag ty := offset_lhs_tag ty.
+
+Structure tagged_res := TagRES { #[reversible=no] untag_res :> Type }.
+Definition offset_res_tag ty := TagRES ty.
+Canonical ptr_res_tag ty := offset_res_tag ty.
+
 (* points-to *)
 #[projections(primitive=yes)]
 Structure AT `{Σ : cpp_logic} : Type :=
-  { #[canonical=yes] AT_LHS :> Type
+  { #[canonical=yes] AT_LHS :> tagged_lhs
   (** ^^ We make [AT_LHS] a coercion *)
-  ; #[canonical=yes] AT_Result : Type
+  ; #[canonical=yes] AT_Result : tagged_res
   (* We hardcode [Rep] as second argument to improve error messages *)
   ; #[canonical=no] AT_at : AT_LHS -> Rep -> AT_Result }.
 #[global] Arguments AT_at {AT} _ _ _ : rename, simpl never.
@@ -77,9 +85,26 @@ mlock Definition __at := @AT_at.
 naming choice makes [ptrA] seem an alternative spelling of [ptr] (like [mpred]
 and [mpredI], and similarly for [offsetA]. *)
 Canonical Structure ptrA `{Σ : cpp_logic} : AT :=
-  {| AT_LHS := ptr; AT_Result := mpred; AT_at := at_aux |}.
+  {| AT_LHS := ptr_lhs_tag ptr; AT_Result := ptr_res_tag mpred; AT_at := at_aux |}.
 Canonical Structure offsetA `{Σ : cpp_logic} : AT :=
-  {| AT_LHS := offset; AT_Result := Rep; AT_at := offsetR_aux |}.
+  {| AT_LHS := offset_lhs_tag offset; AT_Result := offset_res_tag Rep; AT_at := offsetR_aux |}.
+
+Module DELETEME.
+  Section Tests.
+    Context `{cpp_logic}.
+    (* Make sure there are no implicit types. *)
+    Fail Example no_implicit_offset := fun o => o.
+    Fail Example no_implicit_offset := fun p => p.
+    Example ex1 := fun p R => __at p R |-- False.
+    Check ex1 : forall (p : ptr), _. (* make sure it's [ptr] by default. *)
+    Example ex2 := fun (p : ptr) R => __at p R |-- False.    (* explicit annotations work, of course. *)
+    Example ex3 := fun (o : offset) R => __at o R |-- False. (* explicit annotations work, of course. *)
+    Example ex4 := fun o R => __at o R |-@{Rep} False.       (* expected types also help pick the right instance *)
+    Check ex4 : forall (o : offset), _.
+    Example ex5 := fun o R => __at o R |-@{mpred} False.     (* expected types also help pick the right instance *)
+    Check ex5 : forall (o : ptr), _.
+  End Tests.
+End DELETEME.
 
 (** [_at base R] states that [R base] holds.
 
