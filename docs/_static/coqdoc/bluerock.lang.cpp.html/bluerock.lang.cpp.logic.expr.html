@@ -1449,7 +1449,7 @@ Gets the type used in an expression like `sizeof` and `alignof`
 
         The next few axioms rely on the evaluation order specified
         since C++17 (implemented in Clang &gt;= 4):
-        to evaluate <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.f"><span class="id" title="variable">f</span></a>(<span class="id" title="var">args</span>)</span>, <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.f"><span class="id" title="variable">f</span></a></span> is evaluated before <span class="inlinecode"><span class="id" title="var">args</span></span>.
+        to evaluate <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a>(<span class="id" title="var">args</span>)</span>, <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> is evaluated before <span class="inlinecode"><span class="id" title="var">args</span></span>.
 
 <div class="paragraph"> </div>
 
@@ -1460,7 +1460,7 @@ Gets the type used in an expression like `sizeof` and `alignof`
      
 <div class="paragraph"> </div>
 
- <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.logic.expr.html#Expr.wp_call"><span class="id" title="definition">wp_call</span></a></span> <span class="inlinecode"><span class="id" title="var">ooe</span></span> <span class="inlinecode"><span class="id" title="var">pfty</span></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><span class="id" title="var">es</span></span> <span class="inlinecode"><span class="id" title="var">Q</span></span> calls <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.f"><span class="id" title="variable">f</span></a></span> taking the arguments from the
+ <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.logic.expr.html#Expr.wp_call"><span class="id" title="definition">wp_call</span></a></span> <span class="inlinecode"><span class="id" title="var">ooe</span></span> <span class="inlinecode"><span class="id" title="var">pfty</span></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><span class="id" title="var">es</span></span> <span class="inlinecode"><span class="id" title="var">Q</span></span> calls <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> taking the arguments from the
         evaluations of <span class="inlinecode"><span class="id" title="var">es</span></span> and then acts like <span class="inlinecode"><span class="id" title="var">Q</span></span>.
         <span class="inlinecode"><span class="id" title="var">pfty</span></span> is the type that the call is being carried out using,
         i.e. the syntactic type of the function (it is a pointer type).
@@ -1844,7 +1844,7 @@ Pseudo destructors arise from calling the destructor on
 
 <div class="paragraph"> </div>
 
-        with <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.handler.html#lens.T"><span class="id" title="variable">T</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode"><span class="id" title="abbreviation">int</span></span>.
+        with <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.T"><span class="id" title="variable">T</span></a></span> <span class="inlinecode">=</span> <span class="inlinecode"><span class="id" title="abbreviation">int</span></span>.
 
 <div class="paragraph"> </div>
 
