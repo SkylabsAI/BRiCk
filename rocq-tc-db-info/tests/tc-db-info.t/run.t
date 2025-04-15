@@ -37,4 +37,10 @@
     unit' (modes {!}) in Hint Resolve [Exact] (exact Cu')
   Db: test
   Class: C
+  Transparent terms per depth:
+  Depth 1
+    _ (modes {!}) in Hint Resolve [Exact] (exact all_C)
+    unit' (modes {!}) in Hint Resolve [Exact] (exact Cu')
+  Db: test
+  Class: C
   No transparent terms found.

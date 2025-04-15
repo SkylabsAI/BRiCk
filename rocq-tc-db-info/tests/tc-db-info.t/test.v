@@ -28,6 +28,12 @@ HintDb Opacity Info test For C.
 Set HintDb Opacity Info Ignore Outputs.
 HintDb Opacity Info test For C.
 
+#[local] Instance all_C {A} (a : A) : C A a.
+Proof. Admitted.
+
+Hint Resolve all_C : test.
+
+HintDb Opacity Info test For C.
 
 Create HintDb opac discriminated.
 Hint Opaque unit' : opac.
