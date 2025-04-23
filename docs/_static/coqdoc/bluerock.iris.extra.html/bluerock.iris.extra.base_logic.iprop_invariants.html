@@ -103,13 +103,13 @@
 
 <br/>
 <span class="comment">(***&nbsp;Non-atomic&nbsp;invariants&nbsp;for&nbsp;iProp&nbsp;*)</span><br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
 <span class="comment">(*&nbsp;Copy&nbsp;from<br/>
 &nbsp;&nbsp;https://gitlab.mpi-sws.org/iris/iris/-/blob/90b6007faea2b61546aed01fe0ed9936b55468d1/iris/base_logic/lib/na_invariants.v&nbsp;*)</span><br/>
 <span class="id" title="keyword">Section</span> <a id="na_inv" class="idref" href="#na_inv"><span class="id" title="section">na_inv</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Import</span> <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.algebra.gset.html#"><span class="id" title="module">iris.algebra.gset</span></a> <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.algebra.coPset.html#"><span class="id" title="module">iris.algebra.coPset</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Context</span> `{!<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.fancy_updates.html#invGS"><span class="id" title="abbreviation">invGS</span></a> <span class="id" title="var">Σ</span>, !<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.na_invariants.html#na_invG"><span class="id" title="class">na_invG</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#0628ce849eb43988c0c2962e2467d294"><span class="id" title="variable">Σ</span></a>}.<br/>
 &nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="var">Existing</span> <span class="id" title="keyword">Instance</span> <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.na_invariants.html#na_inv_inG"><span class="id" title="definition">na_inv_inG</span></a>.<br/>
+&nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Implicit</span> <span class="id" title="keyword">Types</span> (<span class="id" title="var">P</span> : <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.iprop.html#iProp_solution.iProp"><span class="id" title="abbreviation">iProp</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#1c946abb325e196acaf8c7571357eb36"><span class="id" title="variable">Σ</span></a>).<br/>
@@ -134,16 +134,15 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iNext</span>. <span class="id" title="var">iLeft</span>. <span class="id" title="tactic">by</span> <span class="id" title="var">iFrame</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#na_inv"><span class="id" title="section">na_inv</span></a>.<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
 
 <br/>
 <span class="comment">(***&nbsp;Cancelable&nbsp;invariants&nbsp;for&nbsp;iProp&nbsp;*)</span><br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 <span class="comment">(*&nbsp;Copy&nbsp;from<br/>
 &nbsp;&nbsp;https://gitlab.mpi-sws.org/iris/iris/-/blob/7ccdfe0df5832b69742306302144b5358c9ed843/iris/base_logic/lib/cancelable_invariants.v&nbsp;*)</span><br/>
 <span class="id" title="keyword">Section</span> <a id="cinv" class="idref" href="#cinv"><span class="id" title="section">cinv</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Context</span> `{!<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.fancy_updates.html#invGS"><span class="id" title="abbreviation">invGS</span></a> <span class="id" title="var">Σ</span>, !<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.cancelable_invariants.html#cinvG"><span class="id" title="class">cinvG</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#f8cd4500ff4fee5cd966dfeb97ee3847"><span class="id" title="variable">Σ</span></a>}.<br/>
 &nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="var">Existing</span> <span class="id" title="keyword">Instance</span> <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.cancelable_invariants.html#cinv_inG"><span class="id" title="method">cinv_inG</span></a>.<br/>
+&nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Implicit</span> <span class="id" title="keyword">Types</span> (<span class="id" title="var">P</span> : <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.iprop.html#iProp_solution.iProp"><span class="id" title="abbreviation">iProp</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#f567529cd1f3d1252721bfbbcc8c59db"><span class="id" title="variable">Σ</span></a>).<br/>
@@ -222,9 +221,6 @@ The "open" variants create the invariant in the open state, and delay
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iIntros</span> "!&gt;". <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">with</span> <span class="id" title="var">iFrame</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.iprop_invariants.html#cinv"><span class="id" title="section">cinv</span></a>.<br/>
-
-<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 </div>
 <!--
 -- Copyright (c) 2020 BlueRock Security, Inc.

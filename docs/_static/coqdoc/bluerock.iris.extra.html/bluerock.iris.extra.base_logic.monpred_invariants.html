@@ -284,9 +284,6 @@
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#oinv"><span class="id" title="section">oinv</span></a>.<br/>
 
 <br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
-
-<br/>
 </div>
 
 <div class="doc">
@@ -314,6 +311,7 @@ Allocation rules for monPred that are tied specifically to iProp.
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Implicit</span> <span class="id" title="keyword">Types</span> (<span class="id" title="var">i</span> <span class="id" title="var">j</span> : <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#na_inv_alloc.K"><span class="id" title="variable">K</span></a>) (<span class="id" title="var">p</span> : <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.na_invariants.html#na_inv_pool_name"><span class="id" title="definition">na_inv_pool_name</span></a>) (<span class="id" title="var">P</span> <span class="id" title="var">Q</span> <span class="id" title="var">R</span> : <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#monPred"><span class="id" title="abbreviation">monPred</span></a>).<br/>
+&nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span> <a id="na_own_weakly_objective" class="idref" href="#na_own_weakly_objective"><span class="id" title="instance">na_own_weakly_objective</span></a> <a id="p:62" class="idref" href="#p:62"><span class="id" title="binder">p</span></a> <a id="E:63" class="idref" href="#E:63"><span class="id" title="binder">E</span></a> :<br/>
@@ -343,10 +341,6 @@ Allocation rules for monPred that are tied specifically to iProp.
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iNext</span>. <span class="id" title="var">iLeft</span>. <span class="id" title="tactic">by</span> <span class="id" title="var">iFrame</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#na_inv_alloc"><span class="id" title="section">na_inv_alloc</span></a>.<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
-
-<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 
 <br/>
 </div>
@@ -361,6 +355,7 @@ Cancelable invariants for monPred
 <span class="comment">(*&nbsp;Allocation&nbsp;rules&nbsp;for&nbsp;monPred&nbsp;that&nbsp;are&nbsp;tied&nbsp;specifically&nbsp;to&nbsp;iProp.&nbsp;*)</span><br/>
 <span class="id" title="keyword">Section</span> <a id="allocation" class="idref" href="#allocation"><span class="id" title="section">allocation</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Context</span> {<a id="allocation.K" class="idref" href="#allocation.K"><span class="id" title="variable">K</span></a> <a id="allocation.J" class="idref" href="#allocation.J"><span class="id" title="variable">J</span></a> : <a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.bi.monpred.html#biIndex"><span class="id" title="record">biIndex</span></a>} `{!<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.fancy_updates.html#invGS"><span class="id" title="abbreviation">invGS</span></a> <span class="id" title="var">Σ</span>, !<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.cancelable_invariants.html#cinvG"><span class="id" title="class">cinvG</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#0e0d57bbddb84fea16244eabbdac2294"><span class="id" title="variable">Σ</span></a>}.<br/>
+&nbsp;&nbsp;#[<span class="id" title="var">local</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Transparent</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Notation</span> <a id="monPred" class="idref" href="#monPred"><span class="id" title="abbreviation">monPred</span></a> := (<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.bi.monpred.html#monPred"><span class="id" title="record">monPred</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#allocation.K"><span class="id" title="variable">K</span></a> (<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.iprop.html#iProp_solution.iPropI"><span class="id" title="abbreviation">iPropI</span></a> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#133b19ab5e9ce4621f15d12d760e87a3"><span class="id" title="variable">Σ</span></a>)).<br/>
@@ -460,9 +455,6 @@ The "open" variants create the invariant in the open state, and delay
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iIntros</span> "!&gt;". <span class="id" title="tactic">eauto</span> <span class="id" title="keyword">with</span> <span class="id" title="var">iFrame</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#allocation"><span class="id" title="section">allocation</span></a>.<br/>
-
-<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
 </div>
 <!--
 -- Copyright (c) 2020 BlueRock Security, Inc.
