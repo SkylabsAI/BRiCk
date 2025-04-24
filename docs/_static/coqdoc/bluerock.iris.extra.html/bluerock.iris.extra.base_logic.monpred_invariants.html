@@ -39,7 +39,7 @@
 
 <div class="code">
 <span class="comment">(*<br/>
-&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2021-2022&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
+&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2021-2025&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
 &nbsp;*<br/>
 &nbsp;*&nbsp;This&nbsp;software&nbsp;is&nbsp;distributed&nbsp;under&nbsp;the&nbsp;terms&nbsp;of&nbsp;the&nbsp;BedRock&nbsp;Open-Source&nbsp;License.<br/>
 &nbsp;*&nbsp;See&nbsp;the&nbsp;LICENSE-BedRock&nbsp;file&nbsp;in&nbsp;the&nbsp;repository&nbsp;root&nbsp;for&nbsp;details.<br/>
@@ -158,6 +158,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iApply</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#own_inv_to_inv"><span class="id" title="lemma">own_inv_to_inv</span></a>. <span class="id" title="var">done</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#allocation"><span class="id" title="section">allocation</span></a>.<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#own_inv"><span class="id" title="definition">own_inv</span></a> : <span class="id" title="var">typeclass_instances</span> <span class="id" title="var">br_opacity</span>.<br/>
 
 <br/>
 <span class="comment">(*&nbsp;A&nbsp;proof&nbsp;that&nbsp;inv&nbsp;is&nbsp;objective&nbsp;if&nbsp;its&nbsp;content&nbsp;is&nbsp;objective.&nbsp;*)</span><br/>
@@ -284,6 +285,9 @@
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#oinv"><span class="id" title="section">oinv</span></a>.<br/>
 
 <br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#oinv"><span class="id" title="definition">oinv</span></a> : <span class="id" title="var">typeclass_instances</span> <span class="id" title="var">br_opacity</span>.<br/>
+
+<br/>
 </div>
 
 <div class="doc">
@@ -341,6 +345,9 @@ Allocation rules for monPred that are tied specifically to iProp.
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">iNext</span>. <span class="id" title="var">iLeft</span>. <span class="id" title="tactic">by</span> <span class="id" title="var">iFrame</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Qed</span>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.base_logic.monpred_invariants.html#na_inv_alloc"><span class="id" title="section">na_inv_alloc</span></a>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span> <a class="idref" href="bluerock.iris.extra.bi.na_invariants.html#na_own"><span class="id" title="definition">na_own</span></a> <a class="idref" href="bluerock.iris.extra.bi.na_invariants.html#na_inv"><span class="id" title="definition">na_inv</span></a> : <span class="id" title="var">typeclass_instances</span> <span class="id" title="var">br_opacity</span>.<br/>
 
 <br/>
 </div>

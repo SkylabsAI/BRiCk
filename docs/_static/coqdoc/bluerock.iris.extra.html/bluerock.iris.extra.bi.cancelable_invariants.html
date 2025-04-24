@@ -39,7 +39,7 @@
 
 <div class="code">
 <span class="comment">(*<br/>
-&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2020&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
+&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2020-2025&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
 &nbsp;*&nbsp;This&nbsp;software&nbsp;is&nbsp;distributed&nbsp;under&nbsp;the&nbsp;terms&nbsp;of&nbsp;the&nbsp;BedRock&nbsp;Open-Source&nbsp;License.<br/>
 &nbsp;*&nbsp;See&nbsp;the&nbsp;LICENSE-BedRock&nbsp;file&nbsp;in&nbsp;the&nbsp;repository&nbsp;root&nbsp;for&nbsp;details.<br/>
 &nbsp;*<br/>
@@ -97,6 +97,11 @@ Extraction of cancelable invariants that is general w.r.t HasOwn, and not
 <br/>
 <span class="id" title="keyword">Set</span> <span class="id" title="var">Default</span> <span class="id" title="keyword">Proof</span> <span class="id" title="var">Using</span> "Type".<br/>
 <span class="id" title="keyword">Set</span> <span class="id" title="var">Suggest</span> <span class="id" title="keyword">Proof</span> <span class="id" title="var">Using</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span><br/>
+&nbsp;&nbsp;<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.cancelable_invariants.html#cinv"><span class="id" title="definition">base_logic.lib.cancelable_invariants.cinv</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.cancelable_invariants.html#cinv_own"><span class="id" title="definition">base_logic.lib.cancelable_invariants.cinv_own</span></a> : <span class="id" title="var">br_opacity</span>.<br/>
 
 <br/>
 </div>
@@ -251,7 +256,7 @@ Duplicates from cancelable_invariants. This one is not tied to iProp.
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.iris.extra.bi.cancelable_invariants.html#proofs"><span class="id" title="section">proofs</span></a>.<br/>
 
 <br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">cinv_own</span> <span class="id" title="var">cinv</span>.<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span> <a class="idref" href="bluerock.iris.extra.bi.cancelable_invariants.html#cinv_own"><span class="id" title="definition">cinv_own</span></a> <a class="idref" href="bluerock.iris.extra.bi.cancelable_invariants.html#cinv"><span class="id" title="definition">cinv</span></a> : <span class="id" title="var">typeclass_instances</span> <span class="id" title="var">br_opacity</span>.<br/>
 </div>
 <!--
 -- Copyright (c) 2020 BlueRock Security, Inc.

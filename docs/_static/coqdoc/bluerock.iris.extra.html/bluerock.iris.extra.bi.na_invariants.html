@@ -39,7 +39,7 @@
 
 <div class="code">
 <span class="comment">(*<br/>
-&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2021&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
+&nbsp;*&nbsp;Copyright&nbsp;(c)&nbsp;2021-2025&nbsp;BlueRock&nbsp;Security,&nbsp;Inc.<br/>
 &nbsp;*&nbsp;This&nbsp;software&nbsp;is&nbsp;distributed&nbsp;under&nbsp;the&nbsp;terms&nbsp;of&nbsp;the&nbsp;BedRock&nbsp;Open-Source&nbsp;License.<br/>
 &nbsp;*&nbsp;See&nbsp;the&nbsp;LICENSE-BedRock&nbsp;file&nbsp;in&nbsp;the&nbsp;repository&nbsp;root&nbsp;for&nbsp;details.<br/>
 &nbsp;*<br/>
@@ -74,6 +74,11 @@
 <br/>
 <span class="id" title="keyword">Set</span> <span class="id" title="var">Default</span> <span class="id" title="keyword">Proof</span> <span class="id" title="var">Using</span> "Type".<br/>
 <span class="id" title="keyword">Set</span> <span class="id" title="var">Suggest</span> <span class="id" title="keyword">Proof</span> <span class="id" title="var">Using</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span><br/>
+&nbsp;&nbsp;<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.na_invariants.html#na_inv"><span class="id" title="definition">base_logic.lib.na_invariants.na_inv</span></a><br/>
+&nbsp;&nbsp;<a class="idref" href="https://plv.mpi-sws.org/coqdoc/iris//iris.base_logic.lib.na_invariants.html#na_own"><span class="id" title="definition">base_logic.lib.na_invariants.na_own</span></a> : <span class="id" title="var">br_opacity</span>.<br/>
 
 <br/>
 </div>
@@ -118,7 +123,9 @@ Extraction of non-atomic invariants that is general w.r.t HasOwn,
 
 <br/>
 <span class="id" title="keyword">Global Instance</span>: <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Classes.Morphisms.html#Params"><span class="id" title="class">Params</span></a> (@<a class="idref" href="bluerock.iris.extra.bi.na_invariants.html#na_inv"><span class="id" title="definition">na_inv</span></a>) 5 := {}.<br/>
-#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Typeclasses</span> <span class="id" title="keyword">Opaque</span> <span class="id" title="var">na_own</span> <span class="id" title="var">na_inv</span>.<br/>
+
+<br/>
+#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Hint</span> <span class="id" title="keyword">Opaque</span> <a class="idref" href="bluerock.iris.extra.bi.na_invariants.html#na_own"><span class="id" title="definition">na_own</span></a> <a class="idref" href="bluerock.iris.extra.bi.na_invariants.html#na_inv"><span class="id" title="definition">na_inv</span></a> : <span class="id" title="var">typeclass_instances</span> <span class="id" title="var">br_opacity</span>.<br/>
 
 <br/>
 <span class="comment">(*&nbsp;TODO:&nbsp;allocation&nbsp;rules&nbsp;are&nbsp;missing.&nbsp;These&nbsp;rely&nbsp;on&nbsp;the&nbsp;specific&nbsp;model&nbsp;of&nbsp;PROP,<br/>
