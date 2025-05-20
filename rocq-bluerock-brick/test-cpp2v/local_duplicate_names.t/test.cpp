@@ -1,8 +1,11 @@
 void test() {
   using T = int;
+  T x0;
   { using T = char;
-    { using T = bool; }
-    { using T = short; }
+    T x1;
+    { struct T {}; T x2; }
+    { struct T {}; T x3; }
   }
-  { using T = long long; }
+  { using T = long long; T x4; }
+  T x5;
 }
