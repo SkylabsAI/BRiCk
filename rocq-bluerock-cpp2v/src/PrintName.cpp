@@ -13,6 +13,7 @@
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/Mangle.h>
+#include <clang/AST/RecursiveASTVisitor.h>
 #include <clang/Basic/Version.inc>
 #include <clang/Frontend/CompilerInstance.h>
 #include <optional>
@@ -719,11 +720,46 @@ printAtomicName(const DeclContext& ctx, const Decl& decl, CoqPrinter& print,
 		return unsupported("ident for un-named term");
 	};
 
+	auto duplicate_index = [&](const NamedDecl& nd) -> unsigned {
+		if (auto dc = decl.getParentFunctionOrMethod()) {
+			auto body = dyn_cast<FunctionDecl>(dc)->getBody();
+			struct Finder : RecursiveASTVisitor<Finder> {
+				unsigned count{0};
+				int result{-1};
+				const NamedDecl* const target;
+				Finder(const NamedDecl* _target) : target(_target) {}
+				bool shouldVisitLambdaBody() const {
+					return false;
+				}
+				bool VisitDecl(Decl* d) {
+					if (d == target) {
+						result = count;
+						return false;
+					} else if (auto nd2 = dyn_cast<NamedDecl>(d)) {
+						if (target->getName() == nd2->getName())
+							++count;
+					}
+					return true;
+				}
+			} finder{&nd};
+			finder.TraverseStmt(body);
+			always_assert(finder.result >= 0);
+			return finder.result;
+		}
+		return 0;
+	};
+
 	auto ident_or_anon = [&](const std::optional<std::string> anon_error =
 								 std::nullopt) -> auto& {
 		if (auto nd = isNamed(decl)) {
 			guard::ctor _(print, "Nid", false);
-			return print.str(nd->getName());
+			if (auto n = duplicate_index(*nd)) {
+				auto t = nd->getNameAsString();
+				t += "'" + std::to_string(n - 1);
+				return print.str(t);
+			} else {
+				return print.str(nd->getName());
+			}
 		} else if (!anon_error) {
 			guard::ctor _(print, "Nanon", false);
 			return print.output() << getAnonymousIndex(ctx, decl, cprint);
