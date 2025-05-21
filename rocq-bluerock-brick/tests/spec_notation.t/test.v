@@ -72,7 +72,33 @@ Section with_cpp.
 
   Definition _8 : WPP :=
     \pre |==> True ** |={∅,⊤}=> False
-    \post[Vvoid] emp.
+    \post{} emp.
   Print _8.
+
+  (* This doesn't even work with [Fail]
+  Fail Definition _81 : WPP :=
+    \pre |==> True ** |={∅,⊤}=> False
+    \post{} [| True |].
+   *)
+
+  Definition _82 : WPP :=
+    \pre |==> True ** |={∅,⊤}=> False
+    \post{}[Vvoid] [| True |].
+  Print _82.
+
+  Definition _9 : WPP :=
+    \pre |==> True ** |={∅,⊤}=> False
+    \post{x : nat}[Vvoid] [| x = 3 |].
+  Print _9.
+
+  Definition _10 : WPP :=
+    \pre |==> True ** |={∅,⊤}=> False
+    \post{}[Vvoid] [| True |].
+  Print _10.
+
+  Definition _11 : WPP :=
+    (\pre |==> True ** |={∅,⊤}=> False
+    \post{}[Vvoid] [| True |]).
+  Print _11.
 
 End with_cpp.

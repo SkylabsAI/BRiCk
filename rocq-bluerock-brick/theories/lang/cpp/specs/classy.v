@@ -143,6 +143,13 @@ Notation "'\post' { x .. y } [ r ] post" :=
 Notation "'\post' { x .. y } [ r ] post" :=
   (start_post (post_with (fun x => .. (post_with (fun y => post_ret r post%I) _) ..) _)) (only printing).
 
+Notation "'\post' { } [ ] post" :=
+  (start_post (post_void post%I)) (only parsing).
+Notation "'\post' { } post" :=
+  (start_post (post_void post%I)) (only parsing).
+Notation "'\post' { x .. y } [ ] post" :=
+  (start_post (post_void (bi_exist (fun x => .. (bi_exist (fun y => post%I)) ..)))) (only parsing).
+
 Notation "'\post' [ r ] post" :=
   (start_post (post_ret r post%I)).
 
