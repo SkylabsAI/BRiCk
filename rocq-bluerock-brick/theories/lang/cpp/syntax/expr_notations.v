@@ -316,25 +316,40 @@ Module ExprNotations.
          , only printing).
 
   Notation "e . fld"
-      := (Emember e fld _ _)
+      := (Emember false e (@Nid _ fld) _ _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , fld constr
          , format "'[' e . fld ']'"
          , only printing).
+  Notation "e -> fld"
+      := (Emember true e (@Nid _ fld) _ _)
+         ( in custom CPP_expr at level 20
+         , e custom CPP_expr at level 200
+         , fld constr
+         , format "'[' e -> fld ']'"
+         , only printing).
+
 
   (* NOTE (JH): [Emember_call (inr ...) ...] doesn't seem to be used so we don't
      include a notation for it.
    *)
   Notation "e . fn ()"
-      := (Emember_call (inl (fn, _, _)) e nil _)
+      := (Emember_call false (inl (fn, _, _)) e nil _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , fn constr
          , format "'[' e . fn () ']'"
          , only printing).
+  Notation "e -> fn ()"
+      := (Emember_call true (inl (fn, _, _)) e nil _)
+         ( in custom CPP_expr at level 20
+         , e custom CPP_expr at level 200
+         , fn constr
+         , format "'[' e -> fn () ']'"
+         , only printing).
   Notation "e . fn ( a1 , .. , a2 )"
-      := (Emember_call (inl (fn, _, _)) e (cons a1 .. (cons a2 nil) ..) _)
+      := (Emember_call false (inl (fn, _, _)) e (cons a1 .. (cons a2 nil) ..) _)
          ( in custom CPP_expr at level 20
          , e custom CPP_expr at level 200
          , a1 custom CPP_expr at level 200
@@ -342,6 +357,16 @@ Module ExprNotations.
          , fn constr
          , format "'[' e . fn ( '[hv' a1 ,  '/' .. ,  '/' a2 ']' ) ']'"
          , only printing).
+  Notation "e -> fn ( a1 , .. , a2 )"
+      := (Emember_call true (inl (fn, _, _)) e (cons a1 .. (cons a2 nil) ..) _)
+         ( in custom CPP_expr at level 20
+         , e custom CPP_expr at level 200
+         , a1 custom CPP_expr at level 200
+         , a2 custom CPP_expr at level 200
+         , fn constr
+         , format "'[' e -> fn ( '[hv' a1 ,  '/' .. ,  '/' a2 ']' ) ']'"
+         , only printing).
+
 
   Notation "e [ n ]"
       := (Esubscript e n _)
