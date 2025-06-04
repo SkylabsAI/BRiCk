@@ -1,0 +1,40 @@
+Require Import bluerock.lang.cpp.parser.
+
+#[local] Open Scope pstring_scope.
+
+Require Import bluerock.lang.cpp.parser.plugin.cpp2v.
+cpp.prog module
+  abi Little
+  defns
+    (Dtypedef (Nglobal (Nid "__int128_t")) Tint128_t)
+    (Dtypedef (Nglobal (Nid "__uint128_t")) Tuint128_t)
+    (Dtypedef (Nglobal (Nid "__NSConstantString")) (Tnamed (Nglobal (Nid "__NSConstantString_tag"))))
+    (Dtypedef (Nglobal (Nid "__builtin_ms_va_list")) (Tptr Tchar))
+    (Dtypedef (Nglobal (Nid "__builtin_va_list")) (Tarray (Tnamed (Nglobal (Nid "__va_list_tag"))) 1))
+    (Dtypedef (Nglobal (Nid "Tr")) (Tref Tint))
+    (Dtypedef (Nglobal (Nid "Trr")) (Trv_ref Tint))
+    (Dtypedef (Nglobal (Nid "Tr_r")) (Tref Tint))
+    (Dtypedef (Nglobal (Nid "Tr_rr")) "Tr&&")
+    (Dtypedef (Nglobal (Nid "Trr_r")) "Trr&")
+    (Dtypedef (Nglobal (Nid "Trr_rr")) "Trr&&")
+    (Dtypedef (Nglobal (Nid "cTr")) "const Tr")
+    (Dtypedef (Nglobal (Nid "cTrr")) "const Trr")
+    (Dtypedef (Nglobal (Nid "cTr_r")) "const Tr&")
+    (Dtypedef (Nglobal (Nid "cTr_rr")) "const Tr&&")
+    (Dtypedef (Nglobal (Nid "cTrr_r")) "const Trr&")
+    (Dtypedef (Nglobal (Nid "cTrr_rr")) "const Trr&&").
+
+Require Import bluerock.lang.cpp.syntax.dealias.
+
+Notation TEST input output :=
+  (eq_refl : trace.runO (resolveN module input%cpp_name) = Some output%cpp_name).
+
+Succeed Example _1 := TEST "test(int)" "test(int)".
+Succeed Example _1 := TEST "test(Tr)" "test(int&)".
+Succeed Example _1 := TEST "test(Trr)" "test(int&&)".
+Succeed Example _1 := TEST "test(Tr&)" "test(int&)".
+Succeed Example _1 := TEST "test(Trr&)" "test(int&)".
+
+Succeed Example _1 := TEST "test(Tr_r)" "test(int&)".
+Succeed Example _1 := TEST "test(Tr_rr)" "test(int&)".
+Succeed Example _1 := TEST "test(Trr_r)" "test(int&)".
