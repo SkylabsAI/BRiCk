@@ -237,10 +237,67 @@
 
 <br/>
 <span class="id" title="keyword">Module</span> <a id="exception_spec" class="idref" href="#exception_spec"><span class="id" title="module">exception_spec</span></a>.<br/>
+</div>
+
+<div class="doc">
+  C++11 exception specifications for functions.
+
+<div class="paragraph"> </div>
+
+  This type is equivalent to <code>option(NoThrow | MayThrow)</code>, but flattened into a single
+  variant for performance. The <code>option</code> is necessary because information is not always
+  available, e.g. for templated functions with <code>noexcept</code> specifications depending on
+  template parameters.
+
+<div class="paragraph"> </div>
+
+  Functions marked as <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.decl.html#exception_spec.NoThrow"><span class="id" title="constructor">NoThrow</span></a></span> can throw exceptions internally, but those
+  exceptions are not propagated to callers in the usual way.
+<ul class="doclist">
+<li> Starting with C++17, throwing an exception from a <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.decl.html#exception_spec.NoThrow"><span class="id" title="constructor">NoThrow</span></a></span> function is
+    guaranteed to call <code>std::terminate</code> and terminate program execution.
+    And in this scenario, unwinding the stack and calling destructors is optional.
+
+</li>
+<li> Before C++17, the language also included dynamic exception specifications,
+    with more complex behavior
+    (see &lt;https://en.cppreference.com/w/cpp/language/except_spec.html&gt;).
+
+</li>
+</ul>
+
+<div class="paragraph"> </div>
+
+  Currently, BRiCK does <i>not</i> support exceptions, so semantics for
+  the different scenarios are not defined yet.
+
+<div class="paragraph"> </div>
+
+  For now, BRiCk only uses this to infer whether a <code>new()</code> operator overload signals
+  allocation failure by throwing exceptions (<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.decl.html#exception_spec.MayThrow"><span class="id" title="constructor">MayThrow</span></a></span> case), or returning
+  <code>nullptr</code> (<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.decl.html#exception_spec.NoThrow"><span class="id" title="constructor">NoThrow</span></a></span> case).
+  
+</div>
+<div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Variant</span> <a id="exception_spec.t" class="idref" href="#exception_spec.t"><span class="id" title="inductive">t</span></a> : <span class="id" title="keyword">Set</span> :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.Unknown" class="idref" href="#exception_spec.Unknown"><span class="id" title="constructor">Unknown</span></a> <span class="comment">(*&nbsp;Fused&nbsp;for&nbsp;performance&nbsp;*)</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.NoThrow" class="idref" href="#exception_spec.NoThrow"><span class="id" title="constructor">NoThrow</span></a><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.MayThrow" class="idref" href="#exception_spec.MayThrow"><span class="id" title="constructor">MayThrow</span></a>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.Unknown" class="idref" href="#exception_spec.Unknown"><span class="id" title="constructor">Unknown</span></a> </div>
+
+<div class="doc">
+Unknown exception spec. 
+</div>
+<div class="code">
+&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.NoThrow" class="idref" href="#exception_spec.NoThrow"><span class="id" title="constructor">NoThrow</span></a> </div>
+
+<div class="doc">
+Not supposed to throw exceptions 
+</div>
+<div class="code">
+&nbsp;&nbsp;&nbsp;&nbsp;| <a id="exception_spec.MayThrow" class="idref" href="#exception_spec.MayThrow"><span class="id" title="constructor">MayThrow</span></a> </div>
+
+<div class="doc">
+Allowed to throw exceptions. </div>
+<div class="code">
+.<br/>
 
 <br/>
 &nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span>: <a class="idref" href="https://plv.mpi-sws.org/coqdoc/stdpp//stdpp.base.html#SubsetEq"><span class="id" title="class">SubsetEq</span></a> <a class="idref" href="bluerock.lang.cpp.syntax.decl.html#exception_spec.t"><span class="id" title="inductive">t</span></a> :=<br/>
