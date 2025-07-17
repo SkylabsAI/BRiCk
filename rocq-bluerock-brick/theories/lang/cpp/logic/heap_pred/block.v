@@ -9,9 +9,6 @@ Require Import bluerock.lang.cpp.logic.heap_pred.null.
 Require Import bluerock.lang.cpp.logic.heap_pred.simple.
 Require Import bluerock.lang.cpp.logic.heap_pred.any.
 
-Import rep_defs.INTERNAL. (* for access to [unfold_at] *)
-
-
 #[local] Set Printing Coercions.
 Implicit Types (σ : genv) (p : ptr) (o : offset).
 
@@ -31,9 +28,42 @@ Section with_cpp.
   Definition blockR_eq : @blockR = _ := blockR_aux.(seal_eq).
   #[global] Arguments blockR {_} _%_N _%_cQp.
 
+  Search RepI.
+  #[local] Ltac unwrap_Rep :=
+    repeat match goal with
+      | |- context [ as_Rep ] => rewrite as_Rep.unlock
+      | |- context [ offsetR_aux ] => rewrite offsetR_aux.unlock
+      | |- _ => generalize dependent RepI.unlock;
+              generalize dependent (@RepI.body);
+              intros; subst => /=
+      end.
+
+
+
   #[global] Instance blockR_timeless sz q :
     Timeless (blockR sz q).
-  Proof. rewrite blockR_eq /blockR_def. unfold_at. apply _. Qed.
+  Proof. rewrite blockR_eq /blockR_def. unwrap_Rep.
+         Print MonPred.
+         Print offsetR_aux.unlock.
+         Print as_Rep.unlock.
+         Axiom todo : forall T, T.
+         Lemma at_offsetR :
+           @__at.body _ _ _ (@offsetA _ _ _) = @__at.body _ _ _ (@offsetA _ _ _).
+         Proof.
+           rewrite __at.unlock /offsetA offsetR_aux.unlock /= /AT_at as_Rep.unlock /=.
+             fun o => match eq_sym RepI.unlock in _ = X
+                         return X _ _ _ -> X _ _ _
+                   with
+                   | eq_refl => fun R => {| monPred_at p := monPred_at R (p ,, o)
+                                      ; monPred_mono := fun _ _ pf => match pf in _ = X return monPred_at R (_ ,, o) ≡ monPred_at R (X ,, o) with
+                                                                   | eq_refl => ltac:(reflexivity)
+                                                                   end |}
+                   end.
+         Proof.
+           simpl.
+           o |-> R
+         rewrite offsetR_aux.unlock.
+         unfold_at. apply _. Qed.
   #[global] Instance blockR_cfractional sz :
     CFractional (blockR sz).
   Proof. rewrite blockR_eq. apply _. Qed.

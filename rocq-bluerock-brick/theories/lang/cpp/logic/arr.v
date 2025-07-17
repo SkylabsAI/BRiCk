@@ -213,14 +213,15 @@ Section arrR.
     { rewrite arrR_cons. rewrite type_ptrR_svalidR svalidR_validR; refine _. }
   Qed.
 
+  #[local] Existing Instance Rep_bi_affine.
+
   Lemma arrR_append ty ys xs :
     arrR ty (xs ++ ys) -|- arrR ty xs ** .[ ty ! length xs ] |-> arrR ty ys.
   Proof.
     induction xs => /=.
     { apply: (observe_both (is_Some _)) => Hsz.
       rewrite arrR_nil /= _offsetR_sub_0 //.
-      iSplit; last iIntros "[_ $]". iIntros "X"; repeat iSplit => //.
-      Declare Instance Rep_affine : BiAffine RepI.
+      iSplit; last iIntros "[_ $]". iIntros "X"; repeat iSplit => //. iFrame "%".
       iApply (observe with "X"). }
     { by rewrite !arrR_cons IHxs !_offsetR_sep !_offsetR_succ_sub Nat2Z.inj_succ -!assoc. }
   Qed.
@@ -374,13 +375,13 @@ Section with_array_R.
         (Hlen : i < length xs) :
     Observe (.[ ty ! i ] |-> type_ptrR ty) (arrayR ty R xs).
   Proof.
-    apply: observe_intro_persistent.
     elim: xs i Hlen => [|x xs IHxs] [|i] /= Hlen; try lia;
-                        rewrite arrayR_cons.
+    rewrite arrayR_cons.
     { apply: (observe_lhs (is_Some (size_of resolve ty))) => Hsz.
-      rewrite _offsetR_sub_0 //. iDestruct 1 as "[$ _]". }
+      rewrite _offsetR_sub_0 //.
+      iDestruct 1 as "[#$ _]". }
     { rewrite (IHxs i); try lia.
-      rewrite _offsetR_succ_sub Nat2Z.inj_succ.
+      rewrite _offsetR_pers _offsetR_succ_sub Nat2Z.inj_succ.
       iDestruct 1 as "(_ & _ & $)". }
   Qed.
 
@@ -476,7 +477,8 @@ Section with_array_R.
     - rewrite -{3}(length_take_le xs i) // arrayR_app.
       f_equiv. rewrite length_take_le //.
     - rewrite take_ge ?drop_ge /=; [ |lia|lia].
-      by rewrite bi.sep_elim_l app_nil_r.
+      rewrite app_nil_r !arrayR_nil !_offsetR_sep !_offsetR_only_provable.
+      iDestruct 1 as "[$ _]".
   Qed.
 
   (** Compare [arrayR_cell], [array_idx_with_addr] *)
