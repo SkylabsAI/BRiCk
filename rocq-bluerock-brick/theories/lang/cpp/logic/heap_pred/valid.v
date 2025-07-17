@@ -35,12 +35,8 @@ Section with_cpp.
   #[global] Instance validR_affine : Affine validR.
   Proof. rewrite validR_eq; refine _. Qed.
 
-  Import rep_defs.INTERNAL.
-
-  Lemma monPred_at_validR p : validR p -|- valid_ptr p.
-  Proof. by rewrite validR_eq. Qed.
   Lemma _at_validR (p : ptr) : _at p validR -|- valid_ptr p.
-  Proof. by rewrite validR_eq _at_eq. Qed.
+  Proof. by rewrite validR_eq _at_as_Rep. Qed.
 
   #[global] Instance svalidR_persistent : Persistent svalidR.
   Proof. rewrite svalidR_eq; refine _. Qed.
@@ -49,10 +45,8 @@ Section with_cpp.
   #[global] Instance svalidR_affine : Affine svalidR.
   Proof. rewrite svalidR_eq; refine _. Qed.
 
-  Lemma monPred_at_svalidR p : svalidR p -|- strict_valid_ptr p.
-  Proof. by rewrite svalidR_eq. Qed.
   Lemma _at_svalidR (p : ptr) : _at p svalidR -|- strict_valid_ptr p.
-  Proof. by rewrite svalidR_eq _at_eq. Qed.
+  Proof. by rewrite svalidR_eq _at_as_Rep. Qed.
 
   #[global] Instance type_ptrR_persistent t : Persistent (type_ptrR t).
   Proof. rewrite type_ptrR_eq; refine _. Qed.
@@ -61,20 +55,20 @@ Section with_cpp.
   #[global] Instance type_ptrR_affine t : Affine (type_ptrR t).
   Proof. rewrite type_ptrR_eq; refine _. Qed.
 
-  Lemma monPred_at_type_ptrR ty p : type_ptrR ty p -|- type_ptr ty p.
-  Proof. by rewrite type_ptrR_eq. Qed.
   Lemma _at_type_ptrR (p : ptr) ty : _at p (type_ptrR ty) -|- type_ptr ty p.
-  Proof. by rewrite type_ptrR_eq _at_eq. Qed.
+  Proof. by rewrite type_ptrR_eq _at_as_Rep. Qed.
 
   Lemma svalidR_validR : svalidR |-- validR.
   Proof.
     rewrite validR_eq/validR_def svalidR_eq/svalidR_def.
-    constructor =>p /=. by apply strict_valid_valid.
+    apply Rep_entails_at=>?; rewrite !_at_as_Rep.
+    by apply strict_valid_valid.
   Qed.
   Lemma type_ptrR_svalidR ty : type_ptrR ty |-- svalidR.
   Proof.
     rewrite type_ptrR_eq/type_ptrR_def svalidR_eq/svalidR_def.
-    constructor =>p /=. by apply type_ptr_strict_valid.
+    apply Rep_entails_at=>?; rewrite !_at_as_Rep.
+    by apply type_ptr_strict_valid.
   Qed.
   Lemma type_ptrR_validR ty : type_ptrR ty |-- validR.
   Proof. by rewrite type_ptrR_svalidR svalidR_validR. Qed.
@@ -97,8 +91,8 @@ Section with_cpp.
   #[global] Instance type_ptrR_size_observe ty :
     Observe [| is_Some (size_of σ ty) |] (type_ptrR ty).
   Proof.
-    apply monPred_observe_only_provable => p.
-    rewrite monPred_at_type_ptrR. apply _.
+    apply observe_only_provable_at=>?.
+    rewrite _at_type_ptrR. apply _.
   Qed.
 
 End with_cpp.

@@ -41,7 +41,8 @@ Section with_cpp.
     Proper (flip N.divide ==> bi_entails) alignedR.
   Proof.
     intros m n ?.
-    rewrite alignedR.unlock. constructor=>p/=. iIntros "!%".
+    rewrite alignedR.unlock. apply Rep_entails_at=>p/=.
+    rewrite !_at_as_Rep. iIntros "!%".
     exact: aligned_ptr_divide_weaken.
   Qed.
 

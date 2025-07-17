@@ -43,7 +43,7 @@ Definition Rep_FUpd `{!cpp_logic thread_info Σ} : FUpd RepI :=
   end.
 
 mlock
-  Definition Rep_InternalEq `{!cpp_logic thread_info Σ} : InternalEq RepI :=
+Definition Rep_InternalEq `{!cpp_logic thread_info Σ} : InternalEq RepI :=
   match eq_sym RepI.unlock in _ = X return InternalEq (X _ _ _) with
   | eq_refl => _
   end.
@@ -962,4 +962,20 @@ Section with_cpp.
   End o_sub.
 End with_cpp.
 
-(* #[global] Typeclasses Opaque pureR as_Rep. *)
+(* Not an instance? *)
+Lemma Rep_bi_affine `{!cpp_logic thread_info Σ} : BiAffine RepI.
+Proof. rewrite RepI.unlock; apply _. Qed.
+
+(* This is used because we do not expose [BiAffine RepI] *)
+#[global]
+Instance Rep_emp_timeless `{!cpp_logic thread_info Σ} : Timeless (PROP:=RepI) emp.
+Proof.
+  #[local] Existing Instance Rep_bi_affine. refine _.
+(*  rewrite /Timeless. apply Rep_entails_at=>?.
+  rewrite __at.unlock/=/AT_at/= at_aux.unlock.
+  generalize dependent @RepI.unlock.
+  generalize dependent @RepI.body.
+  intros; subst; simpl.
+  rewrite monPred_at_except_0 monPred_at_later monPred_at_emp.
+  eapply bi.emp_timeless. *)
+Qed.

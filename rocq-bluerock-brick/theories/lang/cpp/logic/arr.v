@@ -45,14 +45,14 @@ Section simpl_never.
 End simpl_never.
 #[local] Hint Resolve size_of_array_1 : core.
 
-(** PDS: Misplaced *)
-Section offsetR.
-  Context `{Σ : cpp_logic}.
+(* (** PDS: Misplaced *) *)
+(* Section offsetR. *)
+(*   Context `{Σ : cpp_logic}. *)
 
-  Lemma monPred_at_offsetR offs (R : Rep) (p : ptr) :
-    (_offsetR offs R) p -|- R (p ,, offs).
-  Proof. by rewrite INTERNAL._offsetR_eq. Qed.
-End offsetR.
+(*   Lemma monPred_at_offsetR offs (R : Rep) (p : ptr) : *)
+(*     (_offsetR offs R) p -|- R (p ,, offs). *)
+(*   Proof. by rewrite INTERNAL._offsetR_eq. Qed. *)
+(* End offsetR. *)
 
 Implicit Types (p : ptr) (σ : genv).
 
@@ -156,6 +156,11 @@ Section arrR.
   Proof.
     rewrite TCForall_Forall Forall_forall=>HR. rewrite arrR_eq /arrR_def.
     apply: bi.sep_affine.
+    apply: bi.sep_affine.
+    apply big_sepL_affine; intros.
+    apply: _offsetR_affine.
+    apply: bi.sep_affine.
+    apply HR. by eapply elem_of_list_lookup_2.
   Qed.
 
   #[global] Instance arrR_size_of_observe {ty ys} : Observe [| is_Some (size_of σ ty) |] (arrR ty ys).
@@ -215,6 +220,7 @@ Section arrR.
     { apply: (observe_both (is_Some _)) => Hsz.
       rewrite arrR_nil /= _offsetR_sub_0 //.
       iSplit; last iIntros "[_ $]". iIntros "X"; repeat iSplit => //.
+      Declare Instance Rep_affine : BiAffine RepI.
       iApply (observe with "X"). }
     { by rewrite !arrR_cons IHxs !_offsetR_sep !_offsetR_succ_sub Nat2Z.inj_succ -!assoc. }
   Qed.

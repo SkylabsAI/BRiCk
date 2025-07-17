@@ -30,46 +30,47 @@ Section with_cpp.
     Theorem leastR_fold (F : (A -> Rep) -> (A -> Rep)) {RMP : RepMonoPred F} a :
       F (leastR F) a |-- leastR F a.
     Proof.
-      rewrite /leastR/=. constructor=>p.
-      rewrite monPred_at_forall.
+      rewrite /leastR/=.
+      apply Rep_entails_at=>p.
+      rewrite _at_forall.
       iIntros "H" (fx).
-      rewrite monPred_at_wand.
-      iIntros (? ?) "Hi".
-      rewrite monPred_at_intuitionistically {2}/pureR /as_Rep/=.
+      rewrite _at_wand.
+      iIntros "#Hi".
+      rewrite _at_intuitionistically {2}/pureR.
+      rewrite !_at_forall.
       iDestruct "Hi" as "#Hi".
-      simpl.
-      iDestruct ("Hi" $! a j) as "Hj".
-      rewrite !INTERNAL._at_eq. iApply "Hj"; iClear "Hj".
-      inversion H; clear H; subst.
+      setoid_rewrite _at_as_Rep.
+      iApply "Hi".
       iDestruct (rep_mono_pred _ fx with "[#]") as "X".
       2:{
-        iSpecialize ("X" $! a j).
-        rewrite !INTERNAL._at_eq.
-        iApply "X".
-        unshelve instantiate (1:=OfeMor (λ x : A, Forall Φ : A -n> Rep, □ (Forall x0 : A, pureR (Forall p : ptr, p |-> F Φ x0 -* p |-> Φ x0)) -* Φ x)); first solve_proper.
-        iApply "H". }
+        iApply ("X" $! _ p).
+        unshelve instantiate (1:=OfeMor (λ x : A, Forall Φ : A -n> Rep, □ (Forall x0 : A, pureR (Forall p : ptr, p |-> F Φ x0 -* p |-> Φ x0)) -* Φ x)); last iApply "H".
+        solve_proper.
+      }
       { iIntros "!>" (??). (* iSpecialize ("Hi" $! x p). *)
-        rewrite !INTERNAL._at_eq /=.
+        rewrite /=.
         iIntros "X".
-        rewrite monPred_at_forall.
+        rewrite _at_forall.
         iSpecialize ("X" $! fx).
-        rewrite monPred_at_wand.
-        iSpecialize ("X" $! p eq_refl).
+        rewrite _at_wand.
         iApply "X".
-        rewrite monPred_at_intuitionistically.
+        rewrite _at_intuitionistically.
         iModIntro.
-        rewrite monPred_at_forall. eauto. }
+        rewrite _at_forall.
+        iIntros (?); rewrite _at_pureR. iIntros (?). iApply "Hi".
+      }
     Qed.
 
     Theorem leastR_unfold (F : (A -> Rep) -> (A -> Rep)) {RMP : RepMonoPred F} a :
       leastR F a |-- F (leastR F) a.
     Proof.
-      rewrite /leastR. constructor=>p.
+      rewrite /leastR. apply Rep_entails_at=>p.
       iIntros "X".
       unshelve iApply ("X" $! (OfeMor (F (leastR F)))).
       { eapply rep_mono_pred_ne; solve_proper. }
-      rewrite /pureR/as_Rep/=.
+      rewrite _at_intuitionistically.
       iIntros "!>" (??).
+      rewrite _at_pureR.
       iApply (rep_mono_pred (F (leastR F)) (leastR F) with "[#]").
       { eapply rep_mono_pred_ne; solve_proper. }
       iIntros "!>" (??). rewrite leastR_fold. eauto.
@@ -99,10 +100,9 @@ Section with_cpp.
       iIntros "#HP H".
       rewrite /leastR _at_forall.
       unshelve iSpecialize ("H" $! (OfeMor (fun x => as_Rep (fun p => P p x)))); simpl.
-      { rewrite /as_Rep/=. intro.
+      { intro.
         red; intros. red; intros. simpl.
-        constructor. intros.
-        simpl. apply H. auto. }
+        apply as_Rep_ne=>?. apply H. apply H0. }
       rewrite !_at_wand !_at_intuitionistically !_at_forall.
       rewrite _at_as_Rep.
       iApply "H".
@@ -110,23 +110,32 @@ Section with_cpp.
       iIntros (?). rewrite _at_as_Rep; iApply "HP".
     Qed.
 
-    Lemma leastR_indR (F : (A -> Rep) -> (A -> Rep)) (P : A -> Rep) {_ : NonExpansive P} x :
+    Lemma leastR_indR (F : (A -> Rep) -> (A -> Rep)) (P : A -> Rep) {_ : NonExpansive P}
+      (_ : Proper (pointwise_relation _ (⊢) ==> pointwise_relation _ (⊢)) F) x :
           □ (pureR $ Forall (p : ptr) (y : A), p |-> F P y -* p |-> P y)
       |-- leastR F x -* P x.
     Proof.
-      constructor=>p.
-      rewrite -!INTERNAL._at_eq.
-      rewrite _at_intuitionistically. setoid_rewrite _at_wand.
+      apply Rep_entails_at=>p.
+      rewrite _at_intuitionistically _at_pureR.
       iIntros "#HP".
-      rewrite (INTERNAL._at_eq p (P x)).
-      iApply (leastR_ind _ (fun p x => P x p)).
-      rewrite _at_pureR.
-      iModIntro; iIntros (??).
+      rewrite _at_wand.
+      unshelve iApply (leastR_ind _ (fun p x => _at p (P x))).
+      { simpl. intros ???? HH.
+        apply _at_ne. apply H. assumption. }
+      iIntros "!>" (??).
       iIntros "X".
-      rewrite -INTERNAL._at_eq. iApply "HP".
-      rewrite /as_Rep/=.
-      (* this should be provable *)
-    Abort.
+      iApply "HP".
+      iClear "HP".
+      iStopProof.
+      f_equiv. apply H0.
+      intro.
+      rewrite __at.unlock/AT_at /=.
+      rewrite as_Rep.unlock @at_aux.unlock.
+      generalize dependent RepI.unlock.
+      unfold Rep in *.
+      generalize dependent @RepI; intros; subst; simpl.
+      done.
+    Qed.
 
     #[global] Instance leastR_timeless F :
       (forall fx, Timeless1 fx -> Timeless1 (F fx)) ->

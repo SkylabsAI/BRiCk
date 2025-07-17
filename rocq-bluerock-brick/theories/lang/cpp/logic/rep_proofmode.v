@@ -356,7 +356,7 @@ Section _offsetR_instances.
   Proof. intros. rewrite /IntoOr. by rewrite (into_or R) _offsetR_or. Qed.
 
   Lemma test_after o R1 R2 : o |-> (R1 \\// R2) |-- (o |-> R1 \\// o |-> R2).
-  Proof. by iIntros "[$|$]". Abort.
+  Proof. iIntros "[?|?]"; [ iLeft | iRight ]; iFrame. Abort. (* the previous proof relied on [BiAffine RepI] *)
 
   (** Feed the [iSplitL], [iSplitR], [iCombine] tactics. *)
   Lemma test_before o R1 R2 : o |-> R1 |-- o |-> R2 -* o |-> (R1 ** R2).

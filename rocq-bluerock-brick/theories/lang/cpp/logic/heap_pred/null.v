@@ -33,11 +33,11 @@ Section with_cpp.
   Proof. by rewrite nonnullR.unlock _at_as_Rep. Qed.
 
   #[global] Instance nonnullR_persistent : Persistent nonnullR.
-  Proof. rewrite unlock. apply _. Qed.
+  Proof. rewrite nonnullR.unlock. apply _. Qed.
   #[global] Instance nonnullR_affine : Affine nonnullR.
-  Proof. rewrite unlock. apply _. Qed.
+  Proof. rewrite nonnullR.unlock. apply _. Qed.
   #[global] Instance nonnullR_timeless : Timeless nonnullR.
-  Proof. rewrite unlock. apply _. Qed.
+  Proof. rewrite nonnullR.unlock. apply _. Qed.
 
   #[global] Instance type_ptrR_observe_nonnull ty :
     Observe nonnullR (type_ptrR ty).
@@ -49,14 +49,14 @@ Section with_cpp.
   Lemma null_nonnull (R : Rep) : nullR |-- nonnullR -* R.
   Proof.
     rewrite nullR.unlock nonnullR.unlock.
-    constructor=>p /=. rewrite monPred_at_wand/=.
-    by iIntros "->" (? <-%ptr_rel_elim) "%".
+    apply Rep_entails_at=>p /=. rewrite _at_wand/= !_at_as_Rep.
+    iIntros "% %"; exfalso; congruence.
   Qed.
 
   Lemma null_validR : nullR |-- validR.
   Proof.
     rewrite nullR.unlock validR_eq /validR_def.
-    constructor => p /=. iIntros "->". iApply valid_ptr_nullptr.
+    apply Rep_entails_at => p /=; rewrite !_at_as_Rep. iIntros "->". iApply valid_ptr_nullptr.
   Qed.
 
   #[global]

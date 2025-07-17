@@ -12,7 +12,7 @@ Require Export bluerock.lang.cpp.bi.cfractional.
 Require Export bluerock.lang.cpp.semantics.
 Require Export bluerock.lang.cpp.syntax.
 Require Export bluerock.lang.cpp.logic.pred.
-Require Export bluerock.lang.cpp.logic.pred.
+Require Export bluerock.lang.cpp.logic.rep_proofmode.
 Require Export bluerock.lang.cpp.logic.path_pred.
 
 Export bluerock.lang.cpp.logic.pred.
