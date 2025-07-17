@@ -31,17 +31,28 @@ Proof. by move=>i i'. Qed.
 Lemma ptr_rel_elim (p1 p2 : ptr) : p1 ⊑ p2 → p1 = p2.
 Proof. done. Qed.
 
-Canonical Structure RepI `{!cpp_logic thread_info Σ} :=
+mlock
+Definition RepI `{!cpp_logic thread_info Σ} :=
   monPredI ptr_bi_index (@mpredI thread_info Σ).
 Definition Rep `{Σ : cpp_logic} : Type := RepI.
 Definition RepO `{Σ : cpp_logic} : ofe := RepI.
 
 #[global] Bind Scope bi_scope with Rep.
 
+mlock Definition at_aux `{Σ : cpp_logic} (p : ptr) : Rep -> mpred :=
+  match eq_sym RepI.unlock in _ = X return bi_car (X _ _ Σ) -> mpred with
+  | eq_refl => fun R => R.(monPred_at) p
+  end.
+
+mlock
+Definition as_Rep `{Σ : cpp_logic} (P : ptr -> mpred) : Rep :=
+  match eq_sym RepI.unlock in _ = X return bi_car (X _ _ Σ) with
+  | eq_refl => MonPred P _
+  end.
+
+
 Section defs.
   Context `{Σ : cpp_logic}.
-
-  Definition as_Rep (P : ptr -> mpred) : Rep := MonPred P _.
 
   (* todo(gmm): make opaque *)
   Definition pureR (P : mpred) : Rep :=
@@ -50,11 +61,8 @@ End defs.
 #[global] Instance: Params (@as_Rep) 3 := {}.
 #[global] Instance: Params (@pureR) 3 := {}.
 
-mlock Definition at_aux `{Σ : cpp_logic} (p : ptr) (R : Rep) : mpred :=
-  R.(monPred_at) p.
-
 mlock Definition offsetR_aux `{Σ : cpp_logic} (o : offset) (R : Rep) : Rep :=
-  as_Rep (fun base => R.(monPred_at) (base ,, o)).
+  as_Rep (fun base => at_aux (base ,, o) R).
 
 (* TODO replace by the right instances. *)
 #[global] Instance: Params (@at_aux) 4 := {}.
@@ -97,6 +105,7 @@ where they are partially applied.
 #[global] Notation "p |-> r" := (__at p r)
   (at level 15, r at level 20, right associativity) : stdpp_scope.
 
+(*
 Module INTERNAL.
   Ltac unfold_at := rewrite __at.unlock /AT_at/(AT_at _ _ _ _)/= 1?at_aux.unlock 1?offsetR_aux.unlock.
   Lemma _at_eq `{Σ : cpp_logic} p R : p |-> R = R.(monPred_at) p.
@@ -105,3 +114,4 @@ Module INTERNAL.
     as_Rep (fun p => R.(monPred_at) (p ,, o)).
   Proof. by unfold_at. Qed.
 End INTERNAL.
+*)
