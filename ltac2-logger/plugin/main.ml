@@ -80,7 +80,7 @@ let unit_valexpr : Tac2val.valexpr = Tac2ffi.of_unit ()
 
 (* Log event recording *)
 
-let fmt = Tac2ffi.repr_ext Tac2print.val_format
+let fmt = Tac2extffi.format
 
 let _ =
   define "log" (Flags.repr @-> int @-> fmt @-> tac valexpr) @@ fun flag level fn ->
