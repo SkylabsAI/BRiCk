@@ -188,7 +188,8 @@ Module Control.
 
     (** [rename old new] renames [old] to [new], shadowing any preexisting
         binding for [new]. *)
-    Ltac2 rename old new := let _ := rename1 old new in ().
+    Ltac2 rename_ old new := let _ := rename1 old new in ().
+    Ltac2 rename := rename_.
 
     (** [rename_many ren] renames all pairs [(old,new)] in the list [ren].
         It takes care to update [old] idents in [rens] whenever a renaming
@@ -196,7 +197,7 @@ Module Control.
     Ltac2 rename_many (rens : (ident * ident) list) : unit :=
       match rens with
       | [] => ()
-      | [(old, new)] => rename old new
+      | [(old, new)] => rename_ old new
       | rens =>
           let rec go rens :=
             match rens with
