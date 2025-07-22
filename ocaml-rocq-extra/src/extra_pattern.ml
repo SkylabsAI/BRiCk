@@ -75,7 +75,7 @@ let map_w_binders : ('a -> int -> 'a) -> ('a -> t -> t) -> 'a -> t -> 'b =
       let p1 = f n p1 in
       let p2 = f n p2 in
       PArray(ps, p1, p2)
-  | PUninstantiated(_) -> .
+  | PExtra(e) -> Util.Empty.abort e
 
 let fold_with_binders : type a b. (a -> int -> a) -> (a -> b -> t -> b) -> a -> b -> t -> b =
   fun g f n acc p ->
@@ -139,7 +139,7 @@ let fold_with_binders : type a b. (a -> int -> a) -> (a -> b -> t -> b) -> a -> 
       let acc = f n acc p1 in
       let acc = f n acc p2 in
       acc
-  | PUninstantiated(_) -> .
+  | PExtra(e) -> Util.Empty.abort e
 
 let rec subst : offset:int -> t -> t array -> t = fun ~offset p args ->
   let fun_subst offset p = subst ~offset p args in
