@@ -24,7 +24,6 @@ Require Export bluerock.ltac2.extra.internal.list.
 Require Export bluerock.ltac2.extra.internal.ltac1.
 Require Export bluerock.ltac2.extra.internal.misc.
 Require Export bluerock.ltac2.extra.internal.obj.
-Require Export bluerock.ltac2.extra.internal.oneshot.
 Require Export bluerock.ltac2.extra.internal.option.
 Require Export bluerock.ltac2.extra.internal.printf.
 Require Export bluerock.ltac2.extra.internal.std.
