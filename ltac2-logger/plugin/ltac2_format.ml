@@ -24,10 +24,10 @@ let msg_repr = Tac2ffi.repr_ext msg_tag
 
 let unit_valexpr : Tac2val.valexpr = Tac2ffi.of_unit ()
 
-let build_msg : Environ.env -> Evd.evar_map -> Tac2print.format list ->
+let build_msg : Environ.env -> Evd.evar_map -> Tac2types.format list ->
     Tac2val.valexpr list -> msg = fun env sigma fs args ->
   let rec build acc fs args =
-    let open Tac2print in
+    let open Tac2types in
     let _String s = String(Tac2ffi.to_string s) in
     let _Int i = Int(Tac2ffi.to_int i) in
     let _Constr c = Constr(env, sigma, Tac2ffi.to_constr c) in
@@ -42,7 +42,21 @@ let build_msg : Environ.env -> Evd.evar_map -> Tac2print.format list ->
         in
         let name = Names.Id.of_string "XXX" in
         let (_, pv) = Proofview.init sigma [] in
-        let (r, _, _, _) = Proofview.apply ~name ~poly:false env tac pv in
+        let (r,_, _, _, _) = Proofview.apply ~name ~poly:false env tac pv in
+        r
+      in
+      Thunk(thunk)
+    in
+    let _Thunk0 f x =
+      let thunk () =
+        let tac =
+          let open Proofview.Notations in
+          Tac2val.apply (Tac2ffi.to_closure f) [x] >>= fun m ->
+          Proofview.tclUNIT (_Msg m)
+        in
+        let name = Names.Id.of_string "XXX" in
+        let (_, pv) = Proofview.init sigma [] in
+        let (r,_, _, _, _) = Proofview.apply ~name ~poly:false env tac pv in
         r
       in
       Thunk(thunk)
@@ -62,6 +76,10 @@ let build_msg : Environ.env -> Evd.evar_map -> Tac2print.format list ->
         build (_Ident i   :: acc) fs args
     | (FmtAlpha      :: fs, f :: x :: args) ->
         build (_Thunk f x :: acc) fs args
+    | (FmtAlpha0     :: fs, f :: x :: args) ->
+        build (_Thunk0 f x :: acc) fs args
+    | (FmtMessage    :: fs, m      :: args) ->
+        build (_Msg m :: acc) fs args
     | (_                  , _             ) -> assert false
   in
   build [] fs args
@@ -85,26 +103,28 @@ let with_env_and_sigma tac =
          that produce several goals, so we forbid this. *)
       assert false (* FIXME better error. *)
 
-let build_msg : Tac2print.format list -> Tac2val.valexpr list ->
+let build_msg : Tac2types.format list -> Tac2val.valexpr list ->
     msg Proofview.tactic = fun fs args ->
   with_env_and_sigma (fun env sigma -> build_msg env sigma fs args)
 
-let arity : Tac2print.format list -> int =
-  let open Tac2print in
+let arity : Tac2types.format list -> int =
+  let open Tac2types in
   let fn acc tag =
     match tag with
     | FmtLiteral(_) -> acc
     | FmtString
     | FmtInt
     | FmtConstr
+    | FmtMessage
     | FmtIdent      -> acc + 1
     | FmtAlpha      -> acc + 2
+    | FmtAlpha0     -> acc + 2
   in
   List.fold_left fn 0
 
 let ret_unit = Proofview.tclUNIT (Tac2ffi.of_unit ())
 
-let eval : enabled:bool -> (msg -> unit) -> Tac2print.format list ->
+let eval : enabled:bool -> (msg -> unit) -> Tac2types.format list ->
     Tac2val.valexpr Proofview.tactic = fun ~enabled print fs ->
   let open Proofview.Notations in
   let eval =
@@ -117,7 +137,7 @@ let eval : enabled:bool -> (msg -> unit) -> Tac2print.format list ->
   | 0 -> eval []
   | n -> Proofview.tclUNIT (Tac2ffi.of_closure (Tac2val.abstract n eval))
 
-let eval_msg : Tac2print.format list -> Tac2val.valexpr Proofview.tactic =
+let eval_msg : Tac2types.format list -> Tac2val.valexpr Proofview.tactic =
     fun fs ->
   let open Proofview.Notations in
   let eval args =

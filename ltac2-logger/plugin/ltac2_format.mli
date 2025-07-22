@@ -6,7 +6,7 @@
  *)
 
 open Ltac2_plugin
-open Tac2print
+open Tac2types
 
 (** Interface used to implement Ltac2 [Printf]-like primitives in OCaml. *)
 
