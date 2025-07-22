@@ -13,3 +13,4 @@ Require Export elpi.elpi.
 Make warnings from, e.g., <<Elpi Typecheck>> fatal.
 *)
 #[global] Set Warnings "+elpi.typecheck".	(* promote future warnings *)
+#[global] Set Warnings "-elpi.flex-clause".
