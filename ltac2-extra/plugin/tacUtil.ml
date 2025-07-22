@@ -49,22 +49,22 @@ module Value = struct
     let f = Tac2ffi.to_closure f in
     fun v -> v >>= fun v -> Tac2val.apply f [v]
 
-  let thaw1 (ra : 'a repr) (rb : 'b repr) (f : valexpr) : 'a -> 'b tactic =
-    Tac2ffi.app_fun1 (Tac2ffi.to_fun1 ra rb f) ra rb
+  let thaw1 (type a b) (ra : a repr) (rb : b repr) (f : valexpr) : a -> b tactic =
+    Tac2ffi.to_fun1 (repr_of ra) (repr_to rb) f
 
-  let thaw2 (ra : 'a repr) (rb : 'b repr) (rc : 'c repr) (f : valexpr) :
-      'a -> 'b -> 'c tactic =
+  let thaw2 (type a b c) (ra : a repr) (rb : b repr) (rc : c repr) (f : valexpr) :
+      a -> b -> c tactic =
     let f = thaw1 ra (Tac2ffi.fun1 rb rc) f in
     fun a b ->
     f a >>= fun f ->
-    Tac2ffi.app_fun1 f rb rc b
+    f b
 
-  let thaw3 (ra : 'a repr) (rb : 'b repr) (rc : 'c repr) (rd : 'd repr)
-      (f : valexpr) : 'a -> 'b -> 'c -> 'd tactic =
+  let thaw3 (type a b c d) (ra : a repr) (rb : b repr) (rc : c repr) (rd : d repr)
+      (f : valexpr) : a -> b -> c -> d tactic =
     let f = thaw2 ra rb (Tac2ffi.fun1 rc rd) f in
     fun a b c ->
     f a b >>= fun f ->
-    Tac2ffi.app_fun1 f rc rd c
+    f c
 
   type binder = Names.Name.t EConstr.binder_annot * EConstr.types
 
