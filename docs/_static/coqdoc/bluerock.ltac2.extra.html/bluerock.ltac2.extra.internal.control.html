@@ -161,6 +161,9 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "is_section_variable".<br/>
 
 <br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">exn</span> ::= [ <span class="id" title="var">Multi_exn</span> (<span class="id" title="var">exn</span> <span class="id" title="var">list</span>) ].<br/>
+
+<br/>
 </div>
 
 <div class="doc">
@@ -170,15 +173,15 @@ This is a variant of <span class="inlinecode"><span class="id" title="var">first
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">first_of_impl</span> (<span class="id" title="var">ls</span> : (<span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span>) <span class="id" title="var">list</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">go</span> <span class="id" title="var">ls</span> :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">ls</span> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">t</span> :: <span class="id" title="var">ls</span> =&gt; <span class="id" title="var">orelse</span> <span class="id" title="var">t</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">go</span> <span class="id" title="var">ls</span>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| []      =&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">m</span> := <span class="id" title="var">Message.of_string</span> "[first_of] ran out of tactics" <span class="id" title="tactic">in</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.zero</span> (<span class="id" title="var">Tactic_failure</span> (<span class="id" title="var">Some</span> <span class="id" title="var">m</span>))<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">in</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.once</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">go</span> <span class="id" title="var">ls</span>).<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">go</span> <span class="id" title="var">ls</span> <span class="id" title="var">errs</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">ls</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">t</span> :: <span class="id" title="var">ls</span> =&gt; <span class="id" title="var">orelse</span> <span class="id" title="var">t</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">e</span> =&gt; <span class="id" title="var">go</span> <span class="id" title="var">ls</span> (<span class="id" title="var">e</span> :: <span class="id" title="var">errs</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| []      =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">errs</span> := <span class="id" title="var">List.rev</span> <span class="id" title="var">errs</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.zero</span> (<span class="id" title="var">Multi_exn</span> <span class="id" title="var">errs</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.once</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">go</span> <span class="id" title="var">ls</span> []).<br/>
 
 <br/>
 </div>
