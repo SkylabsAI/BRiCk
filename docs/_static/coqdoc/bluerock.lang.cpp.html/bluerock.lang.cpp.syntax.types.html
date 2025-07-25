@@ -1482,13 +1482,13 @@ type and to <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/
 
 <div class="doc">
 <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_aggregate_type"><span class="id" title="definition">is_aggregate_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is a (possibly qualified)
-structure or array type.
+<code>struct</code> type.
 
 </div>
 <div class="code">
 <span class="id" title="keyword">Definition</span> <a id="is_aggregate_type" class="idref" href="#is_aggregate_type"><span class="id" title="definition">is_aggregate_type</span></a> (<a id="ty:408" class="idref" href="#ty:408"><span class="id" title="binder">ty</span></a> : <a class="idref" href="bluerock.lang.cpp.syntax.core.html#type"><span class="id" title="abbreviation">type</span></a>) : <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a> :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="bluerock.lang.cpp.syntax.types.html#drop_qualifiers"><span class="id" title="definition">drop_qualifiers</span></a> <a class="idref" href="bluerock.lang.cpp.syntax.types.html#ty:408"><span class="id" title="variable">ty</span></a> <span class="id" title="keyword">with</span><br/>
-&nbsp;&nbsp;| <a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tnamed"><span class="id" title="constructor">Tnamed</span></a> <span class="id" title="var">_</span> | <a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tarray"><span class="id" title="constructor">Tarray</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a><br/>
+&nbsp;&nbsp;| <a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tnamed"><span class="id" title="constructor">Tnamed</span></a> <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a><br/>
 &nbsp;&nbsp;| <span class="id" title="var">_</span> =&gt; <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
