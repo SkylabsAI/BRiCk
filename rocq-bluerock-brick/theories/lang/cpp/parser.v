@@ -5,8 +5,10 @@
  *)
 Require Ltac2.Ltac2.
 Require Export bluerock.prelude.base.	(* for, e.g., <<::>> *)
+Require Import stdpp.sorting.
 Require Import Stdlib.Numbers.Cyclic.Int63.PrimInt63.
 Require Import bluerock.prelude.parray.
+Require Import bluerock.prelude.compare.
 Require Import bluerock.prelude.uint63.
 Require Export Stdlib.Strings.PrimString.
 Require Import bluerock.prelude.avl.
@@ -25,6 +27,46 @@ Include ParserName.
 Include ParserType.
 Include ParserExpr.
 Include ParserDecl.
+
+Section unique_merge_sort.
+  Context {A} (compare : A -> A -> comparison).
+  (* Small variation on stdpp.sorting, TODO copyright. *)
+
+  Fixpoint list_merge (l1 : list A) : list A → list A :=
+    fix list_merge_aux l2 :=
+    match l1, l2 with
+    | [], _ => l2
+    | _, [] => l1
+    | x1 :: l1, x2 :: l2 =>
+      match compare x1 x2 with
+      | Lt => x1 :: list_merge l1 (x2 :: l2)
+      | Eq => list_merge l1 (x2 :: l2)
+      | Gt => x2 :: list_merge_aux l2
+      end
+    end.
+  Global Arguments list_merge !_ !_ / : assert.
+
+  Local Notation stack := (list (option (list A))).
+  Fixpoint merge_list_to_stack (st : stack) (l : list A) : stack :=
+    match st with
+    | [] => [Some l]
+    | None :: st => Some l :: st
+    | Some l' :: st => None :: merge_list_to_stack st (list_merge l' l)
+    end.
+  Fixpoint merge_stack (st : stack) : list A :=
+    match st with
+    | [] => []
+    | None :: st => merge_stack st
+    | Some l :: st => list_merge l (merge_stack st)
+    end.
+  Fixpoint merge_sort_aux (st : stack) (l : list A) : list A :=
+    match l with
+    | [] => merge_stack st
+    | x :: l => merge_sort_aux (merge_list_to_stack st [x]) l
+    end.
+  Definition unique_merge_sort : list A → list A := merge_sort_aux [].
+
+End unique_merge_sort.
 
 Module Import translation_unit.
 
