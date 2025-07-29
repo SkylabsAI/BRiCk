@@ -68,6 +68,168 @@ Section unique_merge_sort.
 
 End unique_merge_sort.
 
+Definition compare_rel {A} (compare : A -> A -> comparison) : relation A :=
+  fun x1 x2 => compare x1 x2 = Lt.
+
+Class SymmetricCompare {A : Type} (compare : Compare A) :=
+  compare_symm :
+    ∀ {x y : A}, compare x y = Lt <-> compare y x = Gt.
+
+Section with_compare.
+  Context {A} (compare : A -> A -> comparison).
+
+  #[global] Instance compare_trichotomy
+    `{!LeibnizComparison compare} `{!SymmetricCompare compare} :
+    Trichotomy (compare_rel compare).
+  Proof.
+    move=> x y. case E: (compare x y); [auto..|].
+    right; right. exact /compare_symm.
+  Qed.
+
+  (** ** Correctness of merge sort *)
+  Section merge_sort_correct.
+
+    Lemma list_merge_nil_l l2 : list_merge compare [] l2 = l2.
+    Proof. by destruct l2. Qed.
+    Lemma list_merge_nil_r l1 : list_merge compare l1 [] = l1.
+    Proof. by destruct l1. Qed.
+    Lemma list_merge_cons x1 x2 l1 l2 :
+      list_merge compare (x1 :: l1) (x2 :: l2) =
+        match compare x1 x2 with
+        | Lt => x1 :: list_merge compare l1 (x2 :: l2)
+        | Eq => list_merge compare l1 (x2 :: l2)
+        | Gt => x2 :: list_merge compare (x1 :: l1) l2
+        end.
+    Proof. done. Qed.
+
+    Notation R := (compare_rel compare).
+
+  (* Lemma compare_symm (x y : A) `{!SymmetricCompare compare} :
+    compare x y = Lt <-> compare y x = Gt.
+  Proof.
+    split; first exact: compare_symm_lt.
+    destruct (compare x y). *)
+
+    Context `{!LeibnizComparison compare} `{!SymmetricCompare compare}.
+
+    (*
+    Instance: Trichotomy R := compare_trichotomy.
+    Proof.
+      move=> x y. rewrite /R.
+      destruct (compare x y) eqn:?; info_auto.
+      right; right; exact /compare_symm.
+    Qed.
+    apply (LeibnizComparison.cmp_eq compare _ _ Heqc).
+    *)
+
+(* From stdpp Require Import options. *)
+  (* Let R : relation A := fun x1 x2 => compare x1 x2 = Lt \/ compare x1 x2 = Eq. *)
+  (*
+  Lemma HdRel_list_merge x l1 l2 :
+    HdRel R x l1 → HdRel R x l2 → HdRel R x (list_merge compare l1 l2).
+  Proof.
+    destruct 1 as [|x1 l1 IH1], 1 as [|x2 l2 IH2];
+      rewrite ?list_merge_cons; simpl; repeat case_match; auto.
+      Print HdRel.
+      econstructor.
+  Qed. *)
+  (*
+  Lemma Sorted_list_merge `{!Trichotomy R} l1 l2 :
+    Sorted R l1 → Sorted R l2 → Sorted R (list_merge compare l1 l2).
+  Proof.
+    intros Hl1. revert l2. induction Hl1 as [|x1 l1 IH1];
+      induction 1 as [|x2 l2 IH2]; rewrite ?list_merge_cons; simpl;
+      repeat case_match;
+      (* repeat case_decide;
+      repeat match goal with H : ¬R _ _ |- _ => apply total_not in H end; *)
+      try constructor; eauto using HdRel_cons.
+  Lemma HdRel_list_merge x l1 l2 :
+  Sorted R l2 ->
+    HdRel R x l1 → HdRel R x l2 → HdRel R x (list_merge compare l1 l2).
+  Proof.
+    revert l1; induction l2 as [|x2 l2 IHl2] => l1.
+    destruct 2 as [|x1 l1 IH1];
+    inversion_clear 1;
+      rewrite ?list_merge_cons /=; repeat case_match; auto.
+    inversion 1 as [|x2 l2 IH2].
+      rewrite ?list_merge_cons; simpl; repeat case_match; auto.
+      econstructor.
+  Qed.
+
+      Print HdRel.
+      rewrite list_merge_cons.
+      (* all: eauto using HdRel_list_merge, HdRel_cons. *)
+  Qed.
+  Lemma merge_Permutation l1 l2 : list_merge R l1 l2 ≡ₚ l1 ++ l2.
+  Proof.
+    revert l2. induction l1 as [|x1 l1 IH1]; intros l2;
+      induction l2 as [|x2 l2 IH2]; rewrite ?list_merge_cons; simpl;
+      repeat case_decide; auto.
+    - by rewrite (right_id_L [] (++)).
+    - by rewrite IH2 Permutation_middle.
+  Qed.
+
+  Local Notation stack := (list (option (list A))).
+  Inductive merge_stack_Sorted : stack → Prop :=
+    | merge_stack_Sorted_nil : merge_stack_Sorted []
+    | merge_stack_Sorted_cons_None st :
+       merge_stack_Sorted st → merge_stack_Sorted (None :: st)
+    | merge_stack_Sorted_cons_Some l st :
+       Sorted R l → merge_stack_Sorted st → merge_stack_Sorted (Some l :: st).
+  Fixpoint merge_stack_flatten (st : stack) : list A :=
+    match st with
+    | [] => []
+    | None :: st => merge_stack_flatten st
+    | Some l :: st => l ++ merge_stack_flatten st
+    end.
+
+  Lemma Sorted_merge_list_to_stack `{!Total R} st l :
+    merge_stack_Sorted st → Sorted R l →
+    merge_stack_Sorted (merge_list_to_stack R st l).
+  Proof.
+    intros Hst. revert l.
+    induction Hst; repeat constructor; naive_solver auto using Sorted_list_merge.
+  Qed.
+  Lemma merge_list_to_stack_Permutation st l :
+    merge_stack_flatten (merge_list_to_stack R st l) ≡ₚ
+      l ++ merge_stack_flatten st.
+  Proof.
+    revert l. induction st as [|[l'|] st IH]; intros l; simpl; auto.
+    by rewrite IH, merge_Permutation, (assoc_L _), (comm (++) l).
+  Qed.
+  Lemma Sorted_merge_stack `{!Total R} st :
+    merge_stack_Sorted st → Sorted R (merge_stack R st).
+  Proof. induction 1; simpl; auto using Sorted_list_merge. Qed.
+  Lemma merge_stack_Permutation st : merge_stack R st ≡ₚ merge_stack_flatten st.
+  Proof.
+    induction st as [|[] ? IH]; intros; simpl; auto.
+    by rewrite merge_Permutation, IH.
+  Qed.
+  Lemma Sorted_merge_sort_aux `{!Total R} st l :
+    merge_stack_Sorted st → Sorted R (merge_sort_aux R st l).
+  Proof.
+    revert st. induction l; simpl;
+      auto using Sorted_merge_stack, Sorted_merge_list_to_stack.
+  Qed.
+  Lemma merge_sort_aux_Permutation st l :
+    merge_sort_aux R st l ≡ₚ merge_stack_flatten st ++ l.
+  Proof.
+    revert st. induction l as [|?? IH]; simpl; intros.
+    - by rewrite (right_id_L [] (++)), merge_stack_Permutation.
+    - rewrite IH, merge_list_to_stack_Permutation; simpl.
+      by rewrite Permutation_middle.
+  Qed.
+  Lemma Sorted_merge_sort `{!Total R} l : Sorted R (merge_sort R l).
+  Proof. apply Sorted_merge_sort_aux. by constructor. Qed.
+  Lemma merge_sort_Permutation l : merge_sort R l ≡ₚ l.
+  Proof. unfold merge_sort. by rewrite merge_sort_aux_Permutation. Qed.
+  Lemma StronglySorted_merge_sort `{!Transitive R, !Total R} l :
+    StronglySorted R (merge_sort R l).
+  Proof. auto using Sorted_StronglySorted, Sorted_merge_sort. Qed.
+  *)
+  End merge_sort_correct.
+End with_compare.
+
 Module Import translation_unit.
 
   (**
