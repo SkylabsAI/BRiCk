@@ -64,7 +64,7 @@
 
 <div class="paragraph"> </div>
 
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#decompose_type"><span class="id" title="definition">decompose_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> strips any top-level qualifiers from <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> and
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#decompose_type"><span class="id" title="definition">decompose_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> strips any top-level qualifiers from <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> and
 returns them, paired with the rest of the type.
 
 <div class="paragraph"> </div>
@@ -304,12 +304,12 @@ It would be nice to make this the default.
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_qualified"><span class="id" title="definition">is_qualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> decides if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> has top-level qualifiers.
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_qualified"><span class="id" title="definition">is_qualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> decides if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> has top-level qualifiers.
 
 <div class="paragraph"> </div>
 
 Note: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_qualified"><span class="id" title="definition">is_qualified</span></a></span> is incompatible with the equivalence on types.
-Counterexample: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tqualified"><span class="id" title="constructor">Tqualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.preliminary.html#QM"><span class="id" title="constructor">QM</span></a></span> <span class="inlinecode">(<a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a>)</span> <span class="inlinecode">≡</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span>.
+Counterexample: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tqualified"><span class="id" title="constructor">Tqualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.preliminary.html#QM"><span class="id" title="constructor">QM</span></a></span> <span class="inlinecode">(<a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a>)</span> <span class="inlinecode">≡</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span>.
 
 </div>
 <div class="code">
@@ -597,7 +597,7 @@ Counterexample: <span class="inlinecode"><a class="idref" href="bluerock.lang.cp
 
 <div class="paragraph"> </div>
 
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#erase_qualifiers"><span class="id" title="definition">erase_qualifiers</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> erases *all* qualifiers that occur everywhere in
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#erase_qualifiers"><span class="id" title="definition">erase_qualifiers</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> erases *all* qualifiers that occur everywhere in
 the type.
 
 <div class="paragraph"> </div>
@@ -768,12 +768,12 @@ simplify instances where you have <span class="inlinecode"><a class="idref" href
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_ref"><span class="id" title="definition">is_ref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> decides if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> a reference type
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_ref"><span class="id" title="definition">is_ref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> decides if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> a reference type
 
 <div class="paragraph"> </div>
 
 Note: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_ref"><span class="id" title="definition">is_ref</span></a></span> is incompatible with the equivalence on types.
-Counterexample: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tqualified"><span class="id" title="constructor">Tqualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.preliminary.html#QM"><span class="id" title="constructor">QM</span></a></span> <span class="inlinecode">(<a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a>)</span> <span class="inlinecode">≡</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span>.
+Counterexample: <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tqualified"><span class="id" title="constructor">Tqualified</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.preliminary.html#QM"><span class="id" title="constructor">QM</span></a></span> <span class="inlinecode">(<a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a>)</span> <span class="inlinecode">≡</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tref"><span class="id" title="constructor">Tref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span>.
 
 </div>
 <div class="code">
@@ -1174,8 +1174,8 @@ normalization of types
 
 <div class="paragraph"> </div>
 
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#unptr"><span class="id" title="definition">unptr</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns the type of the object that a value of type <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span>
-points to or <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is not a pointer type.
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#unptr"><span class="id" title="definition">unptr</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> returns the type of the object that a value of type <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span>
+points to or <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> is not a pointer type.
 
 </div>
 <div class="code">
@@ -1200,7 +1200,7 @@ points to or <span class="inlinecode"><a class="idref" href="http://coq.inria.fr
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#class_name"><span class="id" title="definition">class_name</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns the name of the class that this type refers to
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#class_name"><span class="id" title="definition">class_name</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> returns the name of the class that this type refers to
 
 </div>
 <div class="code">
@@ -1294,7 +1294,7 @@ Formalizes https://eel.is/c++draft/basic.types.generalterm.scalar.type.
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_value_type"><span class="id" title="definition">is_value_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> has value semantics. A value
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_value_type"><span class="id" title="definition">is_value_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> has value semantics. A value
 type is one that can be represented by <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.semantics.values.html#VAL_MIXIN.val"><span class="id" title="inductive">val</span></a></span>.
 
 <div class="paragraph"> </div>
@@ -1317,7 +1317,7 @@ that <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.co
 
 <div class="doc">
   NOTE: In C++ the the underlying type of an enumeration must be an
-  integral type. This definition pre-supposes <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> a valid enumeration.
+  integral type. This definition pre-supposes <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> a valid enumeration.
   
 </div>
 <div class="code">
@@ -1395,7 +1395,7 @@ For use in <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.log
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_reference_type"><span class="id" title="definition">is_reference_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is a (possibly
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_reference_type"><span class="id" title="definition">is_reference_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> is a (possibly
 cv-qualified) reference type.
 
 </div>
@@ -1434,13 +1434,13 @@ cv-qualified) reference type.
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref'"><span class="id" title="abbreviation">as_ref'</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.x"><span class="id" title="variable">x</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> applies <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><span class="id" title="var">u</span></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is a (possibly cv-qualified)
-reference type with underlying type <span class="inlinecode"><span class="id" title="var">u</span></span>, defaulting to <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.x"><span class="id" title="variable">x</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref'"><span class="id" title="abbreviation">as_ref'</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.x"><span class="id" title="variable">x</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> applies <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.name_notation.parser.html#internal.with_lang.body.mfold_left.f"><span class="id" title="variable">f</span></a></span> <span class="inlinecode"><span class="id" title="var">u</span></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> is a (possibly cv-qualified)
+reference type with underlying type <span class="inlinecode"><span class="id" title="var">u</span></span>, defaulting to <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#with_lang.as_ref'.x"><span class="id" title="variable">x</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> is
 not a reference type.
 
 <div class="paragraph"> </div>
 
-The special cases <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref"><span class="id" title="abbreviation">as_ref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> <span class="inlinecode">:</span> <span class="inlinecode"><span class="id" title="keyword">type</span></span> and <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref_option"><span class="id" title="abbreviation">as_ref_option</span></a></span> <span class="inlinecode">:</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.mtraverse.html#option"><span class="id" title="section">option</span></a></span> <span class="inlinecode"><span class="id" title="keyword">type</span></span>
+The special cases <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref"><span class="id" title="abbreviation">as_ref</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> <span class="inlinecode">:</span> <span class="inlinecode"><span class="id" title="keyword">type</span></span> and <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#as_ref_option"><span class="id" title="abbreviation">as_ref_option</span></a></span> <span class="inlinecode">:</span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.mtraverse.html#option"><span class="id" title="section">option</span></a></span> <span class="inlinecode"><span class="id" title="keyword">type</span></span>
 return the underlying type <span class="inlinecode"><span class="id" title="var">u</span></span> (defaulting, respectively, to a dummy
 type and to <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a></span>).
 
@@ -1481,7 +1481,7 @@ type and to <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/
 </div>
 
 <div class="doc">
-<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_aggregate_type"><span class="id" title="definition">is_aggregate_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#global_init.t"><span class="id" title="inductive">t</span></a></span> is a (possibly qualified)
+<span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.types.html#is_aggregate_type"><span class="id" title="definition">is_aggregate_type</span></a></span> <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> returns <span class="inlinecode"><a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a></span> if <span class="inlinecode"><a class="idref" href="bluerock.lang.cpp.syntax.translation_unit.html#alias_table.t"><span class="id" title="definition">t</span></a></span> is a (possibly qualified)
 <code>struct</code> type.
 
 </div>
