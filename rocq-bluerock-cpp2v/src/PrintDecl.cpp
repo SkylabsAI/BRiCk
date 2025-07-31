@@ -209,10 +209,10 @@ template <typename T> struct DeclPrinter {
             if (print.templates()) {
                 // We print untemplated code and template specializations
                 // elsewhere.
-                if (!decl.isTemplated() || isSpecialized(decl))
-                    return false;
+                // if (!decl.isTemplated() || isSpecialized(decl))
+                // 	return false;
 
-                guard::ctor _(print, ctor);
+                guard::ctor _(print, ctor + "_template");
                 cprint.printNameComment(print, decl) << fmt::nbsp;
                 cprint.printTemplateParameters(print, decl) << fmt::nbsp;
                 cprint.printNameAsKey(print, decl) << fmt::nbsp;

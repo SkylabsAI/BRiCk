@@ -157,7 +157,8 @@ public:
 };
 
 struct ctor : public guard {
-    ctor(CoqPrinter &p, llvm::StringRef name, bool line = true) : guard{p} {
+    template <typename T>
+    ctor(CoqPrinter &p, T name, bool line = true) : guard{p} {
         print.ctor(name, line);
     }
     ~ctor() { print.end_ctor(); }

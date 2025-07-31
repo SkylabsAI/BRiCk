@@ -72,25 +72,25 @@ End Mtranslation_unit.
 Definition Dvariable (ps : Mtemp_params) (n : Mname) (t : Mtype) (init : global_init.t) : K :=
   _symbols <[n := Template ps $ Ovar t init]>.
 
-Definition Dfunction (ps : Mtemp_params) (n : Mname)  (f : MFunc) : K :=
+Definition Dfunction_template (ps : Mtemp_params) (n : Mname)  (f : MFunc) : K :=
   _symbols <[n := Template ps $ Ofunction f]>.
 
-Definition Dmethod (ps : Mtemp_params) (n : Mname) (static : bool) (f : MMethod) : K :=
+Definition Dmethod_template (ps : Mtemp_params) (n : Mname) (static : bool) (f : MMethod) : K :=
   _symbols <[n := Template ps $ if static then Ofunction $ static_method f else Omethod f]>.
 
-Definition Dconstructor (ps : Mtemp_params) (n : Mname) (f : MCtor) : K :=
+Definition Dconstructor_template (ps : Mtemp_params) (n : Mname) (f : MCtor) : K :=
   _symbols <[n := Template ps $ Oconstructor f]>.
 
-Definition Ddestructor (ps : Mtemp_params) (n : Mname) (f : MDtor) : K :=
+Definition Ddestructor_template (ps : Mtemp_params) (n : Mname) (f : MDtor) : K :=
   _symbols <[n := Template ps $ Odestructor f]>.
 
-Definition Dtype (ps : Mtemp_params) (n : Mname) : K :=
+Definition Dtype_template (ps : Mtemp_params) (n : Mname) : K :=
   _types <[n := Template ps Gtype]>.
 
-Definition Dstruct (ps : Mtemp_params) (n : Mname) (f : option MStruct) : K :=
+Definition Dstruct_template (ps : Mtemp_params) (n : Mname) (f : option MStruct) : K :=
   _types <[n := Template ps $ if f is Some f then Gstruct f else Gtype]>.
 
-Definition Dunion (ps : Mtemp_params) (n : Mname) (f : option MUnion) : K :=
+Definition Dunion_template (ps : Mtemp_params) (n : Mname) (f : option MUnion) : K :=
   _types <[n := Template ps $ if f is Some f then Gunion f else Gtype]>.
 
 Definition Denum (ps : Mtemp_params) (n : Mname) (u: Mtype) (cs : list ident) : K :=
