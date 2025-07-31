@@ -102,37 +102,50 @@ Module BinOp.
   (**
   https://en.cppreference.com/w/cpp/language/operator_member_access#Built-in_subscript_operator
   *)
-  Definition infer_subscript : t := fun l r ot =>
-    let tl := decltype_of_expr l in
-    let tr := decltype_of_expr r in
-    let is_idx (t : Mdecltype) : bool :=
-      match t with
-      | Tnum _ _ | Tchar_ _ | Tbool => true
-      | _ => false
-      end
-    in
-    let is_ary (t : Mdecltype) : option (Mtype * (MExpr -> MExpr)) :=
-      match t with
-      | Tref (Tptr ety) => Some (ety, fun e => Ecast core.Cl2r e)
-      | Tref (Tarray ety _ | Tincomplete_array ety | Tvariable_array ety _) =>
-          Some (ety, fun e => e)
-      | Trv_ref (Tarray ety _ | Tincomplete_array ety | Tvariable_array ety _) =>
-          Some (ety, fun e => e)
-      | _ => None
-      end
-    in
-    let default := Eunresolved_binop Rsubscript l r in
-    if is_idx tl then
-      match is_ary tr with
-      | None => default
-      | Some (ty, C) => Esubscript l (C r) ty
-      end
-    else if is_idx tr then
-           match is_ary tl with
-           | None => default
-           | Some (ty, C) => Esubscript (C l) r ty
-           end
-         else default.
+  Definition infer_subscript : t := fun l r t =>
+    match t with
+    | Tauto =>
+      let tl := decltype_of_expr l in
+      let tr := decltype_of_expr r in
+      let is_idx (t : Mdecltype) : bool :=
+        match drop_qualifiers t with
+        | Tnum _ _ | Tchar_ _ | Tbool => true
+        | _ => false
+        end
+      in
+      let is_ary (t : Mdecltype) : option (Mtype * (MExpr -> MExpr)) :=
+        let go aty :=
+          let '(cv, aty) := decompose_type aty in
+          match aty with
+          | Tarray ety _
+          | Tincomplete_array ety
+          | Tvariable_array ety _ =>
+              Some (tqualified cv ety, fun e => e)
+          | _ => None
+          end
+        in
+        match t with
+        | Tptr ety => Some (ety, fun e => e)
+        | Tref (Tptr ety) => Some (ety, fun e => Ecast core.Cl2r e)
+        | Tref x => go x
+        | Trv_ref x => go x
+        | _ => None
+        end
+      in
+      let default := Eunresolved_binop Rsubscript l r in
+      if is_idx tl then
+        match is_ary tr with
+        | None => default
+        | Some (ty, C) => Esubscript l (C r) ty
+        end
+      else if is_idx tr then
+            match is_ary tl with
+            | None => default
+            | Some (ty, C) => Esubscript (C l) r ty
+            end
+          else default
+    | _ => Esubscript l r t
+    end.
 
   (**
   https://en.cppreference.com/w/cpp/language/operator_arithmetic#Additive_operators
