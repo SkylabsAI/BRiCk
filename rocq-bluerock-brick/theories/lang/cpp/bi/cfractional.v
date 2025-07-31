@@ -63,6 +63,7 @@ Class AsCFractional {PROP : bi} (P : PROP) (Q : cQp.t -> PROP) (q : cQp.t) : Pro
 #[global] Arguments AsCFractional {_} (_ _)%_I _%_Qp : assert.
 
 Ltac solve_as_cfrac := solve [intros; exact: Build_AsCFractional].
+(* Ltac solve_as_cfrac := solve [intros; exact: Build_AsCFractional]. *)
 
 (** [AsCFractionalN] informs the IPM about predicate [P] satisfying [CFractionalN P] *)
 Notation AsCFractional0 P := (∀ q, AsCFractional (P q) P q) (only parsing).

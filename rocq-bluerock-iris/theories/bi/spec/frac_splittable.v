@@ -60,19 +60,20 @@ Notation Frac2Valid1 P := (∀ q1 q2 a1 a2, Observe2 [| q1 + q2 ≤ 1 |]%Qp (P q
 Ltac solve_frac := solve [intros; split; apply _].
 
 Class FracSplittable_0 {PROP : bi} (R : Qp → PROP) : Prop := {
-  #[global] frac_splittable_0_fractional :: Fractional R;
-  #[global] frac_splittable_0_timeless :: Timeless1 R;
-  #[global] frac_splittable_0_frac_valid :: FracValid0 R;
+  (* #[global] frac_splittable_0_fractional :: Fractional R; *)
+  (* #[global] frac_splittable_0_timeless :: Timeless1 R; *)
+  (* #[global] frac_splittable_0_frac_valid :: FracValid0 R; *)
 }.
 Section frac_0.
   Context {PROP : bi} (R : Qp → PROP) `{!FracSplittable_0 R}.
 
-  Global Instance frac_splittable_0_as_fractional : AsFractional0 R.
-  Proof. solve_as_frac. Qed.
-  Global Instance frac_splittable_0_frac_valid_2 : Frac2Valid0 R.
-  Proof.
-    intros. iIntros "R1 R2". iCombine "R1 R2" as "R". iApply (observe with "R").
-  Qed.
+  (* Global Instance frac_splittable_0_as_fractional : AsFractional0 R. *)
+  (* Proof. solve_as_frac. Qed. *)
+  (* Global Instance frac_splittable_0_frac_valid_2 : Frac2Valid0 R. *)
+  (* Proof. *)
+  (*   intros. iIntros "R1 R2". iCombine "R1 R2" as "R". iApply (observe with "R"). *)
+  (* Qed. *)
+
 End frac_0.
 Section frac_1_gen.
   Context {A} {PROP : bi} (R : Qp → A → PROP).
@@ -105,14 +106,15 @@ Class FracSplittable_1 {A} {PROP : bi} (R : Qp → A → PROP) : Prop := {
 Section frac_1.
   Context {A} {PROP : bi} (R : Qp → A → PROP) `{!FracSplittable_1 R}.
 
-  Global Instance frac_splittable_1_as_fractional : AsFractional1 R.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_1_as_fractional : AsFractional1 R. *)
+  (* Proof. solve_as_frac. Qed. *)
 
-  Goal AgreeF1 R -> Frac2Valid1 R.
-  Proof. apply _. Abort.
+  (* Goal AgreeF1 R -> Frac2Valid1 R. *)
+  (* Proof. apply _. Abort. *)
 
-  Goal AgreeF1 R → Exclusive1 (R 1).
-  Proof. apply _. Abort.
+  (* Goal AgreeF1 R → Exclusive1 (R 1). *)
+  (* Proof. apply _. Abort. *)
+
 End frac_1.
 
 Class FracSplittable_2 {A B} {PROP : bi} (R : Qp → A → B → PROP) : Prop := {
@@ -123,8 +125,9 @@ Class FracSplittable_2 {A B} {PROP : bi} (R : Qp → A → B → PROP) : Prop :=
 Section frac_2.
   Context {A B} {PROP : bi} (R : Qp → A → B → PROP) `{!FracSplittable_2 R}.
 
-  Global Instance frac_splittable_2_as_fractional : AsFractional2 R.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_2_as_fractional : AsFractional2 R. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_2.
 
 Class FracSplittable_3 {A B C} {PROP : bi}
@@ -136,8 +139,9 @@ Class FracSplittable_3 {A B C} {PROP : bi}
 Section frac_3.
   Context {A B C} {PROP : bi} (R : Qp → A → B → C → PROP) `{!FracSplittable_3 R}.
 
-  Global Instance frac_splittable_3_as_fractional : AsFractional3 R.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_3_as_fractional : AsFractional3 R. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_3.
 
 Class FracSplittable_4 {A B C D} {PROP : bi}
@@ -150,8 +154,9 @@ Section frac_4.
   Context {A B C D} {PROP : bi} (R : Qp → A → B → C → D → PROP).
   Context `{!FracSplittable_4 R}.
 
-  Global Instance frac_splittable_4_as_fractional : AsFractional4 R.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_4_as_fractional : AsFractional4 R. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_4.
 
 Class FracSplittable_5 {A B C D E} {PROP : bi}
@@ -164,8 +169,8 @@ Section frac_5.
   Context {A B C D E} {PROP : bi} (R : Qp → A → B → C → D → E → PROP).
   Context `{!FracSplittable_5 R}.
 
-  Global Instance frac_splittable_5_as_fractional : AsFractional5 R.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_5_as_fractional : AsFractional5 R. *)
+  (* Proof. solve_as_frac. Qed. *)
 End frac_5.
 
 Class FracSplittable_6 {A B C D E F} {PROP : bi}
@@ -179,9 +184,10 @@ Section frac_6.
   Context {A B C D E F} {PROP : bi} (R : Qp → A → B → C → D → E → F → PROP).
   Context `{!FracSplittable_6 R}.
 
-  Global Instance frac_splittable_6_as_fractional q a b c d e f :
-    AsFractional (R q a b c d e f) (λ q, R q a b c d e f) q.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_6_as_fractional q a b c d e f : *)
+  (*   AsFractional (R q a b c d e f) (λ q, R q a b c d e f) q. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_6.
 
 Class FracSplittable_7 {A B C D E F G} {PROP : bi}
@@ -196,9 +202,10 @@ Section frac_7.
   Context {A B C D E F G} {PROP : bi} (R : Qp → A → B → C → D → E → F → G → PROP).
   Context `{!FracSplittable_7 R}.
 
-  Global Instance frac_splittable_7_as_fractional q a b c d e f g :
-    AsFractional (R q a b c d e f g) (λ q, R q a b c d e f g) q.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_7_as_fractional q a b c d e f g : *)
+  (*   AsFractional (R q a b c d e f g) (λ q, R q a b c d e f g) q. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_7.
 
 Class FracSplittable_8 {A B C D E F G H} {PROP : bi}
@@ -214,9 +221,10 @@ Section frac_8.
   Context {A B C D E F G H} {PROP : bi} (R : Qp → A → B → C → D → E → F → G → H → PROP).
   Context `{!FracSplittable_8 R}.
 
-  Global Instance frac_splittable_8_as_fractional q a b c d e f g h :
-    AsFractional (R q a b c d e f g h) (λ q, R q a b c d e f g h) q.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_8_as_fractional q a b c d e f g h : *)
+  (*   AsFractional (R q a b c d e f g h) (λ q, R q a b c d e f g h) q. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_8.
 
 Class FracSplittable_9 {A B C D E F G H I} {PROP : bi}
@@ -233,9 +241,10 @@ Section frac_9.
     (R : Qp → A → B → C → D → E → F → G → H → I → PROP).
   Context `{!FracSplittable_9 R}.
 
-  Global Instance frac_splittable_9_as_fractional q a b c d e f g h i :
-    AsFractional (R q a b c d e f g h i) (λ q, R q a b c d e f g h i) q.
-  Proof. solve_as_frac. Qed.
+  (* Global Instance frac_splittable_9_as_fractional q a b c d e f g h i : *)
+  (*   AsFractional (R q a b c d e f g h i) (λ q, R q a b c d e f g h i) q. *)
+  (* Proof. solve_as_frac. Qed. *)
+
 End frac_9.
 
 (** To accomodate arguments _before_ a fraction, universally quantify
