@@ -79,20 +79,20 @@ Module BinOp.
     end.
 
   (** The type of binary operators emitted by cpp2v *)
-  Definition t : Set := MExpr -> MExpr -> option Mexprtype -> MExpr.
+  Definition t : Set := MExpr -> MExpr -> Mexprtype -> MExpr.
 
   Definition resolve : Set := Mexprtype -> Mexprtype -> Mexprtype.
   Definition infer (op : RBinOp) (resolve : resolve) : t := fun l r m =>
     let R : Mexprtype -> MExpr := Ebinary_operator op l r in
     match m with
-    | Some t => R t
-    | None =>
-      let lt := type_of l in
-      let rt := type_of r in
-      if is_unresolved lt || is_unresolved rt then
-        Eunresolved_binop op l r
-      else
-        R $ resolve lt rt
+    | Tauto =>
+        let lt := type_of l in
+        let rt := type_of r in
+        if is_unresolved lt || is_unresolved rt then
+          Eunresolved_binop op l r
+        else
+          R $ resolve lt rt
+    | t => R t
     end.
 
   Definition resolve_left : resolve := fun tl tr => tl.
@@ -190,14 +190,13 @@ Module UnOp.
     | Rarrow => Ederef (* << not used, BRiCk prints this as [Eunresolved_member] *)
     end.
 
-  Definition t : Set := MExpr -> option Mexprtype -> MExpr.
+  Definition t : Set := MExpr -> Mexprtype -> MExpr.
 
   Definition resolve : Set := Mexprtype -> option Mexprtype.
   Definition infer (op : RUnOp) (resolve : resolve) : t := fun e m =>
     let R : Mexprtype -> MExpr := Eunary_operator op e in
     match m with
-    | Some t => R t
-    | None =>
+    | Tauto =>
       let t := type_of e in
       match op , t with
       | Rpreinc , (Tptr _) => Epreinc e t
@@ -214,6 +213,7 @@ Module UnOp.
           | Some t => R t
           end
       end
+    | t => R t
     end.
 
   Definition todo : resolve := fun t =>
@@ -238,7 +238,7 @@ Definition Ederef : UnOp.t := UnOp.infer Rstar UnOp.is_ptr.
 (* TODO: the handling of [Eunresolved_member] isn't quite right *)
 Definition Eunresolved_member (arrow : bool) (base : MExpr) (i : Mname) : MExpr :=
   if arrow then
-    Eunresolved_member (Earrow base None) i
+    Eunresolved_member (Earrow base Tauto) i
   else
     Eunresolved_member base i.
 

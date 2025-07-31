@@ -551,21 +551,16 @@ fmt::Formatter &ClangPrinter::printQualType(CoqPrinter &print,
             }
         }
         return print.output();
-    } else
-        fatal(print, *this, loc, "unexpected null type in printQualType");
+    } else {
+        return print.output() << "Tauto";
+        // fatal(print, *this, loc, "unexpected null type in printQualType");
+    }
 }
 
 fmt::Formatter &ClangPrinter::printQualTypeOption(CoqPrinter &print,
                                                   const QualType &qt,
                                                   loc::loc loc) {
-    auto t = qt.getTypePtrOrNull();
-    if (t == nullptr || t->isDependentType()) {
-        return print.none();
-    } else {
-        print.some();
-        printQualType(print, qt, loc);
-        return print.end_ctor();
-    }
+    printQualType(print, qt, loc);
 }
 
 fmt::Formatter &ClangPrinter::printQualifier(CoqPrinter &print,
