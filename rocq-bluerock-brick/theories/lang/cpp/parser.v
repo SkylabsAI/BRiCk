@@ -17,6 +17,7 @@ Require Import bluerock.lang.cpp.parser.lang.
 Require Import bluerock.lang.cpp.parser.type.
 Require Import bluerock.lang.cpp.parser.name.
 Require Import bluerock.lang.cpp.parser.expr.
+Require Export bluerock.lang.cpp.mparser.expr.
 Require Import bluerock.lang.cpp.parser.decl.
 Require Import bluerock.lang.cpp.parser.notation.
 Require Import bluerock.lang.cpp.parser.reduction.
@@ -214,6 +215,46 @@ Definition Dunion (n : globname) (f : option Union) : K :=
 
 Definition Denum (n : globname) (u : type) (cs : list ident) : K :=
   _types n $ Genum u cs.
+
+Require Import bluerock.lang.cpp.syntax.templates.
+Definition Dfunction_template (ps : list temp_param) (n : name)  (f : MFunc) : K :=
+  _skip. (* _symbols <[n := Template ps $ Ofunction f]>. *)
+
+Definition Dmethod_template (ps : list temp_param) (n : name) (static : bool) (f : MMethod) : K :=
+  _skip. (* _symbols <[n := Template ps $ if static then Ofunction $ static_method f else Omethod f]>. *)
+
+Definition Dconstructor_template (ps : list temp_param) (n : name) (f : MCtor) : K :=
+  _skip. (* _symbols <[n := Template ps $ Oconstructor f]>. *)
+
+Definition Ddestructor_template (ps : list temp_param) (n : name) (f : MDtor) : K :=
+  _skip. (* _symbols <[n := Template ps $ Odestructor f]>. *)
+
+Definition Dtype_template (ps : list temp_param) (n : name) : K :=
+  _skip. (* _types <[n := Template ps Gtype]>. *)
+
+Definition Dstruct_template (ps : list temp_param) (n : name) (f : option MStruct) : K :=
+  _skip. (* _types <[n := Template ps $ if f is Some f then Gstruct f else Gtype]>. *)
+
+Definition Dunion_template (ps : list temp_param) (n : name) (f : option MUnion) : K :=
+  _skip. (* _types <[n := Template ps $ if f is Some f then Gunion f else Gtype]>. *)
+
+Definition Denum_template (ps : list temp_param) (n : name) (u: type) (cs : list ident) : K :=
+  _skip. (* _types <[n := Template ps $ Genum u cs]>. *)
+
+Definition Denum_constant_template (ps : list temp_param) (n : name)
+    (gn : globname) (ut : exprtype) (v : N + Z) (init : option Expr) : K :=
+  _skip. (*
+  _types $ insert n $
+    let v := match v with inl n => Echar n ut | inr z => Eint z ut end in
+    let t := Tenum gn in
+    Template ps $ Gconstant t $ Some $ Ecast (Cintegral t) v. *)
+
+Definition Dvariable_template (ps : list temp_param) (n : name) (t : type) (init : global_init.t) : K :=
+  _skip. (* _symbols <[n := Template ps $ Ovar t init]>. *)
+
+Definition Dtypedef_template (ps : list temp_param) (n : name) (t : type) : K :=
+  _skip. (* _aliases <[n := Template ps t]>. *)
+
 
 Definition Denum_constant (n : globname)
     (gn : globname) (ut : exprtype) (v : N + Z) (init : option Expr) : K :=

@@ -210,6 +210,17 @@ void ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
             }
 
             // TODO I still need to generate the initializer
+            {
+                Cache c;
+                CoqPrinter print(fmt, /*templates*/ true, c);
+
+                for (auto decl : mod.template_declarations()) {
+                    printDecl(decl, print, cprint);
+                }
+                for (auto decl : mod.template_definitions()) {
+                    printDecl(decl, print, cprint);
+                }
+            }
 
             print.output() << "." << fmt::outdent << fmt::outdent << fmt::line;
             if (!interactive_.has_value()) {

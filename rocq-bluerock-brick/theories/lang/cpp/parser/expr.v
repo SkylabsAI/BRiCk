@@ -7,6 +7,7 @@
 Require Import bluerock.lang.cpp.syntax.types(drop_qualifiers).
 Require Import bluerock.lang.cpp.parser.prelude.
 Require Import bluerock.lang.cpp.parser.lang.
+Require Export bluerock.lang.cpp.mparser.expr.
 
 #[local] Arguments force_some _ {_} : assert.	(** TODO: Upstream? *)
 

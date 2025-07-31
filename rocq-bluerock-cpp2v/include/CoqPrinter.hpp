@@ -45,7 +45,7 @@ public:
     }
 
     fmt::Formatter &type() {
-        return this->output_ << (templates() ? "Mtype" : "type");
+        return this->output_ << "type";
     }
 
     fmt::Formatter &begin_tuple() { return this->output_ << "("; }

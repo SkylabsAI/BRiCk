@@ -314,7 +314,6 @@ public:
     void VisitFunctionProtoType(const FunctionProtoType *type,
                                 CoqPrinter &print, ClangPrinter &cprint) {
         guard::ctor _1(print, "Tfunction");
-        print.output() << (print.templates() ? "Mtype" : "type") << fmt::nbsp;
         cprint.printCallingConv(print, type->getCallConv(), loc::of(type))
             << fmt::nbsp;
         cprint.printVariadic(print, type->isVariadic()) << fmt::nbsp;
@@ -560,7 +559,12 @@ fmt::Formatter &ClangPrinter::printQualType(CoqPrinter &print,
 fmt::Formatter &ClangPrinter::printQualTypeOption(CoqPrinter &print,
                                                   const QualType &qt,
                                                   loc::loc loc) {
-    printQualType(print, qt, loc);
+    auto t = qt.getTypePtrOrNull();
+    if (t == nullptr) {
+        return print.output() << "Tauto";
+    } else {
+        return printQualType(print, qt, loc);
+    }
 }
 
 fmt::Formatter &ClangPrinter::printQualifier(CoqPrinter &print,

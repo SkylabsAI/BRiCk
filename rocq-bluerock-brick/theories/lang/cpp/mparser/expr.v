@@ -7,9 +7,11 @@ Require Import bluerock.lang.cpp.mparser.prelude.
 Require Import bluerock.lang.cpp.syntax.types.
 Require Import bluerock.lang.cpp.syntax.typing. (* TODO: use [typed]? *)
 Require Import bluerock.lang.cpp.syntax.overloadable.
-Require Import bluerock.lang.cpp.parser.expr.
+(*
+ Require Import bluerock.lang.cpp.parser.expr.
 
 Include ParserExpr.
+*)
 
 (** ** Template-only derived expressions emitted by cpp2v *)
 (**
