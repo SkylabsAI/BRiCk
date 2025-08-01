@@ -96,6 +96,17 @@ Module internal.
   #[local] Instance am_Lookup {K T} {_ : EqDecision K} : Lookup K T (ArrayMap.t K T) :=
     fun k m => ArrayMap.find m k.
 
+  (* NOTE: this works.
+  Inductive map {t : Type} : Type :=
+  | Branch (here : AtomicNameMap.Raw.t (@map t))
+           (scoped : AtomicNameMap.Raw.t (@map t))
+           (inst : TempArgMap.Raw.t (@map t))
+           (v : option t)
+  | Leaf (value : t).
+  Arguments map _ : clear implicits.
+  *)
+
+
   Inductive map {t : Type} : Type :=
   | Branch (here : ArrayMap.t atomic_name (@map t))
            (scoped : ArrayMap.t atomic_name (@map t))
