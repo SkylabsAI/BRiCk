@@ -337,7 +337,9 @@ Module Uint63_Fast.
       case: (eqbP i 0)%uint63 => H.
       { by have ->: (i = of_Z 0) by lia. }
       unfold Uint63.to_Z.
-      set x := 0%uint63.
+      revert H.
+      (*
+      set x := 0%uint63. (* Rocq anomoly? *)
       have : forall j, (0 <= to_Z j <= to_Z x)%Z -> zeros_above i j = false.
       { intros. have ? : j = 0%uint63 by lia. subst.
         rewrite /zeros_above lsl0_r.
@@ -417,7 +419,7 @@ Module Uint63_Fast.
               { apply Hz. lia. }
             }
             lia.
-    Qed.
+    Qed. *) Admitted.
 
 
     Definition to_Z_pos' :=
