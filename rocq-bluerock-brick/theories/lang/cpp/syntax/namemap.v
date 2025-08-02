@@ -34,6 +34,33 @@ Module internal.
     Include FMapAVL.Make Key.
     Include FMapExtra.MIXIN Key.
     Include FMapExtra.MIXIN_LEIBNIZ Key.
+
+    Definition ix {V} (k : Compare.t) : Lens (t V) (t V) (option V) (option V) :=
+      {| Lens.view := find k
+       ; Lens.over f m :=
+            let v := find k m in
+            match f v with
+            | None => match v with
+                     | None => m
+                     | Some _ => remove k m
+                     end
+            | Some v => add k v m
+            end
+      |}.
+
+    Definition raw_ix {V} (k : Compare.t) : Lens (Raw.t V) (Raw.t V) (option V) (option V) :=
+      {| Lens.view := Raw.find k
+      ; Lens.over f m :=
+          let v := Raw.find k m in
+          match f v with
+          | None => match v with
+                    | None => m
+                    | Some _ => Raw.remove k m
+                    end
+          | Some v => Raw.add k v m
+          end
+      |}.
+
   End AtomicNameMap.
 
   Module TempArgMap.
@@ -53,6 +80,33 @@ Module internal.
     Include FMapAVL.Make Key.
     Include FMapExtra.MIXIN Key.
     Include FMapExtra.MIXIN_LEIBNIZ Key.
+
+    Definition ix {V} (k : Compare.t) : Lens (t V) (t V) (option V) (option V) :=
+      {| Lens.view := find k
+      ; Lens.over f m :=
+          let v := find k m in
+          match f v with
+          | None => match v with
+                    | None => m
+                    | Some _ => remove k m
+                    end
+          | Some v => insert k v m
+          end
+      |}.
+
+    Definition raw_ix {V} (k : Compare.t) : Lens (Raw.t V) (Raw.t V) (option V) (option V) :=
+      {| Lens.view := Raw.find k
+      ; Lens.over f m :=
+          let v := Raw.find k m in
+          match f v with
+          | None => match v with
+                    | None => m
+                    | Some _ => Raw.remove k m
+                    end
+          | Some v => Raw.add k v m
+          end
+      |}.
+
   End TempArgMap.
 
   Module ArrayMap.
@@ -96,7 +150,6 @@ Module internal.
   #[local] Instance am_Lookup {K T} {_ : EqDecision K} : Lookup K T (ArrayMap.t K T) :=
     fun k m => ArrayMap.find m k.
 
-  (* NOTE: this works.
   Inductive map {t : Type} : Type :=
   | Branch (here : AtomicNameMap.Raw.t (@map t))
            (scoped : AtomicNameMap.Raw.t (@map t))
@@ -104,16 +157,14 @@ Module internal.
            (v : option t)
   | Leaf (value : t).
   Arguments map _ : clear implicits.
-  *)
 
-
-  Inductive map {t : Type} : Type :=
-  | Branch (here : ArrayMap.t atomic_name (@map t))
-           (scoped : ArrayMap.t atomic_name (@map t))
-           (inst : ArrayMap.t (list temp_arg') (@map t))
-           (v : option t)
-  | Leaf (value : t).
-  Arguments map _ : clear implicits.
+  (* Inductive map {t : Type} : Type := *)
+  (* | Branch (here : ArrayMap.t atomic_name (@map t)) *)
+  (*          (scoped : ArrayMap.t atomic_name (@map t)) *)
+  (*          (inst : ArrayMap.t (list temp_arg') (@map t)) *)
+  (*          (v : option t) *)
+  (* | Leaf (value : t). *)
+  (* Arguments map _ : clear implicits. *)
 
   Definition here {T} (m : map T) : _ :=
     match m with
@@ -155,17 +206,17 @@ Module internal.
       (m : map T) : map T :=
       match n with
       | Nglobal an =>
-          let here := here m &: ArrayMap.ix an %= f in
+          let here := here m &: AtomicNameMap.raw_ix an %= f in
           branch here (scoped m) (inst m) (value m)
       | Nscoped n an =>
           let f om : option (map T) :=
             match om with
             | None => match f None with
                      | None => None
-                     | Some v => Some $ branch ∅ (∅ &: ArrayMap.ix an .= Some v) ∅ None
+                     | Some v => Some $ branch ∅ (∅ &: AtomicNameMap.raw_ix an .= Some v) ∅ None
                      end
             | Some m =>
-                let scoped := scoped m &: ArrayMap.ix an %= fun om => f om in
+                let scoped := scoped m &: AtomicNameMap.raw_ix an %= fun om => f om in
                 Some $ branch (here m) scoped (inst m) (value m)
             end
           in
@@ -175,10 +226,10 @@ Module internal.
             match om with
             | None => match f None with
                       | None => None
-                      | Some v => Some $ branch ∅ ∅ (∅ &: ArrayMap.ix i .= Some v) None
+                      | Some v => Some $ branch ∅ ∅ (∅ &: TempArgMap.raw_ix i .= Some v) None
                       end
             | Some m =>
-                let inst := inst m &: ArrayMap.ix i %= fun om => f om in
+                let inst := inst m &: TempArgMap.raw_ix i %= fun om => f om in
                 Some $ branch (here m) (scoped m) inst (value m)
             end
           in
