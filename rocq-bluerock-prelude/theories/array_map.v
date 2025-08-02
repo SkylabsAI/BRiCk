@@ -3,12 +3,53 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
+Require Stdlib.micromega.ZifyUint63.
 Require Import Stdlib.Array.PArray.
-Require Import BinNatDef.
+Require Import Stdlib.NArith.BinNatDef.
 Require Import Stdlib.Numbers.Cyclic.Int63.Uint63.
 Require Import bluerock.prelude.base.
 
+(**
+   This file is an experiment in building a space-efficient
+   static finite map that supports fast lookup.
+
+   "Static" here means that it does not support insertion or removal.
+   To construct one of these:
+   1. Create the tree using an AVL tree (or similar ordered tree)
+   2. Convert the AVL tree into this tree using [of_sorted_list]
+
+   Status:
+   With <<vm_compute>> this is very fast compared to AVL trees.
+
+   <<
+    | size   | array_map | avl          | speedup (%) |
+    | ------ | --------- | ------------ | ----------- |
+    |  100   |  10551861 |     12349128 | -15%        |
+    |  200   |  38656324 |   3493436964 | -99%        |
+    |  500   | 250156391 | 127809076122 | -99.8%      |
+   >>
+
+   However, under <<lazy>> performance is the opposite:
+
+   <<
+    | size   | array_map  | avl        | speedup (%) |
+    | ------ | ---------- | ---------- | ----------- |
+    |  100   |  260068506 |  213557956 | +22%        |
+    |  200   | 1175780283 | 1052519065 | +12%        |
+    |  500   | 6884188297 | 6808521939 | +1%         |
+   >>
+
+   This seems to be due to the in-ability to force computations
+   on primitive integers which means that they stack up computations
+   on these values during the bisection. This was mitigated
+   by the explicit the [bisection] type below (which can be forced),
+   but it does not fundamentally change the asymptotics of
+   <<lazy>>.
+ *)
+
 Module Uint63_Fast.
+  Import Stdlib.micromega.ZifyUint63.
+
 
     (* Faster than [to_Z], probably only for small-ish integers *)
     Fixpoint to_Z_zero_rec (n : nat) (i : int) {struct n} : Z :=
@@ -109,7 +150,6 @@ Module Uint63_Fast.
     Definition to_Z_pos (i : int) :=
       if (i =? 0)%uint63 then 0%Z else Z.pos $ to_pos_rec i Uint63.size 0%uint63.
 
-    Require Import Stdlib.micromega.ZifyUint63.
 
     Lemma decide_bounded (P : int -> Prop) `{P_dec : forall x, Decision (P x)} :
       Decision (exists x, P x).
@@ -699,3 +739,64 @@ Module map (Import K : KEY).
   End with_value.
   #[global] Arguments t : clear implicits.
 End map.
+
+(** *** Performance Tests *)
+(*
+Require Stdlib.Structures.OrderedTypeAlt.
+Require Stdlib.FSets.FMapAVL.
+
+Module Type TEST_ARRAY_MAP.
+  Module M.
+    Definition key := nat.
+    Definition inh : Inhabited key := _.
+    Definition compare := Nat.compare.
+    Include map.
+  End M.
+
+  #[local] Definition size : nat := 100.
+
+  Definition big_test : M.t nat :=
+    Eval vm_compute in
+    M.of_sorted_list $ ((fun x => (x,x)) <$> seq 0 size).
+
+  Example test :
+    List.forallb (fun k => bool_decide (M.find k big_test = Some k)) (seq 0 size).
+  Proof.
+    Optimize Heap.
+    Succeed Instructions lazy.
+  Abort.
+End TEST_ARRAY_MAP.
+
+Module Type TEST_AVL.
+  Module Compare.
+    Definition t : Type := nat.
+    #[local] Definition compare : t -> t -> comparison := Nat.compare.
+    #[local] Infix "?=" := compare.
+    #[local] Lemma compare_sym x y : (y ?= x) = CompOpp (x ?= y).
+    Proof. Admitted.
+    #[local] Lemma compare_trans c x y z : (x ?= y) = c -> (y ?= z) = c -> (x ?= z) = c.
+    Proof. Admitted.
+  End Compare.
+
+  Module Key := OrderedTypeAlt.OrderedType_from_Alt Compare.
+  Lemma eqL : forall a b, Key.eq a b -> @eq _ a b.
+  Proof. (* proof the comparison equality is Leibnize equality *) Admitted.
+  Module M.
+    Include FMapAVL.Make Key.
+  End M.
+
+  #[local] Definition size : nat := 100.
+
+  Definition big_test : M.t nat :=
+    Eval vm_compute in
+      List.fold_left (fun a k => M.add k k a) (seq 0 size) (M.empty _).
+
+  Example test :
+    List.forallb (fun k => bool_decide (M.find k big_test = Some k)) (seq 0 size).
+  Proof.
+    Optimize Heap.
+    Succeed Instructions lazy.
+  Abort.
+
+End TEST_AVL.
+*)
