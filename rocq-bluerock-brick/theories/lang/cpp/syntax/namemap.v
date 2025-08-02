@@ -109,107 +109,64 @@ Module internal.
 
   End TempArgMap.
 
-  Module ArrayMap.
-    Section with_K.
-      Context {K : Type}.
-      Context {DEC : EqDecision K}.
+End internal.
 
-      Definition t (T : Type) : Type :=
-        list (K * T).
+Module NameMap.
+  Import internal.
 
-      Definition find {T} (m : t T) (k : K) : option T :=
-        snd <$> List.find (fun kv => bool_decide (kv.1 = k)) m.
+  Section with_elt.
+    Context {elt : Type}.
 
-      Definition empty {T} : t T := [].
+    Inductive t : Type :=
+    | Branch (here : AtomicNameMap.Raw.t t)
+            (scoped : AtomicNameMap.Raw.t t)
+            (inst : TempArgMap.Raw.t t)
+            (v : option elt)
+    | Leaf (value : elt).
 
-      Definition insert {T} (k : K) (v : T) (m : t T) : t T :=
-        (k,v) :: m.
-      Definition remove {T} (k : K) (m : t T) : t T :=
-        List.filter (fun x => ~~bool_decide (x.1 = k)) m.
+    Definition here (m : t) : _ :=
+      match m with
+      | Branch here _ _ _ => here
+      | Leaf _ => ∅
+      end.
+    Definition scoped (m : t) : _ :=
+      match m with
+      | Branch _ scoped _ _ => scoped
+      | Leaf _ => ∅
+      end.
+    Definition inst (m : t) : _ :=
+      match m with
+      | Branch _ _ inst _ => inst
+      | Leaf _ => ∅
+      end.
+    Definition value (m : t) : option elt :=
+      match m with
+      | Branch _ _ _ v => v
+      | Leaf v => Some v
+      end.
+    Definition branch := Branch.
+    #[local] Instance atomic_name_eq_dec : EqDecision atomic_name :=
+      LeibnizComparison.from_comparison.
+    Instance t_empty : Empty t := branch ∅ ∅ ∅ None.
 
-      Definition ix {T} (k : K) : Lens (t T) (t T) (option T) (option T) :=
-        {| Lens.view m := find m k
-         ; Lens.over f m :=
-             match find m k with
-             | None => match f None with
-                      | None => m
-                      | Some v => insert k v m
-                      end
-             | Some v => match f (Some v) with
-                        | None => remove k m
-                        | Some v' => insert k v' $ remove k m
-                        end
-             end
-        |}.
-      End with_K.
-    Arguments t _ _ : clear implicits.
+    Fixpoint find_map (n : name) (m : t) : option t :=
+      match n with
+      | Nglobal an => here m !! an
+      | Nscoped n an => find_map n m ≫= fun m => scoped m !! an
+      | Ninst n i => find_map n m ≫= fun m => inst m !! i
+      | _ => None
+      end.
+    Definition find (n : name) (m : t) : option elt :=
+      find_map n m ≫= value.
 
-  End ArrayMap.
-  #[local] Instance am_Empty {K T} : Empty (ArrayMap.t K T) :=
-    ArrayMap.empty.
-  #[local] Instance am_Lookup {K T} {_ : EqDecision K} : Lookup K T (ArrayMap.t K T) :=
-    fun k m => ArrayMap.find m k.
-
-  Inductive map {t : Type} : Type :=
-  | Branch (here : AtomicNameMap.Raw.t (@map t))
-           (scoped : AtomicNameMap.Raw.t (@map t))
-           (inst : TempArgMap.Raw.t (@map t))
-           (v : option t)
-  | Leaf (value : t).
-  Arguments map _ : clear implicits.
-
-  (* Inductive map {t : Type} : Type := *)
-  (* | Branch (here : ArrayMap.t atomic_name (@map t)) *)
-  (*          (scoped : ArrayMap.t atomic_name (@map t)) *)
-  (*          (inst : ArrayMap.t (list temp_arg') (@map t)) *)
-  (*          (v : option t) *)
-  (* | Leaf (value : t). *)
-  (* Arguments map _ : clear implicits. *)
-
-  Definition here {T} (m : map T) : _ :=
-    match m with
-    | Branch here _ _ _ => here
-    | Leaf _ => ∅
-    end.
-  Definition scoped {T} (m : map T) : _ :=
-    match m with
-    | Branch _ scoped _ _ => scoped
-    | Leaf _ => ∅
-    end.
-  Definition inst {T} (m : map T) : _ :=
-    match m with
-    | Branch _ _ inst _ => inst
-    | Leaf _ => ∅
-    end.
-  Definition value {T} (m : map T) : option T :=
-    match m with
-    | Branch _ _ _ v => v
-    | Leaf v => Some v
-    end.
-  Definition branch {T} := @Branch T.
-  #[local] Instance atomic_name_eq_dec : EqDecision atomic_name := LeibnizComparison.from_comparison.
-
-  Fixpoint find_map {T} (n : name) (m : map T) : option (map T) :=
-    match n with
-    | Nglobal an => here m !! an
-    | Nscoped n an => find_map n m ≫= fun m => scoped m !! an
-    | Ninst n i => find_map n m ≫= fun m => inst m !! i
-    | _ => None
-    end.
-  Definition find {T} (n : name) (m : map T) : option T :=
-    find_map n m ≫= value.
-  Instance t_empty {T} : Empty (map T) := branch ∅ ∅ ∅ None.
-
-  Section lens.
-    Context {T : Type}.
-    #[local] Fixpoint ix_over_aux (n : name) (f : option (map T) -> option (map T))
-      (m : map T) : map T :=
+    #[local] Fixpoint ix_over_aux (n : name) (f : option t -> option t)
+      (m : t) : t :=
       match n with
       | Nglobal an =>
           let here := here m &: AtomicNameMap.raw_ix an %= f in
           branch here (scoped m) (inst m) (value m)
       | Nscoped n an =>
-          let f om : option (map T) :=
+          let f om : option t :=
             match om with
             | None => match f None with
                      | None => None
@@ -222,7 +179,7 @@ Module internal.
           in
           ix_over_aux n f m
       | Ninst n i =>
-          let f om : option (map T) :=
+          let f om : option t :=
             match om with
             | None => match f None with
                       | None => None
@@ -236,8 +193,9 @@ Module internal.
           ix_over_aux n f m
       | _ => m
       end%lens.
-    Definition ix_over (n : name) (f : option T -> option T) : map T -> map T :=
-      let f om : option (map T) :=
+    #[local]
+    Definition ix_over (n : name) (f : option elt -> option elt) : t -> t :=
+      let f om : option t :=
         match om with
         | None => match f None with
                  | None => None
@@ -249,23 +207,25 @@ Module internal.
       in
       ix_over_aux n f.
 
-    Definition ix (n : name) : Lens (map T) (map T) (option T) (option T) :=
-      {| Lens.view := find n ; Lens.over := ix_over n |}.
-  End lens.
+    Definition ix (n : name) : Lens t t (option elt) (option elt) :=
+      {| Lens.view m := find n m ; Lens.over f m := ix_over n f m |}.
 
-  Definition insert {T} (n : name) (v : T) (m : map T) : map T :=
-    Lens.over (ix n) (fun _ => Some v) m.
-  Definition remove {T} (n : name) (m : map T) : map T :=
-    Lens.over (ix n) (fun _ => None) m.
+    Definition insert (n : name) (v : elt) (m : t) : t :=
+      Lens.over (ix n) (fun _ => Some v) m.
+    Definition remove (n : name) (m : t) : t :=
+      Lens.over (ix n) (fun _ => None) m.
+  End with_elt.
+  #[global] Arguments t _ : clear implicits.
 
-  Eval vm_compute in
-    let a := Nglobal $ Nid "a" in
-    let ab := Nscoped a $ Nid "b" in
-    let abc := Nscoped ab $ Nid "c" in
-    let abd := Nscoped ab $ Nid "d" in
-    insert a 1 $ insert abc 2 $ insert abd 3 $ ∅.
+  (* Test case *)
+  (* Eval vm_compute in *)
+  (*   let a := Nglobal $ Nid "a" in *)
+  (*   let ab := Nscoped a $ Nid "b" in *)
+  (*   let abc := Nscoped ab $ Nid "c" in *)
+  (*   let abd := Nscoped ab $ Nid "d" in *)
+  (*   insert a 1 $ insert abc 2 $ insert abd 3 $ ∅. *)
 
-End internal.
+End NameMap.
 
 Module NM.
   Include NameMap.
