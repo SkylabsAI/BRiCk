@@ -61,8 +61,8 @@ Ltac solve_frac := solve [intros; split; apply _].
 
 Class FracSplittable_0 {PROP : bi} (R : Qp → PROP) : Prop := {
   (* #[global] frac_splittable_0_fractional :: Fractional R; *)
-  (* #[global] frac_splittable_0_timeless :: Timeless1 R; *)
-  (* #[global] frac_splittable_0_frac_valid :: FracValid0 R; *)
+  #[global] frac_splittable_0_timeless :: Timeless1 R;
+  #[global] frac_splittable_0_frac_valid :: FracValid0 R;
 }.
 Section frac_0.
   Context {PROP : bi} (R : Qp → PROP) `{!FracSplittable_0 R}.
