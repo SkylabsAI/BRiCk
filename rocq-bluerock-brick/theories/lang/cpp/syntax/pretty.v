@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2024 BlueRock Security, Inc.
+ * Copyright (c) 2024-2025 BlueRock Security, Inc.
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
@@ -245,9 +245,76 @@ Section with_lang.
     | Tresult_parenlist _ _
     | Tresult_member _ _ => "!nyi"
     end
+
   with printE (e : Expr) : PrimString.string :=
     match e with
     | Eglobal nm _ => printN nm
+    | Evar n _ => n
+    | Ebool true => "true"
+    | Ebool false => "false"
+    | Ederef e _ => "*" ++ printE e
+    | Eaddrof e => "&" ++ printE e
+    | Eassign l r _ => printE l ++ " = " ++ printE r
+    | Epreinc e _ => "++" ++ printE e
+    | Epredec e _ => "--" ++ printE e
+    | Epostinc e _ => printE e ++ "++"
+    | Epostdec e _ => printE e ++ "--"
+    | Eseqand l r => printE l ++ " && " ++ printE r
+    | Eseqor l r => printE l ++ " || " ++ printE r
+    | Ecomma l r => printE l ++ ", " ++ printE r
+    | Ecall e ls => printE e ++ (parens $ concat $ join_sep ", " $ printE <$> ls)
+    | Eexplicit_cast c t e =>
+        match c with
+        | cast_style.functional => printT t ++ (parens $ printE e)
+        | cast_style.c => (parens $ printT t) ++ (parens $ printE e)
+        | cast_style.static => "static_cast<" ++ printT t ++ ">" ++ (parens $ printE e)
+        | cast_style.const => "const_cast<" ++ printT t ++ ">" ++ (parens $ printE e)
+        | cast_style.dynamic => "dynamic_cast<" ++ printT t ++ ">" ++ (parens $ printE e)
+        | cast_style.reinterpret => "reinterpret_cast<" ++ printT t ++ ">" ++ (parens $ printE e)
+        end
+    | Emember arrow e a _ _ =>
+        printE e ++ (if arrow then "->" else ".") ++ printAN printT None a
+    | Emember_call arrow (inl (nm, _, _)) obj es =>
+        printE obj ++ (if arrow then "->" else ".") ++ printN nm ++
+          (parens $ concat $ join_sep ", " $ printE <$> es)
+    | Esubscript l r _ =>
+        printE l ++ "[" ++ printE r ++ "]"
+    | Esizeof (inl t) _ => "sizeof" ++ (parens $ printT t)
+    | Esizeof (inr e) _ => "sizeof" ++ (parens $ printE e)
+    | Ealignof (inl t) _ => "alignof" ++ (parens $ printT t)
+    | Ealignof (inr e) _ => "alignof" ++ (parens $ printE e)
+    | Econstructor nm es _ =>
+        printN nm ++ (parens $ concat $ join_sep ", " $ printE <$> es)
+    | Eimplicit e => printE e
+    | Eimplicit_init _ => "{}"
+    | Ethis _ => "this"
+    | Enull => "nullptr"
+    | Eandclean e => printE e
+    | Ematerialize_temp e _ => printE e
+    | Eif t thn els _ => printE t ++ " ? " ++ printE thn ++ " : " ++ printE els
+    | _ => "!nyi"
+    end
+
+  with printS (s : Stmt) : PrimString.string :=
+    match s with
+    | Sexpr e => printE e ++ ";"
+    | Sseq ss =>
+        concat $ join_sep "
+" $ printS <$> ss
+    | Sif None t thn els =>
+        "if " ++ (parens $ printE t) ++ printS thn ++ "
+else " ++ printS els
+    | Sif_consteval thn els =>
+        "if consteval " ++ printS thn ++ " else " ++ printS els
+    | Sdefault => "default:"
+    | Scase (Exact n) => "case " ++ "?" ++ ":"
+    | Scase (Range l h) => "case " ++ "?" ++ ".." ++ "?" ++ ":"
+    | Sbreak => "break;"
+    | Scontinue => "continue;"
+    | Sreturn None => "return;"
+    | Sreturn (Some e) => "return " ++ printE e ++ ";"
+    | Sgoto l => "goto " ++ l
+
     | _ => "!nyi"
     end.
 
