@@ -15,6 +15,7 @@ Require Import bluerock.iris.extra.proofmode.proofmode.
 #[local] Set Primitive Projections.
 #[local] Set Default Proof Using "Type*".
 
+
 (** * Spec building block: fractional ownership *)
 (**
 Overview:

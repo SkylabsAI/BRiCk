@@ -15,6 +15,7 @@ Require Import bluerock.iris.extra.proofmode.proofmode.
 #[local] Set Printing Coercions.
 #[local] Set Default Proof Using "Type*".
 
+
 (** * Spec building block: const/mutable fractional ownership *)
 (**
 Overview:
