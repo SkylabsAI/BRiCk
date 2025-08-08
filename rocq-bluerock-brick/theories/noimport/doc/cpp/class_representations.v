@@ -3,37 +3,24 @@
  * This software is distributed under the terms of the BedRock Open-Source License.
  * See the LICENSE-BedRock file in the repository root for details.
  *)
+Require Import bluerock.iris.extra.bi.prelude.
+Require Import bluerock.iris.extra.proofmode.proofmode.
 Require Import bluerock.lang.cpp.cpp.
-Import cQp_compat.
+Require Import bluerock.lang.cpp.parser.plugin.cpp2v.
 
-Section with_Sigma.
-  #[local] Open Scope bs_scope.
-  Context `{Sigma: cpp_logic} {CU:genv}.
-  Import primitives.
-
-  Variable x:ptr.
-  Variable y:ptr.
-  Variable r:Rep.
-  Variable q:Qp.
+Section with_Σ.
+  Context `{Σ : cpp_logic} {σ : genv}.
 
   (** * Struct & Class
 
       consider the following C++ class.
-
-      [[
-      class Point {
-        int x;
-        int y;
-      };
-      ]]
-
-      cpp2v will generate mangled names and some notations to help
-      you write predicates more conveniently.
  *)
-
-  Notation "`::Point::x`" := (Nscoped (Nglobal $ Nid "Point") (Nid "x")) (at level 0).
-
-  Notation "`::Point::y`" := (Nscoped (Nglobal $ Nid "Point") (Nid "y")) (at level 0).
+  cpp.prog source prog cpp:{{
+        class Point {
+          int x;
+          int y;
+        };
+  }}.
 
   (**
 Just like [intR] defines the memory representation for the type [int],
@@ -41,13 +28,14 @@ we can define [PointR] to define the memory representation for the class [Point]
 The following says, that the field x contains the integer 1 and field y contains
 the integer value [5] *)
 
-  Example PointR15 (q : Qp) : Rep :=
-    _field `::Point::x`  |-> intR q 1 **
-    _field `::Point::y`  |-> intR q 5.
+  Example PointR15 (q : cQp.t) : Rep :=
+    structR "Point" q **
+    _field "Point::x"  |-> intR q 1 **
+    _field "Point::y"  |-> intR q 5.
 
 (**
-The above was too concrete; it stored the specific point (1,5).
-Just like [intR] takes as agument a [z:Z] to denote the mathematical number being
+The above was too concrete; it stored the specific point (1, 5).
+Just like [intR] takes as agument a [z : Z] to denote the mathematical number being
 represented, we define a Gallina record to denote the mathematical model of what is stored:
 *)
 
@@ -57,12 +45,15 @@ represented, we define a Gallina record to denote the mathematical model of what
     }.
 
   (** Then we can define the general class representation as follows: *)
-    Definition PointR (q : Qp) (m: Model_Point): Rep :=
-    _field `::Point::x`  |-> intR q (p_x m) **
-    _field `::Point::y`  |-> intR q (p_y m).
+  Definition PointR (q : cQp.t) (m : Model_Point): Rep :=
+    structR "Point" q **
+    _field "Point::x"  |-> intR q m.(p_x) **
+    _field "Point::y"  |-> intR q m.(p_y).
 
 
   (** * Tagged Unions
+
+   TODO: this is outdated.
 
    Sometimes, the interpretation of a piece of data depends on another value.
    For example, consider the following class.
@@ -102,11 +93,12 @@ represented, we define a Gallina record to denote the mathematical model of what
   Parameters tag_field x_field y_field : field.
 
   Definition taggedR (m : M) : Rep :=
+    structR "tagged" 1$m **
     match m with
-    | AnInt z => _field tag_field |-> boolR 1 true **
-                 _field x_field |-> intR 1 z
-    | ABool b => _field tag_field |-> boolR 1 false **
-                 _field y_field |-> boolR 1 b
+    | AnInt z => _field tag_field |-> boolR 1$m true **
+                 _field x_field |-> intR 1$m z
+    | ABool b => _field tag_field |-> boolR 1$m false **
+                 _field y_field |-> boolR 1$m b
     end.
   (** note that in this definition, the [x_field] and [y_field] are *not*
       disjoint.
@@ -114,10 +106,11 @@ represented, we define a Gallina record to denote the mathematical model of what
       an equivalent way to write this definition is the following.
    *)
   Definition taggedR' (m : M) : Rep :=
-    _field tag_field |-> boolR 1 (is_an_int m) **
+    structR "tagged" 1$m **
+    _field tag_field |-> boolR 1$m (is_an_int m) **
     match m with
-    | AnInt z => _field x_field |-> intR 1 z
-    | ABool b => _field y_field |-> boolR 1 b
+    | AnInt z => _field x_field |-> intR 1$m z
+    | ABool b => _field y_field |-> boolR 1$m b
     end.
   (** a benefit to this approach is that is is clear that, regardless of the
       value of the model, it is always safe to access the [tag] field.
@@ -126,12 +119,21 @@ represented, we define a Gallina record to denote the mathematical model of what
    *)
   Goal forall (this : ptr) m, this |-> taggedR m -|- this |-> taggedR' m.
   Proof.
+    intros.
     rewrite /taggedR /taggedR'.
-    split'; (* prove each direction of the entailment separately (our automation
+
+    Succeed solve [ (* confirm the following script concludes the proof. *)
+      iSplit; (* prove each direction of the entailment separately (our automation
                can only prove one direction at a time) *)
       destruct m; (* case analysis on the [m] to determine if it is an [AnInt]
                      or an [ABool] *)
-      simpl; eauto with iFrame. (* standard entailment checking *)
+      simpl; eauto with iFrame (* standard entailment checking *)
+    ].
+
+    (* This specific proof can be even easier! *)
+    destruct m; (* case analysis on the [m] to determine if it is an [AnInt]
+                    or an [ABool] *)
+      done.
   Qed.
 
 
@@ -169,10 +171,10 @@ represented, we define a Gallina record to denote the mathematical model of what
    *)
   Parameters word_field high_field low_field : field.
 
-  Definition OrBytes_wordR (q : Qp) (w : Z) : Rep :=
+  Definition OrBytes_wordR (q : cQp.t) (w : Z) : Rep :=
     _field word_field |-> intR q w.
 
-  Definition OrBytes_high_lowR (q : Qp) (h l : Z) : Rep :=
+  Definition OrBytes_high_lowR (q : cQp.t) (h l : Z) : Rep :=
     _field high_field |-> intR q h **
     _field low_field |-> intR q l.
 
@@ -180,7 +182,7 @@ represented, we define a Gallina record to denote the mathematical model of what
       one of the two representations as primary. Here, we will pick
       [OrBytes_wordR] as primary.
    *)
-  Definition OrBytesR (q : Qp) (w : Z) : Rep :=
+  Definition OrBytesR (q : cQp.t) (w : Z) : Rep :=
     OrBytes_wordR q w.
 
   (** It is undefined behavior in C++ to read the element of a union that was
@@ -192,7 +194,7 @@ represented, we define a Gallina record to denote the mathematical model of what
    *)
 
   (**
-     Some compilers implement a language extension which defines this behaivor.
+     Some compilers implement a language extension which defines this behavior.
      If you wish to rely on this behavior, you can write lemmas similar to the
      following.
 
@@ -215,4 +217,4 @@ represented, we define a Gallina record to denote the mathematical model of what
       values.
    *)
 
-End with_Sigma.
+End with_Σ.
