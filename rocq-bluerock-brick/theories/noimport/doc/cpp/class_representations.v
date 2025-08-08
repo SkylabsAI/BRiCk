@@ -61,7 +61,7 @@ represented, we define a Gallina record to denote the mathematical model of what
    [[
    struct tagged {
      bool tag;
-     union { int x; bool y; };
+     union u { int x; bool y; } u;
    };
    ]]
 
@@ -92,6 +92,7 @@ represented, we define a Gallina record to denote the mathematical model of what
    *)
   Parameters tag_field x_field y_field : field.
 
+  (* TODO: add unionR, extract `uR`, maybe focus on `u` instead of the whole tagged union. *)
   Definition taggedR (m : M) : Rep :=
     structR "tagged" 1$m **
     match m with
@@ -105,6 +106,7 @@ represented, we define a Gallina record to denote the mathematical model of what
 
       an equivalent way to write this definition is the following.
    *)
+  (* TODO: add unionR, extract uR *)
   Definition taggedR' (m : M) : Rep :=
     structR "tagged" 1$m **
     _field tag_field |-> boolR 1$m (is_an_int m) **
