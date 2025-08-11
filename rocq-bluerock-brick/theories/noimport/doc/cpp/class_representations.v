@@ -50,6 +50,9 @@ represented, we define a Gallina record to denote the mathematical model of what
     _field "Point::x"  |-> intR q m.(p_x) **
     _field "Point::y"  |-> intR q m.(p_y).
 
+(* Require Import bluerock.auto.cpp.prelude.proof. *)
+(*   #[only(cfracsplittable)] derive PointR. *)
+
 
   (** * Tagged Unions
 
@@ -61,7 +64,7 @@ represented, we define a Gallina record to denote the mathematical model of what
    [[
    struct tagged {
      bool tag;
-     union u { int x; bool y; } u;
+     union untagged { int x; bool y; } u;
    };
    ]]
 
@@ -80,6 +83,12 @@ represented, we define a Gallina record to denote the mathematical model of what
   (** these are tagged in Coq, i.e. we can pattern match on a value of
       type [M] to determine which case it is.
    *)
+  Definition union_variant_id (m : M) : nat :=
+    match m with
+    | AnInt _ => 0
+    | _ => 1
+    end.
+
   Definition is_an_int (m : M) : bool :=
     match m with
     | AnInt _ => true
@@ -91,6 +100,14 @@ represented, we define a Gallina record to denote the mathematical model of what
       field for the representation predicate.
    *)
   Parameters tag_field x_field y_field : field.
+
+  Definition untaggedR (q : cQp.t) (m : M): Rep :=
+    unionR "untagged" q (Some (union_variant_id m)) **
+    match m with
+    | AnInt z => _field x_field |-> intR q z
+    | ABool b => _field y_field |-> boolR q b
+    end.
+
 
   (* TODO: add unionR, extract `uR`, maybe focus on `u` instead of the whole tagged union. *)
   Definition taggedR (m : M) : Rep :=
