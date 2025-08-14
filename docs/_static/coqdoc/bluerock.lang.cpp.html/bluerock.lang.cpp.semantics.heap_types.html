@@ -61,10 +61,10 @@ Heap types (aka 'runtime types') are the subset of types
  
 </div>
 <div class="code">
-<span class="id" title="keyword">Notation</span> <a id="Rtype" class="idref" href="#Rtype"><span class="id" title="abbreviation">Rtype</span></a> := <a class="idref" href="bluerock.lang.cpp.syntax.core.html#type"><span class="id" title="abbreviation">type</span></a> (<span class="id" title="var">only</span> <span class="id" title="var">parsing</span>).<br/>
+<span class="id" title="keyword">Notation</span> <a id="Rtype" class="idref" href="#Rtype"><span class="id" title="abbreviation">Rtype</span></a> := <a class="idref" href="bluerock.lang.cpp.syntax.core.html#type"><span class="id" title="inductive">type</span></a> (<span class="id" title="var">only</span> <span class="id" title="var">parsing</span>).<br/>
 
 <br/>
-<span class="id" title="keyword">Fixpoint</span> <a id="is_Rtype" class="idref" href="#is_Rtype"><span class="id" title="definition">is_Rtype</span></a> (<a id="s:1" class="idref" href="#s:1"><span class="id" title="binder">s</span></a> : <a class="idref" href="bluerock.lang.cpp.syntax.core.html#type"><span class="id" title="abbreviation">type</span></a>) : <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a> :=<br/>
+<span class="id" title="keyword">Fixpoint</span> <a id="is_Rtype" class="idref" href="#is_Rtype"><span class="id" title="definition">is_Rtype</span></a> (<a id="s:1" class="idref" href="#s:1"><span class="id" title="binder">s</span></a> : <a class="idref" href="bluerock.lang.cpp.syntax.core.html#type"><span class="id" title="inductive">type</span></a>) : <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a> :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="bluerock.lang.cpp.semantics.heap_types.html#s:1"><span class="id" title="variable">s</span></a> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tnum"><span class="id" title="constructor">Tnum</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
 &nbsp;&nbsp;| <a class="idref" href="bluerock.lang.cpp.syntax.core.html#Tvoid"><span class="id" title="constructor">Tvoid</span></a><br/>
