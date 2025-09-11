@@ -507,7 +507,8 @@ let _ =
     ~best_effort ~strategy ~depth ~dep dbs
 
 let _ =
-  define "is_class" (reference @-> ret bool) Typeclasses.is_class
+  define "is_class" (reference @-> eret bool) @@ fun c env _ -> 
+    Typeclasses.is_class env c
 
 (* Clean error reporting. *)
 
