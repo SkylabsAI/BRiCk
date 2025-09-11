@@ -496,11 +496,11 @@ Module Encoded.
 
       rewrite !(length_take, length_app,length_rev,length_map,length_seq,length_concat).
       rewrite map_map.
-      setoid_rewrite length_rev.
-      setoid_rewrite length_map.
-      setoid_rewrite length_seq.
+      (* setoid_rewrite length_rev. *)
+      (* setoid_rewrite length_map. *)
+      (* setoid_rewrite length_seq. *)
       rewrite (_ : list_sum _ = length ls * bpc)%nat; last first.
-      { clear. induction ls; [done|rewrite /= IHls; lia]. }
+      { clear. induction ls; [done|rewrite /= IHls length_rev length_map length_seq; lia]. }
       rewrite !take_ge; last first.
       { rewrite !(length_app,length_rev,length_map,length_seq,length_concat).
         rewrite map_map.
