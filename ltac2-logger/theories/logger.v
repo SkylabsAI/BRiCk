@@ -85,11 +85,11 @@ Module Log.
 
   Module Notations.
     (** Generic notation for calling [log_msg]. *)
-    Ltac2 Notation "log[" flag(tactic(0)) "," level(tactic(0)) "]" fmt(format) :=
+    Ltac2 Notation "log[" flag(tactic(0)) "," level(tactic(0)) "]" fmt(format) : 1 :=
       log_msg flag level fmt.
 
     (** Notation for calling [msg_msg] to create a message using a format. *)
-    Ltac2 Notation "msg!" fmt(format) :=
+    Ltac2 Notation "msg!" fmt(format) : 1 :=
       msg_msg fmt.
 
     Ltac2 Dev Log Flag tac.

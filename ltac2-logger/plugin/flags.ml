@@ -231,7 +231,7 @@ let define_notation : with_level:bool -> string -> int -> unit =
   let sexpr_str s = Tac2expr.SexprStr(CAst.make s) in
   let sexpr_int i = Tac2expr.SexprInt(CAst.make i) in
   let sexpr_rec id args =
-    let id = CAst.make (Some(Names.Id.of_string id)) in
+    let id = CAst.make (Some(Libnames.qualid_of_string id)) in
     let dummy_loc = Loc.make_loc (0, 0) in
     Tac2expr.SexprRec(dummy_loc, id, args)
   in
@@ -271,7 +271,7 @@ let define_notation : with_level:bool -> string -> int -> unit =
     in
     CAst.make Tac2expr.(CTacApp(log_msg, args))
   in
-  let notation = Tac2entries.register_notation [] tokens None body in
+  let notation = Tac2entries.register_notation [] tokens (None, None) body in
   Tac2entries.register_notation_interpretation notation;
   Msg.info "Ltac2 notation \"log[%s%s] <format>\" is defined.\n%!"
     id (if with_level then ",<level>" else "")
