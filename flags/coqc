@@ -22,3 +22,5 @@
 +mismatched-hint-db
 -w
 -elpi.flex-clause
+-w
+-notation-for-abbreviation
