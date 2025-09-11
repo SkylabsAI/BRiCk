@@ -35,7 +35,7 @@ Register view as elpi.derive.lens.view.
 
 (* Links the record, a field name and the lens focusing on that field *)
 Elpi Db derive.lens.db lp:{{
-  pred lens-db o:inductive, o:string, o:constant.
+  pred lens-db o:inductive, o:constant, o:constant.
 }}.
 
 (* standalone command *)
