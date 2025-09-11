@@ -54,10 +54,10 @@ Section gset_bind.
   Proof. set_solver. Qed.
 End gset_bind.
 
-Section lookup_insert.
+Section lookup_insert_eq.
 
   Lemma lookup_insert_iff `{Countable K, A} (m : gmap K A) k k' a :
     <[ k := a ]> m !! k' = if bool_decide (k = k') then Some a else m !! k'.
-  Proof. by case: bool_decide_reflect => [<-|?]; rewrite (lookup_insert, lookup_insert_ne). Qed.
+  Proof. by case: bool_decide_reflect => [<-|?]; rewrite (lookup_insert_eq, lookup_insert_ne). Qed.
 
-End lookup_insert.
+End lookup_insert_eq.

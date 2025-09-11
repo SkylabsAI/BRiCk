@@ -144,7 +144,7 @@ Section seqN.
   Lemma elem_of_seqN (len start n : N) :
     n ∈ seqN start len ↔ start <= n < start + len.
   Proof.
-    rewrite /seqN -{1} (N2Nat.id n) elem_of_list_fmap_inj.
+    rewrite /seqN -{1} (N2Nat.id n) list_elem_of_fmap_inj.
     rewrite elem_of_seq. lia.
   Qed.
 
@@ -483,13 +483,13 @@ Section listN.
     dropN n (<[i:=x]> xs) = <[(i - n)%N:=x]> (dropN n xs).
   Proof.
     move/N.ge_le/N2Nat_inj_le. rewrite /insert/list_insertN N2Nat.inj_sub.
-    by apply: drop_insert_le.
+    by apply: drop_insert_ge.
   Qed.
 
   Lemma dropN_insertN_lt i n x xs :
     (i < n)%N ->
     dropN n (<[i:=x]> xs) = dropN n xs.
-  Proof. move=> H. apply: drop_insert_gt. lia. Qed.
+  Proof. move=> H. apply: drop_insert_lt. lia. Qed.
 
   (* NOTE: This exists for registration as a pure hint when necessary. *)
   Lemma dropN_congr n1 n2 xs1 xs2 :
@@ -580,7 +580,7 @@ Section listN.
   Lemma takeN_insertN_ge i n x xs :
     (i >= n)%N ->
     takeN n (<[i:=x]> xs) = takeN n xs.
-  Proof. move/N.ge_le/N2Nat_inj_le. by apply: take_insert. Qed.
+  Proof. move/N.ge_le/N2Nat_inj_le. by apply: take_insert_ge. Qed.
 
   Lemma takeN_insertN_lt i n x xs :
     (i < n)%N ->
@@ -749,7 +749,7 @@ Section listN.
   Lemma lookupN_takeN xs k i :
     i < k ->
     lookupN i (takeN k xs) = lookupN i xs.
-  Proof. rewrite -!lookupN_fold /takeN=> H. by apply: lookup_take; lia. Qed.
+  Proof. rewrite -!lookupN_fold /takeN=> H. by apply: lookup_take_lt; lia. Qed.
 
   Lemma lookupN_is_Some xs i :
     i < lengthN xs <-> is_Some (lookupN i xs).
@@ -795,7 +795,7 @@ Section listN.
   Lemma lookupN_insertN_eq i x xs :
     (i < lengthN xs)%N ->
     <[i:=x]> xs !! i = Some x.
-  Proof. rewrite /lengthN. move=> H. apply: list_lookup_insert. lia. Qed.
+  Proof. rewrite /lengthN. move=> H. apply: list_lookup_insert_eq. lia. Qed.
 
   Lemma lookupN_insertN_neq i j x xs :
     i <> j ->
@@ -941,12 +941,12 @@ Section listN.
 
   Lemma insertN_insertN i x x' xs :
     <[i:=x']> (<[i:=x]> xs) = <[i:=x']> xs.
-  Proof. by apply: list_insert_insert. Qed.
+  Proof. by apply: list_insert_insert_eq. Qed.
 
   Lemma insertN_comm i j x x' xs :
   i <> j ->
   <[i:=x]> (<[j:=x']> xs) = <[j:=x']> (<[i:=x]> xs).
-  Proof. move=> H. apply: list_insert_commute. lia. Qed.
+  Proof. move=> H. apply: list_insert_insert_ne. lia. Qed.
 
   Lemma insertN_app_l i x xs1 xs2 :
     (i < lengthN xs1)%N ->
@@ -1333,13 +1333,13 @@ Section listZ.
   Qed.
 
   Lemma elem_of_if_lookupZ_Some {A} {x : A} {xs : list A} (k : Z) : xs !! k = Some x -> x ∈ xs.
-  Proof. rewrite lookupZ_Some_to_nat => - [?]; apply elem_of_list_lookup_2. Qed.
+  Proof. rewrite lookupZ_Some_to_nat => - [?]; apply list_elem_of_lookup_2. Qed.
 
   Lemma lookupZ_is_Some_iff {A} x (xs : list A) : (∃ k : Z, xs !! k = Some x) <-> x ∈ xs.
   Proof.
     split.
     - move => [k]; apply elem_of_if_lookupZ_Some.
-    - move => /elem_of_list_lookup [i Hxs].
+    - move => /list_elem_of_lookup [i Hxs].
       exists (Z.of_nat i); rewrite lookupZ_Some_to_nat Nat2Z.id.
       by split; [lia |].
   Qed.
@@ -1353,7 +1353,7 @@ Section listZ.
     case: bool_decide_reflect.
     - rewrite /lengthN => - [] <- [? ?].
       rewrite /insert /list_insertZ lookupZ_Some_to_nat.
-      rewrite bool_decide_eq_true_2 // list_lookup_insert //.
+      rewrite bool_decide_eq_true_2 // list_lookup_insert_eq //.
       lia.
     - rewrite !not_and_l Z.nlt_ge insertZ_eq_insertN.
       case: bool_decide_reflect => // ? [Hk|[Hneg|Hlen]].
