@@ -24,3 +24,5 @@
 -elpi.flex-clause
 -w
 -notation-for-abbreviation
+-w
+-level-tolerance
