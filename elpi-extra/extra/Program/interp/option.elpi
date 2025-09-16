@@ -10,8 +10,8 @@ accumulate "bluerock.elpi.extra/Program/both/option".	% ../both/option.elpi
 
 namespace option {
 
-  pred of_term i:term, i:(term -> A -> prop), o:option A.	% May panic
-  pred as_term i:option A, i:term, i:(A -> term -> prop), o:term.	% May panic
+  func of_term term, (func term -> A) -> option A.	% May panic
+  func as_term option A, term, (func A -> term) -> term.	% May panic
 
   /*
   Implementation

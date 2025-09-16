@@ -10,8 +10,8 @@ accumulate "bluerock.elpi.extra/Program/both/list".	% ../both/list.elpi
 
 namespace list {
 
-  pred of_term i:term, i:(term -> A -> prop), o:list A.	% May panic
-  pred as_term i:list A, i:term, i:(A -> term -> prop), o:term.	% May panic
+  func of_term term, (func term -> A) -> list A.	% May panic
+  func as_term list A, term, (func A -> term) -> term.	% May panic
 
   /*
   Implementation

@@ -176,9 +176,9 @@ namespace attr {
 
   %%% Entry points
 
-  pred continue-parsing i:list attribute, i:(string -> list A -> prop), o:list A.
-  pred parse-list i:list attribute, i:(string -> prop) i:(string -> list A -> prop), o:list A.
-  pred parse i:(string -> prop) i:(string -> list A -> prop), o:list prop, o:list A.
+  pred continue-parsing i:list attribute, i:(pred i:string, o:list A), o:list A.
+  pred parse-list i:list attribute, i:(pred i:string) i:(pred i:string, o:list A), o:list A.
+  pred parse i:(string -> prop) i:(pred i:string, o:list A), o:list prop, o:list A.
 
   %%% Context
 
@@ -216,8 +216,8 @@ namespace attr {
   pred check-map-norecurse o:list attribute, o:diagnostic.
   pred is-map-norecurse o:list attribute.
 
-  pred check-map i:(string -> list A -> prop), o:list A, o:diagnostic.	% Continue parsing
-  pred is-map i:(string -> list A -> prop), o:list A.
+  pred check-map i:(pred i:string, o:list A), o:list A, o:diagnostic.	% Continue parsing
+  pred is-map i:(pred i:string, o:list A), o:list A.
 
 }
 
@@ -242,7 +242,7 @@ namespace attr {
   %%% Context
 
   namespace internal {
-    type error (string -> prop) -> prop.
+    type error (pred i:string) -> prop.
     type path attr.path -> prop.
     type name string -> prop.
     type value attribute-value -> prop.

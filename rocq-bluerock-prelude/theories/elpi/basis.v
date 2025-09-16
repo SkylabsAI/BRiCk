@@ -43,42 +43,11 @@ Elpi File bluerock.basis.elpi lp:{{
   list.map3 [A|AS] [B|BS] [C|CS] F [D|DS] :- F A B C D, list.map3 AS BS CS F DS.
   list.map3.aux :- coq.error "list.map3 lengths don't agree".
 
-  pred list.app! i:list A, i:A -> prop.
+  pred list.app! i:list A, i:(pred i:A).
   list.app! L F :- std.map L (x\ _\ F x, !) _.
 
-  pred list.app2! i:list A, i:list B, i:A -> B -> prop.
+  pred list.app2! i:list A, i:list B, i:(pred i:A, i:B).
   list.app2! L1 L2 F :- std.map2 L1 L2 (x\ y\ _\ F x y, !) _.
-
-  pred list.foldl i:list A, i:B, i:(A -> B -> B -> prop), o:B.
-  list.foldl L Acc F R :- std.fold L Acc F R.
-
-  pred list.foldr i:list A, i:B, i:(A -> B -> B -> prop), o:B.
-  list.foldr [] Acc _ Acc.
-  list.foldr [X|XS] Acc F R :- F X {list.foldr XS Acc F} R.
-
-  %%% Locate
-
-  /*
-  [coq.gref->module-path GR ModPath] outputs the full kernel name
-  [ModPath] of the module containing global [GR].
-  */
-  pred coq.gref->module-path i:gref, o:string.
-  coq.gref->module-path GR ModPath :- std.do! [
-    Path = {coq.gref->path GR},
-    ModPath = {std.string.concat "." Path},
-  ].
-
-  /*
-  [coq.module-locate Path Name GR] is a simple wrapper around
-  [coq.locate] setting [GR := Path.Name]. Panics if [Path.Name] cannot
-  be located.
-
-  Useful because [coq.locate S] is prone to import mismatch errors
-  unless [S] is a full path.
-  */
-  pred coq.module-locate i:string, i:string, o:gref.
-  coq.module-locate Path Name GR :-
-    coq.locate {calc (Path ^ "." ^ Name)} GR.
 
   %%% Coq options
 
