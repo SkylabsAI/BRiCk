@@ -248,7 +248,7 @@ Module PTRS_IMPL <: PTRS_INTF.
     mkOffset σ (o_sub_ ty z) _.
   Next Obligation. intros; case_match; simplify_eq/=; case_match; naive_solver. Qed.
 
-  Lemma last_last_equiv {X} d {xs : list X} : default d (stdpp.list.last xs) = List.last xs d.
+  Lemma last_last_equiv {X} d {xs : list X} : default d (last xs) = List.last xs d.
   Proof. elim: xs => // x1 xs /= <-. by case_match. Qed.
 (*
   Section merge_elem.
