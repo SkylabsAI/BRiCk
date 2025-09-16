@@ -8,7 +8,7 @@
 
 typeabbrev lstring string -> prop.
 namespace lstring {
-  pred default! i:string, i:lstring, o:string.	% Verbose with <<Elpi Debug "DEBUG_DIAG".>>
+  func default! string, lstring -> string.	% Verbose with <<Elpi Debug "DEBUG_DIAG".>>
 }
 
 kind diag type.
@@ -16,24 +16,25 @@ namespace diag {
   type ok diag.
   type error lstring -> diag.
 
-  pred interp i:diag.	% Panic on error
-  pred assert! i:(diag -> prop), i:lstring.	% Panic with "Prefix: " on error
+  func interp diag ->.	% Panic on error
+  func assert! (func diag ->), lstring ->.	% Panic with "Prefix: " on error
+  :functional
   pred do! o:diag, i:list (diag -> prop).
-  pred lift-ok! i:prop, i:lstring, o:diag.
+  func lift-ok! prop, lstring -> diag.
 
   % Working with fixed strings
 
-  pred errors i:string, o:diag.
-  pred asserts! i:(diag -> prop), i:string.
-  pred lift-oks! i:prop, i:string, o:diag.
+  func errors string -> diag.
+  func asserts! (func diag ->) -> string.
+  func lift-oks! (prop), string -> diag.
 
   % Working with <<diagnostic>>
 
-  pred of_diagnostic i:diagnostic, o:diag.
-  pred to_diagnostic i:diag, o:diagnostic.
+  func of_diagnostic diagnostic -> diag.
+  func to_diagnostic diag -> diagnostic.
 
-  pred lift! i:(diagnostic -> prop), o:diag.
-  pred lower! i:(diag -> prop), o:diagnostic.
+  func lift! (func -> diagnostic) -> diag.
+  func lower! (func -> diag) -> diagnostic.
 }
 
 /*
@@ -58,12 +59,12 @@ namespace diag {
   macro @nomsg :- "No message".
   macro @nodiag :- "No diagnostic".
 
-  pred locate i:diag, i:lstring, o:diag.
+  func locate diag, lstring -> diag.
   locate diag.ok _ diag.ok :- !.
   locate (diag.error E) W (diag.error (locate.msg W E)) :- !.
   locate _ W (diag.error (locate.msg W ((=) @nodiag))).
 
-  pred locate.msg i:lstring, i:lstring, o:string.
+  func locate.msg lstring, lstring -> string.
   locate.msg W E Msg :-
     std.string.concat "" [
       {lstring.default! @noloc W}, ": ",
@@ -71,7 +72,7 @@ namespace diag {
     ] Msg.
 
   interp diag.ok :- !.
-  interp (diag.error E) :- coq.error {lstring.default! @nomsg E}.
+  interp (diag.error E) :- !, coq.error {lstring.default! @nomsg E}.
   interp _ :- coq.error @nodiag.
 
   assert! P W :- P D, !, interp {locate D W}.
@@ -87,8 +88,8 @@ namespace diag {
   asserts! Ps S :- diag.assert! Ps ((=) S).
   lift-oks! P S D :- lift-ok! P ((=) S) D.
 
-  of_diagnostic ok diag.ok.
-  of_diagnostic (error S) (diag.error ((=) S)).
+  of_diagnostic ok diag.ok :- !.
+  of_diagnostic (error S) (diag.error ((=) S)) :- !.
   of_diagnostic _ (diag.error ((=) @nodiag)).
 
   to_diagnostic diag.ok ok :- !.

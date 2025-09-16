@@ -8,9 +8,9 @@
 
 namespace pair {
 
-  pred of_prod i:term, i:(term -> A -> prop), i:(term -> B -> prop), o:pair A B.	% May panic
-  pred as_prod i:pair A B, i:term, i:term, i:(A -> term -> prop), i:(B -> term -> prop), o:term.	% May panic
-  pred as_prod_typecheck i:pair A B, i:(A -> term -> prop), i:(B -> term -> prop), o:term.	% May panic
+  pred of_prod i:term, i:(pred i:term, o:A), i:(pred i:term, o:B), o:pair A B.	% May panic
+  pred as_prod i:pair A B, i:term, i:term, i:(pred i:A, o:term), i:(pred i:B, o:term), o:term.	% May panic
+  pred as_prod_typecheck i:pair A B, i:(pred i:A, o:term), i:(pred i:B, o:term), o:term.	% May panic
 
   /*
   Implementation

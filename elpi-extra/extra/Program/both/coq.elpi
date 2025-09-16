@@ -22,8 +22,8 @@ namespace coq {
 
     type v term -> tm A.
 
-    pred of_term_unsafe i:term, o:tm A.
-    pred to_term i:tm A, o:term.
+    func of_term_unsafe term -> tm A.
+    func to_term tm A -> term.
   }
 
   /** ** Type for hint locality */
@@ -33,7 +33,7 @@ namespace coq {
   namespace locality {
     type e, l, g locality.
 
-    pred with! i:locality, i:prop.	% Run under locality
+    func with! locality, (func) ->.	% Run under locality
     pred id o:locality, o:string.	% "export", "local", "global"
   }
 
@@ -58,7 +58,7 @@ namespace coq {
 
   /** ** Synterp actions */
 
-  pred with-synterp-group! i:id, i:list prop.
+  func with-synterp-group! id, list prop.
 }
 
 /*
@@ -95,7 +95,7 @@ namespace coq {
   }
 
   locate?! Name Pat Val :-
-    std.mem! {coq.locate-all Name} (Pat Tmp),
+    (std.mem {coq.locate-all Name} (Pat Tmp), !), /* Using std.mem instead of std.mem! to work around std.mem! signature change in elpi 3.0 */
     ( ground_term Tmp, !, Val = Tmp
     ; fail ).
 

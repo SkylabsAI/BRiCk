@@ -8,15 +8,15 @@
 
 namespace list {
 
-  pred foldl i:list A, i:B, i:(A -> B -> B -> prop), o:B.
-  pred foldr i:list A, i:B, i:(A -> B -> B -> prop), o:B.
+  func foldl list A, B, (func A, B -> B) -> B.
+  func foldr list A, B, (func A, B -> B) -> B.
 
-  pred app! i:list A, i:A -> prop.
-  pred app2! i:list A, i:list B, i:A -> B -> prop.
+  pred app! i:list A, i:(pred i:A).
+  pred app2! i:list A, i:list B, i:(pred i:A, i:B).
 
   pred uniq i:list A, o:list A.	% The input should be ground
 
-  pred partition i:list A, i:(A -> prop), o:list A, o:list A.
+  func partition list A, (func A) -> list A, list A.
 
   /*
   Implementation

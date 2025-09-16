@@ -30,24 +30,22 @@ namespace coq {
 
   /** ** Reduction w/o scope problems */
 
-  pred eval_whd i:coq.redflags, i:term, o:term.
-  pred eval_lazy i:coq.redflags, i:term, o:term.
-  pred eval_cbv i:coq.redflags, i:term, o:term.
-  pred eval_vm i:term, o:term.
-  pred eval_native i:term, o:term.
-  pred eval_whd_all i:term, o:term.
-  pred eval_lazy_all i:term, o:term.
-  pred eval_cbv_all i:term, o:term.
+  func eval_whd coq.redflags, term -> term.
+  func eval_lazy coq.redflags, term -> term.
+  func eval_cbv coq.redflags, term -> term.
+  func eval_vm term -> term.
+  func eval_native term -> term.
+  func eval_whd_all term -> term.
+  func eval_lazy_all term -> term.
+  func eval_cbv_all term -> term.
 
   /** ** Terms with phantom types */
 
   namespace tm {
     shorten coq.{tm}.
 
-    pred of_global i:(term -> tm A -> prop), i:gref, o:tm A.
-    pred of_string i:(term -> tm A -> prop), i:string, o:tm A.
-
-    pred to_term i:tm A, o:term.
+    pred of_global i:(pred i:term, i:tm A), i:gref, o:tm A.
+    pred of_string i:(pred i:term, i:tm A), i:string, o:tm A.
 
     pred whd i:tm A, o:term.
     pred to_string i:tm A, o:string.
@@ -92,7 +90,7 @@ namespace coq {
   The predicate expects a reference to a compatibility constant and
   reads off the underlying primitive projection.
   */
-  pred extract-primitive-projection i:gref, o:term, o:diag.
+  func extract-primitive-projection gref, term -> diag.
 
   /** ** Tactics */
 
@@ -157,8 +155,6 @@ namespace coq {
     of_global OfTerm GR TM :- coq.env.global GR T, OfTerm T TM.
     of_string OfTerm S TM :- of_global OfTerm {coq.locate S} TM.
 
-    to_term (v T) T.
-
     whd (v T) Tred :- eval_whd_all T Tred.
     to_string (v T) S :- coq.term->string T S.
     pp (v T) PP :- coq.term->pp T PP.
@@ -197,7 +193,7 @@ namespace coq {
     Body = (fun _ _ R\ app [(primitive (proj _ _) as T), R]), !.
   extract-primitive-projection GR _ (diag.error (extract-primitive-projection.msg GR)).
 
-  pred extract-primitive-projection.msg i:gref, o:string.
+  func extract-primitive-projection.msg gref -> string.
   extract-primitive-projection.msg GR Msg :-
     Msg is "Expected compatibility constant: " ^ {coq.gref->string GR}.
 
