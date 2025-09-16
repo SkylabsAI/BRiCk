@@ -1022,13 +1022,22 @@ Module name.
       compare_lex (atomic_name.compare compareT b1.(box_Nscoped_1) b2.(box_Nscoped_1)) $ fun _ =>
       compareN b1.(box_Nscoped_0) b2.(box_Nscoped_0).
 
+    Record box_Nrequires : Set := Box_Nrequires {
+      box_Nrequires_0 : name;  (* compare first b/c they are cheap and very discriminating *)
+      box_Nrequires_1 : Expr;
+    }.
+    Definition box_Nrequires_compare (b1 b2 : box_Nrequires) : comparison :=
+      compare_lex (compareN b1.(box_Nrequires_0) b2.(box_Nrequires_0)) $ fun _ =>
+          compareE b1.(box_Nrequires_1) b2.(box_Nrequires_1).
+
     Definition tag (n : name) : positive :=
       match n with
       | Ninst _ _ => 1
       | Nglobal _ => 2
       | Ndependent _ => 3
       | Nscoped _ _ => 4
-      | _ => 5
+      | Nrequires _ _ => 5
+      | _ => 6
       end.
     Definition car (t : positive) : Set :=
       match t with
@@ -1036,6 +1045,7 @@ Module name.
       | 2 => atomic_name
       | 3 => type
       | 4 => box_Nscoped
+      | 5 => box_Nrequires
       | _ => PrimString.string
       end.
     Definition data (n : name) : car (tag n) :=
@@ -1044,6 +1054,7 @@ Module name.
       | Nglobal c => c
       | Ndependent t => t
       | Nscoped n c => Box_Nscoped n c
+      | Nrequires n e => Box_Nrequires n e
       | Nunsupported msg => msg
       end.
     Definition compare_data (t : positive) : car t -> car t -> comparison :=
@@ -1052,6 +1063,7 @@ Module name.
       | 2 => atomic_name.compare compareT
       | 3 => compareT
       | 4 => box_Nscoped_compare
+      | 5 => box_Nrequires_compare
       | _ => PrimString.compare
       end.
 
@@ -1062,6 +1074,7 @@ Module name.
       | Nglobal c => compare_ctor (Reduce (tag (Nglobal c))) (fun _ => Reduce (data (Nglobal c)))
       | Ndependent t => compare_ctor (Reduce (tag (Ndependent t))) (fun _ => Reduce (data (Ndependent t)))
       | Nscoped n c => compare_ctor (Reduce (tag (Nscoped n c))) (fun _ => Reduce (data (Nscoped n c)))
+      | Nrequires n e => compare_ctor (Reduce (tag (Nrequires n e))) (fun _ => Reduce (data (Nrequires n e)))
       | Nunsupported msg => compare_ctor (Reduce (tag (Nunsupported msg))) (fun _ => Reduce (data (Nunsupported msg)))
       end.
   End compare_body.

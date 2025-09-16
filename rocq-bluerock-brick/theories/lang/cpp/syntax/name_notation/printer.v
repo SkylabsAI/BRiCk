@@ -162,6 +162,8 @@ Section with_lang.
         in
         ((fun tas => angles $ sepBy ", " tas) <$> traverse printTA i) ≫= fun tas =>
         printN tas base
+    | Nrequires n e =>
+        (fun n e => n ++ " requires " ++ parens e) <$> printN inst n <*> printE e
     | Nunsupported note => mfail
     end
 

@@ -64,6 +64,7 @@ Section with_monad.
     | Nglobal an => atomic_name type an
     | Nscoped n s => name n <+> atomic_name type s
     | Ndependent t => type t
+    | Nrequires n e => name n <+> expr e
     | Nunsupported msg => FAIL msg
     end
 

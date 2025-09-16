@@ -150,6 +150,7 @@ Module MTraverse.
       | Nglobal c => Nglobal <$> traverse_an c
       | Ndependent t => Ndependent' <$> traverseT t
       | Nscoped n c => Nscoped <$> traverseN n <*> traverse_an c
+      | Nrequires n e => Nrequires <$> traverseN n <*> traverseE e
       | Nunsupported msg => mret $ Nunsupported msg
       end
 

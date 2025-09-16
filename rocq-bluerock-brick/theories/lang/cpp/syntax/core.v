@@ -338,6 +338,7 @@ Inductive name : Set :=
 | Ndependent (t : type) (* <<typename t>> *)
 | Nscoped (n : name) (c : atomic_name_ type)	(* <<n::c>> *)
 | Nunsupported (_ : PrimString.string)
+| Nrequires (n : name) (e : Expr) (* << n requires (e) *)
 
 (** Template arguments
     - <<int>> would be represented as [Atype Tint]
@@ -857,6 +858,7 @@ Fixpoint is_dependentN (n : name) : bool :=
   | Nglobal c => atomic_name.existsb is_dependentT c
   | Ndependent t => is_dependentT t
   | Nscoped n c => is_dependentN n || atomic_name.existsb is_dependentT c
+  | Nrequires n e => is_dependentN n || is_dependentE e
   | Nunsupported _ => false
   end
 

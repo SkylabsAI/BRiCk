@@ -177,6 +177,8 @@ Section with_lang.
     | Nscoped base n => printN base ++ "::" ++ printAN printT (topName base) n
     | Ninst base i =>
         printN base ++ angles (concat $ join_sep ", " $ List.concat (List.map printTA i))
+    | Nrequires n e =>
+        printN n ++ " requires " ++ parens (printE e)
     | Nunsupported note => "?" ++ note
     end
 
