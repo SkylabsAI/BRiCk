@@ -18,7 +18,7 @@ Require Import bluerock.lang.cpp.parser.type.
 Require Import bluerock.lang.cpp.parser.name.
 Require Import bluerock.lang.cpp.parser.expr.
 Require Import bluerock.lang.cpp.parser.decl.
-Require Import bluerock.lang.cpp.parser.notation.
+Require Export bluerock.lang.cpp.parser.notation.
 Require Import bluerock.lang.cpp.parser.reduction.
 
 Include ParserName.
