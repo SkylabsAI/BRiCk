@@ -547,6 +547,22 @@ Proof.
   by have := not_elem_of_list_lookup _ Hl Hni.
 Qed.
 
+(** Removes [x] from the list [l]. The function returns a [Some] when the
+removal succeeds and [None] when [x] is not in [l]. *)
+
+Fixpoint list_remove `{EqDecision A} (x : A) (l : list A) : option (list A) :=
+  match l with
+  | [] => None
+  | y :: l => if decide (x = y) then Some l else (y ::.) <$> list_remove x l
+  end.
+
+(** Removes all elements in the list [k] from the list [l]. The function returns
+a [Some] when the removal succeeds and [None] some element of [k] is not in [l]. *)
+Fixpoint list_remove_list `{EqDecision A} (k : list A) (l : list A) : option (list A) :=
+  match k with
+  | [] => Some l | x :: k => list_remove x l ≫= list_remove_list k
+  end.
+
 Lemma list_remove_delete `{EqDecision A} i (x : A) (xs : list A) :
   xs !! i = Some x →
   NoDup xs -> (* Needed because [i] might not be the first occurrence. *)
