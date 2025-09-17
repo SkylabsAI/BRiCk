@@ -87,7 +87,7 @@ Section observe.
       Observe (a ≼ b) P → Observe [| a ≼ b |] P.
     Proof. GUARD. rewrite /Observe=>->. iIntros "%". auto. Qed.
 
-    #[global] Instance observe_discrete_validI `{CmraDiscrete A} a P :
+    #[global] Instance observe_discrete_validI `{!CmraDiscrete A} a P :
       Observe (✓ a) P → Observe [| ✓ a |] P.
     Proof. GUARD. rewrite /Observe=>->. iIntros "%". auto. Qed.
 
@@ -146,7 +146,7 @@ Section observe.
     Context {A : ofe}. Notation RA := (exclR A).
     Context `{!HasOwn RA, !HasOwnValid RA}.
 
-    #[global] Instance own_excl_bot g : Observe False (own g ExclBot).
+    #[global] Instance own_excl_bot g : Observe False (own g ExclInvalid).
     Proof. GUARD. apply own_obs. by rewrite excl_validI. Qed.
     Lemma own_excl_l g a x : Observe2 False (own g (Excl a)) (own g x).
     Proof. by apply _. Abort.

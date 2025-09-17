@@ -95,10 +95,10 @@ Section proof_mode.
   Proof. Fail iIntros "P". Abort.
   Lemma test_before `{Hobs : !Observe Q P} : P ⊢ <pers> Q.
   Proof. Fail iApply Hobs. Abort.
-  Global Instance observe_as_emp_valid Q P :
-    AsEmpValid (Observe Q P) (P -∗ <pers> Q).
+  Global Instance observe_as_emp_valid d Q P :
+    AsEmpValid d (Observe Q P) (P -∗ <pers> Q).
   Proof.
-    rewrite/AsEmpValid/Observe. split.
+    rewrite/AsEmpValid/Observe. split => ?.
     - move=>->. by auto.
     - move/bi.wand_elim_r'. by rewrite right_id.
   Qed.
@@ -111,10 +111,10 @@ Section proof_mode.
   Proof. Fail iIntros "P1 P2". Abort.
   Lemma test_before `{Hobs : !Observe2 Q P1 P2} : P1 ⊢ P2 -∗ <pers> Q.
   Proof. Fail iApply Hobs. Abort.
-  Global Instance observe_2_as_emp_valid Q P1 P2 :
-    AsEmpValid (Observe2 Q P1 P2) (P1 -∗ P2 -∗ <pers> Q).
+  Global Instance observe_2_as_emp_valid d Q P1 P2 :
+    AsEmpValid d (Observe2 Q P1 P2) (P1 -∗ P2 -∗ <pers> Q).
   Proof.
-    rewrite/AsEmpValid/Observe2. split.
+    rewrite/AsEmpValid/Observe2. split => ?.
     - move=>->. apply bi.wand_intro_r, bi.emp_sep_2.
     - move/bi.wand_elim_r'. by rewrite right_id.
   Qed.

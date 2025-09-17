@@ -8,7 +8,7 @@
 Require Export iris.algebra.list.
 
 Section ofe.
-  Context {A : ofe}.
+  Context {SI : sidx} {A : ofe}.
   Implicit Types l k : list A.
   Lemma dist_Forall2 n l k : l ≡{n}≡ k ↔ Forall2 (≡{n}≡) l k.
   Proof. done. Qed.

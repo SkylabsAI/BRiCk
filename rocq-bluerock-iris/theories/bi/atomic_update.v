@@ -18,7 +18,7 @@
  * https://gitlab.mpi-sws.org/iris/iris/-/blob/ecad6c9fc48752b52678119c923dc4fff8e96f15/LICENSE-CODE
  *)
 Require Export iris.bi.lib.atomic.
-Require Import iris.bi.lib.fixpoint.
+Require Import iris.bi.lib.fixpoint_mono.
 Require Import bluerock.iris.extra.bi.telescopes.
 Require Import bluerock.iris.extra.proofmode.proofmode.
 Set Default Proof Using "Type".
@@ -43,7 +43,7 @@ Section atomic.
     iIntros "AU" (E HE).
     iApply (greatest_fixpoint_coiter _ (λ _, atomic.atomic_update_def Eo (Eo ∖ Ed) α β Φ)); last done.
     iIntros "!>" ([]).
-    rewrite {1}/atomic.atomic_update_def fixpoint.greatest_fixpoint_unfold.
+    rewrite {1}/atomic.atomic_update_def greatest_fixpoint_unfold.
     rewrite /atomic_update_pre atomic_acc_mask.
     iIntros "AAC". by iApply "AAC".
   Qed.

@@ -139,7 +139,7 @@ Section valid.
   Lemma cmra_valid_elim (a : A) : ¬ ✓{0} a → ✓ a ⊢ False.
   Proof.
     intros NVL. rewrite -embed_pure. apply embed_mono.
-    unseal => ?. apply NVL. apply cmra_validN_le with n; auto. lia.
+    unseal => ?. apply NVL. apply cmra_validN_le with n; auto. cbn; lia.
   Qed.
   Lemma plainly_cmra_valid_1 `{!BiPlainly PROP} `{!@BiEmbedPlainly siPropI PROP BE _ _}
     (a : A) : ✓ a ⊢ ■ ✓ a.

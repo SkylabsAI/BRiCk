@@ -20,7 +20,7 @@ Set Printing Coercions.
 
 
 (** Fractional authorative elements for [frac_auth]. *)
-Definition frac_auth_auth_frac {A : cmra} (q : Qp) (a : A) : frac_authR A :=
+Definition frac_auth_auth_frac {SI : sidx} {A : cmra} (q : Qp) (a : A) : frac_authR A :=
   ●{#q} (Some (1%Qp,a)).
 
 #[global] Instance: Params (@frac_auth_auth_frac) 2 := {}.
@@ -29,16 +29,16 @@ Definition frac_auth_auth_frac {A : cmra} (q : Qp) (a : A) : frac_authR A :=
 Notation "●F{ q } a" := (frac_auth_auth_frac q a) (at level 10, format "●F{ q }  a").
 
 Section frac_auth_auth_frac.
-  Context {A : cmra}.
+  Context {SI : sidx} {A : cmra}.
   Implicit Types a b : A.
   Import proofmode_classes.
 
   Lemma frac_auth_auth_auth_frac a : ●F a = ●F{1} a.
   Proof. done. Qed.
 
-  #[global] Instance frac_auth_auth_frac_ne q : NonExpansive (@frac_auth_auth_frac A q).
+  #[global] Instance frac_auth_auth_frac_ne q : NonExpansive (@frac_auth_auth_frac _ A q).
   Proof. solve_proper. Qed.
-  #[global] Instance frac_auth_auth_frac_proper q : Proper ((≡) ==> (≡)) (@frac_auth_auth_frac A q).
+  #[global] Instance frac_auth_auth_frac_proper q : Proper ((≡) ==> (≡)) (@frac_auth_auth_frac _ A q).
   Proof. solve_proper. Qed.
 
   #[global] Instance frac_auth_auth_frac_discrete q a `{!Discrete a} : Discrete (●F{q} a).
@@ -111,20 +111,20 @@ Section frac_auth_auth_frac.
     - move=>-[] _ /=. by left.
     - move/pair_includedN=>-[]_. by right.
   Qed.
-  Lemma frac_auth_auth_frag_included `{CmraDiscrete A} q1 q2 a b :
+  Lemma frac_auth_auth_frag_included `{!CmraDiscrete A} q1 q2 a b :
     ✓ (●F{q1} a ⋅ ◯F{q2} b) → Some b ≼ Some a.
   Proof.
-    move/cmra_valid_validN/(_ 0)/frac_auth_auth_frag_includedN.
+    move/cmra_valid_validN/(_ sidx_zero)/frac_auth_auth_frag_includedN.
     exact: cmra_discrete_included_r.
   Qed.
 
-  Lemma frac_auth_auth_frag_includedN_total `{CmraTotal A} n q1 q2 a b :
+  Lemma frac_auth_auth_frag_includedN_total `{!CmraTotal A} n q1 q2 a b :
     ✓{n} (●F{q1} a ⋅ ◯F{q2} b) → b ≼{n} a.
   Proof. by move/frac_auth_auth_frag_includedN/Some_includedN_total. Qed.
-  Lemma frac_auth_auth_frag_included_total `{CmraDiscrete A, CmraTotal A} q1 q2 a b :
+  Lemma frac_auth_auth_frag_included_total `{!CmraDiscrete A, !CmraTotal A} q1 q2 a b :
     ✓ (●F{q1} a ⋅ ◯F{q2} b) → b ≼ a.
   Proof.
-    move/cmra_valid_validN/(_ 0)/frac_auth_auth_frag_includedN_total.
+    move/cmra_valid_validN/(_ sidx_zero)/frac_auth_auth_frag_includedN_total.
     exact: cmra_discrete_included_r.
   Qed.
 

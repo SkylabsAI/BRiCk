@@ -5,7 +5,7 @@
  * See the LICENSE-BedRock file in the repository root for details.
  *)
 Require Import stdpp.coPset.
-Require Import iris.bi.lib.fixpoint.
+Require Import iris.bi.lib.fixpoint_mono.
 Require Import iris.bi.lib.laterable.
 Require Import bluerock.iris.extra.bi.derived_laws.
 Require Export bluerock.iris.extra.bi.atomic_update.

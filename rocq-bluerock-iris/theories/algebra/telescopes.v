@@ -9,7 +9,7 @@ Require Import iris.algebra.ofe.
 
 (** Support for guarded recursive specs. *)
 Section tele_fun_ofe.
-  Context {t : tele} {A : ofe}.
+  Context {t : tele} {SI : sidx} {A : ofe}.
 
   (** Imposing a discrete order here might be limiting in practice,
       but the same limitation exists upstream; for example, in
@@ -24,4 +24,4 @@ Section tele_fun_ofe.
 
   Canonical Structure tele_funO := Ofe (t -t> A) tele_fun_ofe_mixin.
 End tele_fun_ofe.
-Arguments tele_funO _ _ : clear implicits, assert.
+Arguments tele_funO {_} _ _ : assert.

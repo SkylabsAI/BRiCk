@@ -39,8 +39,8 @@ End monoid_instances.
 (** Powers *)
 
 Definition power `{Monoid M o} (x : M) (n : N) : M := N.iter n (o x) monoid_unit.
-#[global] Arguments power {_} o {_} _ !_ / : assert.
-#[global] Instance: Params (@power) 3 := {}.
+#[global] Arguments power {_ _} o {_} _ !_ / : assert.
+#[global] Instance: Params (@power) 4 := {}.
 #[global] Hint Opaque power : typeclass_instances br_opacity.
 
 #[global] Notation "x ^^{ o } n" := (power o x n) : stdpp_scope.
@@ -71,7 +71,7 @@ Section power.
     rewrite !power_succ. by apply Hop.
   Qed.
 
-  #[global] Instance power_ne (n : nat) : Proper (dist n ==> eq ==> dist n) (power o).
+  #[global] Instance power_ne (n : SI) : Proper (dist n ==> eq ==> dist n) (power o).
   Proof. apply: power_proper. Qed.
   #[global] Instance power_proper' : Proper (equiv ==> eq ==> equiv) (power o).
   Proof. apply: power_proper. Qed.

@@ -10,13 +10,13 @@ Require Export iris.algebra.lib.dfrac_agree.
 Require Export bluerock.prelude.base.
 Set Printing Coercions.
 
-Lemma qple_dfrac_own_incl q1 q2 :
+Lemma qple_dfrac_own_incl {SI : sidx} q1 q2 :
   (q1 ≤ q2)%Qp ↔ DfracOwn q1 ≼ DfracOwn q2 ∨ DfracOwn q1 = DfracOwn q2.
 Proof.
   by rewrite dfrac_own_included (inj_iff DfracOwn) -Qp.le_lteq.
 Qed.
 
-Definition dfrac_agreeRF (F : oFunctor) : rFunctor :=
+Definition dfrac_agreeRF {SI : sidx} (F : oFunctor) : rFunctor :=
   constRF dfracR * agreeRF F.
 
 (**
@@ -28,16 +28,16 @@ type class resolution.
 *)
 
 Section dfrac_agree.
-  Context {A : ofe}.
+  Context {SI : sidx} {A : ofe}.
   Implicit Types (q : Qp) (d : dfrac) (a : A).
 
   Lemma to_dfrac_agree_valid d a : ✓ to_dfrac_agree d a -> ✓ d.
   Proof. by rewrite/to_dfrac_agree pair_valid=>-[]. Qed.
 
-  #[global] Instance to_frac_agree_ne q : NonExpansive (@to_frac_agree A q).
+  #[global] Instance to_frac_agree_ne q : NonExpansive (@to_frac_agree _ A q).
   Proof. Fail apply _. apply to_dfrac_agree_ne. Qed.
   #[global] Instance to_frac_agree_proper q :
-    Proper (equiv ==> equiv) (@to_frac_agree A q).
+    Proper (equiv ==> equiv) (@to_frac_agree _ A q).
   Proof. Fail apply _. apply to_dfrac_agree_proper. Qed.
 
   #[global] Instance to_frac_agree_exclusive a :
@@ -45,12 +45,12 @@ Section dfrac_agree.
   #[global] Instance to_frac_agree_discrete q a :
     Discrete a -> Discrete (to_frac_agree q a) := _.
   #[global] Instance to_frac_agree_injN n :
-    Inj2 (dist n) (dist n) (dist n) (@to_frac_agree A).
+    Inj2 (dist n) (dist n) (dist n) (@to_frac_agree _ A).
   Proof.
     Fail apply _. by intros q1 a1 q2 a2 [[= ->]->]%to_dfrac_agree_injN.
   Qed.
   #[global] Instance to_frac_agree_inj :
-    Inj2 equiv equiv equiv (@to_frac_agree A).
+    Inj2 equiv equiv equiv (@to_frac_agree _ A).
   Proof.
     Fail apply _. by intros q1 a1 q2 a2 [[= ->]->]%to_dfrac_agree_inj.
   Qed.

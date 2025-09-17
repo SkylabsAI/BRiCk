@@ -87,7 +87,7 @@ Section later_mpred.
   #[global] Instance later_mpred_contractive : Contractive later_mpred.
   Proof.
     move => n ?? HP. apply: Next_contractive.
-    dist_later_intro. destruct n as [|n]; [lia | by destruct HP].
+    dist_later_intro. by destruct HP.
   Qed.
   #[global] Instance later_mpred_ne : NonExpansive later_mpred.
   Proof. exact: contractive_ne. Qed.

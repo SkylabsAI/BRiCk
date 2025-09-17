@@ -117,7 +117,7 @@ Module AuthSet.
         iMod (own_update_2 (A:=auth_setR T) γ.(_gname)
                            (AuthSet.frag s1) (AuthSet.auth s2)
           with "f a") as "fa".
-        { apply: (@auth_set_update _ s3 s3); set_solver. }
+        { apply: (auth_set_update s3 s3); set_solver. }
         iModIntro. setoid_rewrite <-own_op; iApply "fa".
       Qed.
       #[global] Instance frag_auth_sub γ s1 s2 : Observe2 [| s1 ⊆ s2 |] (frag γ s1) (auth γ s2).

@@ -72,7 +72,7 @@ Section defs.
         + intros P Q R [Ht1 HPQ] [Ht2 HQR]. split.
           * by rewrite Ht1 Ht2.
           * etrans. by apply HPQ. done.
-      - intros n m P Q [] ?. split; first done. by eapply dist_lt.
+      - intros n m P Q [] ?. split; first done. by eapply dist_le.
     Qed.
     Canonical Structure function_specO := Ofe function_spec function_spec_ofe_mixin.
 
@@ -91,18 +91,17 @@ Section defs.
     Proof. move=>P Q /type_of_spec_ne. exact: length_type_of_spec. Qed.
   End ofe.
 
-  #[global,program] Instance function_spec_cofe : Cofe function_specO := {|
-    compl c := {|
+  #[global,program] Instance function_spec_cofe : Cofe function_specO :=
+    cofe_finite (fun c => {|
       fs_cc := (c 0).(fs_cc);
       fs_arity := (c 0).(fs_arity);
       fs_return := (c 0).(fs_return);
       fs_arguments := (c 0).(fs_arguments);
       fs_spec := compl (chain_map fs_spec c);
-    |}
-  |}.
+  |}) _.
   Next Obligation.
     intros n c. split; simpl.
-    - destruct (chain_cauchy c 0 n) as [-> _]. lia. done.
+    - destruct (chain_cauchy c 0 n) as [-> _]. cbn; lia. done.
     - intros. apply conv_compl.
   Qed.
 

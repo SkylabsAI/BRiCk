@@ -35,7 +35,7 @@ Require Export bluerock.iris.extra.algebra.base.
 
 (** * The union CMRA *)
 Section coGset.
-  Context `{Countable A}.
+  Context {SI : sidx} `{Countable A}.
   Notation C := (coGset A).
   Implicit Types X Y : C.
 
@@ -96,9 +96,9 @@ Section coGset.
 
 End coGset.
 
-Global Arguments coGsetO _ {_ _} : assert.
-Global Arguments coGsetR _ {_ _} : assert.
-Global Arguments coGsetUR _ {_ _} : assert.
+Global Arguments coGsetO {_} _ {_ _} : assert.
+Global Arguments coGsetR {_} _ {_ _} : assert.
+Global Arguments coGsetUR {_} _ {_ _} : assert.
 
 (** * The disjoint union CMRA *)
 Inductive coGset_disj `{Countable A} :=
@@ -119,7 +119,7 @@ Proof.
 Defined.
 
 Section set_disj.
-  Context `{Countable A, Infinite A}.
+  Context {SI : sidx} `{Countable A, Infinite A}.
   Notation C := (coGset A).
   Implicit Types x y : coGset_disj A.
   Implicit Types X Y : coGset A.
@@ -274,6 +274,6 @@ Section set_disj.
   Qed.
 End set_disj.
 
-Arguments coGset_disjO _ {_ _} : assert.
-Arguments coGset_disjR _ {_ _ _} : assert.
-Arguments coGset_disjUR _ {_ _ _} : assert.
+Arguments coGset_disjO {_} _ {_ _} : assert.
+Arguments coGset_disjR {_} _ {_ _ _} : assert.
+Arguments coGset_disjUR {_} _ {_ _ _} : assert.

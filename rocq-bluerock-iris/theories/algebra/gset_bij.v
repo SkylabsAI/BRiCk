@@ -14,7 +14,7 @@ Note: One might want to use this construction with types [A], [B]
 equipped with an interesting setoid equality. In that case, we'd need
 [Proper] and [Params] instances. *)
 Section gset_bij.
-  Context `{Countable A, Countable B}.
+  Context {SI : sidx} `{Countable A, Countable B}.
   Implicit Types (a : A) (b : B) (L : gset (A * B)).
 
   (** Useful corollary to [gset_bij_auth_extend] that also produces

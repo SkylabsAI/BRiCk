@@ -111,8 +111,8 @@ Section theory.
     Lemma cmra_discrete_includedN_l n x y : Discrete x → ✓{n} y → x ≼{n} y → x ≼ y.
     Proof.
       intros ? Hv Hinc. apply cmra_discrete_included_l; first done.
-      - apply (cmra_validN_le n); first done. lia.
-      - apply (cmra_includedN_le n); first done. lia.
+      - apply (cmra_validN_le n); first done. cbn; lia.
+      - apply (cmra_includedN_le n); first done. cbn; lia.
     Qed.
     Lemma discrete_includedI_l x y : Discrete x → ✓ y ⊢ x ≼ y -∗ [! x ≼ y !].
     Proof.
@@ -123,7 +123,7 @@ Section theory.
     Lemma discrete_includedI_r x y : Discrete y → x ≼ y ⊢ [! x ≼ y !].
     Proof. intros. by rewrite discrete_includedI. Qed.
 
-    Lemma discrete_validI `{CmraDiscrete A} x : ✓ x ⊣⊢ [! ✓ x !].
+    Lemma discrete_validI `{!CmraDiscrete A} x : ✓ x ⊣⊢ [! ✓ x !].
     Proof. rewrite -embed_pure. symmetry. solve_equiv cmra_discrete_valid_iff. Qed.
 
   End cmra.
@@ -193,7 +193,7 @@ Section theory.
       rewrite -!embed_includedI -embed_internal_eq -embed_or.
       solve_equiv Some_includedN.
     Qed.
-    Lemma Some_includedI_total `{CmraTotal A} a b : Some a ≼ Some b ⊣⊢ a ≼ b.
+    Lemma Some_includedI_total `{!CmraTotal A} a b : Some a ≼ Some b ⊣⊢ a ≼ b.
     Proof. rewrite -!embed_includedI. solve_equiv Some_includedN_total. Qed.
 
     Lemma Some_includedI_exclusive a `{!Exclusive a} b :
@@ -241,7 +241,7 @@ Section theory.
     Implicit Types mx : option (excl A).
     Implicit Types a : A.
 
-    Lemma excl_validI x : ✓ x ⊣⊢ if x is ExclBot then False else True.
+    Lemma excl_validI x : ✓ x ⊣⊢ if x is ExclInvalid then False else True.
     Proof. destruct x; split'; auto using cmra_valid_elim. Qed.
     Lemma excl_validI_inv_l mx a : ✓ (Excl' a ⋅ mx) ⊢ [! mx = None !].
     Proof. rewrite -embed_pure. solve_entails excl_validN_inv_l. Qed.
@@ -619,7 +619,7 @@ Section theory.
       solve_entails' (rewrite -cmra_discrete_valid_iff;
         apply frac_auth_auth_frag_included).
     Qed.
-    Lemma frac_auth_auth_frag_includedI_total `{CmraTotal A} q1 q2 a b :
+    Lemma frac_auth_auth_frag_includedI_total `{!CmraTotal A} q1 q2 a b :
       ✓ (●F{q1} a ⋅ ◯F{q2} b) ⊢ b ≼ a.
     Proof.
       rewrite -embed_includedI.

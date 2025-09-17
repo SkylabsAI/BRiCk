@@ -8,7 +8,7 @@
 Require Export bluerock.prelude.base.
 Require Export bluerock.iris.extra.algebra.base.
 
-#[local] Definition resource' (A : Type) : cmra := exclR (leibnizO A).
+#[local] Definition resource' {SI : sidx} (A : Type) : cmra := exclR (leibnizO A).
 #[global] Notation resource A := (Reduce (resource' A)) (only parsing).
 
 (* Type-indexed wrappers, used in the restrict cmra below *)
@@ -50,7 +50,7 @@ Proof. by move => x y; rewrite Wrap_eq_iff. Qed.
 Proof. by case => x; case => y /= ->. Qed.
 
 Section with_ofeT.
-Context {I : Type} {A : ofe}.
+Context {I : Type} {SI : sidx} {A : ofe}.
 Implicit Types x y : wrapper I A.
 
 #[local] Instance wrapper_Dist : Dist (wrapper I A) :=
@@ -76,13 +76,13 @@ Proof.
     { by rewrite /dist/wrapper_Dist/= => x y z // -> ->. }
   - move => n m [x] [y].
     rewrite /dist/wrapper_Dist/=.
-    apply: mixin_dist_lt. apply: ofe_mixin.
+    apply: mixin_dist_le. apply: ofe_mixin.
 Qed.
 Canonical Structure wrapperO := Ofe _ wrapper_ofe_mixin.
 End with_ofeT.
 
 Section ofe_properties.
-  Context {I : Type} {A : ofe}.
+  Context {I : Type} {SI : sidx} {A : ofe}.
 
   #[global] Instance Wrap_ne : NonExpansive (@Wrap I A).
   Proof. solve_proper. Qed.
@@ -106,7 +106,7 @@ Class Restriction I (A : cmra) `{CmraRestrictor I A} :=
     ✓{n} (x ⋅ y).(unwrap) →
     restrict (x ⋅ y).(unwrap) →
     restrict x.(unwrap) }.*)
-Class Restriction (I : Type) (A : cmra) :=
+Class Restriction (I : Type) {SI : sidx} (A : cmra) :=
 { restrict : A -> Prop
 ; cmra_restrict_ne n : Proper (dist n ==> impl) restrict
 ; cmra_restrict_op_l n (x y : A) :
@@ -115,20 +115,22 @@ Class Restriction (I : Type) (A : cmra) :=
     restrict x }.
 
 Section with_Restriction.
-Variables (I : Type) (A : cmra).
-Context `{Restriction I A}.
+Variables (I : Type).
+Context {SI : sidx}.
+Variables (A : cmra).
+Context `{!Restriction I A}.
 Instance restrict_valid_def : Valid (wrapper I A) :=
   λ x, ✓ x.(unwrap) ∧ restrict x.(unwrap).
 Instance restrict_validN_def : ValidN (wrapper I A) :=
   λ n x, ✓{n} x.(unwrap) ∧ restrict x.(unwrap).
-Notation "✓{ n }@{ A } x" := (@validN _ (cmra_validN A) n x)
+Notation "✓{ n }@{ A } x" := (@validN _ _ (cmra_validN A) n x)
   (at level 20, n at next level, only parsing) : stdpp_scope.
 Notation "✓@{ A } x" := (@valid _ (cmra_valid A) x)
   (at level 20, only parsing) : stdpp_scope.
 Lemma restrict_valid (x : wrapper I A) :
   ✓ x ↔ ✓@{A} x.(unwrap) ∧ restrict x.(unwrap).
 Proof. by done. Qed.
-Lemma restrict_validN n (x : wrapper I A) :
+Lemma restrict_validN (n : SI) (x : wrapper I A) :
   ✓{n} x ↔ ✓{n}@{A} x.(unwrap) ∧ restrict x.(unwrap).
 Proof. done. Qed.
 
@@ -159,8 +161,8 @@ Proof.
   - intros n x1 x2 Hx []. split.
     exact: cmra_validN_ne. exact: cmra_restrict_ne.
   - case => x. rewrite restrict_valid /= cmra_valid_validN.
-    setoid_rewrite restrict_validN. naive_solver eauto using O.
-  - intros n x []. split. exact: cmra_validN_S. done.
+    setoid_rewrite restrict_validN. naive_solver eauto using @sidx_zero.
+  - move => n x [?] => /restrict_validN /= [??]. split. exact: cmra_validN_le. done.
   - case => x; case => y; case => z; apply: cmra_assoc.
   - case => x; case => y; apply: cmra_comm.
   - case => x; case => cx; rewrite /pcore/wrapper_PCore/= => h.
@@ -195,10 +197,10 @@ Proof.
 Qed.
 
 Canonical Structure restrictR :=
-  Cmra' _ (@wrapper_ofe_mixin I A) restrict_cmra_mixin.
+  Cmra' _ (@wrapper_ofe_mixin I _ A) restrict_cmra_mixin.
 End with_Restriction.
 
-#[global] Instance wrapper_OfeDiscrete I `{X : OfeDiscrete A} : OfeDiscrete (@wrapperO I A).
+#[global] Instance wrapper_OfeDiscrete I `{X : OfeDiscrete A} : OfeDiscrete (@wrapperO I _ A).
 Proof. by move => []x []y; rewrite wrapper_dist /=; move/(X _) => ->. Qed.
 
 Section with_Restriction.

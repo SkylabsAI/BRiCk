@@ -374,7 +374,7 @@ Module Type PTRS_MIXIN (Import P : PTRS_INTF_MINIMAL).
   Explictly declare that all Iris equalities on pointers are trivial.
   We only add such explicit declarations as actually needed.
   *)
-  Canonical Structure ptrO := leibnizO ptr.
+  Canonical Structure ptrO {SI : sidx} := leibnizO ptr.
   #[global] Instance ptr_inhabited : Inhabited ptr := populate nullptr.
 
   (** ** [offset] Congruence

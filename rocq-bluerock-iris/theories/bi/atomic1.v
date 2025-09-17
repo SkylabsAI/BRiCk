@@ -22,7 +22,7 @@
 
 Require Import stdpp.coPset.
 Require Import stdpp.namespaces.
-Require Import iris.bi.lib.fixpoint.
+Require Import iris.bi.lib.fixpoint_mono.
 Require Import iris.proofmode.coq_tactics.
 Require Import bluerock.iris.extra.proofmode.proofmode.
 Require Import iris.proofmode.reduction.

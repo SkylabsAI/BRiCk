@@ -27,7 +27,7 @@ This is entirely straightforward because the underlying authoritative
 construction supports such fractions. *)
 
 (** Fractional authoritative elements for [excl_auth]. *)
-Definition excl_auth_frac {A : ofe} (q : Qp) (a : A) : excl_authR A :=
+Definition excl_auth_frac {SI : sidx} {A : ofe} (q : Qp) (a : A) : excl_authR A :=
   ●{#q} (Excl' a).
 #[global] Instance: Params (@excl_auth_frac) 1 := {}.
 #[global] Hint Opaque excl_auth_frac : typeclass_instances.
@@ -35,16 +35,16 @@ Definition excl_auth_frac {A : ofe} (q : Qp) (a : A) : excl_authR A :=
 Notation "●E{ q } a" := (excl_auth_frac q a) (at level 10, format "●E{ q }  a").
 
 Section excl_auth_frac.
-  Context {A : ofe}.
+  Context {SI : sidx} {A : ofe}.
   Implicit Types a b : A.
   Import proofmode_classes.
 
   Lemma excl_auth_auth_frac a : ●E a = ●E{1} a.
   Proof. done. Qed.
 
-  #[global] Instance excl_auth_frac_ne q : NonExpansive (@excl_auth_frac A q).
+  #[global] Instance excl_auth_frac_ne q : NonExpansive (@excl_auth_frac _ A q).
   Proof. solve_proper. Qed.
-  #[global] Instance excl_auth_frac_proper q : Proper ((≡) ==> (≡)) (@excl_auth_frac A q).
+  #[global] Instance excl_auth_frac_proper q : Proper ((≡) ==> (≡)) (@excl_auth_frac _ A q).
   Proof. apply: ne_proper. Qed.
 
   #[global] Instance excl_auth_frac_discrete q a `{!Discrete a} : Discrete (●E{q} a).
