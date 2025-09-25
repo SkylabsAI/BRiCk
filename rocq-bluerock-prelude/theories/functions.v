@@ -29,6 +29,7 @@ Section dep_fn_insert.
     | right _ => f a
     end.
 
+  #[global] Arguments dep_fn_insert {A _ T} !_ _ _ !_ /.
 
   (* Lemmas below are named after the lens laws. *)
 

@@ -804,7 +804,7 @@ Module cstring.
         #[global] Instance bufR_singleton :
           forall (q : cQp.t) (sz : Z) (b : Byte.byte),
             1 <= sz ->
-            Observe [| b <> "000" |]%byte (bufR q sz (BS.String b ""%bs)).
+            Observe [| b <> "000"%byte |] (bufR q sz (BS.String b ""%bs)).
         Proof.
           intros **; rewrite /bufR/Observe to_zstring_unfold_String/=; iIntros "buf".
           iDestruct (observe [| N_of_ascii (ascii_of_byte b) <> 0%N |] with "buf")
