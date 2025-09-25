@@ -326,13 +326,12 @@ Module Compose.
           ->  Sts.step_star_tau (compose_lts sf) st
                (st &: _fam_sts _ n__comp .= st__comp').
     Proof.
-      move=>[n]. move: st st__comp'.
-      induction n=>st st__comp'.
-      - by move=>/= <-; exists 0; rewrite dep_fn_insert_set_view_fun.
+      move=>[n]. elim: n st st__comp' => [|n IHn] st st__comp'.
+      - by move=> /= <-; exists 0; rewrite dep_fn_insert_set_view_fun.
       - move=> /= [s' [Hs']].
         have := Refine (IHn (dep_fn_insert n__comp s' st) st__comp').
-        rewrite dep_fn_insert_eq => H {}/H.
-        rewrite /= dep_fn_insert_set_set_fun.
+        rewrite dep_fn_insert_view_set => H {}/H /=.
+        rewrite dep_fn_insert_set_set_fun.
         move=>[n' Hstep_star'].
         exists (S n'), (dep_fn_insert n__comp s' st).
         split; last done.
