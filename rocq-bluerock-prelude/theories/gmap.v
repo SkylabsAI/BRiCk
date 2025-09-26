@@ -24,6 +24,20 @@ Proof. apply mapset_eq. Qed.
 #[global] Notation gset_concat_map :=
   (set_concat_map (C := gset _) (D := gset _)) (only parsing).
 
+Definition gmap_kvmap {A} `{Countable K1, Countable K2}
+    (f : K1 -> A -> option (K2 * A))
+    (m : gmap K1 A) : gmap K2 A :=
+  list_to_map (omap (uncurry f) (map_to_list m)).
+
+(** Variant of [kmap] for [gmap] only. *)
+Definition gmap_okmap {A} `{Countable K1, Countable K2}
+    (f : K1 -> option K2)
+    (m : gmap K1 A) : gmap K2 A :=
+  gmap_kvmap (fun k1 v => k2 ← f k1; Some (k2, v)) m.
+
+Definition gmap_preimage `{Countable K, Countable A} : gmap K A -> gmap A (gset K) :=
+  map_preimg.
+
 (* Like [set_concat_map], but purely in terms of gsets.
 *)
 Section gset_bind.

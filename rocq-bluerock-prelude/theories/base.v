@@ -46,6 +46,14 @@ Proof.
   by rewrite or_comm H or_comm.
 Qed.
 
+Lemma iff_impl (A B C : Prop) : (A → B ↔ C) ↔ ((A → B) ↔ (A → C)).
+Proof. tauto. Qed.
+
+Lemma iff_and (P Q R : Prop) :
+  (P -> Q ↔ R) ->
+  (P ∧ Q) <-> (P ∧ R).
+Proof. tauto. Qed.
+
 (** Workaround https://github.com/coq/coq/issues/4230. Taken from Software Foundations. *)
 #[global] Remove Hints Bool.trans_eq_bool : core.
 

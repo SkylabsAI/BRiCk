@@ -750,3 +750,11 @@ Section NoDup_fmap_ap.
     exact: NoDup_fmap_2.
   Qed.
 End NoDup_fmap_ap.
+
+Lemma list_fmap_concat_singleton {A B : Type} (f : A -> B) (m : list A) :
+  concat ((λ a, [f a]) <$> m) = f <$> m.
+Proof.
+  induction m as [|a m IHm].
+  - done.
+  - by rewrite fmap_cons /= IHm.
+Qed.
