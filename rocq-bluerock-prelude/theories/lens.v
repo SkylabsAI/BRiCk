@@ -14,6 +14,8 @@ Require Import elpi.apps.NES.NES.
 Require Import bluerock.prelude.base.
 Require Import bluerock.prelude.finite.
 Require Import bluerock.prelude.functions.
+Require Import bluerock.prelude.fun_maps.
+Require Import bluerock.prelude.fin_map_dom.
 Require Export Lens.Lens.
 
 Export LensNotations.
@@ -239,3 +241,66 @@ Proof.
   { by rewrite !(set_view L1, set_view L2). }
   { by rewrite !(set_set L1, set_set L2). }
 Qed.
+
+(** Notation to be used for "partial" lenses. *)
+Notation "X -~l> Y" := (X -l> Y)
+  (at level 99, Y at level 200, right associativity, only parsing) : type_scope.
+
+Section map_from_finite.
+  Context {K V : Type} `{Finite K} `{FinMapDom K M D}.
+  Implicit Types (f : K -> V) (m : M V).
+  Notation fun_to_map := (fun_to_map (M := M)).
+  #[local] Set Default Proof Using "Type*".
+
+  (** Produce a partial lens: writing a map [m] will only update keys in [dom m] *)
+  Definition _fun_to_map `{Inhabited V} : (K -> V) -~l> M V :=
+    lens.of_get_set fun_to_map (λ rs rm, map_to_fun (rm ∪ fun_to_map rs)).
+
+  Lemma _fun_to_map_lookup `{Inhabited V} f rn :
+    (f .^ _fun_to_map) !! rn = Some (f rn).
+  Proof. by rewrite lookup_fun_to_map. Qed.
+
+  (** Produce a partial lens: writing a map [m] will only update keys in [dom m],
+    using [O(|m|)] calls to [_key_lens].
+   *)
+  Definition _map_lens {S} (_key_lens : K -> S -l> V) : S -~l> M V :=
+    lens.of_get_set
+      (λ (s : S), fun_to_map $ λ (k : K), s .^ _key_lens k)
+      (λ (s0 : S) (m : M V),
+        let set_one_key (k : K) (v : V) (s : S) : S := s &: _key_lens k .= v in
+        map_fold set_one_key s0 m).
+
+  Lemma _map_lens_lookup {S} (s : S) rn (_key_lens : K -> S -l> V) :
+    (s .^ _map_lens _key_lens) !! rn = Some (s .^ _key_lens rn).
+  Proof. by rewrite lookup_fun_to_map. Qed.
+
+  Lemma _map_lens_set_lookup_aux {S} (s : S) rn (_key_lens : K -> S -l> V) (m : M V)
+      (Hlens : ∀ k, LensLaws' eq eq (_key_lens k))
+      (Hdisj : ∀ (k1 k2 : K) s v, k1 <> k2 ->
+        (s &: (_key_lens k1 .= v)) .^ _key_lens k2 = s .^ _key_lens k2) :
+    rn ∈ dom m ->
+    m !! rn = Some ((s &: (_map_lens _key_lens .= m)) .^ _key_lens rn).
+  Proof.
+    rewrite /_map_lens/=.
+    induction m as [|i x m Hi1 Hi2 IH] using map_first_key_ind; [set_solver|].
+    rewrite map_fold_insert_first_key //.
+    rewrite dom_insert elem_of_union elem_of_singleton.
+    move => [-> | Hin].
+    - rewrite lookup_insert /=. f_equiv.
+      by rewrite view_over.
+    - have ? : i <> rn by set_solver.
+      by rewrite lookup_insert_ne //= IH // Hdisj.
+  Qed.
+
+  Lemma _map_lens_set_lookup {S} (s : S) rn (_key_lens : K -> S -l> V) (m : M V) v
+      (Hlens : ∀ k, LensLaws' eq eq (_key_lens k))
+      (Hdisj : ∀ (k1 k2 : K) s v, k1 <> k2 ->
+        (s &: (_key_lens k1 .= v)) .^ _key_lens k2 = s .^ _key_lens k2) :
+    m !! rn = Some v ->
+    ((s &: (_map_lens _key_lens .= m)) .^ _key_lens rn) = v.
+  Proof.
+    move=>/[dup] Hlook /(elem_of_dom_2 _ _ _) Hin.
+    apply (inj Some).
+    by rewrite -Hlook -_map_lens_set_lookup_aux.
+  Qed.
+End map_from_finite.
