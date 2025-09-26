@@ -288,7 +288,7 @@ Section raw_type_ptrs.
       - iIntros "P"; iDestruct "P" as (sz') "[%Hsz' #tptrs]".
         rewrite !_at_sep !_at_offsetR !_at_only_provable.
         assert (is_Some (size_of σ Tbyte)) by eauto; iFrame "%".
-        rewrite length_fmap -to_nat_lengthN Hlen N_nat_Z.
+        rewrite length_fmap length_lengthN Hlen N_nat_Z.
         rewrite Hsz' in Hsz; inversion Hsz; subst.
         iSplit.
         + rewrite (big_sepL_lookup _ _ (Nat.pred (length xs))). 2: {

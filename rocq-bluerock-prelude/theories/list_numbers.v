@@ -91,14 +91,10 @@ Proof. by rewrite /lengthN length_fmap. Qed.
 
 Lemma list_lookupN_fmap {A B} (f : A -> B) (l : list A) (i : N) :
   (f <$> l) !! i = f <$> (l !! i).
-Proof. by rewrite -[i]N2Nat.id /lookupN/list_lookupN list_lookup_fmap. Qed.
+Proof. by rewrite -list_lookup_fmap. Qed.
 
 Lemma list_ne_lengthN {A} (xs : list A) : lengthN xs ≠ 0 -> xs <> [].
 Proof. by move=> ? /(f_equal lengthN). Qed.
-
-Lemma length_lengthN {A} (xs : list A) :
-  length xs = N.to_nat (lengthN xs).
-Proof. by rewrite /lengthN Nat2N.id. Qed.
 
 Lemma fmap_dropN {A B} (f : A -> B) (l : list A) (i : N) :
   f <$> dropN i l = dropN i (f <$> l).
@@ -234,6 +230,11 @@ Proof. unfold replicateN; rewrite N2Nat.inj_add; apply replicate_add. Qed.
 Lemma elem_of_replicateN {A} (count : N) (b a : A) : a ∈ replicateN count b → b = a.
 Proof. by intros [-> _]%elem_of_replicate. Qed.
 
+(* Outside [Section listN] to generalize over [A]. *)
+Lemma length_lengthN {A} (xs : list A) :
+  length xs = N.to_nat (lengthN xs).
+Proof. by rewrite /lengthN Nat2N.id. Qed.
+
 Section listN.
   Context {A : Type}.
 
@@ -297,11 +298,16 @@ Section listN.
 
   Lemma to_nat_lengthN xs :
     N.to_nat (lengthN xs) = length xs.
-  Proof. by rewrite /lengthN Nat2N.id. Qed.
+  Proof. by rewrite length_lengthN. Qed.
 
+  Lemma lengthN_length (xs : list A) :
+    lengthN xs = N.of_nat (length xs).
+  Proof. by []. Qed.
+
+  (* TODO: conflicting naming scheme *)
   Lemma lengthN_fold xs :
     N.of_nat (length xs) = lengthN xs.
-  Proof. reflexivity. Qed.
+  Proof. by rewrite lengthN_length. Qed.
 
   Lemma lengthN_nil :
     lengthN (A := A) [] = 0.
