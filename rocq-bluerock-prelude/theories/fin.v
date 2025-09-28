@@ -132,6 +132,9 @@ Module fin.
   Lemma to_of_N (p : positive) (m : N) : m < N.pos p -> to_N (of_N p m) = m.
   Proof. apply to_of_N'. Qed.
 
+  Lemma proj_sig1_of_N (p : positive) (m : N) : m < N.pos p -> proj1_sig (of_N p m) = m.
+  Proof. apply to_of_N. Qed.
+
   Lemma of_to_N {p} (x : t (N.pos p)) : of_N p (to_N x) = x.
   Proof. apply of_to_N'. Qed.
 

@@ -32,6 +32,8 @@ mlock Definition only_provable {PROP : bi} (P : Prop) : PROP :=
 #[global] Instance: Params (@only_provable) 1 := {}.
 
 Notation "[ | P | ]" := (only_provable P) (format "[ |  P  | ]").
+(* TODO Fix scopes. *)
+(* Notation "[ | P | ]" := (only_provable P%type%stdpp) (format "[ |  P  | ]"). *)
 
 (* This class carries the assumptions of [only_provable_forall_2], but is very ad-hoc. *)
 Class BiEmpForallOnlyProvable (PROP : bi) :=

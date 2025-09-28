@@ -206,7 +206,7 @@ Module Compose.
   }.
 
   Section Compose.
-    Context (sf: config).
+    Context (sf : config).
     Implicit Types (n : name sf).
 
     Definition State : Type := ∀ n, Sts.State (sts_name sf n).
@@ -215,6 +215,42 @@ Module Compose.
 
     Definition eq_except (n : list _) (s s' : State) :=
       ∀ n', n' ∉ n -> s n' = s' n'.
+
+    #[global] Instance eq_except_equiv ns : Equivalence (Compose.eq_except ns).
+    Proof.
+      split; red => //.
+      { move=> x y E n Hni. by rewrite (E _). }
+      { move=> x y z E1 E2 n Hni. by rewrite (E1 _) ?(E2 _). }
+    Qed.
+
+    Lemma eq_except_weaken {l1 l2 s1 s2} : l1 ⊆ l2 ->
+      Compose.eq_except l1 s1 s2 -> Compose.eq_except l2 s1 s2.
+    Proof.
+      move=> Hsub /[swap] n /(_ n) /[swap] Hni2. apply => Hi1.
+      apply Hni2, Hsub, Hi1.
+    Qed.
+
+    Lemma eq_except_insert {n ns s1 s2} {cs : Sts.State (Compose.sts_name sf n)} :
+      Compose.eq_except (n :: ns) s1 s2 ->
+      (if bool_decide (n ∈ ns) then True else (s1 n = cs)) ->
+      Compose.eq_except ns s1 (dep_fn_insert n cs s2).
+    Proof.
+      move=> + Hin n' Hni; move=> /(_ n') Heq.
+      destruct (decide (n = n')) as [->|Hne]. {
+        by rewrite bool_decide_eq_false_2 // dep_fn_insert_eq in Hin |- *.
+      }
+      rewrite dep_fn_insert_ne //. apply Heq. set_solver.
+    Qed.
+
+    Lemma eq_except_insert_in {n ns s1 s2} {cs : Sts.State (Compose.sts_name sf n)} :
+      Compose.eq_except (n :: ns) s1 s2 ->
+      n ∈ ns ->
+      Compose.eq_except ns s1 (dep_fn_insert n cs s2).
+    Proof.
+      move=> Heq Hin.
+      apply (eq_except_insert Heq).
+      by rewrite bool_decide_eq_true_2.
+    Qed.
 
     Definition compose_lts : Sts.sts (external_event sf) := {|
       Sts._state := State;
@@ -290,21 +326,18 @@ Module Compose.
           ->  Sts.step_star_tau (compose_lts sf) st
                (st &: _fam_sts _ n__comp .= st__comp').
     Proof.
-      move=>[n]. move: st st__comp'.
-      induction n=>st st__comp'.
-      - by move=>/= <-; exists 0; rewrite dep_fn_insert_set_view_fun.
+      move=>[n]. elim: n st st__comp' => [|n IHn] st st__comp'.
+      - by move=> /= <-; exists 0; rewrite dep_fn_insert_set_view_fun.
       - move=> /= [s' [Hs']].
         have := Refine (IHn (dep_fn_insert n__comp s' st) st__comp').
-        rewrite dep_fn_insert_eq => H {}/H.
-        rewrite /= dep_fn_insert_set_set_fun.
+        rewrite dep_fn_insert_view_set => H {}/H /=.
+        rewrite dep_fn_insert_set_set_fun.
         move=>[n' Hstep_star'].
         exists (S n'), (dep_fn_insert n__comp s' st).
         split; last done.
         left; exists n__comp.
-        (* TODO use [Compose_eq_except_insert_in] from downstream. *)
         split; last by rewrite dep_fn_insert_view_set.
-        move=>n''/not_elem_of_cons [Hne ?].
-        by rewrite (dep_fn_insert_view_set_ne st).
+        exact /Compose.eq_except_insert_in /elem_of_list_singleton.
     Qed.
 
     Lemma step_star_ext_lift_single

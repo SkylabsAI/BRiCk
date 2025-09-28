@@ -269,6 +269,9 @@ Section finite.
   Context `{Finite A}.
   Implicit Type (x : A).
 
+  Lemma card_N_lengthN : card_N A = lengthN (enum A).
+  Proof. by []. Qed.
+
   (* Unfolding lemma: pretty annoying to prove inline by unfolding. *)
   Lemma finite_decode_nat_unfold n :
     decode_nat n = enum A !! n.

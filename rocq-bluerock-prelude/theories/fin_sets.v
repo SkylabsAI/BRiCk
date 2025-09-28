@@ -220,6 +220,27 @@ Section set_map.
     set_map f X = ∅ <-> X = ∅.
   Proof. unfold_leibniz. exact: set_map_empty_iff. Qed.
 
+  Lemma set_map_nonempty_iff_L `{!LeibnizEquiv C, !LeibnizEquiv D}
+    (f : A -> B) X :
+    set_map f X <> ∅ <-> X <> ∅.
+  Proof. by rewrite set_map_empty_iff_L. Qed.
+
+  Lemma set_Forall_set_map `{!LeibnizEquiv C}
+    (P : B -> Prop) (f : A -> B) X :
+    set_Forall P (set_map f X) <-> set_Forall (P ∘ f) X.
+  Proof.
+    unfold set_map.
+    rewrite -{2}(list_to_set_elements_L X).
+    induction (elements X) as [| x X' IHX']; cbn; split; intros Hforall;
+      try apply set_Forall_empty.
+    all: pose (set_Forall_union_inv_1 _ _ _ Hforall).
+    all: pose (set_Forall_union_inv_2 _ _ _ Hforall).
+    all: rename select (set_Forall _ {[_]}) into Hsingleton.
+    all: apply set_Forall_singleton in Hsingleton.
+    all: apply set_Forall_union; intuition auto.
+    all: by apply set_Forall_singleton.
+  Qed.
+
   Lemma size_map_inj (f : A -> B) `{!Inj (=) (=) f} (X : C) :
     size (set_map f X) = size X.
   Proof.
