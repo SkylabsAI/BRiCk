@@ -230,7 +230,7 @@ Proof.
   apply big_sepL_fmap.
 Qed.
 
-Lemma big_sepM_lookup_acc' {PROP : bi} `{EqDecision K} `{Countable K} {A}
+Lemma big_sepM_lookup_acc' {PROP : bi} `{Countable K} {A}
     (Φ : K -> A -> PROP) (m : gmap K A) (i : K) (x : A) :
   m !! i = Some x →
   ([∗ map] k↦y ∈ m, Φ k y)
