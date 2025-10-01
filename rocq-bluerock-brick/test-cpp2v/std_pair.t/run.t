@@ -2,7 +2,7 @@
 
 Compiling the C++ code, use "make Q=" for debugging.
   $ ulimit -S -s 40960
-  $ make > /dev/null
+  $ make 2> /dev/null
   $ ls *.v | wc -l | sed -e 's/ //g'
   2
 
