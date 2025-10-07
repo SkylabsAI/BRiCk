@@ -41,7 +41,7 @@
   rocq-equations
   rocq-bluerock-prelude
   rocq-bluerock-iris
-  rocq-bluerock-cpp2v
+  (rocq-bluerock-cpp2v :with-test)
   elpi
   coq-elpi))
 (subst disabled)
