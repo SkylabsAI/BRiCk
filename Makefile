@@ -18,13 +18,13 @@ _CoqProject: _CoqProject.template
 
 SHELL := /bin/bash
 
-BUILD_ROOT=../../_build/default/fmdeps/cpp2v-core
+BUILD_ROOT=../../_build/default/fmdeps/BRiCk
 COQDOC_DIR=doc/sphinx/_static/coqdoc
 ROCQLIB=${PWD}/../../_build/install/default/lib/coq
 
 doc:
 	@dune clean
-	@dune build @../coq/install
+	@dune build @../vendored/rocq/install
 	@dune build
 	@rm -rf /tmp/coqdocjs
 	@cp -r coqdocjs /tmp
