@@ -8,4 +8,4 @@
 Require Import iris.algebra.ofe.
 Require Export bluerock.prelude.wrap.
 
-Canonical Structure WrapNO {Phant} := leibnizO (WrapN Phant).
+Canonical Structure WrapNO {SI:sidx} {Phant} := leibnizO (WrapN Phant).

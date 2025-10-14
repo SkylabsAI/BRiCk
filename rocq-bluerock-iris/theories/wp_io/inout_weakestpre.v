@@ -146,7 +146,7 @@ Proof.
      proper instance for step_fupdN. *)
   induction num_laters_per_step as [|k IHk]; simpl; last by rewrite IHk.
   do 6 f_equiv.
-  rewrite IH; [done|lia|]. intros v. by eapply dist_lt.
+  rewrite IH; [done|cbn in *; lia|]. intros v. by eapply dist_lt.
 Qed.
 Global Instance wp_proper s E e :
   Proper (pointwise_relation _ (≡) ==> (≡)) (wp (PROP:=PROP) s E e).
