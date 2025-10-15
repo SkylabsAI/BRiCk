@@ -114,11 +114,13 @@ Class Restriction (I : Type) {SI : sidx} (A : cmra) :=
     restrict (x ⋅ y) ->
     restrict x }.
 
+#[global] Arguments Build_Restriction _ {_} _ _ _ _ : assert.
+
 Section with_Restriction.
 Variables (I : Type).
 Context {SI : sidx}.
 Variables (A : cmra).
-Context `{!Restriction I A}.
+Context `{R : !Restriction I A}.
 Instance restrict_valid_def : Valid (wrapper I A) :=
   λ x, ✓ x.(unwrap) ∧ restrict x.(unwrap).
 Instance restrict_validN_def : ValidN (wrapper I A) :=
