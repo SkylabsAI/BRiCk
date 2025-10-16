@@ -25,15 +25,12 @@ homepage: "https://github.com/bluerock-io/BRiCk"
 bug-reports: "https://github.com/bluerock-io/BRiCk/issues"
 depends: [
   "dune" {>= "3.16"}
-  "coq"
   "rocq-upoly"
-  "coq-stdpp"
   "coq-iris"
   "rocq-bluerock-prelude"
   "rocq-lens"
   "rocq-lens-elpi"
   "ltac2-extra"
-  "elpi"
   "coq-elpi"
   "odoc" {with-doc}
 ]

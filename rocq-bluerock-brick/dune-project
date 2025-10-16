@@ -32,9 +32,7 @@
  (name rocq-bluerock-brick)
  (synopsis "Frontend and program logic for C++")
  (depends
-  coq
   rocq-upoly
-  coq-stdpp
   coq-iris
   rocq-lens
   rocq-lens-elpi
@@ -42,6 +40,5 @@
   rocq-bluerock-prelude
   rocq-bluerock-iris
   (rocq-bluerock-cpp2v :with-test)
-  elpi
   coq-elpi))
 (subst disabled)

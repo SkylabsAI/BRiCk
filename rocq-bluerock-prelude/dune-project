@@ -32,12 +32,10 @@
  (name rocq-bluerock-prelude)
  (synopsis "BlueRock's prelude (extensions to stdpp)")
  (depends
-  coq
   rocq-upoly
   coq-stdpp
   rocq-lens
   rocq-lens-elpi
-  elpi
   coq-elpi
   ltac2-extra))
 (subst disabled)

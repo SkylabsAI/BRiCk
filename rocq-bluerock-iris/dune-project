@@ -32,14 +32,11 @@
  (name rocq-bluerock-iris)
  (synopsis "BlueRock's extensions to Iris")
  (depends
-  coq
   rocq-upoly
-  coq-stdpp
   coq-iris
   rocq-bluerock-prelude
   rocq-lens
   rocq-lens-elpi
   ltac2-extra
-  elpi
   coq-elpi))
 (subst disabled)
