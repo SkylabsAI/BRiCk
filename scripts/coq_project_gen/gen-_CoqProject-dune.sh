@@ -37,7 +37,7 @@ echo
 echo "# Specified logical paths for directories (for .v and .vo files)."
 
 script_path=`(cd \`dirname $0\`; pwd)`
-${script_path}/gather-coq-paths.py `find . \( -name _build -o -name .git \) -prune -false -o -name dune -print`
+${script_path}/gather-coq-paths.py `find . \( -name _build -o -name .git \) -prune -false -o -name dune -type f -print | sort`
 
 for mapping in "${mappings[@]}"; do
   directory=$(echo $mapping | awk '{print $1}')
