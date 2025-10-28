@@ -130,7 +130,8 @@ let make_diff : instr_count -> instr_count -> diff = fun ic_ref ic_new ->
   let diff_abs = ic_new - ic_ref in
   (diff_abs, float_of_int (100 * diff_abs) /. float_of_int ic_ref)
 
-let bt_make_diff : instr_count by_type -> instr_count by_type -> diff by_type = fun ic_ref ic_new ->
+let bt_make_diff : instr_count by_type -> instr_count by_type -> diff by_type =
+    fun ic_ref ic_new ->
   let bt_total = make_diff ic_ref.bt_total ic_new.bt_total in
   let bt_cpp2v = make_diff ic_ref.bt_cpp2v ic_new.bt_cpp2v in
   let bt_other = make_diff ic_ref.bt_other ic_new.bt_other in
@@ -149,25 +150,34 @@ let show_everything    : bool  ref = ref false
 let missing_unchanged  : bool  ref = ref false
 
 let color diff =
-  if diff < -. !color_threshold then green else
-  if diff > !color_threshold then red else
-  (fun x -> x)
+  if diff < -. !color_threshold then green "%+7.2f%%" else
+  if diff > !color_threshold then red "%+7.2f%%" else
+  "%+7.2f%%"
 
 type output_format =
   | Markdown
   | Gitlab
+  | Github
   | CSV
 
 let output_format : output_format ref = ref Markdown
 let diff_base_url : string option ref = ref None
 
-let print_md_summary (total_ref, total_new, total_diff, (num_dis, total_dis), (num_app, total_app)) =
+let github_color diff =
+  if not !use_colors then "%+7.2f%%" ^^ "" else
+  if diff < -. !color_threshold then "$\\color{green}{%+7.2f\\\\%%}$" else
+  if diff > !color_threshold then "$\\color{red}{%+7.2f\\\\%%}$" else
+  "${%+7.2f\\\\%%}$"
+
+let print_md_summary ?(mode : [`Github | `Gitlab] option = None)
+    (total_ref, total_new, total_diff, (num_dis, total_dis), (num_app, total_app)) =
+  let color = match mode with Some(`Github) -> github_color | _ -> color in
   (* Printing the totals. *)
   let print_summary infostring total_ref total_new total_diff =
     let n0 = float_of_int total_ref /. 1000000000.0 in
     let n1 = float_of_int total_new /. 1000000000.0 in
     let d = float_of_int (fst total_diff) /. 1000000000.0 in
-    info ("|" ^^ color (snd total_diff) " %+7.2f%% " ^^ "| %8.1f | %8.1f | %+8.1f | %s\n")
+    info ("| " ^^ color (snd total_diff) ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
       (snd total_diff) n0 n1 d infostring
   in
   print_summary "proofs, tests"     total_ref.bt_other total_new.bt_other total_diff.bt_other;
@@ -184,7 +194,8 @@ let print_md_header () =
   info "| Relative | Master   | MR       | Change   | Filename\n";
   info "|---------:|---------:|---------:|---------:|----------\n"
 
-let print_md_data totals combined =
+let print_md_data ?(mode : [`Github | `Gitlab] option = None) totals combined =
+  let color = match mode with Some(`Github) -> github_color | _ -> color in
   print_md_header ();
   let add_url k =
     match !diff_base_url with
@@ -202,20 +213,20 @@ let print_md_data totals combined =
     if !show_everything || relevant then
       let n0 = float_of_int n0 /. 1000000000.0 in
       let n1 = float_of_int n1 /. 1000000000.0 in
-      info ("|" ^^ color diff " %+7.2f%% " ^^ "| %8.1f | %8.1f | %+8.1f | %s\n")
+      info ("| " ^^ color diff ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
         diff n0 n1 instr_diff (add_url k)
   in
   List.iter fn combined;
   info "|          |          |          |          |          \n";
-  print_md_summary totals
+  print_md_summary ~mode totals
 
-let print_gitlab_data totals combined =
+let print_gitlab_or_github_data ~mode totals combined =
   let fn url =  info "\n[Full performance report](%s/index.html)\n\n" url in
   Option.iter fn !diff_base_url;
   print_md_header ();
-  print_md_summary totals;
+  print_md_summary ~mode:(Some(mode)) totals;
   info "\n<details><summary>Full Results</summary>\n\n";
-  print_md_data totals combined;
+  print_md_data ~mode:(Some(mode)) totals combined;
   info "\n</details>\n"
 
 
@@ -294,12 +305,15 @@ let analyse : string -> string list -> unit = fun file_ref files_new ->
   (* Printing the data. *)
   let print =
     match !output_format with
-    | Markdown -> print_md_data
-    | Gitlab   -> print_gitlab_data
+    | Markdown -> print_md_data ~mode:None
+    | Gitlab   -> print_gitlab_or_github_data ~mode:`Gitlab
+    | Github   -> print_gitlab_or_github_data ~mode:`Github
     | CSV      -> print_csv_data
   in
 
-  print (total_ref, total_new, total_diff, (num_disappeared, total_disappeared), (num_appeared, total_appeared)) combined
+  print (total_ref, total_new, total_diff,
+    (num_disappeared, total_disappeared),
+    (num_appeared, total_appeared)) combined
 
 let usage : string -> bool -> 'a = fun prog_name error ->
   if error then panic "Usage: %s REF.csv NEW_1.csv .. NEW_n.csv" prog_name;
@@ -330,6 +344,8 @@ let usage : string -> bool -> 'a = fun prog_name error ->
                                         default_instr_threshold;
   einfo "  --csv                      \tPrint the full raw data in CSV.\n";
   einfo "  --gitlab                   \tMarkdown output compiled into a \
+                                        small summary and a <details> section.\n";
+  einfo "  --github                   \tMarkdown output compiled into a \
                                         small summary and a <details> section.\n";
   einfo "  --diff-base-url URL        \tSpecify the base URL for diffs.\n";
   einfo "  --assume-missing-unchanged \tTreat missing files as having unchanged \
@@ -378,6 +394,9 @@ let main () =
         parse_args files args
     | "--gitlab"                    :: args                  ->
         output_format := Gitlab;
+        parse_args files args
+    | "--github"                    :: args                  ->
+        output_format := Github;
         parse_args files args
     | "--diff-base-url" :: url      :: args                  ->
         diff_base_url := Some(url);
