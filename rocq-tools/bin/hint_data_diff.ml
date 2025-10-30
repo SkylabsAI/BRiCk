@@ -43,7 +43,7 @@ type map = hint_data SMap.t
 let read_data_file : string -> map = fun file ->
   let spandata =
     let spandata = Spandata.add_csv_file file Spandata.M.empty in
-    let filter Spandata.Key.{span_path; span} =
+    let filter Spandata.Key.{span; _} =
       match span.Spandata.Span.status with
       | Some("hintOK" | "hintKO") -> Some(Spandata.Key.{span_path=[]; span})
       | _                         -> None
@@ -295,6 +295,7 @@ let usage : out_channel -> unit = fun oc ->
   Printf.fprintf oc "Usage: %s [%s] OLD.csv NEW.csv\n%!" Sys.argv.(0) flags
 
 let handle_flag : Config.t -> string -> Config.t = fun config flag ->
+  ignore config; (* NOTE: Can't do [{config with ...}] (single field). *)
   match flag with
   | "-h" | "--help" -> usage stdout; exit 0
   | "--html"        -> {mode = `HTML}
