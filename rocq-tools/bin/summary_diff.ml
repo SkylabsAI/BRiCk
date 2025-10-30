@@ -228,15 +228,22 @@ let print_md_summary ?(mode : [`Github | `Gitlab] option = None)
     info ("| " ^^ color (snd total_diff) ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
       (snd total_diff) n0 n1 d infostring
   in
-  print_summary "proofs, tests"     total_ref.bt_other total_new.bt_other total_diff.bt_other;
-  print_summary "translation units" total_ref.bt_cpp2v total_new.bt_cpp2v total_diff.bt_cpp2v;
+  let _ =
+    let total_ref = total_ref.bt_total - fst total_dis in
+    let total_new = total_new.bt_total + fst total_app in
+    let total_diff = make_diff total_ref total_new in
+    print_summary "total" total_ref total_new total_diff
+  in
   (if num_dis > 0 then
-      let disappeared_label = Printf.sprintf "disappeared files: %i" num_dis in
-      print_summary disappeared_label 0 0 total_dis);
+      let disappeared_label = Printf.sprintf "├ disappeared files (%i)" num_dis in
+      print_summary disappeared_label (- fst total_dis) 0 total_dis);
   (if num_app > 0 then
-      let appeared_label = Printf.sprintf "newly appeared files: %i" num_app in
-      print_summary appeared_label    0 0 total_app);
-  print_summary "total"           total_ref.bt_total total_new.bt_total total_diff.bt_total
+      let appeared_label = Printf.sprintf "├ newly appeared files (%i)" num_app in
+      print_summary appeared_label 0 (fst total_app) total_app);
+  (if num_dis > 0 || num_app > 0 then
+      print_summary "└ common files" total_ref.bt_total total_new.bt_total total_diff.bt_total);
+  print_summary "├ translation units" total_ref.bt_cpp2v total_new.bt_cpp2v total_diff.bt_cpp2v;
+  print_summary "└ proofs and tests" total_ref.bt_other total_new.bt_other total_diff.bt_other
 
 let print_md_header () =
   info "| Relative | Master   | MR       | Change   | Filename\n";
@@ -251,7 +258,7 @@ let print_md_data ?(mode : [`Github | `Gitlab] option = None) totals combined =
     | Some(url) ->
         Printf.sprintf "[%s](%s/%s.html)" k url (Filename.chop_extension k)
   in
-  let fn (k, (n0, n1, (d, diff))) =
+  let fn (k, (_, (n0, n1, (d, diff)))) =
     let instr_diff = float_of_int d /. 1000000000.0 in
     let relevant =
       abs_float diff >= !relevant_threshold &&
@@ -280,7 +287,7 @@ let print_gitlab_or_github_data ~mode totals combined =
 
 let print_csv_data (total_ref, total_new, total_diff, _, _) combined =
   info "Relative (%%),Master (instr),MR (instr),Change (instr),Filename\n";
-  let fn (k, (n0, n1, (d, diff))) =
+  let fn (k, (_, (n0, n1, (d, diff)))) =
     info "%f,%i,%i,%i,%s\n" diff n0 n1 d k
   in
   List.iter fn combined;
@@ -293,9 +300,9 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
     let gather file data (appeared, i_appeared, disappeared, i_disappeared) =
       match (data.Data.instr_ref, data.Data.instr) with
       | (Some(i), None   ) ->
-          (appeared, i_appeared, S.add file disappeared, i + i_disappeared)
+          (appeared, i_appeared, S.add file disappeared, i_disappeared - i)
       | (None   , Some(i)) ->
-          (S.add file appeared, i + i_appeared, disappeared, i_disappeared)
+          (S.add file appeared, i_appeared + i, disappeared, i_disappeared)
       | (_      , _      ) ->
           (appeared, i_appeared, disappeared, i_disappeared)
     in
@@ -311,25 +318,25 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
     end
   in
   (* Compute the performance diffs. *)
-  let combined : (instr_count * instr_count * diff) M.t =
+  let combined : (bool * (instr_count * instr_count * diff)) M.t =
     let make_diff i_ref i = (i_ref, i, make_diff i_ref i) in
     let filter _ data =
       match (data.Data.instr_ref, data.Data.instr) with
       (* We have data on both side. *)
-      | (Some(i_ref), Some(i)) -> Some(make_diff i_ref i)
+      | (Some(i_ref), Some(i)) -> Some(true, make_diff i_ref i)
       (* We have data in the reference only, file disappeared. *)
       | (Some(i_ref), None   ) ->
           begin
             match !missing_unchanged with
             | false -> None
-            | true  -> Some(make_diff i_ref i_ref)
+            | true  -> Some(false, make_diff i_ref i_ref)
           end
       (* We have new data only, file appeared. *)
       | (None       , Some(i)) ->
           begin
             match !missing_unchanged with
             | false -> None
-            | true  -> Some(make_diff i i)
+            | true  -> Some(false, make_diff i i)
           end
       (* Unreachable case. *)
       | (None           , None       ) ->
@@ -339,8 +346,10 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
   in
   (* Computing the total. *)
   let (total_ref, total_new) =
-    let fn fname (d1,d2,_) (acc1,acc2) =
-      (bt_add fname acc1 d1, bt_add fname acc2 d2)
+    let fn fname (b, (d1,d2,_)) (acc1,acc2) =
+      match b with
+      | false -> (acc1, acc2) (* Data for disappeared/appeared file. *)
+      | true  -> (bt_add fname acc1 d1, bt_add fname acc2 d2)
     in
     M.fold fn combined (bt_zero, bt_zero)
   in
@@ -360,7 +369,9 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
   in
   (* Sorting by instruction diff percentage. *)
   let combined = M.bindings combined in
-  let cmp (_, (_, _, d1)) (_, (_, _, d2)) = compare (snd d1) (snd d2) in
+  let cmp (_, (_, (_, _, d1))) (_, (_, (_, _, d2))) =
+    compare (snd d1) (snd d2)
+  in
   let combined = List.sort cmp combined in
   (* Printing the data. *)
   let print =
