@@ -15,10 +15,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *)
 
-(*
- * Copyright (C) 2022 BlueRock Security, Inc.
- *)
-
 (** Short name for a standard formatter. *)
 type 'a outfmt = ('a, Format.formatter, unit) format
 
@@ -48,68 +44,120 @@ let panic : ('a, 'b) koutfmt -> 'a = fun fmt ->
   Format.kfprintf (fun _ -> exit 1) Format.err_formatter
     (red ("[Panic] " ^^ fmt ^^ "\n"))
 
-let iteri_lines : (int -> string -> unit) -> string -> unit = fun f fname ->
-  let ic = open_in fname in
-  let i = ref 0 in
+(** [fold_file csv_file f acc] folds function [f] over the lines of given file
+    [csv_file], starting with accumulator value [acc]. All lines are parsed as
+    a CSV data line, and are expected to have at least two fields: a file name
+    and an instruction count. The function panics in case of file system error
+    or parse error. *)
+let fold_file : string -> (string -> int -> 'a -> 'a) -> 'a -> 'a =
+    fun csv_file f acc ->
+  let rec fold i ic acc =
+    let error msg = panic "Error in file %s, line %i: %s." csv_file i msg in
+    match In_channel.input_line ic with
+    | None       -> acc
+    | Some(line) ->
+    let (file, instr) =
+      match String.split_on_char ',' line with
+      | file :: instr :: _ -> (String.trim file, String.trim instr)
+      | _                  -> error "bad number of fields"
+    in
+    let instr =
+      try int_of_string instr with Failure(_) ->
+      error "instruction count does not look like an integer"
+    in
+    fold (i+1) ic (f file instr acc)
+  in
   try
-    while true do f !i (input_line ic); incr i done
-  with End_of_file -> close_in ic
+    In_channel.with_open_text csv_file @@ fun ic ->
+    ignore (In_channel.input_line ic); (* Skipping header. *)
+    fold 1 ic acc
+  with Sys_error(s) ->
+    panic "Error with file %s: %s." csv_file s
 
-let foldi_lines : (int -> string -> 'a -> 'a) -> string -> 'a -> 'a =
-    fun fn file a ->
-  let acc = ref a in iteri_lines (fun i s -> acc := fn i s !acc) file; !acc
+(** [is_cpp2v file] indicates whether the given file name [file] looks like it
+    corresponds to an AST file (as produced by the cpp2v program). *)
+let is_cpp2v : string -> bool = fun file ->
+  String.ends_with ~suffix:"_hpp.v"       file ||
+  String.ends_with ~suffix:"_cpp.v"       file ||
+  String.ends_with ~suffix:"_hpp_names.v" file ||
+  String.ends_with ~suffix:"_cpp_names.v" file
 
-module SMap = Map.Make(String)
-module SSet = Set.Make(String)
+module S = Set.Make(String)
+module M = Map.Make(String)
+
+(** Performance data. *)
+module Data : sig
+  (** Performance data for a single Rocq file. *)
+  type t = {
+    file : string;
+    (** Rocq file corresponding to this entry. *)
+    is_cpp2v : bool;
+    (** Does this file look like an AST file based on its name? *)
+    instr_ref : int option;
+    (** Reference instruction count, if any. *)
+    instr : int option;
+    (** Instruction count for the changes, if any. *)
+  }
+
+  (** [get ~ref_data ~new_data] gathers performance data from the given files,
+      which are all expected to contain CSV data. Argument [ref_data] provides
+      the reference data (to be compared to), and [new_data] holds potentially
+      several versions of the data to be compared (entries of later files take
+      precedence over entries in earlier file in the list order). The function
+      panics upon errors (either file-system-related, or parsing error). *)
+  val get : ref_data:string -> new_data:string list -> t M.t
+end = struct
+  type t = {
+    file : string;
+    is_cpp2v : bool;
+    instr_ref : int option;
+    instr : int option;
+  }
+
+  let get ~ref_data ~new_data =
+    let m =
+      let init file instr m =
+        let is_cpp2v = is_cpp2v file in
+        M.add file {file; is_cpp2v; instr_ref = Some(instr); instr = None} m
+      in
+      fold_file ref_data init M.empty
+    in
+    let add m new_data =
+      let add file instr m =
+        let update datao =
+          match datao with
+          | Some(data) -> Some({data with instr = Some(instr)})
+          | None       ->
+          let is_cpp2v = is_cpp2v file in
+          Some({file; is_cpp2v; instr_ref = None; instr = Some(instr)})
+        in
+        M.update file update m
+      in
+      fold_file new_data add m
+    in
+    List.fold_left add m new_data
+end
 
 let excluded = ref []
 
 let add_excluded : string -> unit = fun dir ->
   excluded := dir :: !excluded
 
-let filter_excluded : 'a SMap.t -> 'a SMap.t = fun m ->
+let filter_excluded : 'a M.t -> 'a M.t = fun m ->
   let excluded = !excluded in
   let not_excluded file _ =
     let not_prefix prefix = not (String.starts_with ~prefix file) in
     List.for_all not_prefix excluded
   in
-  SMap.filter not_excluded m
-
-let map_domain : 'a SMap.t -> SSet.t = fun m ->
-  SMap.fold (fun k _ s -> SSet.add k s) m SSet.empty
+  M.filter not_excluded m
 
 type instr_count = int
-
-let parse_file : string -> instr_count SMap.t = fun csv_file ->
-  let add i line m =
-    if i = 0 then m else
-    let (file, instr) =
-      match String.split_on_char ',' line with
-      | file :: instr :: _ -> (String.trim file, String.trim instr)
-      | _ -> panic "%s, line %i: bad number of fields" csv_file i
-    in
-    if SMap.mem file m then
-      panic "several entries for \"%s\"" file;
-    if instr = "" then m else
-    let instr =
-      try int_of_string instr with Invalid_argument(_) ->
-        panic "%s, line %i: bad instruction count %S" csv_file i instr
-    in
-    SMap.add file instr m
-  in
-  filter_excluded (foldi_lines add csv_file SMap.empty)
 
 type 'a by_type = {
   bt_total: 'a;
   bt_cpp2v: 'a;
   bt_other: 'a;
 }
-
-let is_cpp2v fname =
-  String.ends_with ~suffix:"_hpp.v"       fname ||
-  String.ends_with ~suffix:"_cpp.v"       fname ||
-  String.ends_with ~suffix:"_hpp_names.v" fname ||
-  String.ends_with ~suffix:"_cpp_names.v" fname
 
 let bt_add fname (bt : instr_count by_type) (v : instr_count) =
   if is_cpp2v fname then
@@ -239,50 +287,62 @@ let print_csv_data (total_ref, total_new, total_diff, _, _) combined =
   (* Printing the total. *)
   info "%f,%i,%i,%i,*\n" (snd total_diff.bt_total) total_ref.bt_total total_new.bt_total (fst total_diff.bt_total)
 
-let analyse : string -> string list -> unit = fun file_ref files_new ->
-  let data_ref = parse_file file_ref in
-  let data_new = List.map parse_file files_new in
-  let data_new =
-    List.fold_left (SMap.union (fun _key _old_val new_val -> Some(new_val))) SMap.empty data_new
-  in
-  let ref_files = map_domain data_ref in
-  let new_files = map_domain data_new in
-  let all_files = SSet.union ref_files new_files in
-  (* Warn about files that disappeared. *)
-  let disappeared = SSet.diff all_files new_files in
-  (* compute number of missing files and combined instruction count *)
-  let num_disappeared = SSet.cardinal disappeared in
-  let total_disappeared = SSet.fold (fun el acc -> acc + SMap.find el data_ref) disappeared 0 in
-  let () =
-    if not !missing_unchanged then
-      SSet.iter (wrn "Ignoring removed file [%s].") disappeared;
-  in
-  (* Warn about files that appeared. *)
-  let appeared = SSet.diff all_files ref_files in
-  let num_appeared = SSet.cardinal appeared in
-  let total_appeared = SSet.fold (fun el acc -> acc + SMap.find el data_new) appeared 0 in
-  SSet.iter (wrn "Ignoring new file [%s].") appeared;
-  (* Combine the data. *)
-  let combined : (instr_count * instr_count * diff) SMap.t =
-    let fn file file_data_ref m =
-      try
-        let file_data_new = SMap.find file data_new in
-        let diff = make_diff file_data_ref file_data_new in
-        SMap.add file (file_data_ref, file_data_new, diff) m
-      with
-      | Not_found when     !missing_unchanged ->
-        let diff = make_diff file_data_ref file_data_ref in
-        SMap.add file (file_data_ref, file_data_ref, diff) m
-      | Not_found when not !missing_unchanged -> m
+let analyse : string -> string list -> unit = fun ref_data new_data ->
+  let data = filter_excluded (Data.get ~ref_data ~new_data) in
+  let (appeared, total_appeared, disappeared, total_disappeared) =
+    let gather file data (appeared, i_appeared, disappeared, i_disappeared) =
+      match (data.Data.instr_ref, data.Data.instr) with
+      | (Some(i), None   ) ->
+          (appeared, i_appeared, S.add file disappeared, i + i_disappeared)
+      | (None   , Some(i)) ->
+          (S.add file appeared, i + i_appeared, disappeared, i_disappeared)
+      | (_      , _      ) ->
+          (appeared, i_appeared, disappeared, i_disappeared)
     in
-    SMap.fold fn data_ref SMap.empty
+    M.fold gather data (S.empty, 0, S.empty, 0)
+  in
+  let num_disappeared = S.cardinal disappeared in
+  let num_appeared = S.cardinal appeared in
+  (* Warn about files that appeared / disappeared. *)
+  let () =
+    if not !missing_unchanged then begin
+      S.iter (wrn "Ignoring removed file [%s].") disappeared;
+      S.iter (wrn "Ignoring new file [%s].") appeared
+    end
+  in
+  (* Compute the performance diffs. *)
+  let combined : (instr_count * instr_count * diff) M.t =
+    let make_diff i_ref i = (i_ref, i, make_diff i_ref i) in
+    let filter _ data =
+      match (data.Data.instr_ref, data.Data.instr) with
+      (* We have data on both side. *)
+      | (Some(i_ref), Some(i)) -> Some(make_diff i_ref i)
+      (* We have data in the reference only, file disappeared. *)
+      | (Some(i_ref), None   ) ->
+          begin
+            match !missing_unchanged with
+            | false -> None
+            | true  -> Some(make_diff i_ref i_ref)
+          end
+      (* We have new data only, file appeared. *)
+      | (None       , Some(i)) ->
+          begin
+            match !missing_unchanged with
+            | false -> None
+            | true  -> Some(make_diff i i)
+          end
+      (* Unreachable case. *)
+      | (None           , None       ) ->
+          assert false
+    in
+    M.filter_map filter data
   in
   (* Computing the total. *)
   let (total_ref, total_new) =
     let fn fname (d1,d2,_) (acc1,acc2) =
       (bt_add fname acc1 d1, bt_add fname acc2 d2)
     in
-    SMap.fold fn combined (bt_zero, bt_zero)
+    M.fold fn combined (bt_zero, bt_zero)
   in
   let total_diff = bt_make_diff total_ref total_new in
   (* Calculate percentage of missing instructions *)
@@ -299,7 +359,7 @@ let analyse : string -> string list -> unit = fun file_ref files_new ->
     (instr, perc)
   in
   (* Sorting by instruction diff percentage. *)
-  let combined = SMap.bindings combined in
+  let combined = M.bindings combined in
   let cmp (_, (_, _, d1)) (_, (_, _, d2)) = compare (snd d1) (snd d2) in
   let combined = List.sort cmp combined in
   (* Printing the data. *)
