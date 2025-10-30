@@ -25,7 +25,7 @@ let check_no_comp () =
   | Some("false") -> ()
   | Some("true")  ->
       panic "Error: failed following %s." _NO_COMP
-  | Some(v)       ->
+  | Some(_)       ->
       panic "Error: %s can only have value \"true\" or \"false\"." _NO_COMP
 
 let coqc_command : string list -> string = fun args ->

@@ -61,8 +61,8 @@ let spans_of_log : Log.t -> span list = fun log ->
   List.concat_map to_span log
 
 let sample : int -> span -> string list = fun i s ->
-  let contains_time i (S({t0; t1})) = t0 <= i && i <= t1 in
-  let rec sample ctx (S({key; spans})) =
+  let contains_time i (S({t0; t1; _})) = t0 <= i && i <= t1 in
+  let rec sample ctx (S({key; spans; _})) =
     match List.find_opt (contains_time i) spans with
     | None    -> key :: ctx
     | Some(s) -> sample (key :: ctx) s

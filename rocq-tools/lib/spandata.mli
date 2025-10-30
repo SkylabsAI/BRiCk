@@ -21,10 +21,8 @@
 module Data : sig
   (** Type of span data. *)
   type t = {
-    (** Number of occurences of the span. *)
-    count : int;
-    (** Number of instructions spent running the span. *)
-    instr : int;
+    count : int; (** Number of occurences of the span. *)
+    instr : int; (** Number of instructions spent running the span. *)
   }
 end
 
@@ -32,10 +30,8 @@ end
 module Span : sig
   (** Type of a span. *)
   type t = {
-    (** Span name. *)
-    name   : string;
-    (** Optional span status metadata. *)
-    status : string option;
+    name   : string; (** Span name. *)
+    status : string option; (** Optional span status metadata. *)
   }
 end
 
@@ -43,10 +39,8 @@ end
 module Key : sig
   (** Type of span key. *)
   type t = {
-    (** Path to the span (list of ancestor spans). *)
-    span_path : Span.t list;
-    (** The Span. *)
-    span      : Span.t;
+    span_path : Span.t list; (** Path to the span (list of ancestor spans). *)
+    span      : Span.t; (** The Span. *)
   }
 end
 

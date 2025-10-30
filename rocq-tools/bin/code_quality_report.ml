@@ -15,7 +15,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *)
 
-open Rocq_tools
 open Rocq_tools.Extra
 
 type pos = {
@@ -98,7 +97,7 @@ let gather : line list -> item list = fun lines ->
         gather rev_items (Some(file, pos, [])) lines
     | (None                 , Data(line, false) :: lines) ->
         gather (Line(i, line) :: rev_items) header lines
-    | (None                 , Data(line, true ) :: lines) ->
+    | (None                 , Data(_   , true ) :: _    ) ->
         panic "Dangling end of warning at line %i." i
     | (Some(file, pos, data), Data(line, false) :: lines) ->
         gather rev_items (Some(file, pos, line :: data)) lines
