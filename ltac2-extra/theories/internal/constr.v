@@ -499,6 +499,16 @@ Module Constr.
         | None   => invalid_arg "Constr.Unsafe.Destruct.of_constructor_app" t
         end.
 
+      Ltac2 of_reference (trm : constr) : Std.reference option :=
+        match Constr.Unsafe.kind_nocast trm with
+        | Constr.Unsafe.Constructor ctor _ => Some (Std.ConstructRef ctor)
+        | Constr.Unsafe.Ind ind _ => Some (Std.IndRef ind)
+        | Constr.Unsafe.Constant const _ => Some (Std.ConstRef const)
+        | Constr.Unsafe.Proj proj _ _ =>
+            Option.map (fun c => Std.ConstRef c) (Proj.to_constant proj)
+        | _ => None
+        end .
+
       Ltac2 of_lambda_opt : constr -> (binder * constr) option := fun t =>
         match kind t with
         | Lambda b t => Some (b, t)

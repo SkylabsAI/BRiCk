@@ -141,4 +141,18 @@ Module Std.
 
   Ltac2 @external typeclasses_eauto_dbs : tc_config -> hint_db list -> unit :=
     "ltac2_extensions" "typeclasses_eauto_dbs".
+
+  Module Reference.
+
+    Ltac2 equal (x : Std.reference) (y : Std.reference) : bool :=
+      match x, y with
+      | VarRef x,       VarRef y       => Ident.equal x y
+      | ConstRef x,     ConstRef y     => Constant.equal x y
+      | IndRef x,       IndRef y       => Ind.equal x y
+      | ConstructRef x, ConstructRef y => Constructor.equal x y
+      | _, _ => false
+      end.
+
+  End Reference.
+
 End Std.
