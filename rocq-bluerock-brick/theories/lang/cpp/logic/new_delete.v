@@ -780,8 +780,8 @@ Module Type Expr__newdelete.
   Qed.
 
   (** [wp_delete_obj tu obj_type d obj_ptr storage_ptr Q]
-      Delete the object [obj_ptr] (of C++ type <<obj_type>>) that occupies the storage [storage_ptr].
-      [obj_ptr] should be the pointer to the complete object meaning that no virtual dispatch occurs
+      Delete the object <<obj_ptr>> (of C++ type <<obj_type>>) that occupies the storage <<storage_ptr>>.
+      <<obj_ptr>> should be the pointer to the complete object meaning that no virtual dispatch occurs
       here.
 
       This weakest pre-condition does **not** take a translation unit because object deletion is
