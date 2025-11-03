@@ -542,29 +542,30 @@ Module Type Expr__newdelete.
                       wp_args evaluation_order.nd [] targs (implicit_args ++ new_args) in
                   |> letI* res := wp_fptr tu.(types) nfty (_global new_fn.1) vs in
                      letI* := interp tu ifree in
+                     letI* storage_val := operand_receive "void*" res in
                      Exists (storage_base : ptr),
-                     res |-> primR (Tptr Tvoid) 1$m (Vptr storage_base) **
-                     if bool_decide (storage_base = nullptr) then
-                       [| new_args <> nil |] ** Q (Vptr storage_base) free
-                       (* ^^ [new_args <> nil] exists because the default <<operator new>>
-                          is never allowed to return [nullptr] *)
-                     else
-                       (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
-                      storage_base |-> blockR (overhead_sz + alloc_sz) 1$m **
-                      storage_base |-> alignedR (if pass_align then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
-                      (Forall (obj_ptr : ptr),
-                        storage_base .[Tbyte ! overhead_sz] |-> alignedR alloc_al -*
-                        (* This also ensures these pointers share their
-                        address (see [provides_storage_same_address]) *)
-                        provides_storage
-                          (storage_base .[Tbyte ! overhead_sz])
-                          obj_ptr array_ty -*
-                        letI* free'' := wp_opt_initialize oinit array_ty obj_ptr in
-                          (* Track the type we are allocating
-                            so it can be checked at [delete]
-                            *)
-                          obj_ptr |-> new_token.R 1 (new_token.mkBase array_ty storage_base overhead_sz) -*
-                          Q (Vptr obj_ptr) (free'' >*> free' >*> free))))
+                       [| storage_val = Vptr storage_base |] **
+                       if bool_decide (storage_base = nullptr) then
+                         [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] **
+                         Q (Vptr storage_base) (free' >*> free)
+                         (* ^^ only <<noexcept>> overloads for <<operator new>> are allowed to return <<nullptr>> *)
+                       else
+                         (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
+                         storage_base |-> blockR (overhead_sz + alloc_sz) 1$m **
+                         storage_base |-> alignedR (if pass_align then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
+                         (Forall (obj_ptr : ptr),
+                           storage_base .[Tbyte ! overhead_sz] |-> alignedR alloc_al -*
+                           (* This also ensures these pointers share their
+                              address (see [provides_storage_same_address]) *)
+                           provides_storage
+                             (storage_base .[Tbyte ! overhead_sz])
+                             obj_ptr array_ty -*
+                           letI* free'' := wp_opt_initialize oinit array_ty obj_ptr in
+                             (* Track the type we are allocating
+                                so it can be checked at <<delete>>
+                              *)
+                           obj_ptr |-> new_token.R 1 (new_token.mkBase array_ty storage_base overhead_sz) -*
+                           Q (Vptr obj_ptr) (free'' >*> (free' >*> free)))))
         |-- wp_operand (Enew new_fn new_args (new_form.Allocating pass_align) aty (Some array_size) oinit) Q.
 
         (* We deliberately avoid giving a reasoning principle for array-placement <<new>> since
