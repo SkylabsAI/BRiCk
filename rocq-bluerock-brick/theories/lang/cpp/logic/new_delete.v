@@ -415,7 +415,8 @@ Module Type Expr__newdelete.
                 Exists storage_ptr : ptr,
                   [| storage_val = Vptr storage_ptr |] **
                   if bool_decide (storage_ptr = nullptr) then
-                    [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] ** Q (Vptr storage_ptr) free
+                    [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] **
+                    Q (Vptr storage_ptr) free
                     (* ^^ only <<noexcept>> overloads for <<operator new>> are allowed to return <<nullptr>> *)
                   else
                     (* C++ requires the resulting pointer to be aligned to
@@ -745,7 +746,7 @@ Module Type Expr__newdelete.
       uses a classical conjunction to represent non-deterministic (demonic)
       choice.
 
-      NOTE: As with [wp_delete_obj], to invoke <<delete[]>>, [destroyed_type]
+      NOTE: As with [wp_delete_obj], to invoke <<delete[]>>, <<destroyed_type>>
       should be [Tincomplete_array element_type].
    *)
   mlock
