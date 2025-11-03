@@ -432,7 +432,7 @@ Module Type Expr__newdelete.
                         (* This also ensures these pointers share their
                           address (see [provides_storage_same_address]) *)
                         (* Track the type we are allocating
-                          so it can be checked at [delete].
+                          so it can be checked at <<delete>>.
                           It is important that this preserves
                           `const`ness of the type.
                         *)
