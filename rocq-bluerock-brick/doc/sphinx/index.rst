@@ -8,8 +8,8 @@ The |project| C++ Program Logic
 .. topic:: Note
 
    This repository does not provide usable verification tooling to apply these principles to real C++ programs.
-   If you are interested in verifying real, concurrent C++ programs using this logic, please open an issue an issue on this repository.
-   `BlueRock Security <https://bluerock.io/>`_ has developed verification tools on top of this semantics that can be used to verify real C++ programs.
+   If you are interested in verifying real, concurrent C++ programs using this logic, please check out the `automation documentation <https://skylabs-ai.github.io/auto-docs>`_.
+   `SkyLabs AI <https://skylabs-ai.com/>`_ has developed verification tools on top of this semantics that can be used to verify real C++ programs.
 
 The |project| release contains two pieces:
 
