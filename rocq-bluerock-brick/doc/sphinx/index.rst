@@ -39,7 +39,6 @@ Our full feature set (as well as known issues) can be found on the :ref:`feature
    object_layout
    machine
    documentation
-   proof_examples
    bibliography
    acknowledgements
 
