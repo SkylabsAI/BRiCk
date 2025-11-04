@@ -1152,6 +1152,11 @@ Section listZ.
       then <[ Z.to_nat k := a ]> l
       else l.
 
+  Definition takeZ {A} (n : Z) := (takeN (A := A) (Z.to_N n)).
+  #[global] Hint Opaque takeZ : typeclass_instances.
+  Definition dropZ {A} (n : Z) := (dropN (A := A) (Z.to_N n)).
+  #[global] Hint Opaque dropZ : typeclass_instances.
+
   Lemma insertZ_eq_insertN {A} (k : Z) x (xs : list A) :
     <[ k := x ]> xs =
       if bool_decide (0 ≤ k)
@@ -1254,6 +1259,24 @@ Section listZ.
      @bool_decide_refl,
      @bool_decide_lt_irrefl
     ).
+
+  Lemma takeZ_reverse {A} n (xs : list A) :
+    takeZ n (reverse xs) = reverse (dropZ (lengthZ xs - n)%Z xs).
+  Proof.
+    rewrite /takeZ/dropZ.
+    have [Hn|Hn] : (n ≤ 0 ∨ 0 ≤ n)%Z by lia.
+    { have Hn' : Z.to_N n = 0%N by lia.
+      rewrite Hn' takeN_zero dropN_lengthN //; lia. }
+    rewrite takeN_reverse; do 2 f_equiv.
+    lia.
+  Qed.
+
+  Lemma dropZ_reverse {A} n (xs : list A) :
+    dropZ n (reverse xs) = reverse (takeZ (lengthZ xs - n)%Z xs).
+  Proof.
+    rewrite -[X in takeZ _ X]reverse_involutive takeZ_reverse reverse_involutive.
+    by rewrite lengthN_reverse Z.sub_sub_distr Z.sub_diag Z.add_0_l.
+  Qed.
 
   Lemma insertZ_nil {A} (i : Z) (x : A) : <[i:=x]>[] = [].
   Proof. rewrite /insert /list_insertZ; case: bool_decide_reflect => //. Qed.
