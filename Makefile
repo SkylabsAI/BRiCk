@@ -22,6 +22,8 @@ BUILD_ROOT=../../_build/default/fmdeps/BRiCk
 COQDOC_DIR=doc/sphinx/_static/coqdoc
 ROCQLIB=${PWD}/../../_build/install/default/lib/coq
 
+SED = $(shell which gsed 2> /dev/null || which sed 2> /dev/null)
+
 doc:
 	@dune clean
 	@dune build @../vendored/rocq/install
@@ -32,9 +34,16 @@ doc:
 	@mkdir -p doc/sphinx/_static/css/coqdocjs doc/sphinx/_static/js/coqdocjs
 	@cp -r coqdocjs/extra/resources/*.css doc/sphinx/_static/css/coqdocjs
 	@cp -r coqdocjs/extra/resources/*.js doc/sphinx/_static/js/coqdocjs
-	@ROCQLIB=${ROCQLIB} dune build --cache=disabled @doc
+	@ROCQLIB=${ROCQLIB} dune build @doc
+	@rm -rf ${COQDOC_DIR}
 	@mkdir -p ${COQDOC_DIR}
 	@cp -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
+	@find ${COQDOC_DIR} -type f -name '*.html' \
+		| xargs -P 16 -I {} $(SED) -i \
+		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}' {}
+	@find ${COQDOC_DIR} -type f -name '*.html' \
+		| xargs -P 16 -I {} $(SED) -i \
+		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
 	+@$(MAKE) -C doc html
 .PHONY: doc
 
