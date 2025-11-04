@@ -570,13 +570,6 @@ Section listN.
     dropN n (<[i:=x]> xs) = dropN n xs.
   Proof. move=> H. apply: drop_insert_gt. lia. Qed.
 
-  (* NOTE: This exists for registration as a pure hint when necessary. *)
-  Lemma dropN_congr n1 n2 xs1 xs2 :
-    n1 = n2 ->
-    xs1 = xs2 ->
-    dropN n1 xs1 = dropN n2 xs2.
-  Proof. by move=> -> ->. Qed.
-
   Lemma takeN_zero xs :
     takeN 0 xs = [].
   Proof. reflexivity. Qed.
@@ -673,12 +666,6 @@ Section listN.
     (i < n)%N ->
     takeN n (<[i:=x]> xs) = <[i:=x]> (takeN n xs).
   Proof. move=> H. apply: take_insert_lt. lia. Qed.
-
-  Lemma takeN_congr n1 n2 xs1 xs2 :
-    n1 = n2 ->
-    xs1 = xs2 ->
-    takeN n1 xs1 = takeN n2 xs2.
-  Proof. by move=> -> ->. Qed.
 
   Lemma rotateN_fold k xs :
     rotate (N.to_nat k) xs = rotateN k xs.
