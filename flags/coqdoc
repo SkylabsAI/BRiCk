@@ -13,6 +13,6 @@ iris
 https://plv.mpi-sws.org/coqdoc/stdpp/
 stdpp
 --with-header
-/tmp/coqdocjs/extra/header.html
+/tmp/coqdocjs/extra/HEADER.html
 --with-footer
-/tmp/coqdocjs/extra/footer.html
+/tmp/coqdocjs/extra/FOOTER.html
