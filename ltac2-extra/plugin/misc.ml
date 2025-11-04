@@ -458,7 +458,9 @@ let _ =
   define "restrict_evar" (list bool @-> evar @-> tac evar) @@ fun ls e ->
   Proofview.Goal.enter_one @@ fun gl ->
   let sigma = Proofview.Goal.sigma gl in
-  let sigma, e = Evarutil.restrict_evar sigma e (Evd.Filter.make ls) None in
+  let info = Evd.find_undefined sigma e in
+  let filter = Evd.Filter.apply_subfilter (Evd.evar_filter info) ls in
+  let sigma, e = Evarutil.restrict_evar sigma e filter None in
   let open Proofview.Notations in
   Proofview.Unsafe.tclEVARSADVANCE sigma >>= fun _ ->
   Proofview.tclUNIT e

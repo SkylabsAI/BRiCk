@@ -111,7 +111,14 @@ Module Constr.
     Ltac2 @ external is_undefined : evar -> bool :=
       "ltac2_extensions" "evar_is_undefined".
 
-    (** See [Evarutils.restrict_evar] *)
+    (** [restrict] uses [Evarutils.restrict_evar] to restrict the valid
+        hypothesis of an evar.
+        NOTE: Unlike [Evarutils.restrict_evar] and [Evd.restrict], [restrict]
+        expects a filter whose length is equal to __FILTERED__ evar context,
+        i.e. it only filters out hypotheses that were not filtered out before.
+        In other words, the existing filter of the evar is composed with the
+        [bool list] argument provided to [restrict]
+     *)
     Ltac2 @ external restrict : bool list -> evar -> evar :=
       "ltac2_extensions" "restrict_evar".
   End Evar.
