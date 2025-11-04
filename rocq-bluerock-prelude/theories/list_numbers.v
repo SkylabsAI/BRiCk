@@ -296,6 +296,22 @@ Section listN.
     takeN n (replicateN (n + m) x) = replicateN n x.
   Proof. by rewrite /takeN /replicateN N2Nat.inj_add take_replicate_add. Qed.
 
+  Lemma takeN_map {B} n (f : A -> B) (xs : list A) :
+    takeN n (map f xs) = map f (takeN n xs).
+  Proof. by rewrite /takeN firstn_map. Qed.
+
+  Lemma takeN_fmap {B} n (f : A -> B) (xs : list A) :
+    takeN n (fmap f xs) = fmap f (takeN n xs).
+  Proof. by rewrite /takeN firstn_map. Qed.
+
+  Lemma dropN_map {B} n (f : A -> B) (xs : list A) :
+    dropN n (map f xs) = map f (dropN n xs).
+  Proof. by rewrite /dropN skipn_map. Qed.
+
+  Lemma dropN_fmap {B} n (f : A -> B) (xs : list A) :
+    dropN n (fmap f xs) = fmap f (dropN n xs).
+  Proof. by rewrite /dropN skipn_map. Qed.
+
   Lemma to_nat_lengthN xs :
     N.to_nat (lengthN xs) = length xs.
   Proof. by rewrite length_lengthN. Qed.
