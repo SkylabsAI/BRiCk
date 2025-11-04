@@ -311,6 +311,26 @@ Module Type Expr__newdelete.
       #[global] Declare Instance R_agree :
         AgreeF1 R.
 
+      (** This guarantees that non-array allocations have 0 overhead bytes.
+
+          This is supported by <https://eel.is/c++draft/expr.new#17>.
+
+          > When a new-expression calls an allocation function and that allocation
+          > has not been extended, the new-expression passes the amount of space
+          > requested to the allocation function as the first argument of type std​::​size_t.
+          > That argument shall be no less than the size of the object being created;
+          > it may be greater than the size of the object being created only if
+          > the object is an array and the allocation function is not a non-allocating
+          > form ([new.delete.placement]). For arrays of char, unsigned char, and std​::​byte,
+          > the difference between the result of the new-expression and the address returned
+          > by the allocation function shall be an integral multiple of the strictest
+          > fundamental alignment requirement of any object type whose size is no greater
+          > than the size of the array being created.
+       *)
+      #[global] Declare Instance new_token_non_array_0_overhead : forall ty q storage_p overhead,
+          TCEq (is_array_type ty) false ->
+          Observe [| overhead = 0%N |] (new_token.R q $ new_token.mk ty storage_p overhead).
+
     End with_cpp_logic.
   End new_token.
 
