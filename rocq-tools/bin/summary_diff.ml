@@ -138,19 +138,6 @@ end = struct
     List.fold_left add m new_data
 end
 
-let excluded = ref []
-
-let add_excluded : string -> unit = fun dir ->
-  excluded := dir :: !excluded
-
-let filter_excluded : 'a M.t -> 'a M.t = fun m ->
-  let excluded = !excluded in
-  let not_excluded file _ =
-    let not_prefix prefix = not (String.starts_with ~prefix file) in
-    List.for_all not_prefix excluded
-  in
-  M.filter not_excluded m
-
 type instr_count = int
 
 type 'a by_type = {
@@ -185,117 +172,33 @@ let bt_make_diff : instr_count by_type -> instr_count by_type -> diff by_type =
   let bt_other = make_diff ic_ref.bt_other ic_new.bt_other in
   { bt_total; bt_cpp2v; bt_other }
 
-
-let default_color_threshold    = 0.5
-let default_relevant_threshold = 0.1
-let default_instr_threshold    = 0.5
-
-let color_threshold    : float ref = ref default_color_threshold
-let relevant_threshold : float ref = ref default_relevant_threshold
-let instr_threshold    : float ref = ref default_instr_threshold
-let show_everything    : bool  ref = ref false
-
 let missing_unchanged  : bool  ref = ref false
 
-let color diff =
-  if diff < -. !color_threshold then green "%+7.2f%%" else
-  if diff > !color_threshold then red "%+7.2f%%" else
-  "%+7.2f%%"
+type analysis = {
+  total_ref : instr_count by_type;
+  total_new : instr_count by_type;
+  total_diff : diff by_type;
+  num_disappeared : int;
+  total_disappeared : instr_count * float;
+  num_appeared : int;
+  total_appeared : instr_count * float;
+  per_file : (string * (bool * (instr_count * instr_count * diff))) list;
+}
 
-type output_format =
-  | Markdown
-  | Gitlab
-  | Github
-  | CSV
-
-let output_format : output_format ref = ref Markdown
-let diff_base_url : string option ref = ref None
-
-let github_color diff =
-  if not !use_colors then "%+7.2f%%" ^^ "" else
-  if diff < -. !color_threshold then "$\\color{green}{%+7.2f\\\\%%}$" else
-  if diff > !color_threshold then "$\\color{red}{%+7.2f\\\\%%}$" else
-  "${%+7.2f\\\\%%}$"
-
-let print_md_summary ?(mode : [`Github | `Gitlab] option = None)
-    (total_ref, total_new, total_diff, (num_dis, total_dis), (num_app, total_app)) =
-  let color = match mode with Some(`Github) -> github_color | _ -> color in
-  (* Printing the totals. *)
-  let print_summary infostring total_ref total_new total_diff =
-    let n0 = float_of_int total_ref /. 1000000000.0 in
-    let n1 = float_of_int total_new /. 1000000000.0 in
-    let d = float_of_int (fst total_diff) /. 1000000000.0 in
-    info ("| " ^^ color (snd total_diff) ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
-      (snd total_diff) n0 n1 d infostring
-  in
-  let _ =
-    let total_ref = total_ref.bt_total - fst total_dis in
-    let total_new = total_new.bt_total + fst total_app in
-    let total_diff = make_diff total_ref total_new in
-    print_summary "total" total_ref total_new total_diff
-  in
-  (if num_dis > 0 then
-      let disappeared_label = Printf.sprintf "├ disappeared files (%i)" num_dis in
-      print_summary disappeared_label (- fst total_dis) 0 total_dis);
-  (if num_app > 0 then
-      let appeared_label = Printf.sprintf "├ newly appeared files (%i)" num_app in
-      print_summary appeared_label 0 (fst total_app) total_app);
-  (if num_dis > 0 || num_app > 0 then
-      print_summary "└ common files" total_ref.bt_total total_new.bt_total total_diff.bt_total);
-  print_summary "├ translation units" total_ref.bt_cpp2v total_new.bt_cpp2v total_diff.bt_cpp2v;
-  print_summary "└ proofs and tests" total_ref.bt_other total_new.bt_other total_diff.bt_other
-
-let print_md_header () =
-  info "| Relative | Master   | MR       | Change   | Filename\n";
-  info "|---------:|---------:|---------:|---------:|----------\n"
-
-let print_md_data ?(mode : [`Github | `Gitlab] option = None) totals combined =
-  let color = match mode with Some(`Github) -> github_color | _ -> color in
-  print_md_header ();
-  let add_url k =
-    match !diff_base_url with
-    | None -> k
-    | Some(url) ->
-        Printf.sprintf "[%s](%s/%s.html)" k url (Filename.chop_extension k)
-  in
-  let fn (k, (_, (n0, n1, (d, diff)))) =
-    let instr_diff = float_of_int d /. 1000000000.0 in
-    let relevant =
-      abs_float diff >= !relevant_threshold &&
-      abs_float instr_diff >= !instr_threshold
-
+let analyse : excluded:string list -> missing_unchanged:bool ->
+    ref_data:string -> new_data:string list -> analysis =
+    fun ~excluded ~missing_unchanged ~ref_data ~new_data ->
+  (* Read the data from the input files. *)
+  let data = Data.get ~ref_data ~new_data in
+  (* Only keep data from non-excluded folders. *)
+  let data =
+    let not_excluded file _ =
+      let not_prefix prefix = not (String.starts_with ~prefix file) in
+      List.for_all not_prefix excluded
     in
-    if !show_everything || relevant then
-      let n0 = float_of_int n0 /. 1000000000.0 in
-      let n1 = float_of_int n1 /. 1000000000.0 in
-      info ("| " ^^ color diff ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
-        diff n0 n1 instr_diff (add_url k)
+    M.filter not_excluded data
   in
-  List.iter fn combined;
-  info "|          |          |          |          |          \n";
-  print_md_summary ~mode totals
-
-let print_gitlab_or_github_data ~mode totals combined =
-  let fn url =  info "\n[Full performance report](%s/index.html)\n\n" url in
-  Option.iter fn !diff_base_url;
-  print_md_header ();
-  print_md_summary ~mode:(Some(mode)) totals;
-  info "\n<details><summary>Full Results</summary>\n\n";
-  print_md_data ~mode:(Some(mode)) totals combined;
-  info "\n</details>\n"
-
-
-let print_csv_data (total_ref, total_new, total_diff, _, _) combined =
-  info "Relative (%%),Master (instr),MR (instr),Change (instr),Filename\n";
-  let fn (k, (_, (n0, n1, (d, diff)))) =
-    info "%f,%i,%i,%i,%s\n" diff n0 n1 d k
-  in
-  List.iter fn combined;
-  (* Printing the total. *)
-  info "%f,%i,%i,%i,*\n" (snd total_diff.bt_total) total_ref.bt_total total_new.bt_total (fst total_diff.bt_total)
-
-let analyse : string -> string list -> unit = fun ref_data new_data ->
-  let data = filter_excluded (Data.get ~ref_data ~new_data) in
+  (* Gather appeared / disappeared files. *)
   let (appeared, total_appeared, disappeared, total_disappeared) =
     let gather file data (appeared, i_appeared, disappeared, i_disappeared) =
       match (data.Data.instr_ref, data.Data.instr) with
@@ -312,7 +215,7 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
   let num_appeared = S.cardinal appeared in
   (* Warn about files that appeared / disappeared. *)
   let () =
-    if not !missing_unchanged then begin
+    if not missing_unchanged then begin
       S.iter (wrn "Ignoring removed file [%s].") disappeared;
       S.iter (wrn "Ignoring new file [%s].") appeared
     end
@@ -327,14 +230,14 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
       (* We have data in the reference only, file disappeared. *)
       | (Some(i_ref), None   ) ->
           begin
-            match !missing_unchanged with
+            match missing_unchanged with
             | false -> None
             | true  -> Some(false, make_diff i_ref i_ref)
           end
       (* We have new data only, file appeared. *)
       | (None       , Some(i)) ->
           begin
-            match !missing_unchanged with
+            match missing_unchanged with
             | false -> None
             | true  -> Some(false, make_diff i i)
           end
@@ -372,19 +275,137 @@ let analyse : string -> string list -> unit = fun ref_data new_data ->
   let cmp (_, (_, (_, _, d1))) (_, (_, (_, _, d2))) =
     compare (snd d1) (snd d2)
   in
-  let combined = List.sort cmp combined in
-  (* Printing the data. *)
-  let print =
-    match !output_format with
-    | Markdown -> print_md_data ~mode:None
-    | Gitlab   -> print_gitlab_or_github_data ~mode:`Gitlab
-    | Github   -> print_gitlab_or_github_data ~mode:`Github
-    | CSV      -> print_csv_data
-  in
+  let per_file = List.sort cmp combined in
+  (* Return the data. *)
+  { total_ref; total_new; total_diff; num_disappeared; total_disappeared;
+    num_appeared; total_appeared; per_file }
 
-  print (total_ref, total_new, total_diff,
-    (num_disappeared, total_disappeared),
-    (num_appeared, total_appeared)) combined
+let default_color_threshold    = 0.5
+let default_relevant_threshold = 0.1
+let default_instr_threshold    = 0.5
+
+let color_threshold    : float ref = ref default_color_threshold
+let relevant_threshold : float ref = ref default_relevant_threshold
+let instr_threshold    : float ref = ref default_instr_threshold
+let show_everything    : bool  ref = ref false
+
+let excluded = ref []
+
+let add_excluded : string -> unit = fun dir ->
+  excluded := dir :: !excluded
+
+
+let color diff =
+  if diff < -. !color_threshold then green "%+7.2f%%" else
+  if diff > !color_threshold then red "%+7.2f%%" else
+  "%+7.2f%%"
+
+type output_format =
+  | Markdown
+  | Gitlab
+  | Github
+  | CSV
+
+let output_format : output_format ref = ref Markdown
+let diff_base_url : string option ref = ref None
+
+let github_color diff =
+  if not !use_colors then "%+7.2f%%" ^^ "" else
+  if diff < -. !color_threshold then "$\\color{green}{%+7.2f\\\\%%}$" else
+  if diff > !color_threshold then "$\\color{red}{%+7.2f\\\\%%}$" else
+  "${%+7.2f\\\\%%}$"
+
+let print_md_summary ?(mode : [`Github | `Gitlab] option = None) analysis =
+  let {total_ref; total_new; total_diff; _} = analysis in
+  let {num_disappeared=num_dis; total_disappeared=total_dis; _} = analysis in
+  let {num_appeared=num_app; total_appeared=total_app; _} = analysis in
+  let color = match mode with Some(`Github) -> github_color | _ -> color in
+  (* Printing the totals. *)
+  let print_summary infostring total_ref total_new total_diff =
+    let n0 = float_of_int total_ref /. 1000000000.0 in
+    let n1 = float_of_int total_new /. 1000000000.0 in
+    let d = float_of_int (fst total_diff) /. 1000000000.0 in
+    info ("| " ^^ color (snd total_diff) ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
+      (snd total_diff) n0 n1 d infostring
+  in
+  let _ =
+    let total_ref = total_ref.bt_total - fst total_dis in
+    let total_new = total_new.bt_total + fst total_app in
+    let total_diff = make_diff total_ref total_new in
+    print_summary "total" total_ref total_new total_diff
+  in
+  (if num_dis > 0 then
+      let disappeared_label = Printf.sprintf "├ disappeared files (%i)" num_dis in
+      print_summary disappeared_label (- fst total_dis) 0 total_dis);
+  (if num_app > 0 then
+      let appeared_label = Printf.sprintf "├ newly appeared files (%i)" num_app in
+      print_summary appeared_label 0 (fst total_app) total_app);
+  (if num_dis > 0 || num_app > 0 then
+      print_summary "└ common files" total_ref.bt_total total_new.bt_total total_diff.bt_total);
+  print_summary "├ translation units" total_ref.bt_cpp2v total_new.bt_cpp2v total_diff.bt_cpp2v;
+  print_summary "└ proofs and tests" total_ref.bt_other total_new.bt_other total_diff.bt_other
+
+let print_md_header () =
+  info "| Relative | Master   | MR       | Change   | Filename\n";
+  info "|---------:|---------:|---------:|---------:|----------\n"
+
+let print_md_data ?(mode : [`Github | `Gitlab] option = None) analysis =
+  let color = match mode with Some(`Github) -> github_color | _ -> color in
+  print_md_header ();
+  let add_url k =
+    match !diff_base_url with
+    | None -> k
+    | Some(url) ->
+        Printf.sprintf "[%s](%s/%s.html)" k url (Filename.chop_extension k)
+  in
+  let fn (k, (_, (n0, n1, (d, diff)))) =
+    let instr_diff = float_of_int d /. 1000000000.0 in
+    let relevant =
+      abs_float diff >= !relevant_threshold &&
+      abs_float instr_diff >= !instr_threshold
+
+    in
+    if !show_everything || relevant then
+      let n0 = float_of_int n0 /. 1000000000.0 in
+      let n1 = float_of_int n1 /. 1000000000.0 in
+      info ("| " ^^ color diff ^^ " | %8.1f | %8.1f | %+8.1f | %s\n")
+        diff n0 n1 instr_diff (add_url k)
+  in
+  List.iter fn analysis.per_file;
+  info "|          |          |          |          |          \n";
+  print_md_summary ~mode analysis
+
+let print_gitlab_or_github_data ~mode analysis =
+  let fn url =  info "\n[Full performance report](%s/index.html)\n\n" url in
+  Option.iter fn !diff_base_url;
+  print_md_header ();
+  print_md_summary ~mode:(Some(mode)) analysis;
+  info "\n<details><summary>Full Results</summary>\n\n";
+  print_md_data ~mode:(Some(mode)) analysis;
+  info "\n</details>\n"
+
+let print_csv_data analysis =
+  let {total_ref; total_new; total_diff; per_file; _} = analysis in
+  info "Relative (%%),Master (instr),MR (instr),Change (instr),Filename\n";
+  let fn (k, (_, (n0, n1, (d, diff)))) =
+    info "%f,%i,%i,%i,%s\n" diff n0 n1 d k
+  in
+  List.iter fn per_file;
+  (* Printing the total. *)
+  info "%f,%i,%i,%i,*\n" (snd total_diff.bt_total) total_ref.bt_total total_new.bt_total (fst total_diff.bt_total)
+
+let analyse : ref_data:string -> new_data:string list -> unit =
+    fun ~ref_data ~new_data ->
+  let analysis =
+    let excluded = !excluded in
+    let missing_unchanged = !missing_unchanged in
+    analyse ~excluded ~missing_unchanged ~ref_data ~new_data
+  in
+  match !output_format with
+  | Markdown -> print_md_data ~mode:None analysis
+  | Gitlab   -> print_gitlab_or_github_data ~mode:`Gitlab analysis
+  | Github   -> print_gitlab_or_github_data ~mode:`Github analysis
+  | CSV      -> print_csv_data analysis
 
 let usage : string -> bool -> 'a = fun prog_name error ->
   if error then panic "Usage: %s REF.csv NEW_1.csv .. NEW_n.csv" prog_name;
@@ -491,8 +512,8 @@ let main () =
   in
   let files = parse_args [] args in
   match files with
-  | file1 :: (_ :: _ as files) -> analyse file1 files
-  | _                          ->
+  | ref_data :: (_ :: _ as new_data) -> analyse ~ref_data ~new_data
+  | _                                ->
       let n = List.length files in
       panic "at least 2 file paths expected on the command line (%i given)." n
 
