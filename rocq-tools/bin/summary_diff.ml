@@ -29,16 +29,12 @@ let with_color k fmt =
 
 let red    fmt = with_color "31" fmt
 let green  fmt = with_color "32" fmt
-let yellow fmt = with_color "33" fmt
 
 let info : 'a outfmt -> 'a = fun fmt ->
   Format.printf (fmt ^^ "%!")
 
 let einfo : 'a outfmt -> 'a = fun fmt ->
   Format.eprintf (fmt ^^ "%!")
-
-let wrn : 'a outfmt -> 'a = fun fmt ->
-  Format.eprintf (yellow ("[Warning] " ^^ fmt ^^ "\n"))
 
 let panic : ('a, 'b) koutfmt -> 'a = fun fmt ->
   Format.kfprintf (fun _ -> exit 1) Format.err_formatter
@@ -173,8 +169,6 @@ let bt_make_diff : instr_count by_type -> instr_count by_type -> diff by_type =
   let bt_other = make_diff ic_ref.bt_other ic_new.bt_other in
   { bt_total; bt_cpp2v; bt_other }
 
-let missing_unchanged  : bool  ref = ref false
-
 type analysis = {
   total_ref : instr_count by_type;
   total_new : instr_count by_type;
@@ -203,9 +197,8 @@ let pp_analysis : Format.formatter -> analysis -> unit = fun ff analysis ->
   Format.fprintf ff "total_appeared = %a\n%!" pp_diff analysis.total_appeared;
   Format.fprintf ff "length per_file = %i\n%!" (List.length analysis.per_file)
 
-let analyse : excluded:string list -> missing_unchanged:bool ->
-    ref_data:string -> new_data:string list -> analysis =
-    fun ~excluded ~missing_unchanged ~ref_data ~new_data ->
+let analyse : excluded:string list -> ref_data:string -> new_data:string list
+    -> analysis = fun ~excluded ~ref_data ~new_data ->
   (* Read the data from the input files. *)
   let data = Data.get ~ref_data ~new_data in
   (* Only keep data from non-excluded folders. *)
@@ -231,13 +224,6 @@ let analyse : excluded:string list -> missing_unchanged:bool ->
   in
   let num_disappeared = S.cardinal disappeared in
   let num_appeared = S.cardinal appeared in
-  (* Warn about files that appeared / disappeared. *)
-  let () =
-    if not missing_unchanged then begin
-      S.iter (wrn "Ignoring removed file [%s].") disappeared;
-      S.iter (wrn "Ignoring new file [%s].") appeared
-    end
-  in
   (* Compute the performance diffs. *)
   let combined : (bool * (instr_count * instr_count * diff)) M.t =
     let make_diff i_ref i = (i_ref, i, make_diff i_ref i) in
@@ -246,22 +232,11 @@ let analyse : excluded:string list -> missing_unchanged:bool ->
       (* We have data on both side. *)
       | (Some(i_ref), Some(i)) -> Some(true, make_diff i_ref i)
       (* We have data in the reference only, file disappeared. *)
-      | (Some(i_ref), None   ) ->
-          begin
-            match missing_unchanged with
-            | false -> None
-            | true  -> Some(false, make_diff i_ref i_ref)
-          end
+      | (Some(i_ref), None   ) -> Some(false, make_diff i_ref i_ref)
       (* We have new data only, file appeared. *)
-      | (None       , Some(i)) ->
-          begin
-            match missing_unchanged with
-            | false -> None
-            | true  -> Some(false, make_diff i i)
-          end
+      | (None       , Some(i)) -> Some(false, make_diff i i)
       (* Unreachable case. *)
-      | (None           , None       ) ->
-          assert false
+      | (None       , None   ) -> assert false
     in
     M.filter_map filter data
   in
@@ -376,7 +351,6 @@ let print_md_data ?(mode : [`Github | `Gitlab] option = None) analysis =
     let relevant =
       abs_float diff >= !relevant_threshold &&
       abs_float instr_diff >= !instr_threshold
-
     in
     if !show_everything || relevant then
       let n0 = float_of_int n0 /. 1000000000.0 in
@@ -410,11 +384,7 @@ let print_csv_data analysis =
 
 let analyse : ref_data:string -> new_data:string list -> unit =
     fun ~ref_data ~new_data ->
-  let analysis =
-    let excluded = !excluded in
-    let missing_unchanged = !missing_unchanged in
-    analyse ~excluded ~missing_unchanged ~ref_data ~new_data
-  in
+  let analysis = analyse ~excluded:!excluded ~ref_data ~new_data in
   if !debug_analysis then
     Format.eprintf "### DEBUG ###\n%a#############\n%!" pp_analysis analysis;
   match !output_format with
@@ -424,18 +394,16 @@ let analyse : ref_data:string -> new_data:string list -> unit =
   | CSV      -> print_csv_data analysis
 
 let usage : string -> bool -> 'a = fun prog_name error ->
-  if error then panic "Usage: %s REF.csv NEW_1.csv .. NEW_n.csv" prog_name;
-  einfo "Usage: %s REF.csv NEW_1.csv .. NEW_n.csv\n\n" prog_name;
-  einfo "Output the total and per-file differences in instruction counts between \
-         the reference pipeline REF.csv and multiple target pipelines NEW_i.csv.\n\n";
-  einfo "By default, files only appearing in the reference pipeline or the \
-         target pipelines are treated as removed or newly added, respectively, \
-         and discarded for the purpose of comparison. The flag --assume-missing-unchanged \
-         changes the former case by assuming that the files missing from the \
-         target pipelines have the same performance as in the reference \
-         pipelines and including them in the total instruction count.\n";
-  einfo "NOTE: Always list NEW_i.csv files in chronological order. In case of overlap, \
-         rightmost wins.\n\n";
+  if error then panic "Usage: %s BASE.csv JOB_1.csv .. JOB_n.csv" prog_name;
+  einfo "Usage: %s BASE.csv JOB_1.csv .. JOB_n.csv\n\n" prog_name;
+  einfo "Output the total and per-file differences in instruction counts \
+         between the base pipeline (given in BASE.csv) and multiple job \
+         pipeline (given in JOB_i.csv, listed in chronological order since \
+         in case of overlap the last file wins).\n\n";
+  einfo "When performance data is only available in the base data, or only \
+         available in the job data, then the performance is assumed to be \
+         unchanged on that file (it is contained in the total instruction \
+         count).\n";
   einfo "Supported arguments:\n";
   einfo "  --help, -h                 \tShow this help message.\n";
   einfo "  --no-colors                \tDo not output any colors.\n";
@@ -457,8 +425,6 @@ let usage : string -> bool -> 'a = fun prog_name error ->
   einfo "  --github                   \tMarkdown output compiled into a \
                                         small summary and a <details> section.\n";
   einfo "  --diff-base-url URL        \tSpecify the base URL for diffs.\n";
-  einfo "  --assume-missing-unchanged \tTreat missing files as having unchanged \
-                                        performance results.\n";
   einfo "  --exclude DIR              \tExcludes files whose path starts \
                                         with DIR.\n";
   einfo "  --debug-analysis           \tPrint the output of the analysis phase.\n";
@@ -514,14 +480,14 @@ let main () =
     | "--diff-base-url" :: url      :: args                  ->
         diff_base_url := Some(url);
         parse_args files args
-    | "--assume-missing-unchanged"  :: args                  ->
-        missing_unchanged := true;
-        parse_args files args
     | "--exclude" :: dir            :: args                  ->
         add_excluded dir;
         parse_args files args
     | "--debug-analysis"            :: args                  ->
         debug_analysis := true;
+        parse_args files args
+    | "--assume-missing-unchanged"  :: args                  ->
+        (* TODO remove when possible. *)
         parse_args files args
     | arg                           :: _ when is_flag arg    ->
         panic "Invalid command line argument \"%s\"." arg;
