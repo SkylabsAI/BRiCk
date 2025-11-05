@@ -158,8 +158,9 @@ let bt_add fname (bt : instr_count by_type) (v : instr_count) =
 
 let bt_zero : instr_count by_type = { bt_total = 0; bt_cpp2v = 0; bt_other = 0 }
 
-
 type diff = int * float
+
+let negate_diff (i, f) = (-i, -.f)
 
 let make_diff : instr_count -> instr_count -> diff = fun ic_ref ic_new ->
   let diff_abs = ic_new - ic_ref in
@@ -275,18 +276,8 @@ let analyse : excluded:string list -> missing_unchanged:bool ->
   in
   let total_diff = bt_make_diff total_ref total_new in
   (* Calculate percentage of missing instructions *)
-  let total_disappeared =
-    let (instr, perc) = make_diff total_ref.bt_total (total_ref.bt_total - total_disappeared) in
-    let perc =  -1.0 *. perc  in
-    let instr = -1   *  instr in
-    (instr, perc)
-  in
-  let total_appeared =
-    let (instr, perc) = make_diff total_ref.bt_total (total_new.bt_total - total_appeared) in
-    let perc =  -1.0 *. perc  in
-    let instr = -1   *  instr in
-    (instr, perc)
-  in
+  let total_disappeared = negate_diff (make_diff total_ref.bt_total (total_ref.bt_total - total_disappeared)) in
+  let total_appeared = negate_diff (make_diff total_ref.bt_total (total_new.bt_total - total_appeared)) in
   (* Sorting by instruction diff percentage. *)
   let combined = M.bindings combined in
   let cmp (_, (_, (_, _, d1))) (_, (_, (_, _, d2))) =
