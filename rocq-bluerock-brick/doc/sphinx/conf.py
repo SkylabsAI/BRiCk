@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2020 BlueRock Security, Inc.
+# Copyright (c) 2020-2025 SkyLabs AI.
 # This software is distributed under the terms of the BedRock Open-Source License.
 # See the LICENSE-BedRock file in the repository root for details.
 #
 
 # General information about the project.
-project = 'BlueRock BRiCk'
-copyright = '2021-24 BlueRock Security'
-author = 'The BlueRock FM Team'
+project = 'SkyLabs BRiCk'
+copyright = '2021-25 SkyLabs AI'
+author = 'The SkyLabs FM Team'
 
 version = "0.5.0"
 release = "alpha"
@@ -82,7 +82,7 @@ alectryon.docutils.AlectryonTransform.SERTOP_ARGS = sertop_args
 # NOTE: Add in other entries here if we want to register coqdoc things which are
 #       compatible with the `:coqid:` role.
 alectryon.docutils.COQ_IDENT_DB_URLS.append(
-    ("bluerock", "https://bedrocksystems.gitlab.io/cpp2v/$modpath.html#$ident")
+    ("bluerock", "https://skylabsai.gitlab.io/cpp2v/$modpath.html#$ident")
 )
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -248,7 +248,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pragmaticFM.tex', 'BlueRock BRiCk',
+    (master_doc, 'pragmaticFM.tex', 'SkyLabs AI BRiCk',
      'Jasper Haag', 'manual'),
 ]
 
@@ -269,8 +269,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'PragmaticFMDocumentation', 'BlueRock BRiCk',
-     author, 'PragmaticFMDocumentation', 'A pragmatic guide to formal methods within BlueRock.',
+    (master_doc, 'PragmaticFMDocumentation', 'SkyLabs AI BRiCk',
+     author, 'PragmaticFMDocumentation', 'A pragmatic guide to formal methods within SkyLabs AI.',
      'Miscellaneous'),
 ]
 
@@ -296,7 +296,7 @@ epub_exclude_files = ['search.html']
 # https://github.com/sphinx-doc/sphinx/issues/2173
 global_substitutions = {
     'project' : 'BRiCk',
-    'full_project': 'BlueRock BRiCk',
+    'full_project': 'SkyLabs AI BRiCk',
     'cpp2v': 'cpp2v'
 }
 
