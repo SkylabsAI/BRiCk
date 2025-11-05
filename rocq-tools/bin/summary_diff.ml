@@ -179,11 +179,28 @@ type analysis = {
   total_new : instr_count by_type;
   total_diff : diff by_type;
   num_disappeared : int;
-  total_disappeared : instr_count * float;
+  total_disappeared : diff;
   num_appeared : int;
-  total_appeared : instr_count * float;
+  total_appeared : diff;
   per_file : (string * (bool * (instr_count * instr_count * diff))) list;
 }
+
+let pp_analysis : Format.formatter -> analysis -> unit = fun ff analysis ->
+  let pp_diff ff (i, f) = Format.fprintf ff "(%i, %f)" i f in
+  Format.fprintf ff "total_ref.bt_total = %i\n%!" analysis.total_ref.bt_total;
+  Format.fprintf ff "total_ref.bt_cpp2v = %i\n%!" analysis.total_ref.bt_cpp2v;
+  Format.fprintf ff "total_ref.bt_other = %i\n%!" analysis.total_ref.bt_other;
+  Format.fprintf ff "total_new.bt_total = %i\n%!" analysis.total_new.bt_total;
+  Format.fprintf ff "total_new.bt_cpp2v = %i\n%!" analysis.total_new.bt_cpp2v;
+  Format.fprintf ff "total_new.bt_other = %i\n%!" analysis.total_new.bt_other;
+  Format.fprintf ff "total_diff.bt_total = %a\n%!" pp_diff analysis.total_diff.bt_total;
+  Format.fprintf ff "total_diff.bt_cpp2v = %a\n%!" pp_diff analysis.total_diff.bt_cpp2v;
+  Format.fprintf ff "total_diff.bt_other = %a\n%!" pp_diff analysis.total_diff.bt_other;
+  Format.fprintf ff "num_disappeared = %i\n%!" analysis.num_disappeared;
+  Format.fprintf ff "total_disappeared = %a\n%!" pp_diff analysis.total_disappeared;
+  Format.fprintf ff "num_appeared = %i\n%!" analysis.num_appeared;
+  Format.fprintf ff "total_appeared = %a\n%!" pp_diff analysis.total_appeared;
+  Format.fprintf ff "length per_file = %i\n%!" (List.length analysis.per_file)
 
 let analyse : excluded:string list -> missing_unchanged:bool ->
     ref_data:string -> new_data:string list -> analysis =
@@ -294,6 +311,7 @@ let excluded = ref []
 let add_excluded : string -> unit = fun dir ->
   excluded := dir :: !excluded
 
+let debug_analysis = ref false
 
 let color diff =
   if diff < -. !color_threshold then green "%+7.2f%%" else
@@ -401,6 +419,8 @@ let analyse : ref_data:string -> new_data:string list -> unit =
     let missing_unchanged = !missing_unchanged in
     analyse ~excluded ~missing_unchanged ~ref_data ~new_data
   in
+  if !debug_analysis then
+    Format.eprintf "### DEBUG ###\n%a#############\n%!" pp_analysis analysis;
   match !output_format with
   | Markdown -> print_md_data ~mode:None analysis
   | Gitlab   -> print_gitlab_or_github_data ~mode:`Gitlab analysis
@@ -444,6 +464,7 @@ let usage : string -> bool -> 'a = fun prog_name error ->
                                         performance results.\n";
   einfo "  --exclude DIR              \tExcludes files whose path starts \
                                         with DIR.\n";
+  einfo "  --debug-analysis           \tPrint the output of the analysis phase.\n";
   exit 0
 
 let main () =
@@ -498,6 +519,9 @@ let main () =
         parse_args files args
     | "--exclude" :: dir            :: args                  ->
         add_excluded dir;
+        parse_args files args
+    | "--debug-analysis"            :: args                  ->
+        debug_analysis := true;
         parse_args files args
     | arg                           :: _ when is_flag arg    ->
         panic "Invalid command line argument \"%s\"." arg;
