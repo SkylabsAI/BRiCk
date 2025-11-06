@@ -1163,6 +1163,13 @@ Proof.
   induction ty; simpl; intros; eauto.
 Qed.
 
+(** Determine if <<ty>> is an array type. *)
+Definition is_array_type (ty : type) : bool :=
+  match ty with
+  | Tarray _ _ | Tincomplete_array _ | Tvariable_array _ _ => true
+  | _ => false
+  end.
+
 (**
 [drop_reference] removes any leading reference types.
 *)

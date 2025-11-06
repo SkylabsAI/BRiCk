@@ -311,6 +311,26 @@ Module Type Expr__newdelete.
       #[global] Declare Instance R_agree :
         AgreeF1 R.
 
+      (** This guarantees that non-array allocations have 0 overhead bytes.
+
+          This is supported by <https://eel.is/c++draft/expr.new#17>.
+
+          > When a new-expression calls an allocation function and that allocation
+          > has not been extended, the new-expression passes the amount of space
+          > requested to the allocation function as the first argument of type std​::​size_t.
+          > That argument shall be no less than the size of the object being created;
+          > it may be greater than the size of the object being created only if
+          > the object is an array and the allocation function is not a non-allocating
+          > form ([new.delete.placement]). For arrays of char, unsigned char, and std​::​byte,
+          > the difference between the result of the new-expression and the address returned
+          > by the allocation function shall be an integral multiple of the strictest
+          > fundamental alignment requirement of any object type whose size is no greater
+          > than the size of the array being created.
+       *)
+      #[global] Declare Instance new_token_non_array_0_overhead : forall ty q storage_p overhead,
+          TCEq (is_array_type ty) false ->
+          Observe [| overhead = 0%N |] (new_token.R q $ new_token.mk ty storage_p overhead).
+
     End with_cpp_logic.
   End new_token.
 
@@ -415,7 +435,8 @@ Module Type Expr__newdelete.
                 Exists storage_ptr : ptr,
                   [| storage_val = Vptr storage_ptr |] **
                   if bool_decide (storage_ptr = nullptr) then
-                    [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] ** Q (Vptr storage_ptr) free
+                    [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] **
+                    Q (Vptr storage_ptr) free
                     (* ^^ only <<noexcept>> overloads for <<operator new>> are allowed to return <<nullptr>> *)
                   else
                     (* C++ requires the resulting pointer to be aligned to
@@ -431,7 +452,7 @@ Module Type Expr__newdelete.
                         (* This also ensures these pointers share their
                           address (see [provides_storage_same_address]) *)
                         (* Track the type we are allocating
-                          so it can be checked at [delete].
+                          so it can be checked at <<delete>>.
                           It is important that this preserves
                           `const`ness of the type.
                         *)
@@ -542,29 +563,30 @@ Module Type Expr__newdelete.
                       wp_args evaluation_order.nd [] targs (implicit_args ++ new_args) in
                   |> letI* res := wp_fptr tu.(types) nfty (_global new_fn.1) vs in
                      letI* := interp tu ifree in
+                     letI* storage_val := operand_receive "void*" res in
                      Exists (storage_base : ptr),
-                     res |-> primR (Tptr Tvoid) 1$m (Vptr storage_base) **
-                     if bool_decide (storage_base = nullptr) then
-                       [| new_args <> nil |] ** Q (Vptr storage_base) free
-                       (* ^^ [new_args <> nil] exists because the default <<operator new>>
-                          is never allowed to return [nullptr] *)
-                     else
-                       (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
-                      storage_base |-> blockR (overhead_sz + alloc_sz) 1$m **
-                      storage_base |-> alignedR (if pass_align then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
-                      (Forall (obj_ptr : ptr),
-                        storage_base .[Tbyte ! overhead_sz] |-> alignedR alloc_al -*
-                        (* This also ensures these pointers share their
-                        address (see [provides_storage_same_address]) *)
-                        provides_storage
-                          (storage_base .[Tbyte ! overhead_sz])
-                          obj_ptr array_ty -*
-                        letI* free'' := wp_opt_initialize oinit array_ty obj_ptr in
-                          (* Track the type we are allocating
-                            so it can be checked at [delete]
-                            *)
-                          obj_ptr |-> new_token.R 1 (new_token.mkBase array_ty storage_base overhead_sz) -*
-                          Q (Vptr obj_ptr) (free'' >*> free' >*> free))))
+                       [| storage_val = Vptr storage_base |] **
+                       if bool_decide (storage_base = nullptr) then
+                         [| can_throw <$> tu.(symbols) !! new_fn.1 = Some exception_spec.NoThrow |] **
+                         Q (Vptr storage_base) (free' >*> free)
+                         (* ^^ only <<noexcept>> overloads for <<operator new>> are allowed to return <<nullptr>> *)
+                       else
+                         (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
+                         storage_base |-> blockR (overhead_sz + alloc_sz) 1$m **
+                         storage_base |-> alignedR (if pass_align then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
+                         (Forall (obj_ptr : ptr),
+                           storage_base .[Tbyte ! overhead_sz] |-> alignedR alloc_al -*
+                           (* This also ensures these pointers share their
+                              address (see [provides_storage_same_address]) *)
+                           provides_storage
+                             (storage_base .[Tbyte ! overhead_sz])
+                             obj_ptr array_ty -*
+                           letI* free'' := wp_opt_initialize oinit array_ty obj_ptr in
+                             (* Track the type we are allocating
+                                so it can be checked at <<delete>>
+                              *)
+                           obj_ptr |-> new_token.R 1 (new_token.mkBase array_ty storage_base overhead_sz) -*
+                           Q (Vptr obj_ptr) (free'' >*> (free' >*> free)))))
         |-- wp_operand (Enew new_fn new_args (new_form.Allocating pass_align) aty (Some array_size) oinit) Q.
 
         (* We deliberately avoid giving a reasoning principle for array-placement <<new>> since
@@ -744,7 +766,7 @@ Module Type Expr__newdelete.
       uses a classical conjunction to represent non-deterministic (demonic)
       choice.
 
-      NOTE: As with [wp_delete_obj], to invoke <<delete[]>>, [destroyed_type]
+      NOTE: As with [wp_delete_obj], to invoke <<delete[]>>, <<destroyed_type>>
       should be [Tincomplete_array element_type].
    *)
   mlock
@@ -780,8 +802,8 @@ Module Type Expr__newdelete.
   Qed.
 
   (** [wp_delete_obj tu obj_type d obj_ptr storage_ptr Q]
-      Delete the object [obj_ptr] (of C++ type <<obj_type>>) that occupies the storage [storage_ptr].
-      [obj_ptr] should be the pointer to the complete object meaning that no virtual dispatch occurs
+      Delete the object <<obj_ptr>> (of C++ type <<obj_type>>) that occupies the storage <<storage_ptr>>.
+      <<obj_ptr>> should be the pointer to the complete object meaning that no virtual dispatch occurs
       here.
 
       This weakest pre-condition does **not** take a translation unit because object deletion is
