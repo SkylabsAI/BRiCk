@@ -91,6 +91,14 @@
  (package rocq-tools)
  (libraries rocq_tools str yojson))
 
+; Diff two code quality reports
+(executable
+ (name code_quality_diff)
+ (public_name coqc-perf.code-quality-diff)
+ (modules code_quality_diff)
+ (package rocq-tools)
+ (libraries rocq_tools str yojson))
+
 ; Extract instruction counts per command type.
 (executable
  (name cmd_data)
