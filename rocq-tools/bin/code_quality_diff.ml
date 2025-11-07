@@ -64,19 +64,16 @@ open Rocq_tools.Code_quality
 type 'a outfmt = ('a, Format.formatter, unit) format
 
 module W = struct
-  type t = warning
-  let compare : t -> t -> int = Stdlib.compare
+  include Warning
   let pp : Format.formatter -> t -> unit =
-    fun fmt {w_full; _} ->
-    Format.fprintf fmt "%s" w_full
+    fun fmt {full; _} ->
+    Format.fprintf fmt "%s" full
 end
 module E = struct
-  type t = error
-  let compare : t -> t -> int = Stdlib.compare
-
+  include Error
   let pp : Format.formatter -> t -> unit =
-    fun fmt {e_full; _} ->
-    Format.fprintf fmt "%s" e_full
+    fun fmt {full; _} ->
+    Format.fprintf fmt "%s" full
 end
 
 

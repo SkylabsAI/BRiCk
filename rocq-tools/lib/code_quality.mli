@@ -21,20 +21,34 @@ type pos = {
   c1   : int; (* End column.   *)
 }
 
-type warning = {
-  w_file : string;     (* File where the warning originated.     *)
-  w_pos  : pos option; (* Optional warning position in the file. *)
-  w_name : string;     (* Name for the warning.                  *)
-  w_text : string;     (* Text from the warning.                 *)
-  w_full : string;     (* Original content including headers     *)
-}
+module Warning : sig
+  type t = {
+    file : string;     (* File where the warning originated.     *)
+    pos  : pos option; (* Optional warning position in the file. *)
+    name : string;     (* Name for the warning.                  *)
+    text : string;     (* Text from the warning.                 *)
+    full : string;     (* Original content including headers     *)
+  }
 
-type error = {
-  e_file : string;
-  e_pos  : pos option;
-  e_text : string;
-  e_full : string;
-}
+  (* Flaky warning are warnings whose text might change spuriously. Two flaky
+     warnings will be considered identical if they are equal up to their
+     text. *)
+  val is_flaky : t -> bool
+
+  (* [compare] compares warnings modulo flaky texts *)
+  val compare : t -> t -> int
+end
+
+module Error : sig
+  type t = {
+    file : string;
+    pos  : pos option;
+    text : string;
+    full : string;
+  }
+
+  val compare : t -> t -> int
+end
 
 val get_lines : In_channel.t -> (string -> 'a) -> 'a list
 
@@ -43,4 +57,4 @@ type line =
   | Data of string * bool (* Is this the last warning line? *)
 
 val parse_line : string -> line
-val parse_lines : line list -> (int * string) list * warning list * error list
+val parse_lines : line list -> (int * string) list * Warning.t list * Error.t list

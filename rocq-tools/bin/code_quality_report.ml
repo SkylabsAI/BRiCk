@@ -59,8 +59,8 @@ let main () =
     in
     `Assoc(fields)
   in
-  let error_to_json e =  to_json e.e_file e.e_pos e.e_text (`Error) in
-  let warning_to_json w = to_json w.w_file w.w_pos w.w_text (`Warning(w.w_name)) in
+  let error_to_json (e : Error.t) =  to_json e.file e.pos e.text (`Error) in
+  let warning_to_json (w : Warning.t) = to_json w.file w.pos w.text (`Warning(w.name)) in
   let json = `List(List.map error_to_json errors @ List.map warning_to_json warnings) in
   Printf.printf "%a\n%!" (Yojson.Basic.pretty_to_channel ~std:true) json
 

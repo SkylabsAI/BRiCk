@@ -23,20 +23,46 @@ type pos = {
   c1   : int; (* End column.   *)
 }
 
-type warning = {
-  w_file : string;     (* File where the warning originated.     *)
-  w_pos  : pos option; (* Optional warning position in the file. *)
-  w_name : string;     (* Name for the warning.                  *)
-  w_text : string;     (* Text from the warning.                 *)
-  w_full : string;     (* Original content including headers     *)
-}
+module Warning = struct
+  type t = {
+    file : string;     (* File where the warning originated.     *)
+    pos  : pos option; (* Optional warning position in the file. *)
+    name : string;     (* Name for the warning.                  *)
+    text : string;     (* Text from the warning.                 *)
+    full : string;     (* Original content including headers     *)
+  }
 
-type error = {
-  e_file : string;
-  e_pos  : pos option;
-  e_text : string;
-  e_full : string;
-}
+  let is_name_flaky : string -> bool =
+    let re = Str.regexp {re|\bbr-work-timeout\b|re} in
+    fun name ->
+    try
+      let _ = Str.search_forward re name 0 in
+      true
+    with Not_found -> false
+
+  let is_flaky : t -> bool = fun {name; _} ->
+    is_name_flaky name
+
+  let compare : t -> t -> int = fun w1 w2 ->
+    let c = String.compare w1.name w2.name in
+    if c <> 0 then c else
+    let flaky = is_flaky w1 in      (* = is_flaky w2 *)
+    if flaky then
+      Stdlib.compare (w1.file, w1.pos) (w2.file, w2.pos) (* compare only the remaining non-text fields *)
+    else
+      String.compare w1.full w2.full (* just compare everything *)
+end
+
+module Error = struct
+  type t = {
+    file : string;
+    pos  : pos option;
+    text : string;
+    full : string;
+  }
+
+  let compare : t -> t -> int = Stdlib.compare
+end
 
 let get_lines : In_channel.t -> (string -> 'a) -> 'a list = fun ic f ->
   let rec loop rev_lines =
@@ -73,13 +99,13 @@ let parse_line : string -> line = fun line ->
     Data(line, last_warning_line)
 
 type item =
-  | Warning of warning
-  | Error of error
+  | Warning of Warning.t
+  | Error of Error.t
   | Line of int * string
 
-let make_warning : string -> pos option -> string -> string -> warning =
-    fun w_file w_pos data w_full ->
-  let (w_name, w_text) =
+let make_warning : string -> pos option -> string -> string -> Warning.t =
+    fun file pos data full ->
+  let (name, text) =
     if not (String.starts_with ~prefix:"Warning:" data) then
       panic "Invalid warning (no leading  \"Warning:\").";
     let len = String.length data in
@@ -89,11 +115,11 @@ let make_warning : string -> pos option -> string -> string -> warning =
     let text = String.sub data 9 (len - 8 - (len - ibracket) - 2) in
     (List.hd tags, String.trim text)
   in
-  {w_file; w_pos; w_name; w_text; w_full}
+  {file; pos; name; text; full}
 
-let make_error : string -> pos option -> string -> string -> error =
-    fun e_file e_pos e_text e_full ->
-  {e_file; e_pos; e_text; e_full}
+let make_error : string -> pos option -> string -> string -> Error.t =
+    fun file pos text full ->
+  {file; pos; text; full}
 
 type kind =
   | E (* Error *)
