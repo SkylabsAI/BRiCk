@@ -987,11 +987,25 @@ Section listN.
     rewrite !fmap_Some. intros (x' & ? & ->). by rewrite Nat2N.id.
   Qed.
 
+  Lemma takeN_zip_with {B C} (f : A -> B -> C) n xs ys :
+    takeN n (zip_with f xs ys) = zip_with f (takeN n xs) (takeN n ys).
+  Proof. by rewrite /takeN zip_with_take. Qed.
+
+  Lemma dropN_zip_with {B C} (f : A -> B -> C) n xs ys :
+    dropN n (zip_with f xs ys) = zip_with f (dropN n xs) (dropN n ys).
+  Proof. by rewrite /dropN zip_with_drop. Qed.
+
+  Lemma zip_with_lookupN_Some {B C} (f : A -> B -> C) x (y : B) xs (ys : list B) i :
+    xs !! i = Some x
+    -> ys !! i = Some y
+    -> zip_with f xs ys !! i = Some (f x y).
+  Proof. by rewrite !list_lookupN_lookup lookup_zip_with => -> ->. Qed.
+
   Lemma zip_lookupN_Some {B} x (y : B) xs (ys : list B) i :
     xs !! i = Some x
     -> ys !! i = Some y
     -> zip xs ys !! i = Some (x, y).
-  Proof. by move=>??; apply: zip_lookup_Some. Qed.
+  Proof. apply zip_with_lookupN_Some. Qed.
 
   Lemma insertN_seqN (i j k : N) :
     <[ k := (i + k)%N ]> (seqN i j) = seqN i j.
