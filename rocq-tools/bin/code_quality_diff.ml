@@ -18,48 +18,6 @@
 open Rocq_tools.Extra
 open Rocq_tools.Code_quality
 
-(* module Severity : sig *)
-(*   type t = *)
-(*     | Blocker *)
-(*     | Critical *)
-(*     | Major *)
-(*     | Minor *)
-(*     | Info *)
-(*   val of_string : string -> t *)
-(*   val compare : t -> t -> int *)
-(* end = struct *)
-(*   type t = *)
-(*     | Blocker *)
-(*     | Critical *)
-(*     | Major *)
-(*     | Minor *)
-(*     | Info *)
-
-(*   let of_string : string -> t = fun s -> *)
-(*     match String.lowercase_ascii s with *)
-(*     | "blocker"  -> Blocker *)
-(*     | "critical" -> Critical *)
-(*     | "major"    -> Major *)
-(*     | "minor"    -> Minor *)
-(*     | "info"     -> Info *)
-(*     | _ -> assert false *)
-
-(*   let compare = Stdlib.compare *)
-(* end *)
-
-(* let analyse_json file1 file2 = *)
-(*   let file1 = Yojson.Basic.from_file file1 in *)
-(*   let file2 = Yojson.Basic.from_file file2 in *)
-(*   let module M = Map.Make(String) in *)
-(*   let open Yojson.Basic.Util in *)
-(*   let fill_map m j = *)
-(*     let f m j = *)
-(*       let key = j |> member "fingerprint" |> to_string in *)
-(*       M.add key j m *)
-(*     in *)
-(*     List.fold_left f m (to_list j) *)
-(*   in *)
-
 (** Short name for a standard formatter. *)
 type 'a outfmt = ('a, Format.formatter, unit) format
 
