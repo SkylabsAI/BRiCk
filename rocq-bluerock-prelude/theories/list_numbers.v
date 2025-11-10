@@ -230,6 +230,13 @@ Proof. unfold replicateN; rewrite N2Nat.inj_add; apply replicate_add. Qed.
 Lemma elem_of_replicateN {A} (count : N) (b a : A) : a ∈ replicateN count b → b = a.
 Proof. by intros [-> _]%elem_of_replicate. Qed.
 
+Lemma reverse_nil_iff {A} (xs : list A) : reverse xs = [] <-> xs = [].
+Proof.
+  case: xs => [|x xs];
+    rewrite !(reverse_nil,reverse_cons,app_nil) //;
+    intuition; discriminate.
+Qed.
+
 (* Outside [Section listN] to generalize over [A]. *)
 Lemma length_lengthN {A} (xs : list A) :
   length xs = N.to_nat (lengthN xs).
@@ -312,6 +319,20 @@ Section listN.
     dropN n (fmap f xs) = fmap f (dropN n xs).
   Proof. by rewrite /dropN skipn_map. Qed.
 
+  Lemma takeN_reverse n (xs : list A) :
+    takeN n (reverse xs) = reverse (dropN (lengthN xs - n)%N xs).
+  Proof.
+    rewrite /lengthN/takeN/dropN take_reverse; do 2 f_equiv.
+    lia.
+  Qed.
+
+  Lemma dropN_reverse n (xs : list A) :
+    dropN n (reverse xs) = reverse (takeN (lengthN xs - n)%N xs).
+  Proof.
+    rewrite /lengthN/takeN/dropN drop_reverse; do 2 f_equiv.
+    lia.
+  Qed.
+
   Lemma to_nat_lengthN xs :
     N.to_nat (lengthN xs) = length xs.
   Proof. by rewrite length_lengthN. Qed.
@@ -382,12 +403,19 @@ Section listN.
     lengthN (<[i:=x]> xs) = lengthN xs.
   Proof. rewrite /lengthN. f_equal. by apply: length_insert. Qed.
 
+  Lemma lengthN_reverse (xs : list A) : lengthN (reverse xs) = lengthN xs.
+  Proof.
+    elim: xs => [|x xs IH];
+      by rewrite !(reverse_cons,reverse_nil,lengthN_app,lengthN_cons,lengthN_nil,N.add_0_l) // IH.
+  Qed.
+
   Definition lengthN_simpl :=
     (@lengthN_fold,
      @lengthN_nil, @lengthN_cons,
      @lengthN_app, @lengthN_map,
      @lengthN_dropN, @lengthN_takeN,
-     @lengthN_rotateN, @lengthN_replicateN).
+     @lengthN_rotateN, @lengthN_replicateN,
+     @lengthN_reverse ).
 
   Lemma lengthN_zip {B} xs (ys : list B) :
     lengthN (zip xs ys) = (lengthN xs) `min` (lengthN ys).
