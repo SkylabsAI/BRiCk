@@ -22,7 +22,11 @@ open Rocq_tools.Code_quality
 let dummy_pos : pos = {line = 0; c0 = -1; c1 = -1}
 
 let main () =
-  let _lines, warnings, errors = parse_lines (get_lines stdin parse_line) in
+  let lines, warnings, errors = parse_lines (get_lines stdin parse_line) in
+  let warn_line (i, line) =
+    Printf.eprintf "Warning: dangling input line.\n% 5i | %s\n%!" i line
+  in
+  List.iter warn_line lines;
   let to_json file pos text (kind : [`Error|`Warning of string])  =
     let name =
       match kind with

@@ -206,8 +206,4 @@ let parse_lines lines =
     in
     List.fold_right f items ([], [], [])
   in
-  let warn_line (i, line) =
-    Printf.eprintf "Warning: dangling input line.\n% 5i | %s\n%!" i line
-  in
-  List.iter warn_line lines;
   lines, warnings, errors

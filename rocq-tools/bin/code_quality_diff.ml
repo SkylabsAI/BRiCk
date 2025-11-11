@@ -25,25 +25,25 @@ module W = struct
   include Warning
   let pp : Format.formatter -> t -> unit =
     fun fmt {full; _} ->
-    Format.fprintf fmt "%s" full
+    Format.fprintf fmt "%s\n" full
 end
 module E = struct
   include Error
   let pp : Format.formatter -> t -> unit =
     fun fmt {full; _} ->
-    Format.fprintf fmt "%s" full
+    Format.fprintf fmt "%s\n" full
 end
 
 
 module WS = struct
   include Set.Make(W)
   let pp pp_w fmt ws =
-    iter (fun w -> pp_w fmt w) ws
+    iter (fun w -> Format.fprintf fmt "%a" pp_w w) ws
 end
 module ES = struct
   include Set.Make(E)
   let pp pp_w fmt ws =
-    iter (fun w -> pp_w fmt w) ws
+    iter (fun w -> Format.fprintf fmt "%a" pp_w w) ws
 end
 
 module Analysis = struct
@@ -71,34 +71,126 @@ module Markdown = struct
         Format.fprintf fmt "# %s %s (%i)\n" symbol title num;
       in
       let code_block pp_content fmt content =
-        Format.fprintf fmt "```\n%a\n```\n" pp_content content
+        Format.fprintf fmt "```\n%a```\n" pp_content content
       in
       if not @@ ES.is_empty e_appeared then begin
         header fmt ":x:" "New Errors" (ES.cardinal e_appeared);
-        Format.fprintf fmt "\n%a\n" (code_block @@ ES.pp E.pp) e_appeared;
+        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block E.pp) e_appeared;
       end;
 
       if not @@ WS.is_empty w_appeared then begin
         header fmt ":warning:" "New Warnings" (WS.cardinal w_appeared);
-        Format.fprintf fmt "%a\n" (code_block @@ WS.pp W.pp) w_appeared;
+        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block W.pp) w_appeared;
       end;
 
       if not @@ ES.is_empty e_disappeared then begin
         header fmt ":negative_squared_cross_mark:" "Fixed Errors" (ES.cardinal e_disappeared);
-        Format.fprintf fmt "\n%a\n" (code_block @@ ES.pp E.pp) e_disappeared;
+        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block E.pp) e_disappeared;
       end;
       if not @@ WS.is_empty w_disappeared then begin
         header fmt ":green_heart:" "Fixed Warnings" (WS.cardinal w_disappeared);
-        Format.fprintf fmt "\n%a\n" (code_block @@ WS.pp W.pp) w_disappeared;
+        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block W.pp) w_disappeared;
       end
     end
 end
 
-let analyse fmt file1 file2 =
-  let file1 = open_in file1 in
-  let file2 = open_in file2 in
-  let (_, warnings1, errors1) = parse_lines (get_lines file1 parse_line) in
-  let (_, warnings2, errors2) = parse_lines (get_lines file2 parse_line) in
+type glob_out = {
+  src_file : string;
+  std_out : string list;
+  std_err : string list;
+}
+
+let to_glob_out : string -> glob_out =
+  let re = Str.regexp {|\.glob$|} in
+  fun filename ->
+  let src_file = Str.replace_first re ".v" filename in
+  let std_out =
+    let filename = filename ^ ".stdout" in
+    if Sys.file_exists filename then
+      get_lines (open_in filename) (fun x -> x)
+    else
+      []
+  in
+  let std_err =
+    let filename = filename ^ ".stderr" in
+    if Sys.file_exists filename then
+      get_lines (open_in filename) (fun x -> x)
+    else
+      []
+  in
+  { src_file; std_out; std_err }
+
+type dune_out = {
+  src_file : string;
+  output : string list;      (* dune does not dinstinguish stderr and stdout. *)
+}
+
+let to_dune_out : fname:string -> dune_out list =
+  let re = Str.regexp {|\bcoqc.* \([^ ]+\.v\))$|} in
+  fun ~fname ->
+  let open Yojson.Basic in
+  let json = from_file ~fname fname in
+  let list = Util.to_list json in
+  let list = List.map Util.to_assoc list in
+  let list =
+    let f a =
+      (Util.to_string @@ List.assoc "command" a,
+      List.map Util.to_string @@ Util.to_list @@ List.assoc "output" a)
+    in
+    List.map f list in
+  let list =
+    let f (cmd, out) =
+      let found =
+        try
+          let _ = Str.search_forward re cmd 0 in
+          true
+        with Not_found -> false
+      in
+      if not found then None else begin
+        let src_file = Str.matched_group 1 cmd in
+        let output = List.filter (fun x -> x <> "") out in
+        Some { src_file; output }
+      end
+    in
+    List.filter_map f list
+  in
+  list
+
+let analyse fmt ~before_dune ~after_dune ~before_globs ~after_globs =
+
+  let nonempty_stdout_warning src_file output =
+    let text = Format.sprintf "File \"%s\", line 0, characters 0-0:\nWarning: Non-empty stdout when building using coqc:\n%s\n[non-empty-stdout,dummy]" src_file output in
+    W.{ file = src_file; pos = None; name = "non-empty-stdout,dummy"; text; full = text }
+  in
+  let dangling_output_warning src_file output =
+    let text = Format.sprintf "File \"%s\", line 0, characters 0-0:\nWarning: Dangling output when building using coqc:\n%s\n[dangling-output-stdout,dummy]" src_file output in
+    W.{ file = src_file; pos = None; name = "dangling-output,dummy"; text; full = text }
+  in
+
+  let parse globs dunes =
+    let glob (ws, es) {src_file; std_err; std_out} =
+      let (dangling_lines, w,e) = parse_lines (List.map parse_line std_err) in
+      let dangling = List.map (fun (_, txt) -> dangling_output_warning src_file txt) dangling_lines in
+      let w =
+        if std_out = [] then w else begin
+          nonempty_stdout_warning src_file (String.concat "\n" std_out) :: w
+        end
+      in
+      (List.rev_append w @@ List.rev_append dangling ws, List.rev_append e es)
+    in
+
+    let dune (ws, es) {src_file; output} =
+      let (dangling_lines, w, e) = parse_lines (List.map parse_line output) in
+      let dangling = List.map (fun (_, txt) -> dangling_output_warning src_file txt) dangling_lines in
+      (List.rev_append w @@ List.rev_append dangling ws, List.rev_append e es)
+    in
+
+    List.fold_left glob ([], []) globs |> fun res ->
+    List.fold_left dune res dunes
+  in
+
+  let (warnings1, errors1) = parse before_globs before_dune in
+  let (warnings2, errors2) = parse after_globs after_dune in
 
   (* Format.efprintf fmt "size of warnings1 = %i\n" (List.length warnings1);  *)
   (* Format.efprintf fmt "size of warnings2 = %i\n" (List.length warnings2);  *)
@@ -125,9 +217,25 @@ let analyse fmt file1 file2 =
 let einfo : 'a outfmt -> 'a = fun fmt ->
   Format.eprintf (fmt ^^ "%!")
 
-let usage : string -> bool -> 'a = fun prog_name error ->
-  if error then panic "Usage: %s code_quality_report_ref.json code_quality_report.json" prog_name;
-  einfo "Usage: %s code_quality_report_ref.json code_quality_report.json\n" prog_name;
+module Args = struct
+  type t = {
+    before_globs: glob_out list;
+    before_dune : dune_out list;
+    after_globs : glob_out list;
+    after_dune : dune_out list;
+  }
+  let empty = {
+    before_globs = [];
+    after_globs = [];
+    before_dune = [];
+    after_dune = [];
+  }
+end
+open Args
+
+let usage : ?error:bool -> string -> 'a = fun ?(error=false) prog_name ->
+  if error then panic "Usage: %s [--before-globs-from-file file-with-glob-files ..] [--after-globs-from-file file-with-glob-files ..] [--before-dune dune-log.json ..] [--after-dune dune-log.json ..]" prog_name;
+  einfo "Usage: %s [--before-globs-from-file file-with-glob-files ..] [--after-globs-from-file file-with-glob-files ..] [--before-dune dune-log.json ..] [--after-dune dune-log.json ..]" prog_name;
   exit 0
 
 let main () =
@@ -135,29 +243,47 @@ let main () =
     let args = List.tl (Array.to_list Sys.argv) in
     (Sys.argv.(0), args)
   in
-  let rec parse_args files args =
+  let ensure_file file =
+    if try Sys.is_directory file with Sys_error(_) -> false then
+      panic "File expected, [%s] is a directory." file;
+    if not (Sys.file_exists file) then
+      panic "No such file or directory [%s]." file;
+  in
+  let rec parse_args state args =
     let is_flag arg = String.length arg > 0 && arg.[0] = '-' in
     match args with
     | ("--help" | "-h")             :: _                     ->
-        usage prog_name false
+        usage prog_name
+    | "--before-globs-from-file" :: file  :: args            ->
+        ensure_file file;
+        let new_before_globs = get_lines (open_in file) to_glob_out in
+        let before_globs = List.rev_append new_before_globs state.before_globs in
+        parse_args {state with before_globs} args
+    | "--after-globs-from-file" :: file   :: args            ->
+        ensure_file file;
+        let new_after_globs = get_lines (open_in file) to_glob_out in
+        let after_globs = List.rev_append new_after_globs state.after_globs in
+        parse_args {state with after_globs} args
+    | "--before-dune" :: file       :: args                  ->
+        ensure_file file;
+        let new_before_dune = to_dune_out ~fname:file in
+        let before_dune = List.rev_append new_before_dune state.before_dune in
+        parse_args {state with before_dune} args
+    | "--after-dune" :: file       :: args                  ->
+        ensure_file file;
+        let new_after_dune = to_dune_out ~fname:file in
+        let after_dune = List.rev_append new_after_dune state.after_dune in
+        parse_args {state with after_dune} args
     | arg                           :: _ when is_flag arg    ->
         panic "Invalid command line argument \"%s\"." arg;
-    | file                          :: args                  ->
-        if try Sys.is_directory file with Sys_error(_) -> false then
-          panic "File expected, [%s] is a directory." file;
-        if not (Sys.file_exists file) then
-          panic "No such file or directory [%s]." file;
-        parse_args (file :: files) args
+    | _ :: _ ->
+        usage ~error:true prog_name
     | []                                                     ->
-        List.rev files
+        state
 
   in
-  let files = parse_args [] args in
-  match files with
-  | [file1; file2] -> analyse (Format.formatter_of_out_channel stdout) file1 file2
-  | _                          ->
-      let n = List.length files in
-      panic "at least 2 file paths expected on the command line (%i given)." n
+  let {before_dune; after_dune; before_globs; after_globs} = parse_args empty args in
+  analyse (Format.formatter_of_out_channel stdout) ~before_dune ~after_dune ~before_globs ~after_globs
 
 let _ =
   try main () with
