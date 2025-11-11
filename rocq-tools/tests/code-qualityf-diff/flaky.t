@@ -10,8 +10,8 @@
   > Warning: Timeout (2.50s) exceeded: tactic ran for 3.71s [br-work-timeout,br]
   > EOF
 
-  $ echo "before/test.glob" > before-globs
-  $ echo "after/test.glob" > after-globs
+  $ echo "before/test.glob.stderr" > before-globs
+  $ echo "after/test.glob.stderr" > after-globs
 
   $ coqc-perf.code-quality-diff --before-globs-from-file before-globs --after-globs-from-file after-globs
   # No Changes in Warnings or Errors

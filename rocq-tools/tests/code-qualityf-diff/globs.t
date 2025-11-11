@@ -6,7 +6,8 @@
   > dangling text!
   > EOF
   $ cat > globs <<EOF
-  > test.glob
+  > test.glob.stderr
+  > test.glob.stdout
   > EOF
   $ coqc-perf.code-quality-diff --after-globs-from-file globs
   # :x: New Errors (1)

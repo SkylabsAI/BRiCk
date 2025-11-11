@@ -100,25 +100,31 @@ type glob_out = {
   std_err : string list;
 }
 
-let to_glob_out : string -> glob_out =
-  let re = Str.regexp {|\.glob$|} in
+let to_glob_out : string -> glob_out option =
+  let re = Str.regexp {|\.glob\.\(stdout\|stderr\)$|} in
   fun filename ->
-  let src_file = Str.replace_first re ".v" filename in
-  let std_out =
-    let filename = filename ^ ".stdout" in
-    if Sys.file_exists filename then
-      get_lines (open_in filename) (fun x -> x)
-    else
-      []
-  in
-  let std_err =
-    let filename = filename ^ ".stderr" in
-    if Sys.file_exists filename then
-      get_lines (open_in filename) (fun x -> x)
-    else
-      []
-  in
-  { src_file; std_out; std_err }
+  let is_std_out = String.ends_with ~suffix:".glob.stdout" filename in
+  let is_std_err = String.ends_with ~suffix:".glob.stderr" filename in
+  if not (is_std_out || is_std_err) then begin
+    Printf.eprintf "%s is neither a .glob.stdout nor a .glob.stderr file" filename;
+    None
+  end
+  else begin
+    let src_file = Str.replace_first re ".v" filename in
+    let std_out =
+      if is_std_out && Sys.file_exists filename then
+        get_lines (open_in filename) (fun x -> x)
+      else
+        []
+    in
+    let std_err =
+      if is_std_err && Sys.file_exists filename then
+        get_lines (open_in filename) (fun x -> x)
+      else
+        []
+    in
+    Some { src_file; std_out; std_err }
+  end
 
 type dune_out = {
   src_file : string;
@@ -256,12 +262,12 @@ let main () =
         usage prog_name
     | "--before-globs-from-file" :: file  :: args            ->
         ensure_file file;
-        let new_before_globs = get_lines (open_in file) to_glob_out in
+        let new_before_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) to_glob_out in
         let before_globs = List.rev_append new_before_globs state.before_globs in
         parse_args {state with before_globs} args
     | "--after-globs-from-file" :: file   :: args            ->
         ensure_file file;
-        let new_after_globs = get_lines (open_in file) to_glob_out in
+        let new_after_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) to_glob_out in
         let after_globs = List.rev_append new_after_globs state.after_globs in
         parse_args {state with after_globs} args
     | "--before-dune" :: file       :: args                  ->
