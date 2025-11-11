@@ -79,7 +79,7 @@ static void test(const clang::Decl *decl, CoqPrinter &print,
 
 void ToCoqConsumer::HandleTranslationUnit(clang::ASTContext &Context) {
     if (Context.getDiagnostics().getClient()->getNumErrors() == 0) {
-        toCoqModule(&Context, Context.getTranslationUnitDecl(), sharing_);
+        toCoqModule(&Context, Context.getTranslationUnitDecl());
     }
 }
 
@@ -104,8 +104,7 @@ sortAliasList(const ::Module::AliasSet &al) {
 }
 
 void ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
-                                clang::TranslationUnitDecl *decl,
-                                bool sharing) {
+                                clang::TranslationUnitDecl *decl) {
 
 #if 0
     NoInclude noInclude(ctxt->getSourceManager());
@@ -143,9 +142,13 @@ void ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
             ClangPrinter cprint(compiler_, ctxt, trace_, comment_, typedefs_);
 
             parser(print);
+            if (interactive_.has_value()) {
+                print.output() << "Section cpp_prog__" << interactive_.value()
+                               << "__." << fmt::line;
+            }
             bytestring(print) << fmt::line;
 
-            if (sharing) {
+            if (this->sharing_) {
                 auto preprint = [&](const Decl *decl) {
                     auto cp = cprint.withDecl(decl);
                     PRINTER<clang::Type> type_fn = [&](auto prefix, auto num,
@@ -216,6 +219,13 @@ void ToCoqConsumer::toCoqModule(clang::ASTContext *ctxt,
             // TODO I still need to generate the initializer
 
             print.output() << "." << fmt::outdent << fmt::outdent << fmt::line;
+
+            // Close the section if we opened one
+            if (this->interactive_.has_value()) {
+                print.output() << "End cpp_prog__" << interactive_.value()
+                               << "__." << fmt::line;
+            }
+
             if (!interactive_.has_value()) {
                 print.output()
                     << "Notation module := source (only parsing)." << fmt::line;

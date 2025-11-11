@@ -69,8 +69,7 @@ public:
     }
 
 private:
-    void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl,
-                     bool sharing);
+    void toCoqModule(clang::ASTContext *ctxt, clang::TranslationUnitDecl *decl);
     void elab(Decl *, bool rec = false);
 
 private:
