@@ -1302,6 +1302,22 @@ Section listZ.
      @bool_decide_lt_irrefl
     ).
 
+  Lemma takeZ_map {A B} n (f : A -> B) (xs : list A) :
+    takeZ n (map f xs) = map f (takeZ n xs).
+  Proof. by rewrite /takeZ takeN_map. Qed.
+
+  Lemma takeZ_fmap {A B} n (f : A -> B) (xs : list A) :
+    takeZ n (fmap f xs) = fmap f (takeZ n xs).
+  Proof. by rewrite /takeZ takeN_map. Qed.
+
+  Lemma dropZ_map {A B} n (f : A -> B) (xs : list A) :
+    dropZ n (map f xs) = map f (dropZ n xs).
+  Proof. by rewrite /dropZ dropN_map. Qed.
+
+  Lemma dropZ_fmap {A B} n (f : A -> B) (xs : list A) :
+    dropZ n (fmap f xs) = fmap f (dropZ n xs).
+  Proof. by rewrite /dropZ dropN_map. Qed.
+
   Lemma takeZ_reverse {A} n (xs : list A) :
     takeZ n (reverse xs) = reverse (dropZ (lengthZ xs - n)%Z xs).
   Proof.
