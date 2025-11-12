@@ -1,15 +1,16 @@
-  $ cat > test.glob.stderr <<EOF
+  $ mkdir globs
+  $ cat > globs/test.glob.stderr <<EOF
   > File "test.v", line 44, characters 19-20:
   > Error: Syntax error: '.' expected after [command] (in [vernac_aux]).
   > EOF
-  $ cat > test.glob.stdout <<EOF
+  $ cat > globs/test.glob.stdout <<EOF
   > dangling text!
   > EOF
-  $ cat > globs <<EOF
-  > test.glob.stderr
-  > test.glob.stdout
+  $ cat > globs/files <<EOF
+  > globs/test.glob.stderr
+  > globs/test.glob.stdout
   > EOF
-  $ coqc-perf.code-quality-diff --after-globs-from-file globs
+  $ coqc-perf.code-quality-diff --after-globs-from-file globs/files
   # :x: New Errors (1)
   
   ```
@@ -27,7 +28,7 @@
   ```
   
 
-  $ coqc-perf.code-quality-diff --before-globs-from-file globs
+  $ coqc-perf.code-quality-diff --before-globs-from-file globs/files
   # :negative_squared_cross_mark: Fixed Errors (1)
   
   ```

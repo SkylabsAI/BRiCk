@@ -100,9 +100,15 @@ type glob_out = {
   std_err : string list;
 }
 
-let to_glob_out : string -> glob_out option =
+let ensure_file file =
+  if try Sys.is_directory file with Sys_error(_) -> false then
+    panic "File expected, [%s] is a directory." file;
+  if not (Sys.file_exists file) then
+    panic "No such file or directory [%s]." file
+
+let to_glob_out : strip_prefix:string -> string -> glob_out option =
   let re = Str.regexp {|\.glob\.\(stdout\|stderr\)$|} in
-  fun filename ->
+  fun ~strip_prefix filename ->
   let is_std_out = String.ends_with ~suffix:".glob.stdout" filename in
   let is_std_err = String.ends_with ~suffix:".glob.stderr" filename in
   if not (is_std_out || is_std_err) then begin
@@ -111,15 +117,25 @@ let to_glob_out : string -> glob_out option =
   end
   else begin
     let src_file = Str.replace_first re ".v" filename in
+    let src_file = if String.starts_with ~prefix:strip_prefix src_file then
+        let n = String.length strip_prefix in
+        String.sub src_file n (String.length src_file - n)
+      else
+        src_file
+    in
     let std_out =
-      if is_std_out && Sys.file_exists filename then
+      if is_std_out then begin
+        ensure_file filename;
         get_lines (open_in filename) (fun x -> x)
+      end
       else
         []
     in
     let std_err =
-      if is_std_err && Sys.file_exists filename then
+      if is_std_err then begin
+        ensure_file filename;
         get_lines (open_in filename) (fun x -> x)
+      end
       else
         []
     in
@@ -249,12 +265,6 @@ let main () =
     let args = List.tl (Array.to_list Sys.argv) in
     (Sys.argv.(0), args)
   in
-  let ensure_file file =
-    if try Sys.is_directory file with Sys_error(_) -> false then
-      panic "File expected, [%s] is a directory." file;
-    if not (Sys.file_exists file) then
-      panic "No such file or directory [%s]." file;
-  in
   let rec parse_args state args =
     let is_flag arg = String.length arg > 0 && arg.[0] = '-' in
     match args with
@@ -262,12 +272,14 @@ let main () =
         usage prog_name
     | "--before-globs-from-file" :: file  :: args            ->
         ensure_file file;
-        let new_before_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) to_glob_out in
+        let strip_prefix = Filename.dirname file ^ "/" in
+        let new_before_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) (to_glob_out ~strip_prefix) in
         let before_globs = List.rev_append new_before_globs state.before_globs in
         parse_args {state with before_globs} args
     | "--after-globs-from-file" :: file   :: args            ->
         ensure_file file;
-        let new_after_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) to_glob_out in
+        let strip_prefix = Filename.dirname file ^ "/" in
+        let new_after_globs = List.filter_map (fun x -> x) @@ get_lines (open_in file) (to_glob_out ~strip_prefix) in
         let after_globs = List.rev_append new_after_globs state.after_globs in
         parse_args {state with after_globs} args
     | "--before-dune" :: file       :: args                  ->
