@@ -34,30 +34,61 @@ module E = struct
     Format.fprintf fmt "%s\n" full
 end
 
+module type Set = sig
+  include Set.S
+  val pp : (Format.formatter -> elt -> unit) -> Format.formatter -> t -> unit
+  val pp_elt : Format.formatter -> elt -> unit
+end
 
-module WS = struct
+module WS : Set with type elt = Warning.t = struct
   include Set.Make(W)
+  let pp_elt = W.pp
   let pp pp_w fmt ws =
     iter (fun w -> Format.fprintf fmt "%a" pp_w w) ws
 end
-module ES = struct
+module ES : Set with type elt = Error.t = struct
   include Set.Make(E)
+  let pp_elt = E.pp
   let pp pp_w fmt ws =
     iter (fun w -> Format.fprintf fmt "%a" pp_w w) ws
 end
 
 module Analysis = struct
+  type 's data = {
+    before : 's;
+    after : 's;
+    appeared : 's;
+    disappeared : 's;
+  }
   type t = {
-    e_appeared : ES.t;
-    e_disappeared : ES.t;
-    w_appeared : WS.t;
-    w_disappeared : WS.t;
+    warnings : WS.t data;
+    errors : ES.t data;
   }
 end
 
 module Markdown = struct
   let output fmt (a : Analysis.t) =
-    let Analysis.{e_appeared; e_disappeared; w_appeared; w_disappeared} = a in
+    let open Analysis in
+    let {warnings={appeared=w_appeared; disappeared=w_disappeared; _} as ws;
+         errors  ={appeared=e_appeared; disappeared=e_disappeared;_} as es} = a in
+
+    let table fmt =
+      Format.fprintf fmt "\
+        |        |Before|New |Fixed|After|\n\
+        |--------|-----:|---:|----:|----:|\n\
+        |Errors  | %i   | %i | %i  | %i  |\n\
+        |Warnings| %i   | %i | %i  | %i  |\n\n"
+        (ES.cardinal es.before) (ES.cardinal es.appeared) (ES.cardinal es.disappeared) (ES.cardinal es.after)
+        (WS.cardinal ws.before) (WS.cardinal ws.appeared) (WS.cardinal ws.disappeared) (WS.cardinal ws.after);
+    in
+
+    let in_summary : ?is_open:bool -> _ -> header:_ -> _ = fun ?(is_open=false) fmt ~header body ->
+      Format.fprintf fmt "<details%s><summary>\n\n" (if is_open then " open" else "");
+      header fmt;
+      Format.fprintf fmt "\n</summary>\n";
+      body fmt;
+      Format.fprintf fmt "</details>\n\n";
+    in
 
     if WS.is_empty w_appeared &&
        WS.is_empty w_disappeared &&
@@ -65,32 +96,38 @@ module Markdown = struct
        ES.is_empty e_disappeared
     then begin
       Format.fprintf fmt "# No Changes in Warnings or Errors\n%!";
+      table fmt;
     end
     else begin
+      Format.fprintf fmt "# Changes in Warnings or Errors\n%!";
+      table fmt;
       let header fmt symbol title num =
-        Format.fprintf fmt "# %s %s (%i)\n" symbol title num;
+        Format.fprintf fmt "## %s %s (%i)\n" symbol title num;
       in
       let code_block pp_content fmt content =
         Format.fprintf fmt "```\n%a```\n" pp_content content
       in
+      if not @@ ES.is_empty e_disappeared then begin
+        let header fmt = header fmt ":negative_squared_cross_mark:" "Fixed Errors" (ES.cardinal e_disappeared) in
+        in_summary fmt ~header @@ fun fmt ->
+        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block ES.pp_elt) e_disappeared;
+      end;
+      if not @@ WS.is_empty w_disappeared then begin
+        let header fmt = header fmt ":green_heart:" "Fixed Warnings" (WS.cardinal w_disappeared) in
+        in_summary fmt ~header @@ fun fmt ->
+        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block WS.pp_elt) w_disappeared;
+      end;
       if not @@ ES.is_empty e_appeared then begin
-        header fmt ":x:" "New Errors" (ES.cardinal e_appeared);
-        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block E.pp) e_appeared;
+        let header fmt = header fmt ":x:" "New Errors" (ES.cardinal e_appeared) in
+        in_summary fmt ~is_open:true ~header @@ fun fmt ->
+        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block ES.pp_elt) e_appeared;
       end;
 
       if not @@ WS.is_empty w_appeared then begin
-        header fmt ":warning:" "New Warnings" (WS.cardinal w_appeared);
-        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block W.pp) w_appeared;
+        let header fmt = header fmt ":warning:" "New Warnings" (WS.cardinal w_appeared) in
+        in_summary fmt ~is_open:true ~header @@ fun fmt ->
+        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block WS.pp_elt) w_appeared;
       end;
-
-      if not @@ ES.is_empty e_disappeared then begin
-        header fmt ":negative_squared_cross_mark:" "Fixed Errors" (ES.cardinal e_disappeared);
-        Format.fprintf fmt "\n%a\n" (ES.pp @@ code_block E.pp) e_disappeared;
-      end;
-      if not @@ WS.is_empty w_disappeared then begin
-        header fmt ":green_heart:" "Fixed Warnings" (WS.cardinal w_disappeared);
-        Format.fprintf fmt "\n%a\n" (WS.pp @@ code_block W.pp) w_disappeared;
-      end
     end
 end
 
@@ -219,21 +256,23 @@ let analyse fmt ~before_dune ~after_dune ~before_globs ~after_globs =
   (* Format.efprintf fmt "size of errors1 = %i\n" (List.length errors1);  *)
   (* Format.efprintf fmt "size of errors2 = %i\n" (List.length errors2);  *)
 
-  let w1 = WS.of_list warnings1 in
-  let w2 = WS.of_list warnings2 in
+  let warnings =
+    let before = WS.of_list warnings1 in
+    let after = WS.of_list warnings2 in
+    let appeared = WS.diff after before in
+    let disappeared = WS.diff before after in
+    Analysis.{ before; after; appeared; disappeared }
+  in
 
-  (* let w_both = WS.union w1 w2 in *)
-  let w_appeared = WS.diff w2 w1 in
-  let w_disappeared = WS.diff w1 w2 in
+  let errors =
+    let before = ES.of_list errors1 in
+    let after = ES.of_list errors2 in
+    let appeared = ES.diff after before in
+    let disappeared = ES.diff before after in
+    Analysis.{ before; after; appeared; disappeared }
+  in
 
-  let e1 = ES.of_list errors1 in
-  let e2 = ES.of_list errors2 in
-
-  (* let e_both = ES.union e1 e2 in *)
-  let e_appeared = ES.diff e2 e1 in
-  let e_disappeared = ES.diff e1 e2 in
-
-  Markdown.output fmt {e_appeared; e_disappeared; w_appeared; w_disappeared}
+  Markdown.output fmt {errors; warnings}
 
 
 let einfo : 'a outfmt -> 'a = fun fmt ->

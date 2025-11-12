@@ -15,3 +15,8 @@
 
   $ coqc-perf.code-quality-diff --before-globs-from-file before-globs --after-globs-from-file after-globs
   # No Changes in Warnings or Errors
+  |        |Before|New |Fixed|After|
+  |--------|-----:|---:|----:|----:|
+  |Errors  | 0   | 0 | 0  | 0  |
+  |Warnings| 1   | 0 | 0  | 1  |
+  

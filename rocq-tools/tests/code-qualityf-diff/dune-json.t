@@ -20,14 +20,30 @@
   > ]
   > EOF
   $ coqc-perf.code-quality-diff --after-dune dune-log.json
-  # :x: New Errors (1)
+  # Changes in Warnings or Errors
+  |        |Before|New |Fixed|After|
+  |--------|-----:|---:|----:|----:|
+  |Errors  | 0   | 1 | 0  | 1  |
+  |Warnings| 0   | 2 | 0  | 2  |
+  
+  <details open><summary>
+  
+  ## :x: New Errors (1)
+  
+  </summary>
   
   ```
   File "./fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 44, characters 19-20:
   Error: Syntax error: '.' expected after [command] (in [vernac_aux]).
   ```
   
-  # :warning: New Warnings (2)
+  </details>
+  
+  <details open><summary>
+  
+  ## :warning: New Warnings (2)
+  
+  </summary>
   
   ```
   File "fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 0, characters 0-0:
@@ -39,17 +55,35 @@
   File "./fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 43, characters 8-17:
   Warning: Unused variable: x. [ltac2-unused-variable,ltac2,default]
   ```
+  
+  </details>
   
 
   $ coqc-perf.code-quality-diff --before-dune dune-log.json
-  # :negative_squared_cross_mark: Fixed Errors (1)
+  # Changes in Warnings or Errors
+  |        |Before|New |Fixed|After|
+  |--------|-----:|---:|----:|----:|
+  |Errors  | 1   | 0 | 1  | 0  |
+  |Warnings| 2   | 0 | 2  | 0  |
+  
+  <details><summary>
+  
+  ## :negative_squared_cross_mark: Fixed Errors (1)
+  
+  </summary>
   
   ```
   File "./fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 44, characters 19-20:
   Error: Syntax error: '.' expected after [command] (in [vernac_aux]).
   ```
   
-  # :green_heart: Fixed Warnings (2)
+  </details>
+  
+  <details><summary>
+  
+  ## :green_heart: Fixed Warnings (2)
+  
+  </summary>
   
   ```
   File "fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 0, characters 0-0:
@@ -61,4 +95,6 @@
   File "./fmdeps/BRiCk/ltac2-extra/theories/extra.v", line 43, characters 8-17:
   Warning: Unused variable: x. [ltac2-unused-variable,ltac2,default]
   ```
+  
+  </details>
   
