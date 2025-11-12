@@ -4,7 +4,7 @@
     {
       "description": "Unused variable: f.",
       "check_name": "warning:ltac2-unused-variable",
-      "fingerprint": "d6567c30396f607c3de5f3cc5dbc3f65",
+      "fingerprint": "1a37d999b358dc8a06d198887bcde86d",
       "severity": "minor",
       "location": {
         "path": "dir/file.v",
@@ -17,7 +17,7 @@
     {
       "description": "Non-empty stdout when building using coqc.",
       "check_name": "warning:non-empty-stdout",
-      "fingerprint": "368b08f16ed903846e877ab1009a8179",
+      "fingerprint": "680c7db4d2eb8c2ea78be4254f390c9e",
       "severity": "minor",
       "location": {
         "path": "dir1/dir2/tests.v",
@@ -30,7 +30,7 @@
     {
       "description": "This is a very\nlong warning on several lines.",
       "check_name": "warning:long-warning",
-      "fingerprint": "aa36465603a6fcd270181cdf745c62ad",
+      "fingerprint": "6dcd18b96ff1cb143b1ac7102c39a804",
       "severity": "minor",
       "location": {
         "path": "dir/other_file.v",
@@ -43,7 +43,7 @@
     {
       "description": "Some warning.",
       "check_name": "warning:some-warning",
-      "fingerprint": "dc7cb753b634e94cf6a428ad39707840",
+      "fingerprint": "12c09b22f93cec3c59d73b41748eb317",
       "severity": "minor",
       "location": {
         "path": "dir/nested_dir/file.v",
