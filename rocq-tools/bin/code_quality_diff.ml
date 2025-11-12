@@ -55,14 +55,14 @@ end
 
 module Analysis = struct
   type 's data = {
-    before : 's;
-    after : 's;
-    appeared : 's;
+    before      : 's;
+    after       : 's;
+    appeared    : 's;
     disappeared : 's;
   }
   type t = {
     warnings : WS.t data;
-    errors : ES.t data;
+    errors   : ES.t data;
   }
 end
 
