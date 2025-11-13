@@ -1,6 +1,11 @@
 BRiCk and other BlueRock libraries
 ==================================
 
+## Build
+
+Follow instructions in the https://github.com/SkylabsAI/workspace meta-repo;
+that will checkout this repo and needed dependencies.
+
 ## BRiCk (Program logic for C++)
 
 See [this README.md](rocq-bluerock-brick/README.md).
