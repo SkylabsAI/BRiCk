@@ -31,14 +31,13 @@ CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
 	$(Q)dune clean
-	$(Q)dune build @../vendored/rocq/install
-	$(Q)dune build
 	$(Q)rm -rf /tmp/coqdocjs
 	$(Q)cp -r coqdocjs /tmp
 	$(Q)rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
 	$(Q)mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
 	$(Q)$(CP) -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
 	$(Q)$(CP) -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
+	$(Q)dune build @../vendored/rocq/install @default
 	$(Q)ROCQLIB=${ROCQLIB} dune build @doc
 	$(Q)rm -rf ${COQDOC_DIR}
 	$(Q)mkdir -p ${COQDOC_DIR}
