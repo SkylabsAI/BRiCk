@@ -26,7 +26,7 @@ ROCQLIB=${PWD}/../../_build/install/default/lib/coq
 DOC_PATH = rocq-bluerock-brick/doc
 COQDOC_DIR = $(DOC_PATH)/sphinx/_static/coqdoc
 
-SED = $(shell which gsed 2> /dev/null || which sed 2> /dev/null)
+SED = $(shell (which gsed || which sed) 2> /dev/null)
 CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
@@ -44,11 +44,11 @@ doc:
 	$(Q)mkdir -p ${COQDOC_DIR}
 	$(Q)$(CP) -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
 	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
-		| xargs -P 16 -I {} $(SED) -i \
-		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}' {}
+		| xargs $(SED) -i \
+		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}'
 	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
-		| xargs -P 16 -I {} $(SED) -i \
-		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
+		| xargs $(SED) -i \
+		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}'
 	$(Q)uv run --with-requirements python_requirements.txt $(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
 
