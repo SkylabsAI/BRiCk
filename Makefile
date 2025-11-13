@@ -46,7 +46,7 @@ doc:
 	@find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
-	+@$(MAKE) -C $(DOC_PATH) html
+	@$(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
 
 doc-open: doc
@@ -54,7 +54,7 @@ doc-open: doc
 .PHONY: doc-open
 
 doc-clean:
-	+@$(MAKE) -C doc clean
+	@$(MAKE) -C doc clean
 .PHONY: doc-clean
 
 clean: doc-clean
