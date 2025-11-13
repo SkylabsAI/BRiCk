@@ -5,6 +5,9 @@
 # License. See the LICENSE-BedRock file in the repository root for details.
 #
 
+# Use "make ... Q=" to show more commands.
+Q = @
+
 # You can override this with a different program which you can use to preview
 # html files within your filesystem.
 DOCOPEN ?= xdg-open
@@ -14,7 +17,7 @@ all:
 .PHONY: all
 
 _CoqProject: _CoqProject.template
-	@cp $< $@
+	$(Q)cp $< $@
 
 SHELL := /bin/bash
 
@@ -27,26 +30,26 @@ SED = $(shell which gsed 2> /dev/null || which sed 2> /dev/null)
 CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
-	@dune clean
-	@dune build @../vendored/rocq/install
-	@dune build
-	@rm -rf /tmp/coqdocjs
-	@cp -r coqdocjs /tmp
-	@rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
-	@mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
-	@$(CP) -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
-	@$(CP) -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
-	@ROCQLIB=${ROCQLIB} dune build @doc
-	@rm -rf ${COQDOC_DIR}
-	@mkdir -p ${COQDOC_DIR}
-	@$(CP) -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
-	@find ${COQDOC_DIR} -type f -name '*.html' \
+	$(Q)dune clean
+	$(Q)dune build @../vendored/rocq/install
+	$(Q)dune build
+	$(Q)rm -rf /tmp/coqdocjs
+	$(Q)cp -r coqdocjs /tmp
+	$(Q)rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
+	$(Q)mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
+	$(Q)$(CP) -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
+	$(Q)$(CP) -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
+	$(Q)ROCQLIB=${ROCQLIB} dune build @doc
+	$(Q)rm -rf ${COQDOC_DIR}
+	$(Q)mkdir -p ${COQDOC_DIR}
+	$(Q)$(CP) -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
+	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}' {}
-	@find ${COQDOC_DIR} -type f -name '*.html' \
+	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
-	@uv run --with-requirements python_requirements.txt $(MAKE) -C $(DOC_PATH) html
+	$(Q)uv run --with-requirements python_requirements.txt $(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
 
 doc-open: doc
@@ -54,10 +57,10 @@ doc-open: doc
 .PHONY: doc-open
 
 doc-clean:
-	@$(MAKE) -C doc clean
+	$(Q)$(MAKE) -C doc clean
 .PHONY: doc-clean
 
 clean: doc-clean
-	@dune clean || echo "dune not found; not cleaning dune-generated documentation files"
-	@rm -f _CoqProject
+	$(Q)dune clean || echo "dune not found; not cleaning dune-generated documentation files"
+	$(Q)rm -f _CoqProject
 .PHONY: clean
