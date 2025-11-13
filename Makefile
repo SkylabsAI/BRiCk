@@ -46,7 +46,7 @@ doc:
 	@find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
-	@$(MAKE) -C $(DOC_PATH) html
+	@uv run --with-requirements python_requirements.txt $(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
 
 doc-open: doc
