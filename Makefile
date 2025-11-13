@@ -21,8 +21,9 @@ _CoqProject: _CoqProject.template
 
 SHELL := /bin/bash
 
-BUILD_ROOT=../../_build/default/fmdeps/BRiCk
-ROCQLIB=${PWD}/../../_build/install/default/lib/coq
+dune_build_folder = ../../_build
+BUILD_ROOT=$(dune_build_folder)/default/fmdeps/BRiCk
+ROCQLIB=$(dune_build_folder)/install/default/lib/coq
 DOC_PATH = rocq-bluerock-brick/doc
 COQDOC_DIR = $(DOC_PATH)/sphinx/_static/coqdoc
 
