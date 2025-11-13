@@ -45,9 +45,7 @@ doc:
 	$(Q)$(CP) -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
 	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs $(SED) -i \
-		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}'
-	$(Q)find ${COQDOC_DIR} -type f -name '*.html' \
-		| xargs $(SED) -i \
+		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}' \
 		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}'
 	$(Q)uv run --with-requirements python_requirements.txt $(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
