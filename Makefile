@@ -30,7 +30,6 @@ SED = $(shell (which gsed || which sed) 2> /dev/null)
 CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
-	$(Q)dune clean
 	$(Q)rm -rf /tmp/coqdocjs
 	$(Q)cp -r coqdocjs /tmp
 	$(Q)rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
