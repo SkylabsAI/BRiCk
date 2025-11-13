@@ -34,8 +34,8 @@ doc:
 	@cp -r coqdocjs /tmp
 	@rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
 	@mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
-	@cp -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
-	@cp -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
+	@$(CP) -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
+	@$(CP) -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
 	@ROCQLIB=${ROCQLIB} dune build @doc
 	@rm -rf ${COQDOC_DIR}
 	@mkdir -p ${COQDOC_DIR}
