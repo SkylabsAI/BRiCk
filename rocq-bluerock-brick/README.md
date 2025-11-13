@@ -13,6 +13,10 @@ using
 $ dune build
 ```
 
+### Building docs
+
+Run `make -C .. doc`.
+
 ## Examples
 
 See the examples in the `tests` directory to get an idea of coverage that the
