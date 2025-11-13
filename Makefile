@@ -23,6 +23,7 @@ COQDOC_DIR=doc/sphinx/_static/coqdoc
 ROCQLIB=${PWD}/../../_build/install/default/lib/coq
 
 SED = $(shell which gsed 2> /dev/null || which sed 2> /dev/null)
+CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
 	@dune clean
@@ -37,7 +38,7 @@ doc:
 	@ROCQLIB=${ROCQLIB} dune build @doc
 	@rm -rf ${COQDOC_DIR}
 	@mkdir -p ${COQDOC_DIR}
-	@cp -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
+	@$(CP) -r -t ${COQDOC_DIR} $$(find ${BUILD_ROOT} -type d -name '*.html')
 	@find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{FOOTER}}}/{' -e 'r coqdocjs/extra/footer.html' -e 'd' -e '}' {}
