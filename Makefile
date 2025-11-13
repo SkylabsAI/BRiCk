@@ -19,8 +19,9 @@ _CoqProject: _CoqProject.template
 SHELL := /bin/bash
 
 BUILD_ROOT=../../_build/default/fmdeps/BRiCk
-COQDOC_DIR=doc/sphinx/_static/coqdoc
 ROCQLIB=${PWD}/../../_build/install/default/lib/coq
+DOC_PATH = rocq-bluerock-brick/doc
+COQDOC_DIR = $(DOC_PATH)/sphinx/_static/coqdoc
 
 SED = $(shell which gsed 2> /dev/null || which sed 2> /dev/null)
 CP = $(shell (which gcp || which cp) 2> /dev/null)
@@ -31,10 +32,10 @@ doc:
 	@dune build
 	@rm -rf /tmp/coqdocjs
 	@cp -r coqdocjs /tmp
-	@rm -rf doc/sphinx/_static/coqdoc
-	@mkdir -p doc/sphinx/_static/css/coqdocjs doc/sphinx/_static/js/coqdocjs
-	@cp -r coqdocjs/extra/resources/*.css doc/sphinx/_static/css/coqdocjs
-	@cp -r coqdocjs/extra/resources/*.js doc/sphinx/_static/js/coqdocjs
+	@rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
+	@mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
+	@cp -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
+	@cp -r coqdocjs/extra/resources/*.js $(DOC_PATH)/sphinx/_static/js/coqdocjs
 	@ROCQLIB=${ROCQLIB} dune build @doc
 	@rm -rf ${COQDOC_DIR}
 	@mkdir -p ${COQDOC_DIR}
@@ -45,11 +46,11 @@ doc:
 	@find ${COQDOC_DIR} -type f -name '*.html' \
 		| xargs -P 16 -I {} $(SED) -i \
 		-e '/{{{HEADER}}}/{' -e 'r coqdocjs/extra/header.html' -e 'd' -e '}' {}
-	+@$(MAKE) -C doc html
+	+@$(MAKE) -C $(DOC_PATH) html
 .PHONY: doc
 
 doc-open: doc
-	$(DOCOPEN) doc/sphinx/_build/html/index.html
+	$(DOCOPEN) $(DOC_PATH)/sphinx/_build/html/index.html
 .PHONY: doc-open
 
 doc-clean:
