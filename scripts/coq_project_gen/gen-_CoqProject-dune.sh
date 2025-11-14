@@ -38,10 +38,10 @@ echo "# Specified logical paths for directories (for .v and .vo files)."
 
 list_dune_files () {
   find . \
-    \( -name _build -o -name .git \) \
-     -prune -false -o -name dune \
-     \( -type f -o -type l \) \
-    -print | sort
+    \( -name _build -o -name .git \) -prune -false \
+    -o \
+    -name dune \( -type f -o -type l \) -print \
+    | sort
 }
 
 script_path=`(cd \`dirname $0\`; pwd)`
