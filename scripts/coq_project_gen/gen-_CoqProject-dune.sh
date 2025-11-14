@@ -40,7 +40,7 @@ list_dune_files () {
     local find_args=()
     find_args+=( \( -name _build -o -name .git \) )
     find_args+=( -prune -false -o -name dune )
-    find_args+=( -type f )
+    find_args+=( \( -type f -o -type l \) )
     find . "${find_args[@]}" -print | sort
 }
 
