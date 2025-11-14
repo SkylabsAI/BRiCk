@@ -419,6 +419,19 @@ Module Type Expr__newdelete.
             then [Ecast (Cintegral Talign_val_t) (Eint al Tsize_t)]
             else [].
 
+        (** Only the default allocation functions are required to provide
+            alignment of <<__STDCPP_DEFAULT_NEW_ALIGNMENT__>>.
+            See <https://eel.is/c++draft/cpp.predefined#1.8>.
+         *)
+        Definition requires_default_alignment (tu : translation_unit) (nm : name) : bool :=
+          match nm with
+          | Nglobal (Nop function_qualifiers.N (OONew _) [arg]) =>
+              (* This assumes that names do not use aliases, which they do not *)
+              if bool_decide (arg = Tsize_t) then true
+              else false
+          | _ => false
+          end.
+
         Axiom wp_operand_new :
           forall (oinit : option Expr)
             new_fn (pass_align : bool) new_args aty Q targs
@@ -443,8 +456,8 @@ Module Type Expr__newdelete.
                         <<__STDCPP_DEFAULT_NEW_ALIGNMENT__>> even in cases when the
                         required alignment is actually smaller. When the alignment is
                         smaller, [pass_align] will be [false]. *)
-                    storage_ptr |-> alignedR (if pass_align then alloc_al
-                                              else STDCPP_DEFAULT_NEW_ALIGNMENT) **
+                    storage_ptr |-> alignedR (if pass_align && ~~requires_default_alignment tu new_fn.1
+                                              then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
                     storage_ptr |-> blockR alloc_sz 1$m **
                     (Forall (obj_ptr : ptr),
                        provides_storage storage_ptr obj_ptr aty -*
@@ -573,7 +586,8 @@ Module Type Expr__newdelete.
                        else
                          (* [blockR alloc_sz -|- tblockR (Tarray aty array_size)] *)
                          storage_base |-> blockR (overhead_sz + alloc_sz) 1$m **
-                         storage_base |-> alignedR (if pass_align then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
+                         storage_base |-> alignedR (if pass_align && ~~requires_default_alignment tu new_fn.1
+                                                    then alloc_al else STDCPP_DEFAULT_NEW_ALIGNMENT) **
                          (Forall (obj_ptr : ptr),
                            storage_base .[Tbyte ! overhead_sz] |-> alignedR alloc_al -*
                            (* This also ensures these pointers share their
