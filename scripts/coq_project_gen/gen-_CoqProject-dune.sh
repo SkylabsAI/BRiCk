@@ -36,8 +36,16 @@ echo "-I _build/install/default/lib"
 echo
 echo "# Specified logical paths for directories (for .v and .vo files)."
 
+list_dune_files () {
+    local find_args=()
+    find_args+=( \( -name _build -o -name .git \) )
+    find_args+=( -prune -false -o -name dune )
+    find_args+=( -type f )
+    find . "${find_args[@]}" -print | sort
+}
+
 script_path=`(cd \`dirname $0\`; pwd)`
-${script_path}/gather-coq-paths.py `find . \( -name _build -o -name .git \) -prune -false -o -name dune -type f -print | sort`
+${script_path}/gather-coq-paths.py `list_dune_files`
 
 for mapping in "${mappings[@]}"; do
   directory=$(echo $mapping | awk '{print $1}')
