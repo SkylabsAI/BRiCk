@@ -1,0 +1,3 @@
+sphinx
+sphinx-rtd-theme
+alectryon==1.4.0

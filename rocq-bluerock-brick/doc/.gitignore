@@ -1,0 +1,5 @@
+src/_downloads
+sphinx/cache
+sphinx/_static/coqdoc
+sphinx/_static/css/coqdocjs
+sphinx/_static/js/coqdocjs
