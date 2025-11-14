@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env -S bash -e
 ##
 ## Copyright (c) 2023-2025 BlueRock Security, Inc.
 ## All rights reserved.

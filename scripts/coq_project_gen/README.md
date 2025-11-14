@@ -5,8 +5,7 @@ all `coq.theory` stanzas in `dune` files to generate `-Q` mappings.
 
 ## Installing dependencies
 
-Use `pip install -r python_requirements.txt` or the equivalent for your Python
-virtual environment.
+This script just requires GNU `bash` and `uv` https://docs.astral.sh/uv/.
 
 ## Invoke
 

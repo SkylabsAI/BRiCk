@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "sexpdata==1.0.2",
+# ]
+# ///
+
 #
 # Copyright (C) 2025 BlueRock Security, Inc.
 # All rights reserved.
