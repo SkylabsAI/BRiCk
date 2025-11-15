@@ -32,7 +32,10 @@ CP = $(shell (which gcp || which cp) 2> /dev/null)
 
 doc:
 	$(Q)rm -rf /tmp/coqdocjs
-	$(Q)cp -r coqdocjs /tmp
+	$(Q)mkdir -p /tmp/coqdocjs/extra
+# Referenced in `flags/coqdoc`
+	$(Q)echo '{{{HEADER}}}' > /tmp/coqdocjs/extra/fake-header.html
+	$(Q)echo '{{{FOOTER}}}' > /tmp/coqdocjs/extra/fake-footer.html
 	$(Q)rm -rf $(DOC_PATH)/sphinx/_static/coqdoc
 	$(Q)mkdir -p $(DOC_PATH)/sphinx/_static/css/coqdocjs $(DOC_PATH)/sphinx/_static/js/coqdocjs
 	$(Q)$(CP) -r coqdocjs/extra/resources/*.css $(DOC_PATH)/sphinx/_static/css/coqdocjs
