@@ -122,7 +122,7 @@ object that the pointer refers to; similar concepts are common in modern
 formalizations of pointers, from `CompCert <https://hal.inria.fr/hal-00703441/document>`_ onwards.
 
 Notably, a single call to :cpp:`malloc` might allocate storage for multiple objects:
-each such object will have a distinct allocation ID [#invalid-ptr-no-alloc-id].
+each such object will have a distinct allocation ID\ [#invalid-ptr-no-alloc-id]_.
 
 .. code-block:: coq
 
