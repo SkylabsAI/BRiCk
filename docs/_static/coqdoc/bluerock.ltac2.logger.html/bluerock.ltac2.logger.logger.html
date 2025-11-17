@@ -37,22 +37,22 @@ Capturing the default Coq output into a buffer.
 &nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">buffer</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">buffer</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="var">start_capture</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">buffer</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="var">start_capture</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">buffer</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "Coq_output.start_capture".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="var">contents</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="var">contents</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "Coq_output.contents".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="tactic">clear</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="tactic">clear</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "Coq_output.clear".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="var">end_capture</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="var">end_capture</span> : <span class="id" title="var">buffer</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "Coq_output.end_capture".<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Coq_output"><span class="id" title="module">Coq_output</span></a>.<br/>
 
@@ -75,7 +75,7 @@ Logging support.
 Type of a raw (not yet rendered) log message in OCaml 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">msg</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">msg</span>.<br/>
 
 <br/>
 </div>
@@ -85,7 +85,7 @@ Flag attached to a log entry: should morally be abstract, so don't
       construct values yourself. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">log_flag</span> := <span class="id" title="var">int</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">log_flag</span> := <span class="id" title="var">int</span>.<br/>
 
 <br/>
 </div>
@@ -96,7 +96,7 @@ Log level for a log entry. A log entry with level 0 or less is always
       cannot be disabled. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">log_level</span> := <span class="id" title="var">int</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">log_level</span> := <span class="id" title="var">int</span>.<br/>
 
 <br/>
 </div>
@@ -106,7 +106,7 @@ Log level for a log entry. A log entry with level 0 or less is always
       message with the given <span class="inlinecode"><span class="id" title="var">flag</span></span> and <span class="inlinecode"><span class="id" title="keyword">level</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">log_enabled</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">log_enabled</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "log_enabled".<br/>
 
 <br/>
@@ -117,7 +117,7 @@ Log level for a log entry. A log entry with level 0 or less is always
       the given <span class="inlinecode"><span class="id" title="var">flag</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">log_level</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">log_level</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "log_level".<br/>
 
 <br/>
@@ -131,7 +131,7 @@ Log level for a log entry. A log entry with level 0 or less is always
       <span class="inlinecode"><span class="id" title="var">format</span></span> argument as a format string. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">log_msg</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> -&gt; ('<span class="id" title="var">a</span>, <span class="id" title="var">unit</span>, <span class="id" title="var">msg</span>, <span class="id" title="var">unit</span>) <span class="id" title="var">format</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">log_msg</span> : <span class="id" title="var">log_flag</span> -&gt; <span class="id" title="var">log_level</span> -&gt; ('<span class="id" title="var">a</span>, <span class="id" title="var">unit</span>, <span class="id" title="var">msg</span>, <span class="id" title="var">unit</span>) <span class="id" title="var">format</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "log".<br/>
 
 <br/>
@@ -144,7 +144,7 @@ Log level for a log entry. A log entry with level 0 or less is always
       function cannot be called directly (see <span class="inlinecode"><span class="id" title="var">log_msg</span></span> above). 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">msg_msg</span> : ('<span class="id" title="var">a</span>, <span class="id" title="var">unit</span>, <span class="id" title="var">msg</span>, <span class="id" title="var">msg</span>) <span class="id" title="var">format</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">msg_msg</span> : ('<span class="id" title="var">a</span>, <span class="id" title="var">unit</span>, <span class="id" title="var">msg</span>, <span class="id" title="var">msg</span>) <span class="id" title="var">format</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "msg".<br/>
 
 <br/>
@@ -155,7 +155,7 @@ Log level for a log entry. A log entry with level 0 or less is always
 Generic notation for calling <span class="inlinecode"><span class="id" title="var">log_msg</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Notation</span> "log[" <span class="id" title="var">flag</span>(<span class="id" title="var">tactic</span>(0)) "," <span class="id" title="keyword">level</span>(<span class="id" title="var">tactic</span>(0)) "]" <span class="id" title="var">fmt</span>(<span class="id" title="var">format</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Notation</span> "log[" <span class="id" title="var">flag</span>(<span class="id" title="var">tactic</span>(0)) "," <span class="id" title="keyword">level</span>(<span class="id" title="var">tactic</span>(0)) "]" <span class="id" title="var">fmt</span>(<span class="id" title="var">format</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">log_msg</span> <span class="id" title="var">flag</span> <span class="id" title="keyword">level</span> <span class="id" title="var">fmt</span>.<br/>
 
 <br/>
@@ -165,11 +165,11 @@ Generic notation for calling <span class="inlinecode"><span class="id" title="va
 Notation for calling <span class="inlinecode"><span class="id" title="var">msg_msg</span></span> to create a message using a format. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Notation</span> "msg!" <span class="id" title="var">fmt</span>(<span class="id" title="var">format</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Notation</span> "msg!" <span class="id" title="var">fmt</span>(<span class="id" title="var">format</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">msg_msg</span> <span class="id" title="var">fmt</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">Dev</span> <span class="id" title="var">Log</span> <span class="id" title="var">Flag</span> <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">Dev</span> <span class="id" title="var">Log</span> <span class="id" title="var">Flag</span> <span class="id" title="var">tac</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log.Notations"><span class="id" title="module">Notations</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Import</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log.Notations"><span class="id" title="module">Notations</span></a>.<br/>
 
@@ -180,42 +180,42 @@ Notation for calling <span class="inlinecode"><span class="id" title="var">msg_m
 Printer for messages. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pp_message</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">message</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pp_message</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">message</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pp_message".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pp_err</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">err</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pp_err</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">err</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pp_err".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pp_ast</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pp_ast</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pp_ast".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pp_list</span> : (<span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> -&gt; <span class="id" title="var">msg</span>) -&gt; <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pp_list</span> : (<span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> -&gt; <span class="id" title="var">msg</span>) -&gt; <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="var">msg</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pp_list".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pp_exn</span> (<span class="id" title="var">_</span> : <span class="id" title="var">unit</span>) (<span class="id" title="var">e</span> : <span class="id" title="var">exn</span>) : <span class="id" title="var">msg</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pp_exn</span> (<span class="id" title="var">_</span> : <span class="id" title="var">unit</span>) (<span class="id" title="var">e</span> : <span class="id" title="var">exn</span>) : <span class="id" title="var">msg</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">msg</span>! "%a" <span class="id" title="var">pp_message</span> (<span class="id" title="var">Message.of_exn</span> (<span class="id" title="var">Control.clear_exn_info</span> <span class="id" title="var">e</span>)).<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pp_bool</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">b</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pp_bool</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">b</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">b</span> <span class="id" title="keyword">then</span> <span class="id" title="var">msg</span>! "true" <span class="id" title="keyword">else</span> <span class="id" title="var">msg</span>! "false".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pp_int</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">i</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pp_int</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">i</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">msg</span>! "%i" <span class="id" title="var">i</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pp_option</span> : (<span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> -&gt; <span class="id" title="var">msg</span>) -&gt; <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">_</span> <span class="id" title="var">o</span> =&gt;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pp_option</span> : (<span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> -&gt; <span class="id" title="var">msg</span>) -&gt; <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="var">msg</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">_</span> <span class="id" title="var">o</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">o</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span>   =&gt; <span class="id" title="var">msg</span>! "None"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">v</span> =&gt; <span class="id" title="var">msg</span>! "Some(%a)" <span class="id" title="var">f</span> <span class="id" title="var">v</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Notation</span> "if!" <span class="id" title="var">cond</span>(<span class="id" title="var">self</span>) "then" <span class="id" title="var">run</span>(<span class="id" title="var">thunk</span>(<span class="id" title="var">tactic</span>(5))) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Notation</span> "if!" <span class="id" title="var">cond</span>(<span class="id" title="var">self</span>) "then" <span class="id" title="var">run</span>(<span class="id" title="var">thunk</span>(<span class="id" title="var">tactic</span>(5))) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">cond</span> <span class="id" title="keyword">then</span> <span class="id" title="var">run</span> () <span class="id" title="keyword">else</span> ().<br/>
 
 <br/>
@@ -232,7 +232,7 @@ Log spans.
 Type of a span. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
 
 <br/>
 </div>
@@ -241,7 +241,7 @@ Type of a span.
 <span class="inlinecode"><span class="id" title="var">push_span</span></span> <span class="inlinecode"><span class="id" title="var">name</span></span> opens a new span named <span class="inlinecode"><span class="id" title="var">name</span></span>, and returns it. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">push</span> : <span class="id" title="var">string</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">push</span> : <span class="id" title="var">string</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "push_span".<br/>
 
 <br/>
@@ -253,7 +253,7 @@ Type of a span.
         unchanged. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">try_pop</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">try_pop</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pop_span".<br/>
 
 <br/>
@@ -264,7 +264,7 @@ Type of a span.
         before <span class="inlinecode"><span class="id" title="var">s</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">try_pop_until</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">try_pop_until</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pop_span_until".<br/>
 
 <br/>
@@ -275,7 +275,7 @@ Type of a span.
         may break compositionality. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pop_all</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pop_all</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "pop_all_spans".<br/>
 
 <br/>
@@ -285,14 +285,14 @@ Type of a span.
 Exception raised by <span class="inlinecode"><span class="id" title="var">pop</span></span> and <span class="inlinecode"><span class="id" title="var">pop_until</span></span> if they fail. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">exn</span> ::= [ <span class="id" title="var">Pop_error</span> ].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">exn</span> ::= [ <span class="id" title="var">Pop_error</span> ].<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pop</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">s</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pop</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">s</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">try_pop</span> <span class="id" title="var">s</span> <span class="id" title="keyword">then</span> () <span class="id" title="keyword">else</span> <span class="id" title="var">Control.zero</span> <span class="id" title="var">Pop_error</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pop_until</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">s</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pop_until</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">s</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">try_pop_until</span> <span class="id" title="var">s</span> <span class="id" title="keyword">then</span> () <span class="id" title="keyword">else</span> <span class="id" title="var">Control.zero</span> <span class="id" title="var">Pop_error</span>.<br/>
 
 <br/>
@@ -303,7 +303,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         are several (or no) focused goals. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mpush</span> <span class="id" title="var">name</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">push</span> <span class="id" title="var">name</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mpush</span> <span class="id" title="var">name</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">push</span> <span class="id" title="var">name</span>).<br/>
 
 <br/>
 </div>
@@ -313,7 +313,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         several (or no) focused goals. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mpop</span> <span class="id" title="var">span</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">pop</span> <span class="id" title="var">span</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mpop</span> <span class="id" title="var">span</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">pop</span> <span class="id" title="var">span</span>).<br/>
 
 <br/>
 </div>
@@ -323,10 +323,10 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         when there are several (or no) focused goals. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mpop_until</span> <span class="id" title="var">span</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">pop_until</span> <span class="id" title="var">span</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mpop_until</span> <span class="id" title="var">span</span> := <span class="id" title="var">Control.without_focus</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">pop_until</span> <span class="id" title="var">span</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_span_aux</span> (<span class="id" title="var">notify</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">name</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span>) : '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_span_aux</span> (<span class="id" title="var">notify</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">name</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span>) : '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">go</span> <span class="id" title="var">tac</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">span</span> := <span class="id" title="var">push</span> <span class="id" title="var">name</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Control.case_bt</span> <span class="id" title="var">tac</span> <span class="id" title="keyword">with</span><br/>
@@ -345,11 +345,11 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">go</span> <span class="id" title="var">tac</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_span_</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">with_span_aux</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_span</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">with_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_span_</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">with_span_aux</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_span</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">with_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mwith_span_aux</span> (<span class="id" title="var">notify</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">name</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span>) : '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mwith_span_aux</span> (<span class="id" title="var">notify</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">name</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; '<span class="id" title="var">a</span>) : '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">go</span> <span class="id" title="var">tac</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">span</span> := <span class="id" title="var">push</span> <span class="id" title="var">name</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Control.case_bt</span> <span class="id" title="var">tac</span> <span class="id" title="keyword">with</span><br/>
@@ -378,9 +378,9 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         works when there are several (or no) focused goals. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mwith_span_</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">mwith_span_aux</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mwith_span</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">mwith_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mwith_span_backtracking</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">mwith_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mwith_span_</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">mwith_span_aux</span> <span class="id" title="var">notify</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mwith_span</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">once</span> (<span class="id" title="var">mwith_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mwith_span_backtracking</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> := <span class="id" title="var">mwith_span_</span> <span class="id" title="var">true</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span>.<br/>
 
 <br/>
 </div>
@@ -390,7 +390,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         the integer value <span class="inlinecode"><span class="id" title="var">v</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">add_int_metadata</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">add_int_metadata</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "add_span_metadata_int".<br/>
 
 <br/>
@@ -401,7 +401,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         be the string value <span class="inlinecode"><span class="id" title="var">v</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">add_string_metadata</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">add_string_metadata</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "add_span_metadata_string".<br/>
 
 <br/>
@@ -412,7 +412,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
         '+success' or '+failure' to log whether <span class="inlinecode"><span class="id" title="var">tac</span></span> succeeded or failed. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_status</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_status</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">span</span> := <span class="id" title="var">Log.Span.push</span> <span class="id" title="var">name</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">run</span> () :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">res</span> := <span class="id" title="var">tac</span> () <span class="id" title="tactic">in</span><br/>
@@ -437,7 +437,7 @@ Exception raised by <span class="inlinecode"><span class="id" title="var">pop</s
 same as <span class="inlinecode"><span class="id" title="var">with_status</span></span> but supports multiple goals. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">mwith_status</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">mwith_status</span> <span class="id" title="var">name</span> <span class="id" title="var">tac</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">span</span> := <span class="id" title="var">Log.Span.mpush</span> <span class="id" title="var">name</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">run</span> () :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">res</span> := <span class="id" title="var">tac</span> () <span class="id" title="tactic">in</span><br/>
@@ -464,14 +464,14 @@ Internal logger state manipulation.
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Log.State" class="idref" href="#Log.State"><span class="id" title="module">State</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">save</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">save</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "save_log_state".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">restore</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">restore</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.log" "restore_log_state".<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log.State"><span class="id" title="module">State</span></a>.<br/>
 
@@ -482,7 +482,7 @@ Internal logger state manipulation.
 Reset the log state. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">reset_log</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">reset_log</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "reset_log".<br/>
 
 <br/>
@@ -496,7 +496,7 @@ Reset the log state.
       is true, the partial log is printed. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">output_log_generic</span> : <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">string</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">output_log_generic</span> : <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">string</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "output_log".<br/>
 
 <br/>
@@ -508,20 +508,20 @@ Reset the log state.
       function <span class="inlinecode"><span class="id" title="var">output_log_generic</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">output_log_tmp</span> : <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">output_log_tmp</span> : <span class="id" title="var">bool</span> -&gt; <span class="id" title="var">string</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"br.log" "output_log_tmp".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log</span> () := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">false</span> <span class="id" title="var">None</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log_debug</span> () := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">true</span> <span class="id" title="var">None</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log_file</span> <span class="id" title="var">file</span> := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">false</span> (<span class="id" title="var">Some</span> <span class="id" title="var">file</span>).<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log_file_debug</span> <span class="id" title="var">file</span> := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">true</span> (<span class="id" title="var">Some</span> <span class="id" title="var">file</span>).<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log</span> () := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">false</span> <span class="id" title="var">None</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log_debug</span> () := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">true</span> <span class="id" title="var">None</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log_file</span> <span class="id" title="var">file</span> := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">false</span> (<span class="id" title="var">Some</span> <span class="id" title="var">file</span>).<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log_file_debug</span> <span class="id" title="var">file</span> := <span class="id" title="var">output_log_generic</span> <span class="id" title="var">true</span> (<span class="id" title="var">Some</span> <span class="id" title="var">file</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">exn</span> ::= [ <span class="id" title="var">WithLogError</span>(<span class="id" title="var">string</span>, <span class="id" title="var">exn</span>) ].<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">exn</span> ::= [ <span class="id" title="var">WithLogError</span>(<span class="id" title="var">string</span>, <span class="id" title="var">exn</span>) ].<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_log</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">file</span> : <span class="id" title="var">string</span> <span class="id" title="var">option</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_log</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">file</span> : <span class="id" title="var">string</span> <span class="id" title="var">option</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.without_focus</span> <span class="id" title="var">reset_log</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">run</span> () :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.enter</span> <span class="id" title="var">tac</span>;<br/>
@@ -545,7 +545,7 @@ Reset the log state.
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.plus</span> <span class="id" title="var">run</span> <span class="id" title="var">handle</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">unit</span> -&gt; <span class="id" title="var">unit</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.without_focus</span> <span class="id" title="var">reset_log</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">run</span> () :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.enter</span> <span class="id" title="var">tac</span>;<br/>
@@ -565,46 +565,46 @@ Reset the log state.
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Log.Ltac1" class="idref" href="#Log.Ltac1"><span class="id" title="module">Ltac1</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">parse_debug</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">parse_debug</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Ltac1.to_bool</span> <span class="id" title="tactic">debug</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="tactic">debug</span> =&gt; <span class="id" title="tactic">debug</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span>       =&gt; <span class="id" title="var">throw_invalid</span>! "not a concrete [bool]"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">parse_ofile</span> (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">string</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">parse_ofile</span> (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">string</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Ltac1.to_option</span> <span class="id" title="var">String.of_string_constr</span> <span class="id" title="var">ofile</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">ofile</span> =&gt; <span class="id" title="var">ofile</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span>       =&gt; <span class="id" title="var">throw_invalid</span>! "not a concrete [option string]"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">parse_ext</span> (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">parse_ext</span> (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Ltac1.to_string</span> <span class="id" title="var">ext</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">ext</span> =&gt; <span class="id" title="var">ext</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span>     =&gt; <span class="id" title="var">throw_invalid</span>! "not a concrete [string]"<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log_generic</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log_generic</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="tactic">debug</span> := <span class="id" title="var">parse_debug</span> <span class="id" title="tactic">debug</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">ofile</span> := <span class="id" title="var">parse_ofile</span> <span class="id" title="var">ofile</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <span class="id" title="tactic">debug</span> <span class="id" title="var">ofile</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_log</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">Ltac1.t</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_log</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ofile</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">Ltac1.t</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="tactic">debug</span> := <span class="id" title="var">parse_debug</span> <span class="id" title="tactic">debug</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">ofile</span> := <span class="id" title="var">parse_ofile</span> <span class="id" title="var">ofile</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log</span> <span class="id" title="tactic">debug</span> <span class="id" title="var">ofile</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">Ltac1.run</span> <span class="id" title="var">tac</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">output_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">output_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) : <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="tactic">debug</span> := <span class="id" title="var">parse_debug</span> <span class="id" title="tactic">debug</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">ext</span> := <span class="id" title="var">parse_ext</span> <span class="id" title="var">ext</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_tmp</span> <span class="id" title="tactic">debug</span> <span class="id" title="var">ext</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">with_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">Ltac1.t</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">with_log_tmp</span> (<span class="id" title="tactic">debug</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">ext</span> : <span class="id" title="var">Ltac1.t</span>) (<span class="id" title="var">tac</span> : <span class="id" title="var">Ltac1.t</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="tactic">debug</span> := <span class="id" title="var">parse_debug</span> <span class="id" title="tactic">debug</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">ext</span> := <span class="id" title="var">parse_ext</span> <span class="id" title="var">ext</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_tmp</span> <span class="id" title="tactic">debug</span> <span class="id" title="var">ext</span> (<span class="id" title="keyword">fun</span> () =&gt; <span class="id" title="var">Ltac1.run</span> <span class="id" title="var">tac</span>).<br/>
@@ -708,15 +708,15 @@ Reset the log state.
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log"  :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log!" :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>).<br/>
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log_file"  <span class="id" title="keyword">constr</span>(<span class="id" title="var">file</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log_file!" <span class="id" title="keyword">constr</span>(<span class="id" title="var">file</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>).<br/>
 
 <br/>
 </div>
@@ -734,15 +734,15 @@ Reset the log state.
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log"  <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>) <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>) <span class="id" title="var">tac</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log!" <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>) <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> <span class="id" title="inductive">string</span>) <span class="id" title="var">tac</span>.<br/>
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log_file"  <span class="id" title="keyword">constr</span>(<span class="id" title="var">file</span>) <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>) <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>) <span class="id" title="var">tac</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log_file!" <span class="id" title="keyword">constr</span>(<span class="id" title="var">file</span>) <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>) <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_generic</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  (@<a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="inductive">string</span> <span class="id" title="var">file</span>) <span class="id" title="var">tac</span>.<br/>
 
 <br/>
 </div>
@@ -765,9 +765,9 @@ Reset the log state.
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log_tmp_file"  <span class="id" title="keyword">constr</span>(<span class="id" title="var">ext</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_tmp</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> <span class="id" title="var">ext</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_tmp</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> <span class="id" title="var">ext</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "output_log_tmp_file!" <span class="id" title="keyword">constr</span>(<span class="id" title="var">ext</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_tmp</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  <span class="id" title="var">ext</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">output_log_tmp</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  <span class="id" title="var">ext</span>.<br/>
 
 <br/>
 </div>
@@ -785,9 +785,9 @@ Reset the log state.
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log_tmp_file"  <span class="id" title="keyword">constr</span>(<span class="id" title="var">ext</span>) <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_tmp</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> <span class="id" title="var">ext</span> <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_tmp</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> <span class="id" title="var">ext</span> <span class="id" title="var">tac</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;#[<span class="id" title="var">global</span>] <span class="id" title="keyword">Tactic</span> <span class="id" title="keyword">Notation</span> "with_log_tmp_file!" <span class="id" title="keyword">constr</span>(<span class="id" title="var">ext</span>) <span class="id" title="var">tactic</span>(<span class="id" title="var">tac</span>) :=<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_tmp</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  <span class="id" title="var">ext</span> <span class="id" title="var">tac</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">with_log_tmp</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>  <span class="id" title="var">ext</span> <span class="id" title="var">tac</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log.Ltac1Notations"><span class="id" title="module">Ltac1Notations</span></a>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log"><span class="id" title="module">Log</span></a>.<br/>
 <span class="id" title="keyword">Export</span> <a class="idref" href="bluerock.ltac2.logger.logger.html#Log.Notations"><span class="id" title="module">Log.Notations</span></a>.<br/>
@@ -795,7 +795,7 @@ Reset the log state.
 </div>
 
 <div id="footer">
-<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://rocq-prover.org/">coqdoc</a>
 </div>
 
 </div>

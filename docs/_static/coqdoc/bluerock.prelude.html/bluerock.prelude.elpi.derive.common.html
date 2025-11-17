@@ -62,7 +62,7 @@
 &nbsp;&nbsp;unfold-constants&nbsp;OrigGR&nbsp;Prefix&nbsp;HasSynterp&nbsp;GR&nbsp;D&nbsp;:-<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;P&nbsp;=&nbsp;derive-original-gref&nbsp;GR&nbsp;OrigGR,<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;derivation&nbsp;GR&nbsp;Prefix&nbsp;HasSynterp&nbsp;(derive&nbsp;Name&nbsp;Do&nbsp;Done),<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;D&nbsp;=&nbsp;(derive&nbsp;Name&nbsp;(cl\&nbsp;P&nbsp;=&gt;&nbsp;Do&nbsp;cl)&nbsp;(P&nbsp;=&gt;&nbsp;Done)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;D&nbsp;=&nbsp;(derive&nbsp;Name&nbsp;(cl\&nbsp;P&nbsp;=&gt;&nbsp;Do&nbsp;cl,&nbsp;!)&nbsp;(P&nbsp;=&gt;&nbsp;Done)).<br/>
 &nbsp;&nbsp;unfold-constants&nbsp;OrigGR&nbsp;Prefix&nbsp;HasSynterp&nbsp;(const&nbsp;C)&nbsp;D&nbsp;:-<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;coq.env.const&nbsp;C&nbsp;(some&nbsp;(global&nbsp;C'))&nbsp;_,<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;unfold-constants&nbsp;OrigGR&nbsp;Prefix&nbsp;HasSynterp&nbsp;C'&nbsp;D.<br/>

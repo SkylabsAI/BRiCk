@@ -34,7 +34,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 </div>
 <div class="code">
 <span class="id" title="keyword">Module</span> <a id="String" class="idref" href="#String"><span class="id" title="module">String</span></a>.<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span> <a class="idref" href="http://coq.inria.fr/doc/V9.1+alpha/stdlib//Corelib.Classes.Init.html#"><span class="id" title="module">Init</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Import</span> <span class="id" title="module">Ltac2</span> <a class="idref" href="http://rocq-prover.org/doc/V9.1.0/stdlib//Corelib.Classes.Init.html#"><span class="id" title="module">Init</span></a>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">Export</span> <span class="id" title="module">Ltac2.String</span>.<br/>
 
 <br/>
@@ -47,7 +47,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
    
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">sub</span> : <span class="id" title="var">string</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">sub</span> : <span class="id" title="var">string</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "string_sub".<br/>
 
 <br/>
@@ -57,7 +57,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 <span class="inlinecode"><span class="id" title="var">of_char_list</span></span> <span class="inlinecode"><span class="id" title="var">cs</span></span> builds a string from the list <span class="inlinecode"><span class="id" title="var">cs</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_char_list</span> (<span class="id" title="var">cs</span> : <span class="id" title="var">char</span> <span class="id" title="var">list</span>) : <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_char_list</span> (<span class="id" title="var">cs</span> : <span class="id" title="var">char</span> <span class="id" title="var">list</span>) : <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">len</span> := <span class="id" title="var">List.length</span> <span class="id" title="var">cs</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">res</span> := <span class="id" title="var">String.make</span> <span class="id" title="var">len</span> (<span class="id" title="var">Char.of_int</span> 0) <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.iteri</span> (<span class="id" title="var">String.set</span> <span class="id" title="var">res</span>) <span class="id" title="var">cs</span>; <span class="id" title="var">res</span>.<br/>
@@ -71,7 +71,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
       from the <span class="inlinecode"><span class="id" title="var">Coq.Strings.String</span></span> module. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_string_constr</span> (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">string</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_string_constr</span> (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">string</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">build_string</span> <span class="id" title="var">acc</span> <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">lazy_match</span>! <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="constructor">String</span> ?<span class="id" title="var">c</span> ?<span class="id" title="var">t</span>  =&gt; <span class="id" title="var">Option.bind</span> (<span class="id" title="var">Char.of_ascii_constr</span> <span class="id" title="var">c</span>)<br/>
@@ -83,19 +83,19 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">build_string</span> [] <span class="id" title="var">t</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">in_quotes</span> (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) : <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">in_quotes</span> (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) : <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">q</span> := <span class="id" title="var">String.make</span> 1 (<span class="id" title="var">Char.of_int</span> 34) <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">app</span> <span class="id" title="var">q</span> (<span class="id" title="var">app</span> <span class="id" title="var">s</span> <span class="id" title="var">q</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">newline</span> () : <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">newline</span> () : <span class="id" title="var">string</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">String.make</span> 1 (<span class="id" title="var">Char.of_int</span> 10).<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.string.html#String"><span class="id" title="module">String</span></a>.<br/>
 </div>
 </div>
 
 <div id="footer">
-<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://rocq-prover.org/">coqdoc</a>
 </div>
 
 </div>

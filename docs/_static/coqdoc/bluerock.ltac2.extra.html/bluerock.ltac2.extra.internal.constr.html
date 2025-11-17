@@ -51,7 +51,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
       considered <span class="inlinecode"><span class="id" title="var">entirely_closed</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">entirely_closed</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">entirely_closed</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "entirely_closed".<br/>
 
 <br/>
@@ -61,7 +61,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
 <span class="inlinecode"><span class="id" title="var">retype</span></span> <span class="inlinecode"><span class="id" title="var">c</span></span> runs <span class="inlinecode"><span class="id" title="var">Retyping.get_type_of</span></span> <span class="inlinecode">~<span class="id" title="var">lax</span>:<span class="id" title="var">false</span></span> <span class="inlinecode"><span class="id" title="var">c</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">retype</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">retype</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_retype".<br/>
 
 <br/>
@@ -75,7 +75,7 @@ Minor extensions to <span class="inlinecode"><span class="id" title="var">Ltac2.
       the boolean <span class="inlinecode"><span class="id" title="var">b</span></span> indicates whether all goals must be solved. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">pretype_at</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">pretype_at</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">bool</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">option</span> -&gt; <span class="id" title="var">preterm</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_pretype_at".<br/>
 
@@ -87,27 +87,27 @@ See Coq's Vars.mli
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.Vars" class="idref" href="#Constr.Vars"><span class="id" title="module">Vars</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">closedn</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">closedn</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_closedn".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">noccur_between</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">noccur_between</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_noccur_between".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">rels</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">int</span> <span class="id" title="var">list</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">rels</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">int</span> <span class="id" title="var">list</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_rels".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">vars</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">vars</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_vars".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">vars_really_needed</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">vars_really_needed</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_really_needed".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">vars_really_needed_unsafe</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">vars_really_needed_unsafe</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">FSet.t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "vars_really_needed_unsafe".<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.Vars"><span class="id" title="module">Vars</span></a>.<br/>
 
@@ -116,7 +116,7 @@ See Coq's Vars.mli
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Export</span> <span class="id" title="module">Ltac2.Constr.Binder</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">deconstruct</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) : <span class="id" title="var">name</span> * <span class="id" title="var">relevance</span> * <span class="id" title="keyword">type</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">deconstruct</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) : <span class="id" title="var">name</span> * <span class="id" title="var">relevance</span> * <span class="id" title="keyword">type</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">name</span> <span class="id" title="var">b</span>, <span class="id" title="var">relevance</span> <span class="id" title="var">b</span>, <span class="id" title="keyword">type</span> <span class="id" title="var">b</span>).<br/>
 
 <br/>
@@ -128,11 +128,11 @@ Mapping over a binder
 <div class="code">
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_name</span> : (<span class="id" title="var">name</span> -&gt; <span class="id" title="var">name</span>) -&gt; <span class="id" title="var">binder</span> -&gt; <span class="id" title="var">binder</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_name</span> : (<span class="id" title="var">name</span> -&gt; <span class="id" title="var">name</span>) -&gt; <span class="id" title="var">binder</span> -&gt; <span class="id" title="var">binder</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> (<span class="id" title="var">name</span>, <span class="id" title="var">r</span>, <span class="id" title="var">ty</span>) := <span class="id" title="var">deconstruct</span> <span class="id" title="var">b</span> <span class="id" title="tactic">in</span> <span class="id" title="var">unsafe_make</span> (<span class="id" title="var">f</span> <span class="id" title="var">name</span>) <span class="id" title="var">r</span> <span class="id" title="var">ty</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_type</span> : (<span class="id" title="keyword">type</span> -&gt; <span class="id" title="keyword">type</span>) -&gt; <span class="id" title="var">binder</span> -&gt; <span class="id" title="var">binder</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_type</span> : (<span class="id" title="keyword">type</span> -&gt; <span class="id" title="keyword">type</span>) -&gt; <span class="id" title="var">binder</span> -&gt; <span class="id" title="var">binder</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> (<span class="id" title="var">name</span>, <span class="id" title="var">r</span>, <span class="id" title="var">ty</span>) := <span class="id" title="var">deconstruct</span> <span class="id" title="var">b</span> <span class="id" title="tactic">in</span> <span class="id" title="var">unsafe_make</span> <span class="id" title="var">name</span> <span class="id" title="var">r</span> (<span class="id" title="var">f</span> <span class="id" title="var">ty</span>).<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.Binder"><span class="id" title="module">Binder</span></a>.<br/>
 
@@ -144,7 +144,7 @@ Mapping over a binder
 <span class="inlinecode"><span class="id" title="var">make</span></span> <span class="inlinecode"><span class="id" title="var">ty</span></span> creates a new evar of type <span class="inlinecode"><span class="id" title="var">ty</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make</span> (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> := <span class="id" title="var">Misc.gen_evar</span> <span class="id" title="var">false</span> <span class="id" title="var">ty</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make</span> (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> := <span class="id" title="var">Misc.gen_evar</span> <span class="id" title="var">false</span> <span class="id" title="var">ty</span>.<br/>
 
 <br/>
 </div>
@@ -154,7 +154,7 @@ Mapping over a binder
         a candidate for typeclass resolution. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_tc</span> (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> := <span class="id" title="var">Misc.gen_evar</span> <span class="id" title="var">true</span> <span class="id" title="var">ty</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_tc</span> (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> := <span class="id" title="var">Misc.gen_evar</span> <span class="id" title="var">true</span> <span class="id" title="var">ty</span>.<br/>
 
 <br/>
 </div>
@@ -164,7 +164,7 @@ Mapping over a binder
         not the case, an uncatchable <span class="inlinecode"><span class="id" title="var">Invalid_argument</span></span> <span class="inlinecode"><span class="id" title="var">_</span></span> is raised. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_constr</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="tactic">evar</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_constr</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="tactic">evar</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Constr.Unsafe.kind</span> <span class="id" title="var">c</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Constr.Unsafe.Evar</span> <span class="id" title="tactic">evar</span> <span class="id" title="var">args</span> =&gt; (<span class="id" title="tactic">evar</span>, <span class="id" title="var">args</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> =&gt; <span class="id" title="var">Control.throw_invalid_argument</span> "Evar.get"<br/>
@@ -178,7 +178,7 @@ Mapping over a binder
         not in the evar map. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="var">name</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="var">name</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">ident</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "evar_name".<br/>
 
 <br/>
@@ -189,7 +189,7 @@ Mapping over a binder
         does not fail if <span class="inlinecode"><span class="id" title="tactic">evar</span></span> is already named <span class="inlinecode"><span class="id" title="var">id</span></span>. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="tactic">rename</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">ident</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="tactic">rename</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">ident</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "rename_evar".<br/>
 
 <br/>
@@ -199,17 +199,24 @@ Mapping over a binder
 <span class="inlinecode"><span class="id" title="var">is_undefined</span></span> <span class="inlinecode"><span class="id" title="tactic">evar</span></span> indicates wheter <span class="inlinecode"><span class="id" title="tactic">evar</span></span> is undefined. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">is_undefined</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">is_undefined</span> : <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "evar_is_undefined".<br/>
 
 <br/>
 </div>
 
 <div class="doc">
-See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_evar</span></span> 
+<span class="inlinecode"><span class="id" title="var">restrict</span></span> uses <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_evar</span></span> to restrict the valid
+        hypothesis of an evar.
+        NOTE: Unlike <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_evar</span></span> and <span class="inlinecode"><span class="id" title="var">Evd.restrict</span></span>, <span class="inlinecode"><span class="id" title="var">restrict</span></span>
+        expects a filter whose length is equal to <i>_FILTERED_</i> evar context,
+        i.e. it only filters out hypotheses that were not filtered out before.
+        In other words, the existing filter of the evar is composed with the
+        <span class="inlinecode"><span class="id" title="var">bool</span></span> <span class="inlinecode"><span class="id" title="var">list</span></span> argument provided to <span class="inlinecode"><span class="id" title="var">restrict</span></span>
+     
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">restrict</span> : <span class="id" title="var">bool</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="tactic">evar</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">restrict</span> : <span class="id" title="var">bool</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="tactic">evar</span> -&gt; <span class="id" title="tactic">evar</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "restrict_evar".<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.Evar"><span class="id" title="module">Evar</span></a>.<br/>
 
@@ -222,7 +229,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
       are evars without solutions. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">subst_evars</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">subst_evars</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "subst_evars".<br/>
 
 <br/>
@@ -239,23 +246,23 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 <div class="code">
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_rel</span> (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_rel</span> (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Rel</span> <span class="id" title="var">i</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_var</span> (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_var</span> (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Var</span> <span class="id" title="var">id</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_meta</span> (<span class="id" title="var">m</span> : <span class="id" title="var">meta</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_meta</span> (<span class="id" title="var">m</span> : <span class="id" title="var">meta</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Meta</span> <span class="id" title="var">m</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_evar</span> (<span class="id" title="tactic">evar</span> : <span class="id" title="tactic">evar</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_evar</span> (<span class="id" title="tactic">evar</span> : <span class="id" title="tactic">evar</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Evar</span> <span class="id" title="tactic">evar</span> <span class="id" title="var">args</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_sort</span> (<span class="id" title="var">s</span> : <span class="id" title="var">sort</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_sort</span> (<span class="id" title="var">s</span> : <span class="id" title="var">sort</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="keyword">Sort</span> <span class="id" title="var">s</span>).<br/>
 
 <br/>
@@ -265,15 +272,15 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 <span class="inlinecode"><span class="id" title="var">Cast</span></span> <span class="inlinecode"><span class="id" title="var">tm</span></span> <span class="inlinecode"><span class="id" title="var">c</span></span> <span class="inlinecode"><span class="id" title="var">ty</span></span> is <span class="inlinecode"><span class="id" title="var">tm</span></span> <span class="inlinecode">:</span> <span class="inlinecode"><span class="id" title="var">ty</span></span> 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_cast</span> (<span class="id" title="var">tm</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">c</span> : <span class="id" title="var">cast</span>) (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_cast</span> (<span class="id" title="var">tm</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">c</span> : <span class="id" title="var">cast</span>) (<span class="id" title="var">ty</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Cast</span> <span class="id" title="var">tm</span> <span class="id" title="var">c</span> <span class="id" title="var">ty</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_prod</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_prod</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Prod</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_prod'</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_prod'</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">v</span> := <span class="id" title="var">Fresh.in_goal</span> (<span class="id" title="var">Option.default</span> @<span class="id" title="var">x</span> (<span class="id" title="var">Constr.Binder.name</span> <span class="id" title="var">b</span>)) <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">t</span> := <span class="id" title="var">Constr.Binder.type</span> <span class="id" title="var">b</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">fn</span> := <span class="id" title="var">Constr.in_context</span> <span class="id" title="var">v</span> <span class="id" title="var">t</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> =&gt;<br/>
@@ -285,15 +292,15 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_arrow</span> (<span class="id" title="var">t0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">t1</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_arrow</span> (<span class="id" title="var">t0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">t1</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Constr.Unsafe.make</span> (<span class="id" title="var">Prod</span> (<span class="id" title="var">Constr.Binder.make</span> <span class="id" title="var">None</span> <span class="id" title="var">t0</span>) <span class="id" title="var">t1</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_lambda</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_lambda</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Lambda</span> <span class="id" title="var">b</span> <span class="id" title="var">c</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_lambda'</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_lambda'</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">v</span> := <span class="id" title="var">Fresh.in_goal</span> (<span class="id" title="var">Option.default</span> @<span class="id" title="var">x</span> (<span class="id" title="var">Constr.Binder.name</span> <span class="id" title="var">b</span>)) <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">t</span> := <span class="id" title="var">Constr.Binder.type</span> <span class="id" title="var">b</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Constr.in_context</span> <span class="id" title="var">v</span> <span class="id" title="var">t</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> =&gt;<br/>
@@ -307,35 +314,35 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 <span class="inlinecode"><span class="id" title="keyword">let</span></span> <span class="inlinecode"><span class="id" title="var">b</span></span> <span class="inlinecode">:=</span> <span class="inlinecode"><span class="id" title="var">c1</span></span> <span class="inlinecode"><span class="id" title="tactic">in</span></span> <span class="inlinecode"><span class="id" title="var">c2</span></span> 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_let_in</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c1</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">c2</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_let_in</span> (<span class="id" title="var">b</span> : <span class="id" title="var">binder</span>) (<span class="id" title="var">c1</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">c2</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">LetIn</span> <span class="id" title="var">b</span> <span class="id" title="var">c1</span> <span class="id" title="var">c2</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">App</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app_list</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app_list</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">args</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> (<span class="id" title="var">Array.of_list</span> <span class="id" title="var">args</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app1</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app1</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 1 <span class="id" title="var">arg</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app2</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app2</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 2 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 1 <span class="id" title="var">arg1</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app3</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app3</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 3 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 1 <span class="id" title="var">arg1</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 2 <span class="id" title="var">arg2</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app4</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app4</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 4 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 1 <span class="id" title="var">arg1</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 2 <span class="id" title="var">arg2</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 3 <span class="id" title="var">arg3</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app5</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app5</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg4</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 5 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 1 <span class="id" title="var">arg1</span>;<br/>
@@ -343,7 +350,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 3 <span class="id" title="var">arg3</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 4 <span class="id" title="var">arg4</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app6</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app6</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg4</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg5</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 6 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
@@ -353,7 +360,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 4 <span class="id" title="var">arg4</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 5 <span class="id" title="var">arg5</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app7</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app7</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg4</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg5</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg6</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 7 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
@@ -364,7 +371,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 5 <span class="id" title="var">arg5</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 6 <span class="id" title="var">arg6</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app8</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app8</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg4</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg5</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg6</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg7</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">args</span> := <span class="id" title="var">Array.make</span> 8 <span class="id" title="var">arg0</span> <span class="id" title="tactic">in</span><br/>
@@ -376,7 +383,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 6 <span class="id" title="var">arg6</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Array.set</span> <span class="id" title="var">args</span> 7 <span class="id" title="var">arg7</span>;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make_app</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_app9</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_app9</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg0</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg1</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg2</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg3</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg4</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg5</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg6</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">arg7</span> : <span class="id" title="keyword">constr</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">arg8</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
@@ -400,11 +407,11 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
     
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_constant</span> (<span class="id" title="var">c</span> : <span class="id" title="var">constant</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_constant</span> (<span class="id" title="var">c</span> : <span class="id" title="var">constant</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Constant</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_ind</span> (<span class="id" title="var">i</span> : <span class="id" title="var">inductive</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_ind</span> (<span class="id" title="var">i</span> : <span class="id" title="var">inductive</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Ind</span> <span class="id" title="var">i</span> <span class="id" title="var">u</span>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_constructor</span> (<span class="id" title="var">c</span> : <span class="id" title="tactic">constructor</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_constructor</span> (<span class="id" title="var">c</span> : <span class="id" title="tactic">constructor</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Constructor</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span>).<br/>
 
 <br/>
@@ -451,7 +458,7 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
     
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_case</span> (<span class="id" title="var">ci</span> : <span class="id" title="tactic">case</span>) (<span class="id" title="var">p</span> : <span class="id" title="keyword">constr</span> * <span class="id" title="var">Binder.relevance</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_case</span> (<span class="id" title="var">ci</span> : <span class="id" title="tactic">case</span>) (<span class="id" title="var">p</span> : <span class="id" title="keyword">constr</span> * <span class="id" title="var">Binder.relevance</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">iv</span> : <span class="id" title="var">case_invert</span>) (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">br</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Case</span> <span class="id" title="var">ci</span> <span class="id" title="var">p</span> <span class="id" title="var">iv</span> <span class="id" title="var">c</span> <span class="id" title="var">br</span>).<br/>
 
@@ -470,12 +477,12 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
     <span class="inlinecode"></span>
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_fix</span> (<span class="id" title="var">skips</span> : <span class="id" title="var">int</span> <span class="id" title="var">array</span>) (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) (<span class="id" title="var">bnds</span> : <span class="id" title="var">binder</span> <span class="id" title="var">array</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_fix</span> (<span class="id" title="var">skips</span> : <span class="id" title="var">int</span> <span class="id" title="var">array</span>) (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) (<span class="id" title="var">bnds</span> : <span class="id" title="var">binder</span> <span class="id" title="var">array</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">lams</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="keyword">Fix</span> <span class="id" title="var">skips</span> <span class="id" title="var">i</span> <span class="id" title="var">bnds</span> <span class="id" title="var">lams</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_cofix</span> (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) (<span class="id" title="var">bnds</span> : <span class="id" title="var">binder</span> <span class="id" title="var">array</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_cofix</span> (<span class="id" title="var">i</span> : <span class="id" title="var">int</span>) (<span class="id" title="var">bnds</span> : <span class="id" title="var">binder</span> <span class="id" title="var">array</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">lams</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">CoFix</span> <span class="id" title="var">i</span> <span class="id" title="var">bnds</span> <span class="id" title="var">lams</span>).<br/>
 
@@ -486,16 +493,16 @@ See <span class="inlinecode"><span class="id" title="var">Evarutils.restrict_eva
 Primitive projection <span class="inlinecode"><span class="id" title="var">t</span>.(<span class="id" title="var">p</span>)</span> 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_proj</span> (<span class="id" title="var">p</span> : <span class="id" title="var">projection</span>) (<span class="id" title="var">r</span> : <span class="id" title="var">Binder.relevance</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_proj</span> (<span class="id" title="var">p</span> : <span class="id" title="var">projection</span>) (<span class="id" title="var">r</span> : <span class="id" title="var">Binder.relevance</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Proj</span> <span class="id" title="var">p</span> <span class="id" title="var">r</span> <span class="id" title="var">t</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_uint63</span> (<span class="id" title="var">i</span> : <span class="id" title="var">uint63</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_uint63</span> (<span class="id" title="var">i</span> : <span class="id" title="var">uint63</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Uint63</span> <span class="id" title="var">i</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_float</span> (<span class="id" title="var">f</span> : <span class="id" title="var">float</span>) : <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_float</span> (<span class="id" title="var">f</span> : <span class="id" title="var">float</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Float</span> <span class="id" title="var">f</span>).<br/>
 
 <br/>
@@ -508,19 +515,19 @@ Primitive projection <span class="inlinecode"><span class="id" title="var">t</sp
     
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_array</span> (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) (<span class="id" title="var">cs</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_array</span> (<span class="id" title="var">u</span> : <span class="id" title="var">instance</span>) (<span class="id" title="var">cs</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">def</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">make</span> (<span class="id" title="var">Array</span> <span class="id" title="var">u</span> <span class="id" title="var">cs</span> <span class="id" title="var">def</span> <span class="id" title="var">t</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_string</span> (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_string</span> (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Pstring.of_string</span> <span class="id" title="var">s</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">p</span> =&gt; <span class="id" title="var">make</span> (<span class="id" title="var">String</span> <span class="id" title="var">p</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> =&gt; <span class="id" title="var">Control.throw_invalid_argument</span> "Invalid primitive string: %s" <span class="id" title="var">s</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">make_pstring</span> (<span class="id" title="var">p</span> : <span class="id" title="var">pstring</span>) := <span class="id" title="var">make</span> (<span class="id" title="var">String</span> <span class="id" title="var">p</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">make_pstring</span> (<span class="id" title="var">p</span> : <span class="id" title="var">pstring</span>) := <span class="id" title="var">make</span> (<span class="id" title="var">String</span> <span class="id" title="var">p</span>).<br/>
 
 <br/>
 </div>
@@ -539,44 +546,44 @@ Primitive projection <span class="inlinecode"><span class="id" title="var">t</sp
 
 <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.Unsafe.RelDecl" class="idref" href="#Constr.Unsafe.RelDecl"><span class="id" title="module">RelDecl</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span> := [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span> := [<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> (<span class="id" title="var">binder</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> (<span class="id" title="var">binder</span>, <span class="id" title="var">term</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;].<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">pp</span> : <span class="id" title="var">t</span> <span class="id" title="var">pp</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">decl</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">pp</span> : <span class="id" title="var">t</span> <span class="id" title="var">pp</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> <span class="id" title="var">decl</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> <span class="id" title="var">b</span> =&gt; <span class="id" title="var">pp_binder</span> () <span class="id" title="var">b</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">fprintf</span> "%a := %t" <span class="id" title="var">pp_binder</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">binder</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">binder</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">binder</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">binder</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span> <span class="id" title="var">Assum</span> <span class="id" title="var">b</span> =&gt; <span class="id" title="var">b</span> | <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">b</span> <span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">name</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">name</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">name</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">name</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Constr.Binder.name</span> (<span class="id" title="var">binder</span> <span class="id" title="var">decl</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">type</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="keyword">type</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">type</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="keyword">type</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Constr.Binder.type</span> (<span class="id" title="var">binder</span> <span class="id" title="var">decl</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">relevance</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">Binder.relevance</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">relevance</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">Binder.relevance</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Constr.Binder.relevance</span> (<span class="id" title="var">binder</span> <span class="id" title="var">decl</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">value</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">term</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">value</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">term</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span> <span class="id" title="var">Assum</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">None</span> | <span class="id" title="var">Def</span> <span class="id" title="var">_</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">Some</span> <span class="id" title="var">val</span> <span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">is_assum</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">is_assum</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span> <span class="id" title="var">Assum</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">true</span> | <span class="id" title="var">_</span> =&gt; <span class="id" title="var">false</span> <span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">is_def</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">is_def</span> (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span> <span class="id" title="var">Def</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">true</span> | <span class="id" title="var">_</span> =&gt; <span class="id" title="var">false</span> <span class="id" title="keyword">end</span>.<br/>
 
 <br/>
@@ -588,28 +595,28 @@ Mapping over a declaration
 <div class="code">
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_name</span> : (<span class="id" title="var">name</span> -&gt; <span class="id" title="var">name</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_name</span> : (<span class="id" title="var">name</span> -&gt; <span class="id" title="var">name</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> <span class="id" title="var">b</span> =&gt; <span class="id" title="var">Assum</span> (<span class="id" title="var">Constr.Binder.map_name</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">Def</span> (<span class="id" title="var">Constr.Binder.map_name</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>) <span class="id" title="var">val</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_type</span> : (<span class="id" title="keyword">type</span> -&gt; <span class="id" title="keyword">type</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_type</span> : (<span class="id" title="keyword">type</span> -&gt; <span class="id" title="keyword">type</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> <span class="id" title="var">b</span> =&gt; <span class="id" title="var">Assum</span> (<span class="id" title="var">Constr.Binder.map_type</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">Def</span> (<span class="id" title="var">Constr.Binder.map_type</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>) <span class="id" title="var">val</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_value</span> : (<span class="id" title="var">term</span> -&gt; <span class="id" title="var">term</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_value</span> : (<span class="id" title="var">term</span> -&gt; <span class="id" title="var">term</span>) -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">f</span> <span class="id" title="var">decl</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">decl</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">Def</span> <span class="id" title="var">b</span> (<span class="id" title="var">f</span> <span class="id" title="var">val</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">map_constr</span> (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">map_constr</span> (<span class="id" title="var">f</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) (<span class="id" title="var">decl</span> : <span class="id" title="var">t</span>) : <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Assum</span> <span class="id" title="var">b</span> =&gt; <span class="id" title="var">Assum</span> (<span class="id" title="var">Constr.Binder.map_type</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Def</span> <span class="id" title="var">b</span> <span class="id" title="var">val</span> =&gt; <span class="id" title="var">Def</span> (<span class="id" title="var">Constr.Binder.map_type</span> <span class="id" title="var">f</span> <span class="id" title="var">b</span>) (<span class="id" title="var">f</span> <span class="id" title="var">val</span>)<br/>
@@ -662,34 +669,34 @@ Mapping over a declaration
 <div class="code">
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">map</span> : (<span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">map</span> : (<span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_map".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">map_with_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">map_with_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;('<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) -&gt; '<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_map_with_binders".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">map_with_full_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">map_with_full_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">RelDecl.t</span> -&gt; '<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_map_with_full_binders".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">iter</span> : (<span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">iter</span> : (<span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_iter".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">iter_with_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">iter_with_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;('<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span>) -&gt; '<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_iter_with_binders".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">iter_with_full_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">iter_with_full_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">RelDecl.t</span> -&gt; '<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">unit</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_iter_with_full_binders".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="tactic">fold</span> : (<span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="tactic">fold</span> : (<span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span>) -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_fold".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">fold_with_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">fold_with_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;('<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span>) -&gt; '<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_fold_with_binders".<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">fold_with_full_binders</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">fold_with_full_binders</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">RelDecl.t</span> -&gt; '<span class="id" title="var">c</span> -&gt; '<span class="id" title="var">c</span>) -&gt; ('<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span>) -&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'<span class="id" title="var">c</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "constr_fold_with_full_binders".<br/>
@@ -698,18 +705,18 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.Unsafe.Destruct" class="idref" href="#Constr.Unsafe.Destruct"><span class="id" title="module">Destruct</span></a>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">invalid_arg'</span> (<span class="id" title="var">whence</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">what</span> : <span class="id" title="var">message</span>) : '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">invalid_arg'</span> (<span class="id" title="var">whence</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">what</span> : <span class="id" title="var">message</span>) : '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">m</span> := <span class="id" title="var">Message.of_string</span> <span class="id" title="var">whence</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">m</span> := <span class="id" title="var">Message.concat</span> <span class="id" title="var">m</span> (<span class="id" title="var">Message.of_string</span> ": ") <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">m</span> := <span class="id" title="var">Message.concat</span> <span class="id" title="var">m</span> <span class="id" title="var">what</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Control.throw</span> (<span class="id" title="var">Invalid_argument</span> (<span class="id" title="var">Some</span> <span class="id" title="var">m</span>)).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">invalid_arg</span> (<span class="id" title="var">whence</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : '<span class="id" title="var">a</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">invalid_arg</span> (<span class="id" title="var">whence</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">t</span> : <span class="id" title="keyword">constr</span>) : '<span class="id" title="var">a</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">invalid_arg'</span> <span class="id" title="var">whence</span> (<span class="id" title="var">Message.of_constr</span> <span class="id" title="var">t</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_ind_app_opt</span> : <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="keyword">constr</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_ind_app_opt</span> : <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="keyword">constr</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">kind</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Ind</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span>    =&gt; <span class="id" title="var">Some</span> (<span class="id" title="var">t</span>, <span class="id" title="var">Array.make</span> 0 <span class="id" title="var">t</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">App</span> <span class="id" title="var">c</span> <span class="id" title="var">args</span> =&gt;<br/>
@@ -721,7 +728,7 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_ind_app</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_ind_app</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">panic</span> () := <span class="id" title="var">invalid_arg</span> "Constr.Unsafe.Destruct.of_ind_app" <span class="id" title="var">t</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">of_ind_app_opt</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">v</span> =&gt; <span class="id" title="var">v</span><br/>
@@ -729,7 +736,7 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_constructor_app_opt</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_constructor_app_opt</span> :<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="keyword">constr</span> * <span class="id" title="var">instance</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">kind</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Constructor</span> <span class="id" title="var">_</span> <span class="id" title="var">inst</span> =&gt; <span class="id" title="var">Some</span> (<span class="id" title="var">t</span>, <span class="id" title="var">inst</span>, <span class="id" title="var">Array.make</span> 0 <span class="id" title="var">t</span>)<br/>
@@ -742,7 +749,7 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_constructor_app</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> * <span class="id" title="var">instance</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_constructor_app</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> * <span class="id" title="var">instance</span> * <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">of_constructor_app_opt</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">r</span> =&gt; <span class="id" title="var">r</span><br/>
@@ -750,21 +757,21 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_lambda_opt</span> : <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="var">binder</span> * <span class="id" title="keyword">constr</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_lambda_opt</span> : <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="var">binder</span> * <span class="id" title="keyword">constr</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">kind</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Lambda</span> <span class="id" title="var">b</span> <span class="id" title="var">t</span> =&gt; <span class="id" title="var">Some</span> (<span class="id" title="var">b</span>, <span class="id" title="var">t</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> =&gt; <span class="id" title="var">None</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_lambda</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">binder</span> * <span class="id" title="keyword">constr</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_lambda</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">binder</span> * <span class="id" title="keyword">constr</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">of_lambda_opt</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">r</span> =&gt; <span class="id" title="var">r</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> =&gt; <span class="id" title="var">invalid_arg</span> "Constr.Unsafe.Destruct.of_lambda" <span class="id" title="var">t</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_n_lambdas_opt</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="var">binder</span> <span class="id" title="var">list</span> * <span class="id" title="keyword">constr</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_n_lambdas_opt</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; (<span class="id" title="var">binder</span> <span class="id" title="var">list</span> * <span class="id" title="keyword">constr</span>) <span class="id" title="var">option</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">go</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> (<span class="id" title="var">acc</span> : <span class="id" title="var">binder</span> <span class="id" title="var">list</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">Int.equal</span> <span class="id" title="var">i</span> 0 <span class="id" title="keyword">then</span> <span class="id" title="var">Some</span> (<span class="id" title="var">List.rev</span> <span class="id" title="var">acc</span>, <span class="id" title="var">t</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">else</span><br/>
@@ -777,14 +784,14 @@ Mapping over a declaration
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">else</span> <span class="id" title="var">invalid_arg'</span> "Constr.Unsafe.Destruct.of_n_lambdas_opt" (<span class="id" title="var">Message.of_int</span> <span class="id" title="var">i</span>).<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_n_lambdas</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">binder</span> <span class="id" title="var">list</span> * <span class="id" title="keyword">constr</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> =&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_n_lambdas</span> : <span class="id" title="var">int</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">binder</span> <span class="id" title="var">list</span> * <span class="id" title="keyword">constr</span> := <span class="id" title="keyword">fun</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> =&gt;<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">of_n_lambdas_opt</span> <span class="id" title="var">i</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">r</span> =&gt; <span class="id" title="var">r</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> =&gt; <span class="id" title="var">invalid_arg</span> "Constr.Unsafe.Destruct.of_n_lambdas" <span class="id" title="var">t</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">projection_info</span> := {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">projection_info</span> := {<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
 
 <div class="doc">
@@ -823,7 +830,7 @@ the record value to which the projection is applied.
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">of_projection</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">projection_info</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">of_projection</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">projection_info</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "decompose_proj".<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.Unsafe.Destruct"><span class="id" title="module">Destruct</span></a>.<br/>
 
@@ -835,18 +842,18 @@ the record value to which the projection is applied.
         <span class="inlinecode"><span class="id" title="var">ConstrSet</span></span> and <span class="inlinecode"><span class="id" title="var">ConstrMap</span></span>. Use at your own peril. 
 </div>
 <div class="code">
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">compare</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">int</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">compare</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">int</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.Constr" "compare".<br/>
 
 <br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.Unsafe"><span class="id" title="module">Unsafe</span></a>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @<span class="id" title="var">external</span> <span class="id" title="var">is_class</span> : <span class="id" title="var">Std.reference</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @<span class="id" title="var">external</span> <span class="id" title="var">is_class</span> : <span class="id" title="var">Std.reference</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "is_class".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">rec</span> <span class="id" title="var">is_class_application</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">is_class_application</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Unsafe.kind</span> <span class="id" title="var">c</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Unsafe.App</span> <span class="id" title="var">c</span> <span class="id" title="var">_</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Unsafe.Prod</span> <span class="id" title="var">_</span> <span class="id" title="var">c</span>          =&gt; <span class="id" title="var">is_class_application</span> <span class="id" title="var">c</span><br/>
@@ -858,7 +865,7 @@ the record value to which the projection is applied.
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">rec</span> <span class="id" title="var">is_head_evar</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">rec</span> <span class="id" title="var">is_head_evar</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Unsafe.kind</span> <span class="id" title="var">c</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Unsafe.Evar</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">true</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Unsafe.App</span> <span class="id" title="var">c</span> <span class="id" title="var">_</span>  =&gt; <span class="id" title="var">is_head_evar</span> <span class="id" title="var">c</span><br/>
@@ -875,11 +882,11 @@ the record value to which the projection is applied.
       nested product types. The value returned is in weak-head normal form. 
 </div>
 <div class="code">
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">specialize_products</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">specialize_products</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">array</span> -&gt; <span class="id" title="keyword">constr</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "specialize_products".<br/>
 
 <br/>
-&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">debug_print</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">message</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">debug_print</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">message</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "debug_print".<br/>
 
 <br/>
@@ -890,21 +897,21 @@ Primitive projections.
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.PProj" class="idref" href="#Constr.PProj"><span class="id" title="module">PProj</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span> := <span class="id" title="var">constant</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span> := <span class="id" title="var">constant</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">mkProj</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">mkProj</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> -&gt; <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"ltac2_extensions" "mkProj".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_compat</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_compat</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) : <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">Constr.Unsafe.kind</span> <span class="id" title="var">c</span> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Constr.Unsafe.Constant</span> <span class="id" title="var">c</span> <span class="id" title="var">_</span> =&gt; <span class="id" title="var">c</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> =&gt; <span class="id" title="var">Control.zero</span> (<span class="id" title="var">Invalid_argument</span> (<span class="id" title="var">Some</span> (<span class="id" title="var">Message.of_string</span> "not a constant")))<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="var">of_compat_const</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">b</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">x</span> : <span class="id" title="keyword">constr</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="var">of_compat_const</span> (<span class="id" title="var">c</span> : <span class="id" title="keyword">constr</span>) (<span class="id" title="var">b</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">x</span> : <span class="id" title="keyword">constr</span>) :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">mkProj</span> (<span class="id" title="var">of_compat</span> <span class="id" title="var">c</span>) <span class="id" title="var">b</span> <span class="id" title="var">x</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.PProj"><span class="id" title="module">PProj</span></a>.<br/>
 
@@ -917,42 +924,42 @@ Primitive projections.
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.ConstrSet" class="idref" href="#Constr.ConstrSet"><span class="id" title="module">ConstrSet</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">t</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">empty</span> : <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">empty</span> : <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "empty".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">is_empty</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">is_empty</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "is_empty".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">diff</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">diff</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "diff".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">union</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">union</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "union".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">of_list</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">of_list</span> : <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "of_list".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">mem</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">mem</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "mem".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">elements</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">elements</span> : <span class="id" title="var">t</span> -&gt; <span class="id" title="keyword">constr</span> <span class="id" title="var">list</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "elements".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">add</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">add</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "add".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">remove</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">remove</span> : <span class="id" title="keyword">constr</span> -&gt; <span class="id" title="var">t</span> -&gt; <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrSet" "remove".<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.ConstrSet"><span class="id" title="module">ConstrSet</span></a>.<br/>
 
@@ -965,42 +972,42 @@ Primitive projections.
 </div>
 <div class="code">
 &nbsp;&nbsp;<span class="id" title="keyword">Module</span> <a id="Constr.ConstrMap" class="idref" href="#Constr.ConstrMap"><span class="id" title="module">ConstrMap</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 <span class="id" title="keyword">Type</span> '<span class="id" title="var">a</span> <span class="id" title="var">t</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> <span class="id" title="keyword">Type</span> '<span class="id" title="var">a</span> <span class="id" title="var">t</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">empty</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">empty</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "empty".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">is_empty</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">is_empty</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "is_empty".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">mem</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">mem</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">bool</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "mem".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">add</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">add</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "add".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">singleton</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">singleton</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "singleton".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">remove</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">remove</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "remove".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">cardinal</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">int</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">cardinal</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; <span class="id" title="var">int</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "cardinal".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">bindings</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; (<span class="id" title="keyword">constr</span> * '<span class="id" title="var">a</span>) <span class="id" title="var">list</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">bindings</span> : '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; (<span class="id" title="keyword">constr</span> * '<span class="id" title="var">a</span>) <span class="id" title="var">list</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "bindings".<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac</span>2 @ <span class="id" title="var">external</span> <span class="id" title="var">find_opt</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">option</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Ltac2</span> @ <span class="id" title="var">external</span> <span class="id" title="var">find_opt</span> : <span class="id" title="keyword">constr</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">t</span> -&gt; '<span class="id" title="var">a</span> <span class="id" title="var">option</span> :=<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"br.ConstrMap" "find_opt".<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr.ConstrMap"><span class="id" title="module">ConstrMap</span></a>.<br/>
 <span class="id" title="keyword">End</span> <a class="idref" href="bluerock.ltac2.extra.internal.constr.html#Constr"><span class="id" title="module">Constr</span></a>.<br/>
@@ -1008,7 +1015,7 @@ Primitive projections.
 </div>
 
 <div id="footer">
-<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://rocq-prover.org/">coqdoc</a>
 </div>
 
 </div>

@@ -90,10 +90,10 @@
 &nbsp;&nbsp;&nbsp;* | #[<span class="id" title="var">global</span>] <span class="id" title="keyword">Instance</span> <span class="id" title="var">C_eq_dec</span> : <span class="id" title="var">EqDecision</span> <span class="id" title="var">C</span>. <span class="id" title="keyword">Proof</span>. ... <span class="id" title="keyword">Defined</span>.<br/>
 &nbsp;&nbsp;&nbsp;*/<br/>
 &nbsp;&nbsp;<span class="id" title="var">namespace</span> <span class="id" title="var">derive.eqdec</span> {<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred</span> <span class="id" title="var">main</span> <span class="id" title="var">i</span>:<span class="id" title="var">gref</span>, <span class="id" title="var">i</span>:<span class="id" title="var">string</span>, <span class="id" title="var">o</span>:<span class="id" title="var">list</span> <span class="id" title="var">prop</span>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">main</span> <span class="id" title="var">TyGR</span> <span class="id" title="var">Prefix</span> <span class="id" title="var">Clauses</span> :- <span class="id" title="var">std.do</span>! [<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">func</span> <span class="id" title="var">main</span> <span class="id" title="var">gref</span>, <span class="id" title="var">string</span> -&gt; <span class="id" title="var">list</span> <span class="id" title="var">prop</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">main</span> <span class="id" title="var">TyGR</span> <span class="id" title="var">Prefix</span> <span class="id" title="var">Clauses</span> :-<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">InstanceName</span> <span class="id" title="keyword">is</span> <span class="id" title="var">Prefix</span> ^ "eq_dec",<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">derive</span>-<span class="id" title="var">original</span>-<span class="id" title="var">gref</span> <span class="id" title="var">TyGR</span> <span class="id" title="var">OrigGR</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">derive</span>-<span class="id" title="var">original</span>-<span class="id" title="var">gref</span> <span class="id" title="var">TyGR</span> <span class="id" title="var">OrigGR</span>, !,<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">TyEqDecision</span> = {{ <a class="idref" href="https://plv.mpi-sws.org/coqdoc/stdpp//stdpp.base.html#EqDecision"><span class="id" title="abbreviation">EqDecision</span></a> <span class="id" title="var">lp</span>:{{<span class="id" title="var">global</span> <span class="id" title="var">OrigGR</span>}} }},<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">std.assert</span>-<span class="id" title="var">ok</span>! (<span class="id" title="var">coq.elaborate</span>-<span class="id" title="var">skeleton</span> <span class="id" title="var">TyEqDecision</span> <span class="id" title="var">_</span> <span class="id" title="var">ETyEqDecision</span>) "[derive.eqdec] [TyEqDecision]",<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">std.assert</span>-<span class="id" title="var">ok</span>! (<span class="id" title="var">coq.typecheck</span> {{ <span class="id" title="var">lp</span>:<span class="id" title="var">BoEqDecision</span> : <span class="id" title="var">lp</span>:<span class="id" title="var">ETyEqDecision</span> }} <span class="id" title="var">_</span>) "typechecking the [EqDecision t] instance failed",<br/>
@@ -104,12 +104,11 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Clauses</span> = [<span class="id" title="var">eqdec</span>-<span class="id" title="var">done</span> <span class="id" title="var">OrigGR</span>, <span class="id" title="var">eqdec</span> <span class="id" title="var">OrigGR</span> (<span class="id" title="var">const</span> <span class="id" title="var">C</span>)],<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">std.forall</span> <span class="id" title="var">Clauses</span> (<span class="id" title="var">x</span>\<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">coq.elpi.accumulate</span> <span class="id" title="var">_</span> "derive.stdpp.eq_dec.db" (<span class="id" title="var">clause</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">x</span>)<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;),<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;].<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">main</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> :- <span class="id" title="var">usage</span>.<br/>
 
 <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred</span> <span class="id" title="var">usage</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">func</span> <span class="id" title="var">usage</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">usage</span> :- <span class="id" title="var">coq.error</span><br/>
 "Usage: #[only(eq_dec)] derive T
 where T is an inductive or a definition that unfolds to an inductive.
