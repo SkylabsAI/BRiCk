@@ -198,7 +198,7 @@ virtual address of a pointer.</p>
 object that the pointer refers to; similar concepts are common in modern
 formalizations of pointers, from <a class="reference external" href="https://hal.inria.fr/hal-00703441/document">CompCert</a> onwards.</p>
 <p>Notably, a single call to <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">malloc</span></code> might allocate storage for multiple objects:
-each such object will have a distinct allocation ID [#invalid-ptr-no-alloc-id].</p>
+each such object will have a distinct allocation ID<a class="footnote-reference brackets" href="#invalid-ptr-no-alloc-id" id="id5">3</a>.</p>
 <div class="highlight-coq notranslate"><div class="highlight"><pre><span></span><span class="kn">Parameter</span> <span class="n">ptr_alloc_id</span> <span class="o">:</span> <span class="n">ptr</span> <span class="o">-&gt;</span> <span class="n">option</span> <span class="n">alloc_id</span><span class="o">.</span>
 </pre></div>
 </div>
@@ -297,7 +297,7 @@ constructor is a no-op.</p>
 <dt class="label" id="std-ptr-values"><span class="brackets"><a class="fn-backref" href="#id4">2</a></span></dt>
 <dd><p>“Values of pointer type” are discussed in <a class="reference external" href="https://eel.is/c++draft/basic.compound#3">basic.compound#3</a>.</p>
 </dd>
-<dt class="label" id="invalid-ptr-no-alloc-id"><span class="brackets">3</span></dt>
+<dt class="label" id="invalid-ptr-no-alloc-id"><span class="brackets"><a class="fn-backref" href="#id5">3</a></span></dt>
 <dd><p>The reason that this function is partial is because invalid pointers do not contain allocation IDs.</p>
 </dd>
 </dl>
