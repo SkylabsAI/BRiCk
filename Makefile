@@ -23,7 +23,11 @@ SHELL := /bin/bash
 
 dune_build_folder = ../../_build
 BUILD_ROOT=$(dune_build_folder)/default/fmdeps/BRiCk
-ROCQLIB=$(dune_build_folder)/install/default/lib/coq
+# Beware:
+# 1. ROCQLIB must be absolute
+# 2. dune caching does _not_ track the dependency on ROCQLIB, so CI won't help
+# you if you break rule 1.
+ROCQLIB=${PWD}/$(dune_build_folder)/install/default/lib/coq
 DOC_PATH = rocq-bluerock-brick/doc
 COQDOC_DIR = $(DOC_PATH)/sphinx/_static/coqdoc
 
