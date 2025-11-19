@@ -63,7 +63,7 @@ doc-open: doc
 .PHONY: doc-open
 
 doc-clean:
-	$(Q)$(MAKE) -C doc clean
+	$(Q)$(MAKE) -C $(DOC_PATH) clean
 .PHONY: doc-clean
 
 clean: doc-clean
