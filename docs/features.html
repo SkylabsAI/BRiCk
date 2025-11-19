@@ -1,25 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Language Support &mdash; SkyLabs BRiCk alpha documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
-      <link rel="stylesheet" type="text/css" href="_static/alectryon.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/justify.css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/alectryon.css?v=3179997d" />
+      <link rel="stylesheet" type="text/css" href="_static/css/justify.css?v=94af2184" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/alectryon.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1f169f65"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/alectryon.js?v=749f78b6"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +37,6 @@
           <a href="index.html" class="icon icon-home">
             SkyLabs BRiCk
           </a>
-              <div class="version">
-                0.5.0
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -92,11 +88,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="language-support">
-<span id="features"></span><h1>Language Support<a class="headerlink" href="#language-support" title="Permalink to this heading"></a></h1>
+  <section id="language-support">
+<span id="features"></span><h1>Language Support<a class="headerlink" href="#language-support" title="Link to this heading"></a></h1>
 <p>The BRiCk program logic is aimed to be a formalization of pragmatic C++. Its feature set is guided by the requirements of low-level program verification and also some pragmatic considerations.</p>
-<div class="section" id="limitations-of-project">
-<h2>Limitations of BRiCk<a class="headerlink" href="#limitations-of-project" title="Permalink to this heading"></a></h2>
+<section id="limitations-of-project">
+<h2>Limitations of BRiCk<a class="headerlink" href="#limitations-of-project" title="Link to this heading"></a></h2>
 <p>BRiCk does not cover the full feature set of C++. Some features that are explicitly <strong>not supported</strong> are:</p>
 <ul class="simple">
 <li><p>The BRiCk program logic <em>assumes</em> that the abstract syntax tree is well-typed and uses this assumption to avoid performing type checking within the semantics. If you are using <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">cpp2v</span></span></code> to generate the AST, then Clang will ensure that the syntax tree is well typed.</p></li>
@@ -113,7 +109,7 @@
 <ul class="simple">
 <li><p>Translation unit initialization (i.e. initialization of globals)</p></li>
 <li><p><code class="code highlight cpp docutils literal highlight-cpp"><span class="k">template</span></code> code can only be reasoned about <em>after</em> instantiating it to specific arguments.</p></li>
-<li><p>Weak memory accesses. BRiCk currently requires that all atomic accesses are sequentially consistent <a class="footnote-reference brackets" href="#weak-mem" id="id1">1</a>.</p></li>
+<li><p>Weak memory accesses. BRiCk currently requires that all atomic accesses are sequentially consistent <a class="footnote-reference brackets" href="#weak-mem" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p></li>
 <li><p>Member pointers (and associated operators, i.e. <code class="code highlight cpp docutils literal highlight-cpp"><span class="p">.</span><span class="o">*</span></code> and <code class="code highlight cpp docutils literal highlight-cpp"><span class="o">-&gt;*</span></code>)</p></li>
 <li><p>Member functions, constructors, and destructors are modeled by translating them to functions. This is unsound but requires <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">reinterpret_cast</span></code> to exploit.</p></li>
 <li><p>The semantics currently ignores <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">volatile</span></code> qualifiers.</p></li>
@@ -121,34 +117,35 @@
 <li><p><a class="reference external" href="https://eel.is/c++draft/basic.life#8">Transparent replacement</a>.</p></li>
 <li><p>Verification of variadic functions (e.g. <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">printf</span></code>) is not supported, but calling variadic functions is supported.</p></li>
 </ul>
-</div>
-<div class="section" id="deviations-from-the-standard">
-<h2>Deviations from the Standard<a class="headerlink" href="#deviations-from-the-standard" title="Permalink to this heading"></a></h2>
+</section>
+<section id="deviations-from-the-standard">
+<h2>Deviations from the Standard<a class="headerlink" href="#deviations-from-the-standard" title="Link to this heading"></a></h2>
 <p>In certain instances, BRiCk’s semantics deviates from the C++ standard.</p>
 <ul class="simple">
 <li><p>BRiCk’s semantics do not currently permit “pointer zapping”. See <a class="reference internal" href="pointers.html#no-pointer-zapping"><span class="std std-ref">Assumptions beyond the standard</span></a>.</p></li>
-<li><p>BRiCk uses <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Tnum</span></span> <span class="n"><span class="pre">sz</span></span> <span class="n"><span class="pre">sgn</span></span></code> to represent all integer types rather than the standard types <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">char</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">short</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">int</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">long</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">long</span> <span class="kt">long</span></code>.</p></li>
+<li><p>BRiCk uses <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Tnum</span></span> <span class="n"><span class="pre">sz</span></span> <span class="n"><span class="pre">sgn</span></span></code> to represent all integer types rather than the standard types <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">char</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">short</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">int</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">long</span></code>, <code class="code highlight cpp docutils literal highlight-cpp"><span class="kt">long</span><span class="w"> </span><span class="kt">long</span></code>.</p></li>
 </ul>
-</div>
-<div class="section" id="known-issues">
-<h2>Known Issues<a class="headerlink" href="#known-issues" title="Permalink to this heading"></a></h2>
+</section>
+<section id="known-issues">
+<h2>Known Issues<a class="headerlink" href="#known-issues" title="Link to this heading"></a></h2>
 <p>There are several known issues with the current BRiCk semantics; we are working to support these.</p>
 <ul class="simple">
 <li><p>BRiCk semantics does not currently support flexible array members. These are not officially supported by the standard but are frequently used in C++ programs.</p></li>
 </ul>
-</div>
-<div class="section" id="extensions-to-the-standard">
-<h2>Extensions to the Standard<a class="headerlink" href="#extensions-to-the-standard" title="Permalink to this heading"></a></h2>
+</section>
+<section id="extensions-to-the-standard">
+<h2>Extensions to the Standard<a class="headerlink" href="#extensions-to-the-standard" title="Link to this heading"></a></h2>
 <p>BRiCk also extends the C++ standard in limited ways to make low-level program verification possible.
 For example, inter-operation with assembly (see <a class="reference internal" href="machine.html#machine-interop"><span class="std std-ref">Assembly Interoperation</span></a>), sharing data across address spaces, etc.
 We believe that our extensions are conservative and characterize the way that low-level programmers rely on compilers to work.</p>
-<dl class="footnote brackets">
-<dt class="label" id="weak-mem"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
-<dd><p>We plan to support weak memory C++ in the future based on other work in Iris.</p>
-</dd>
-</dl>
-</div>
-</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="weak-mem" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>We plan to support weak memory C++ in the future based on other work in Iris.</p>
+</aside>
+</aside>
+</section>
+</section>
 
 
            </div>

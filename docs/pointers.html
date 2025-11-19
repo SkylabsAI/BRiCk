@@ -1,25 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pointers and pointer provenance &mdash; SkyLabs BRiCk alpha documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
-      <link rel="stylesheet" type="text/css" href="_static/alectryon.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/justify.css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/alectryon.css?v=3179997d" />
+      <link rel="stylesheet" type="text/css" href="_static/css/justify.css?v=94af2184" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/alectryon.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1f169f65"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/alectryon.js?v=749f78b6"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +37,6 @@
           <a href="index.html" class="icon icon-home">
             SkyLabs BRiCk
           </a>
-              <div class="version">
-                0.5.0
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -103,8 +99,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="pointers-and-pointer-provenance">
-<span id="id1"></span><h1>Pointers and pointer provenance<a class="headerlink" href="#pointers-and-pointer-provenance" title="Permalink to this heading"></a></h1>
+  <section id="pointers-and-pointer-provenance">
+<span id="id1"></span><h1>Pointers and pointer provenance<a class="headerlink" href="#pointers-and-pointer-provenance" title="Link to this heading"></a></h1>
 <p>Surprisingly, C++ pointers are not just addresses; here we explain what they are
 in the C++ standard and in BRiCk.</p>
 <p>Two pointers might differ despite <a class="reference external" href="https://eel.is/c++draft/basic.compound#def:represents_the_address">representing the same address</a>, depending
@@ -114,19 +110,19 @@ differently.</p>
 pointers, even when they often have the same address. In particular, since <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">px1</span></span></code> is
 created from a pointer to <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code>, it cannot be used to read or write to <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">y</span></span></code>; this
 is similar to the restriction we show in <a class="reference internal" href="undefined_behavior.html#undefined-behavior"><span class="std std-ref">Undefined behavior and optimizations</span></a>.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
-  <span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="o">*</span><span class="n">px</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">x</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="o">*</span><span class="n">py</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">y</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="o">*</span><span class="n">px1</span> <span class="o">=</span> <span class="n">px</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="c1">//...</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">foo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">px</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">x</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">py</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">px1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">px</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">//...</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>More generally, a pointer identifies the “object” to which it points, and pointer
 arithmetic is only allowed to produce pointers to unrelated objects in limited circumstances.</p>
-<div class="section" id="objects-in-the-c-standard">
-<h2>Objects in the C++ standard<a class="headerlink" href="#objects-in-the-c-standard" title="Permalink to this heading"></a></h2>
+<section id="objects-in-the-c-standard">
+<h2>Objects in the C++ standard<a class="headerlink" href="#objects-in-the-c-standard" title="Link to this heading"></a></h2>
 <p>Unlike in traditional object-oriented programming jargon,
 in the C++ and C standards the word “object” means an instance of some
 type (not necessarily a class type). Objects include variables and what
@@ -148,18 +144,18 @@ another object e of type “array of N unsigned char” or of type “array of N
 std​::​byte” ([cstddef.syn]), that array <em>provides storage</em> for the created
 object if: […]</p>
 </div></blockquote>
-<div class="section" id="objects-and-values">
-<h3>Objects and values<a class="headerlink" href="#objects-and-values" title="Permalink to this heading"></a></h3>
+<section id="objects-and-values">
+<h3>Objects and values<a class="headerlink" href="#objects-and-values" title="Link to this heading"></a></h3>
 <p>The C++ standard also talks about <a class="reference external" href="https://eel.is/c++draft/basic.types.general#def:value">values</a>, at least for
 primitive objects; during its lifetime, an object of primitive type stores a
-primitive value<a class="footnote-reference brackets" href="#objects-have-values" id="id3">1</a>.
+primitive value<a class="footnote-reference brackets" href="#objects-have-values" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.
 The BRiCk semantics contains a type <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">val</span></span></code> of primitive values.</p>
-</div>
-</div>
-<div class="section" id="pointers-pointer-values-and-objects">
-<h2>Pointers, pointer values and objects<a class="headerlink" href="#pointers-pointer-values-and-objects" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="pointers-pointer-values-and-objects">
+<h2>Pointers, pointer values and objects<a class="headerlink" href="#pointers-pointer-values-and-objects" title="Link to this heading"></a></h2>
 <p>BRiCk introduces an abstract type <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">ptr</span></span></code> of <em>pointer values</em>, which models
-the analogous concept in the standard<a class="footnote-reference brackets" href="#std-ptr-values" id="id4">2</a>. BRiCk uses pointer
+the analogous concept in the standard<a class="footnote-reference brackets" href="#std-ptr-values" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>. BRiCk uses pointer
 values to identify objects: each object has an associated pointer value, but a
 pointer value might not point to an object. Specifically:</p>
 <ul class="simple">
@@ -172,15 +168,15 @@ might not point to an actual object.</p></li>
 <p>For instance, in the following program, at line 3, we can say that the pointer
 value <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x_ptr</span></span></code> points to an integer object with value <code class="code highlight coq docutils literal notranslate"><span class="mi"><span class="pre">42</span></span></code>. Note that the name
 of the variable used for the pointer is not important.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="lineno">1 </span><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
-<span class="lineno">2 </span>  <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
-<span class="lineno">3 </span><span class="hll">  <span class="c1">// `x_ptr |-&gt; intR 42 1`</span>
-</span><span class="lineno">4 </span>  <span class="k">return</span> <span class="n">x</span><span class="p">;</span>
-<span class="lineno">5 </span><span class="p">}</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kt">void</span><span class="w"> </span><span class="nf">foo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="linenos">2</span><span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+<span class="hll"><span class="linenos">3</span><span class="w">  </span><span class="c1">// `x_ptr |-&gt; intR 42 1`</span>
+</span><span class="linenos">4</span><span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="linenos">5</span><span class="p">}</span>
 </pre></div>
 </div>
-<div class="section" id="project-pointers-and-optional-addresses">
-<h3>BRiCk pointers and optional addresses<a class="headerlink" href="#project-pointers-and-optional-addresses" title="Permalink to this heading"></a></h3>
+<section id="project-pointers-and-optional-addresses">
+<h3>BRiCk pointers and optional addresses<a class="headerlink" href="#project-pointers-and-optional-addresses" title="Link to this heading"></a></h3>
 <p>Pointers always contain an address, but BRiCk pointer values need not. In our
 last example, <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code> might live in a register or be removed altogether by
 optimizations. But since BRiCk pointer values need not have an address, we can
@@ -190,22 +186,22 @@ virtual address of a pointer.</p>
 <div class="highlight-coq notranslate"><div class="highlight"><pre><span></span><span class="kn">Parameter</span> <span class="n">ptr_vaddr</span> <span class="o">:</span> <span class="n">ptr</span> <span class="o">-&gt;</span> <span class="n">option</span> <span class="n">vaddr</span><span class="o">.</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="pointer-provenance-in-project">
-<h2>Pointer provenance in BRiCk<a class="headerlink" href="#pointer-provenance-in-project" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="pointer-provenance-in-project">
+<h2>Pointer provenance in BRiCk<a class="headerlink" href="#pointer-provenance-in-project" title="Link to this heading"></a></h2>
 <p>Each (valid) pointer value must contain an allocation ID. This ID identifies the complete
 object that the pointer refers to; similar concepts are common in modern
 formalizations of pointers, from <a class="reference external" href="https://hal.inria.fr/hal-00703441/document">CompCert</a> onwards.</p>
 <p>Notably, a single call to <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">malloc</span></code> might allocate storage for multiple objects:
-each such object will have a distinct allocation ID<a class="footnote-reference brackets" href="#invalid-ptr-no-alloc-id" id="id5">3</a>.</p>
+each such object will have a distinct allocation ID<a class="footnote-reference brackets" href="#invalid-ptr-no-alloc-id" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.</p>
 <div class="highlight-coq notranslate"><div class="highlight"><pre><span></span><span class="kn">Parameter</span> <span class="n">ptr_alloc_id</span> <span class="o">:</span> <span class="n">ptr</span> <span class="o">-&gt;</span> <span class="n">option</span> <span class="n">alloc_id</span><span class="o">.</span>
 </pre></div>
 </div>
 <p>Importantly, the ID of a complete object differs from the ID of any character
 array that provides storage to the object.</p>
-<div class="section" id="pointers-and-subobjects-in-project">
-<span id="pointers-and-pointer-provenance-provenance-subobjects"></span><h3>Pointers and subobjects in BRiCk<a class="headerlink" href="#pointers-and-subobjects-in-project" title="Permalink to this heading"></a></h3>
+<section id="pointers-and-subobjects-in-project">
+<span id="pointers-and-pointer-provenance-provenance-subobjects"></span><h3>Pointers and subobjects in BRiCk<a class="headerlink" href="#pointers-and-subobjects-in-project" title="Link to this heading"></a></h3>
 <p>A pointer identifies a “path” inside the complete object, where each
 step goes to a subobject; this is less common, but follows both Krebbers (2015)
 for C and Ramananandro for C++. For instance:</p>
@@ -238,9 +234,9 @@ axioms allow us to collapse adjacent offsets, such as consecutive <a class="refe
 </pre></div>
 </div>
 <p>This is formalized in Coq in <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html">bluerock.lang.cpp.semantics.ptrs</a>.</p>
-</div>
-<div class="section" id="integer-pointer-casts">
-<h3>Integer-pointer casts<a class="headerlink" href="#integer-pointer-casts" title="Permalink to this heading"></a></h3>
+</section>
+<section id="integer-pointer-casts">
+<h3>Integer-pointer casts<a class="headerlink" href="#integer-pointer-casts" title="Link to this heading"></a></h3>
 <p>Beyond what is provided by the C++ standard, we assume useful semantics for
 integer-to-pointer casts, in particular, the PNVI-ae-udi model by the Cerberus
 project (as in the <a class="reference external" href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2577.pdf">N2577 paper from the C standard committee</a>).
@@ -263,10 +259,10 @@ rules as above, so it can produce a pointer with any exposed allocation IDs.</p>
 <p>In all cases, we assume the C++ abstract machine follows an extension of the
 PNVI-ae-udi model; in particular, the provenance remains ambiguous until such a point
 that all provenances except for one can be shown to produce undefined behavior.</p>
-</div>
-</div>
-<div class="section" id="assumptions-beyond-the-standard">
-<span id="no-pointer-zapping"></span><h2>Assumptions beyond the standard<a class="headerlink" href="#assumptions-beyond-the-standard" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="assumptions-beyond-the-standard">
+<span id="no-pointer-zapping"></span><h2>Assumptions beyond the standard<a class="headerlink" href="#assumptions-beyond-the-standard" title="Link to this heading"></a></h2>
 <p>As our goal is verifying low-level systems software, we make
 assumptions on our compilers, here and elsewhere:</p>
 <ul class="simple">
@@ -277,15 +273,16 @@ restrict operations on them (in particular equality comparisons). See
 <li><p>Support for effective types is also incomplete; similarly to Cerberus,
 we still assume users use options such as GCC/Clang’s <code class="code highlight coq docutils literal notranslate"><span class="o"><span class="pre">-</span></span><span class="n"><span class="pre">fno</span></span><span class="o"><span class="pre">-</span></span><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">-</span></span><span class="n"><span class="pre">aliasing</span></span></code>.</p></li>
 </ul>
-</div>
-<div class="section" id="further-readings">
-<h2>Further readings<a class="headerlink" href="#further-readings" title="Permalink to this heading"></a></h2>
+</section>
+<section id="further-readings">
+<h2>Further readings<a class="headerlink" href="#further-readings" title="Link to this heading"></a></h2>
 <p>For a crash course on formal models of pointers, consider also
 <a class="reference external" href="https://www.ralfj.de/blog/2018/07/24/pointers-and-bytes.html">this blog post by Ralf Jung</a>.</p>
 <p class="rubric">Footnotes</p>
-<dl class="footnote brackets">
-<dt class="label" id="objects-have-values"><span class="brackets"><a class="fn-backref" href="#id3">1</a></span></dt>
-<dd><p>This appears to follow from <a class="reference external" href="https://eel.is/c++draft/basic.life#4">intro.object#1
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="objects-have-values" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">1</a><span class="fn-bracket">]</span></span>
+<p>This appears to follow from <a class="reference external" href="https://eel.is/c++draft/basic.life#4">intro.object#1
 &lt;https://eel.is/c++draft/intro.object#1&gt;_,
 `basic.life#4</a> and
 <a class="reference external" href="https://eel.is/c++draft/basic.types.general#def:value">basic.types.general#def:value</a>.
@@ -293,16 +290,18 @@ In particular, <a class="reference external" href="https://eel.is/c++draft/basic
 outside their lifetime even in surprising scenarios; e.g. placement new over
 initialized memory is allowed to discard the initialization, even when the
 constructor is a no-op.</p>
-</dd>
-<dt class="label" id="std-ptr-values"><span class="brackets"><a class="fn-backref" href="#id4">2</a></span></dt>
-<dd><p>“Values of pointer type” are discussed in <a class="reference external" href="https://eel.is/c++draft/basic.compound#3">basic.compound#3</a>.</p>
-</dd>
-<dt class="label" id="invalid-ptr-no-alloc-id"><span class="brackets"><a class="fn-backref" href="#id5">3</a></span></dt>
-<dd><p>The reason that this function is partial is because invalid pointers do not contain allocation IDs.</p>
-</dd>
-</dl>
-</div>
-</div>
+</aside>
+<aside class="footnote brackets" id="std-ptr-values" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">2</a><span class="fn-bracket">]</span></span>
+<p>“Values of pointer type” are discussed in <a class="reference external" href="https://eel.is/c++draft/basic.compound#3">basic.compound#3</a>.</p>
+</aside>
+<aside class="footnote brackets" id="invalid-ptr-no-alloc-id" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id5">3</a><span class="fn-bracket">]</span></span>
+<p>The reason that this function is partial is because invalid pointers do not contain allocation IDs.</p>
+</aside>
+</aside>
+</section>
+</section>
 
 
            </div>

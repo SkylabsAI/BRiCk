@@ -1,25 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Undefined behavior and optimizations &mdash; SkyLabs BRiCk alpha documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
-      <link rel="stylesheet" type="text/css" href="_static/alectryon.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/justify.css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/alectryon.css?v=3179997d" />
+      <link rel="stylesheet" type="text/css" href="_static/css/justify.css?v=94af2184" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/alectryon.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1f169f65"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/alectryon.js?v=749f78b6"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +37,6 @@
           <a href="index.html" class="icon icon-home">
             SkyLabs BRiCk
           </a>
-              <div class="version">
-                0.5.0
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -89,8 +85,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="undefined-behavior-and-optimizations">
-<span id="undefined-behavior"></span><h1>Undefined behavior and optimizations<a class="headerlink" href="#undefined-behavior-and-optimizations" title="Permalink to this heading"></a></h1>
+  <section id="undefined-behavior-and-optimizations">
+<span id="undefined-behavior"></span><h1>Undefined behavior and optimizations<a class="headerlink" href="#undefined-behavior-and-optimizations" title="Link to this heading"></a></h1>
 <p>C++ programmers want compilers to produce fast code without exploiting undefined
 behavior. But that is impossible, so (optimizing) compilers opt to produce fast
 code instead. Hence, to formally verify C++ programs are correct, we must prevent
@@ -99,23 +95,23 @@ programs from having UB.</p>
 UB is necessary even for obvious optimizations. You are welcome to skip this
 page, but it will give intuition for other content in this guide.</p>
 <p>We assume you are familiar with programming in C++.</p>
-<div class="section" id="a-minimal-example">
-<h2>A minimal example<a class="headerlink" href="#a-minimal-example" title="Permalink to this heading"></a></h2>
+<section id="a-minimal-example">
+<h2>A minimal example<a class="headerlink" href="#a-minimal-example" title="Link to this heading"></a></h2>
 <p>We show undefined behavior on an example. For clarity, we pick a small example.
 This example might seem artificial, but it shows issues that affect real
 programs.</p>
 <p>In the snippet below, the function <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">foo</span></span></code> seems equivalent to
-<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">foo_opt</span></span></code><a class="footnote-reference brackets" href="#provenance-example" id="id1">1</a>, but the latter can avoid re-reading <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code> from
+<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">foo_opt</span></span></code><a class="footnote-reference brackets" href="#provenance-example" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, but the latter can avoid re-reading <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code> from
 memory, so we expect optimizers to transform the former into the latter.</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="p">{</span>
-  <span class="kt">long</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
-  <span class="n">bar</span><span class="p">();</span>
-  <span class="k">return</span> <span class="n">x</span><span class="p">;</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">foo</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">long</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">  </span><span class="n">bar</span><span class="p">();</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="kt">int</span> <span class="nf">foo_opt</span><span class="p">()</span> <span class="p">{</span>
-  <span class="n">bar</span><span class="p">();</span>
-  <span class="k">return</span> <span class="mi">5</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">foo_opt</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">bar</span><span class="p">();</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -123,14 +119,14 @@ memory, so we expect optimizers to transform the former into the latter.</p>
 defined by the C++ standard, and compilers indeed perform it.</p>
 <p>However, that optimization changes the program behavior if <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">bar</span></span><span class="bp"><span class="pre">()</span></span></code> looks like
 the following strange example:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">bar</span><span class="p">()</span> <span class="p">{</span>
-  <span class="kt">long</span> <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="kt">long</span><span class="o">*</span> <span class="n">px</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">y</span> <span class="o">+</span> <span class="mi">5</span><span class="p">;</span> <span class="c1">// &quot;5&quot; is platform-specific</span>
-  <span class="o">*</span><span class="n">px</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">bar</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">long</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">long</span><span class="o">*</span><span class="w"> </span><span class="n">px</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="c1">// &quot;5&quot; is platform-specific</span>
+<span class="w">  </span><span class="o">*</span><span class="n">px</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>On our test platform<a class="footnote-reference brackets" href="#godbolt-example" id="id2">2</a>, <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">px</span></span></code> will contain the address of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code>,
+<p>On our test platform<a class="footnote-reference brackets" href="#godbolt-example" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">px</span></span></code> will contain the address of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code>,
 so without optimizations <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">foo</span></span><span class="bp"><span class="pre">()</span></span></code> will return <code class="code highlight coq docutils literal notranslate"><span class="mi"><span class="pre">4</span></span></code>; but with the optimization
 above, <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">foo</span></span><span class="bp"><span class="pre">()</span></span></code> returns <code class="code highlight coq docutils literal notranslate"><span class="mi"><span class="pre">5</span></span></code>.</p>
 <p>We claimed our optimization preserves program behavior, yet it appears to change
@@ -143,16 +139,18 @@ In particular, <code class="code highlight coq docutils literal notranslate"><sp
 increments it until it has the address of another variable (<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">x</span></span></code>), then writes
 through this pointer.</p>
 <p class="rubric">Footnotes</p>
-<dl class="footnote brackets">
-<dt class="label" id="provenance-example"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
-<dd><p>Based on <a class="reference external" href="https://web.archive.org/web/20210819142604/https://news.ycombinator.com/item?id=27562962">this example</a>.</p>
-</dd>
-<dt class="label" id="godbolt-example"><span class="brackets"><a class="fn-backref" href="#id2">2</a></span></dt>
-<dd><p>At least on a specific compiler, according to <a class="reference external" href="https://godbolt.org/z/8cha4Ebfo">Godbolt</a>.</p>
-</dd>
-</dl>
-</div>
-</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="provenance-example" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Based on <a class="reference external" href="https://web.archive.org/web/20210819142604/https://news.ycombinator.com/item?id=27562962">this example</a>.</p>
+</aside>
+<aside class="footnote brackets" id="godbolt-example" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>At least on a specific compiler, according to <a class="reference external" href="https://godbolt.org/z/8cha4Ebfo">Godbolt</a>.</p>
+</aside>
+</aside>
+</section>
+</section>
 
 
            </div>

@@ -1,25 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Object representation, layout and padding &mdash; SkyLabs BRiCk alpha documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
-      <link rel="stylesheet" type="text/css" href="_static/alectryon.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/justify.css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/alectryon.css?v=3179997d" />
+      <link rel="stylesheet" type="text/css" href="_static/css/justify.css?v=94af2184" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/alectryon.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1f169f65"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/alectryon.js?v=749f78b6"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +37,6 @@
           <a href="index.html" class="icon icon-home">
             SkyLabs BRiCk
           </a>
-              <div class="version">
-                0.5.0
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -124,12 +120,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="object-representation-layout-and-padding">
-<span id="object-layout"></span><h1>Object representation, layout and padding<a class="headerlink" href="#object-representation-layout-and-padding" title="Permalink to this heading"></a></h1>
+  <section id="object-representation-layout-and-padding">
+<span id="object-layout"></span><h1>Object representation, layout and padding<a class="headerlink" href="#object-representation-layout-and-padding" title="Link to this heading"></a></h1>
 <p>This document highlights some tricky aspects around object
 representation, layout and padding in C++ and describes how BRiCk deals with them.</p>
 <p>A basic problem when formalizing C(++) is that there are multiple ways to view the same
-data <a class="footnote-reference brackets" href="#krebbers-thesis-2-5" id="id1">1</a>:</p>
+data <a class="footnote-reference brackets" href="#krebbers-thesis-2-5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>:</p>
 <ul class="simple">
 <li><p>In a <em>high-level</em> way using arrays, structs and unions.</p></li>
 <li><p>In a <em>low-level</em> way using unstructured and untyped byte representations.</p></li>
@@ -142,11 +138,11 @@ but <em>not</em> part of the high-level representation.</p>
 <p>Much of the reasoning described in this section is still experimental and subject to change.
 In practice, many C++ programs do not require this level of reasoning.</p>
 </div>
-<div class="section" id="representing-values">
-<span id="object-layout-values"></span><h2>Representing Values<a class="headerlink" href="#representing-values" title="Permalink to this heading"></a></h2>
+<section id="representing-values">
+<span id="object-layout-values"></span><h2>Representing Values<a class="headerlink" href="#representing-values" title="Link to this heading"></a></h2>
 <p>In the BRiCk separation logic, we choose to immediately materialize all aggregates (i.e. aggregates do not have a Coq-value representation), and address the delayed materialization through the fact that not all pointers (<a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.ptr">ptr</a>) are required to be backed by memory.</p>
-<div class="section" id="representing-values-in-memory">
-<h3>Representing Values in Memory<a class="headerlink" href="#representing-values-in-memory" title="Permalink to this heading"></a></h3>
+<section id="representing-values-in-memory">
+<h3>Representing Values in Memory<a class="headerlink" href="#representing-values-in-memory" title="Link to this heading"></a></h3>
 <p>Given that we materialize all aggregates, we can provide a simple characterization of the different types of Coq values (<a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#VAL_MIXIN.val">val</a>) which model C++ values; all values are one of:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#VAL_MIXIN.Vptr">Vptr</a> - for C++ pointer and reference values</p></li>
@@ -156,10 +152,10 @@ In practice, many C++ programs do not require this level of reasoning.</p>
 </ul>
 <p>This characterization enables us to use a single abstraction to model the in-memory representation of C++ values - called <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#primR">primR</a> <code class="code highlight coq docutils literal notranslate"><span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">type</span></span> <span class="o"><span class="pre">-&gt;</span></span> <span class="n"><span class="pre">Qp</span></span> <span class="o"><span class="pre">-&gt;</span></span> <span class="n"><span class="pre">val</span></span> <span class="o"><span class="pre">-&gt;</span></span> <span class="n"><span class="pre">Rep</span></span></code> - which reflects the fractional ownership (<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Qp</span></span></code>) of some Coq-model <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">val</span></span></code>ue of a given C++ <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">type</span></span></code>.
 <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Rep</span></span> <span class="o"><span class="pre">~=</span></span> <span class="n"><span class="pre">ptr</span></span> <span class="o"><span class="pre">-&gt;</span></span> <span class="n"><span class="pre">mpred</span></span></code> models the location agnostic in-memory representation of some resource, and for any given <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">p</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">ptr</span></span></code> and <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">R</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">Rep</span></span></code>, <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">p</span></span> <span class="o"><span class="pre">|-&gt;</span></span> <span class="n"><span class="pre">R</span></span></code> reflects the materialization of the resource modeled by <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">R</span></span></code> at the logical pointer <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">p</span></span></code>.</p>
-</div>
-</div>
-<div class="section" id="reasoning-about-the-layout-of-an-array-in-memory">
-<span id="object-layout-arrays"></span><h2>Reasoning about the layout of an array in memory<a class="headerlink" href="#reasoning-about-the-layout-of-an-array-in-memory" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="reasoning-about-the-layout-of-an-array-in-memory">
+<span id="object-layout-arrays"></span><h2>Reasoning about the layout of an array in memory<a class="headerlink" href="#reasoning-about-the-layout-of-an-array-in-memory" title="Link to this heading"></a></h2>
 <p>The C++ standard defines the <a class="reference external" href="http://eel.is/c++draft/dcl.array#6">layout of arrays</a> as
 follows:</p>
 <blockquote class="pull-quote">
@@ -167,33 +163,33 @@ follows:</p>
 subobjects of type U, known as the elements of the array, and numbered 0 to N-1.</p>
 </div></blockquote>
 <p>This means that there is no padding between elements of an array.</p>
-<div class="section" id="how-is-this-reflected-in-project">
-<h3>How is this reflected in BRiCk?<a class="headerlink" href="#how-is-this-reflected-in-project" title="Permalink to this heading"></a></h3>
+<section id="how-is-this-reflected-in-project">
+<h3>How is this reflected in BRiCk?<a class="headerlink" href="#how-is-this-reflected-in-project" title="Link to this heading"></a></h3>
 <p>The <code class="code highlight coq docutils literal notranslate"><span class="kn"><span class="pre">Axiom</span></span></code> <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.eval_o_sub">eval_o_sub</a> is defined to compute the the numerical
 offset needed to subscript into an array based on the size of the underlying type and the index which
 is being used for the subscript. Furthermore, none of the definitions and the related theories of
 arrays contained within <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.arr.html">bluerock.lang.cpp.logic.arr</a> mention padding in any capacity.</p>
-</div>
-</div>
-<div class="section" id="reasoning-about-the-layout-of-a-struct-in-memory">
-<span id="object-layout-structs"></span><h2>Reasoning about the layout of a struct in memory<a class="headerlink" href="#reasoning-about-the-layout-of-a-struct-in-memory" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="reasoning-about-the-layout-of-a-struct-in-memory">
+<span id="object-layout-structs"></span><h2>Reasoning about the layout of a struct in memory<a class="headerlink" href="#reasoning-about-the-layout-of-a-struct-in-memory" title="Link to this heading"></a></h2>
 <p>Reasoning about the layout of an object in memory is often required when interacting with drivers.
 For example, consider the following code:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span> <span class="o">*</span><span class="n">dma_address</span> <span class="o">=</span> <span class="p">...;</span>
-<span class="k">struct</span> <span class="n">dma_struct</span> <span class="p">{</span>
-  <span class="n">uint64</span> <span class="n">a</span><span class="p">;</span>
-  <span class="n">uint64</span> <span class="n">b</span><span class="p">;</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">dma_address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">dma_struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">uint64</span><span class="w"> </span><span class="n">a</span><span class="p">;</span>
+<span class="w">  </span><span class="n">uint64</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="kt">void</span> <span class="nf">do_dma</span><span class="p">()</span> <span class="p">{</span>
-  <span class="k">struct</span> <span class="n">dma_struct</span> <span class="o">*</span><span class="n">ptr</span> <span class="o">=</span> <span class="n">dma_address</span><span class="p">;</span>
-  <span class="c1">// This example ignores many concerns including:</span>
-  <span class="c1">// - UB via data-races</span>
-  <span class="c1">// - the compiler reordering writes</span>
-  <span class="c1">// - endianness</span>
-  <span class="c1">// - alignment</span>
-  <span class="n">ptr</span><span class="o">-&gt;</span><span class="n">a</span> <span class="o">=</span> <span class="p">...;</span> <span class="c1">// (1) This write must go to dma_address + 0</span>
-  <span class="n">ptr</span><span class="o">-&gt;</span><span class="n">b</span> <span class="o">=</span> <span class="p">...;</span> <span class="c1">// (2) This write must go to dma_address + 8</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">do_dma</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">struct</span><span class="w"> </span><span class="nc">dma_struct</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dma_address</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// This example ignores many concerns including:</span>
+<span class="w">  </span><span class="c1">// - UB via data-races</span>
+<span class="w">  </span><span class="c1">// - the compiler reordering writes</span>
+<span class="w">  </span><span class="c1">// - endianness</span>
+<span class="w">  </span><span class="c1">// - alignment</span>
+<span class="w">  </span><span class="n">ptr</span><span class="o">-&gt;</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span><span class="w"> </span><span class="c1">// (1) This write must go to dma_address + 0</span>
+<span class="w">  </span><span class="n">ptr</span><span class="o">-&gt;</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...;</span><span class="w"> </span><span class="c1">// (2) This write must go to dma_address + 8</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -218,7 +214,7 @@ achieve appropriate alignment. — end note]</p>
 <p>Thus, the C++ standard guarantees that the write on line <code class="code highlight coq docutils literal notranslate"><span class="o"><span class="pre">(</span></span><span class="mi"><span class="pre">1</span></span><span class="o"><span class="pre">)</span></span></code> goes to  <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">dma_address</span></span> <span class="o"><span class="pre">+</span></span> <span class="mi"><span class="pre">0</span></span></code>,
 but on its own it does not guarantee the exclusion of padding between <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">a</span></span></code> and <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">b</span></span></code>.
 However, more concrete guarantees are given by the platform ABI and we rely on those for
-the particular architectures which we support. For example, the ARM ABI <a class="footnote-reference brackets" href="#abi-arm" id="id2">2</a>
+the particular architectures which we support. For example, the ARM ABI <a class="footnote-reference brackets" href="#abi-arm" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
 guarantees that:</p>
 <blockquote class="pull-quote">
 <div><ul class="simple">
@@ -232,8 +228,8 @@ sufficient to hold all of its members when they are laid out according to these 
 <p>We also make an <strong>additional assumption</strong>: For <a class="reference internal" href="#object-layout-concepts-pod"><span class="std std-ref">Plain Old Data (POD)</span></a>,
 compilers only insert padding between fields if it is necessary to achieve alignment.</p>
 </div>
-<div class="section" id="id3">
-<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<section id="id3">
+<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
 <p>The address offset of a <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.offset">offset</a> is determined by <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.eval_offset">eval_offset</a>.
 BRiCk currently supports reasoning about the layout of (a limited number of) aggregates by embedding the layout information from the Clang front-end into the BRiCk abstract syntax tree (see <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.syntax.translation_unit.html#Struct">Struct</a> and <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.syntax.translation_unit.html#Union">Union</a>).</p>
 <p>In particular, <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#struct_def">struct_def</a> uses the information from the Clang front-end to enumerate the properly-<a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.offset">offset</a> bases and fields of a given struct.
@@ -245,10 +241,10 @@ Furthermore, <a class="reference external" href="_static/coqdoc/bluerock.lang.cp
 <p>We believe that a good, platform independent way to reason about layout information is to use a combination of <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">static_assert</span></code> and <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">offsetof</span></code>.
 BRiCk does not currently support this level of reasoning about <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">offsetof</span></code>, but it is likely to be added in the future by connecting <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.eval_offset">eval_offset</a> to the semantics of <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">offsetof</span></code>.</p>
 </div>
-</div>
-</div>
-<div class="section" id="reasoning-about-the-layout-of-a-union-in-memory">
-<span id="object-layout-unions"></span><h2>Reasoning about the layout of a union in memory<a class="headerlink" href="#reasoning-about-the-layout-of-a-union-in-memory" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="reasoning-about-the-layout-of-a-union-in-memory">
+<span id="object-layout-unions"></span><h2>Reasoning about the layout of a union in memory<a class="headerlink" href="#reasoning-about-the-layout-of-a-union-in-memory" title="Link to this heading"></a></h2>
 <p>The C++ standard defines the <a class="reference external" href="http://eel.is/c++draft/class.union#3">layout of unions</a> as follows:</p>
 <blockquote class="pull-quote">
 <div><p>The size of a union is sufficient to contain the largest of its
@@ -265,8 +261,8 @@ end note]</p>
 pointer can safely be used to access all of them. In particular, accessing
 a member which is not the <strong>active</strong> member of a union is UB.</p>
 </div>
-<div class="section" id="id4">
-<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<section id="id4">
+<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
 <p>The virtual address offset of a <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.offset">offset</a> is determined by <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.eval_offset">eval_offset</a>.
 BRiCk currently supports reasoning about the layout of (a limited number of) aggregates by embedding the layout information from the Clang front-end into the BRiCk abstract syntax tree (see <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.syntax.translation_unit.html#Struct">Struct</a> and <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.syntax.translation_unit.html#Union">Union</a>).</p>
 <p>In particular, <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#union_def">union_def</a> uses the information from the Clang front-end to provide a disjunction of all of the properly-<a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS.offset">offset</a> fields of a given union.
@@ -279,10 +275,10 @@ Furthermore, <a class="reference external" href="_static/coqdoc/bluerock.lang.cp
 <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#union_def">union_def</a> uses <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.ptrs.html#PTRS_MIXIN._field">_field</a> which itself uses <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.types.html#offset_of">offset_of</a>; <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.types.html#offset_of">offset_of</a> uses opaque offset information from the translation unit.</p>
 <p>If provers require this level of reasoning in the future we could provide additional assumptions regarding the offset information contained within a given translation unit.</p>
 </div>
-</div>
-</div>
-<div class="section" id="implicit-destruction">
-<span id="object-layout-implicit-destruction"></span><h2>Implicit Destruction<a class="headerlink" href="#implicit-destruction" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+<section id="implicit-destruction">
+<span id="object-layout-implicit-destruction"></span><h2>Implicit Destruction<a class="headerlink" href="#implicit-destruction" title="Link to this heading"></a></h2>
 <p>A <a class="reference internal" href="#object-layout-concepts-trivially-destructible"><span class="std std-ref">Trivially Destructible Object</span></a> supports <strong>Implicit Destruction</strong> - in which the compiler reclaims the underlying storage of the object <em>without</em> running any code.
 The following axioms reflect the current support for <strong>Implicit Destruction</strong> in BRiCk; please refer to <a class="reference internal" href="#object-layout-axiomatized-object-model"><span class="std std-ref">this section</span></a> for more details regarding our axiomatization of the C++ memory model:</p>
 <ul class="simple">
@@ -306,12 +302,12 @@ The following axioms reflect the current support for <strong>Implicit Destructio
 <p class="admonition-title">Note</p>
 <p>We do not axiomatize <strong>Implicit Destruction</strong> for arrays of <a class="reference internal" href="#object-layout-concepts-trivially-destructible"><span class="std std-ref">Trivially Destructible Objects</span></a> because we have yet to encounter a use case for it in our code-base.</p>
 </div>
-</div>
-<div class="section" id="axiomatizing-c-s-object-model">
-<span id="object-layout-axiomatized-object-model"></span><h2>Axiomatizing C++’s Object Model<a class="headerlink" href="#axiomatizing-c-s-object-model" title="Permalink to this heading"></a></h2>
+</section>
+<section id="axiomatizing-c-s-object-model">
+<span id="object-layout-axiomatized-object-model"></span><h2>Axiomatizing C++’s Object Model<a class="headerlink" href="#axiomatizing-c-s-object-model" title="Link to this heading"></a></h2>
 <p>While the BRiCk axiomatization of C++’s object model is an ongoing research and development problem - with regards to weak memory and multi C++ Abstract Machine interaction, to name a few examples - there are some important characteristics which are relatively stable.</p>
-<div class="section" id="working-with-the-high-level-representation-of-objects">
-<span id="object-layout-axiomatized-object-model-high-level"></span><h3>Working with the high-level representation of objects<a class="headerlink" href="#working-with-the-high-level-representation-of-objects" title="Permalink to this heading"></a></h3>
+<section id="working-with-the-high-level-representation-of-objects">
+<span id="object-layout-axiomatized-object-model-high-level"></span><h3>Working with the high-level representation of objects<a class="headerlink" href="#working-with-the-high-level-representation-of-objects" title="Link to this heading"></a></h3>
 <p>C++ programmers are usually concerned with (live) C++ objects rather than the memory in which they are resident.
 To wit, our specifications speak in terms of high-level C++ objects such as <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#primR">primR</a>.
 Variable declarations (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.stmt.html#wp_decl_var">wp_decl_var</a>) similarly yield high-level C++ objects (which our axiomatization directly reclaims when they go out of scope).</p>
@@ -319,8 +315,8 @@ Variable declarations (c.f. <a class="reference external" href="_static/coqdoc/b
 Implementers of custom allocators will also need a way to reason about chunks of memory in which there are no resident (live) C++ objects.
 Therefore we define <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#blockR">blockR</a> (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#blockR_def">blockR_def</a>) and axiomatize <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.pred.html#provides_storage">provides_storage</a>.
 This enables us to talk about (untyped) memory which is managed by the C++ Abstract Machine <strong>and</strong> to relate high-level C++ objects to the memory which backs them when necessary, respectively.</p>
-<div class="section" id="reasoning-about-physical-memory-with-blockr-and-tblockr">
-<span id="object-layout-axiomatized-object-model-high-level-blockr"></span><h4>Reasoning about physical memory with <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">blockR</span></span></code> and <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">tblockR</span></span></code><a class="headerlink" href="#reasoning-about-physical-memory-with-blockr-and-tblockr" title="Permalink to this heading"></a></h4>
+<section id="reasoning-about-physical-memory-with-blockr-and-tblockr">
+<span id="object-layout-axiomatized-object-model-high-level-blockr"></span><h4>Reasoning about physical memory with <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">blockR</span></span></code> and <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">tblockR</span></span></code><a class="headerlink" href="#reasoning-about-physical-memory-with-blockr-and-tblockr" title="Link to this heading"></a></h4>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p><a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#blockR_def">blockR_def</a> speaks in terms of <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#anyR">anyR</a> which itself relates to <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#primR">primR</a> and <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#uninitR">uninitR</a> (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#primR_anyR">primR_anyR</a>and <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.heap_pred.html#uninitR_anyR">uninitR_anyR</a>).
@@ -329,47 +325,47 @@ While <code class="code highlight coq docutils literal notranslate"><span class=
 <p><code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">blockR</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">sz</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">N</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">q</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">Qp</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">Rep</span></span></code> is a definition which represents fractional ownership (<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Qp</span></span></code>) of a contiguous chunk of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">sz</span></span></code> bytes - where each byte is either uninitialized or initialized to contain some concrete value of type <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">char</span></span></code>.
 <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">tblockR</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">ty</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">q</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">Qp</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">Rep</span></span></code> is a definition which represents fractional ownership (<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Qp</span></span></code>) of a contiguous chunk of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">size_of</span></span> <span class="n"><span class="pre">ty</span></span></code> bytes (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.types.html#size_of">size_of</a>) - where each byte is either uninitialized or initialized to contain some concrete value of type <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">char</span></span></code>, and where the first byte respects <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">align_of</span></span> <span class="n"><span class="pre">ty</span></span></code> (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.types.html#align_of">align_of</a>).
 Numerous axioms and definitions within <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.html">bluerock.lang.cpp.logic</a> make use of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">blockR</span></span></code> and <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">tblockR</span></span></code> in order to reflect the transfer of physical memory between the C++ Abstract Machine and the executing code (although most of this is hidden from verifiers).</p>
-</div>
-<div class="section" id="relating-physical-memory-to-the-high-level-object-which-it-provides-storage-for">
-<span id="object-layout-axiomatized-object-model-high-level-provides-storage"></span><h4>Relating physical memory to the high-level object which it <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">provides_storage</span></span></code> for<a class="headerlink" href="#relating-physical-memory-to-the-high-level-object-which-it-provides-storage-for" title="Permalink to this heading"></a></h4>
+</section>
+<section id="relating-physical-memory-to-the-high-level-object-which-it-provides-storage-for">
+<span id="object-layout-axiomatized-object-model-high-level-provides-storage"></span><h4>Relating physical memory to the high-level object which it <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">provides_storage</span></span></code> for<a class="headerlink" href="#relating-physical-memory-to-the-high-level-object-which-it-provides-storage-for" title="Link to this heading"></a></h4>
 <p>One place in which verifiers <em>are</em> exposed to the <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">blockR</span></span></code>/<code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">tblockR</span></span></code> definitions is when proving the correctness of custom (de)allocation functions.
 In particular, reasoning about C++ dynamic memory management - as axiomatized within <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.new_delete.html">bluerock.lang.cpp.logic.new_delete</a> - requires the explicit tracking of the high-level C++ object which was created <em>as well as</em> the physical memory which <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.pred.html#provides_storage">provides_storage</a> for the high-level C++ object.</p>
 <p>When it is used (c.f. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.new_delete.html#wp_prval_new">wp_prval_new</a>), <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">provides_storage</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">storage</span></span> <span class="n"><span class="pre">object</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">ptr</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">(</span></span><span class="n"><span class="pre">storage_type</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">)</span></span> <span class="o"><span class="pre">:</span></span> <span class="n"><span class="pre">mpred</span></span></code> relates the physical memory associated with the logical <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">storage</span></span></code> pointer to the high-level C++ object associated with the logical <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">object</span></span></code> pointer (and of type <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">storage_type</span></span></code>).
 This decoupling enables useful high-level reasoning for verifiers after allocation <em>while also</em> enabling the sound reclamation of that high-level object and the physical memory in which it resides.</p>
-</div>
-</div>
-<div class="section" id="working-with-the-low-level-representation-of-objects">
-<span id="object-layout-axiomatized-object-model-low-level"></span><h3>Working with the low-level representation of objects<a class="headerlink" href="#working-with-the-low-level-representation-of-objects" title="Permalink to this heading"></a></h3>
+</section>
+</section>
+<section id="working-with-the-low-level-representation-of-objects">
+<span id="object-layout-axiomatized-object-model-low-level"></span><h3>Working with the low-level representation of objects<a class="headerlink" href="#working-with-the-low-level-representation-of-objects" title="Link to this heading"></a></h3>
 <p>Consider the following code that does not exhibit undefined behavior (which can be checked using <a class="reference external" href="https://www.cl.cam.ac.uk/~pes20/cerberus/">Cerberus</a>):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="cpf">&lt;stddef.h&gt;</span><span class="cp"></span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="cpf">&lt;stddef.h&gt;</span>
 
-<span class="k">struct</span> <span class="n">S</span> <span class="p">{</span>
-  <span class="kt">short</span> <span class="n">a</span><span class="p">;</span>
-  <span class="c1">// The compiler must insert padding here to satisfy the alignment requirement of b</span>
-  <span class="kt">int</span> <span class="n">b</span><span class="p">;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">S</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">short</span><span class="w"> </span><span class="n">a</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// The compiler must insert padding here to satisfy the alignment requirement of b</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="kt">void</span> <span class="nf">custom_memcpy</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dest</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">src</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
-   <span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">d</span> <span class="o">=</span> <span class="n">dest</span><span class="p">,</span> <span class="o">*</span><span class="n">s</span> <span class="o">=</span> <span class="n">src</span><span class="p">;</span>
-   <span class="k">for</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
-     <span class="o">*</span><span class="n">d</span> <span class="o">=</span> <span class="o">*</span><span class="n">s</span><span class="p">;</span>
-     <span class="n">d</span><span class="o">++</span><span class="p">;</span> <span class="n">s</span><span class="o">++</span><span class="p">;</span>
-   <span class="p">}</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">custom_memcpy</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">src</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dest</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">src</span><span class="p">;</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">     </span><span class="o">*</span><span class="n">d</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">;</span>
+<span class="w">     </span><span class="n">d</span><span class="o">++</span><span class="p">;</span><span class="w"> </span><span class="n">s</span><span class="o">++</span><span class="p">;</span>
+<span class="w">   </span><span class="p">}</span>
 <span class="p">}</span>
 
-<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-  <span class="k">struct</span> <span class="n">S</span> <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">;</span>
-  <span class="n">s1</span><span class="p">.</span><span class="n">a</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">s1</span><span class="p">.</span><span class="n">b</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span> <span class="c1">// Create an object using its high-level representation</span>
-  <span class="n">custom_memcpy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s2</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">S</span><span class="p">));</span> <span class="c1">// Copy the low-level representation of the object (including padding)</span>
-  <span class="n">assert</span><span class="p">(</span><span class="n">s2</span><span class="p">.</span><span class="n">b</span> <span class="o">==</span> <span class="mi">2</span><span class="p">);</span> <span class="c1">// Access the resulting memory via the high-level representation</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">struct</span><span class="w"> </span><span class="nc">S</span><span class="w"> </span><span class="n">s1</span><span class="p">,</span><span class="w"> </span><span class="n">s2</span><span class="p">;</span>
+<span class="w">  </span><span class="n">s1</span><span class="p">.</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">s1</span><span class="p">.</span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="c1">// Create an object using its high-level representation</span>
+<span class="w">  </span><span class="n">custom_memcpy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">s2</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">s1</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">S</span><span class="p">));</span><span class="w"> </span><span class="c1">// Copy the low-level representation of the object (including padding)</span>
+<span class="w">  </span><span class="n">assert</span><span class="p">(</span><span class="n">s2</span><span class="p">.</span><span class="n">b</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w"> </span><span class="c1">// Access the resulting memory via the high-level representation</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 <p>This code is interesting because it accesses both the high-level representation and low-level representation of an object.
-In particular, there are parts of memory that are not accessible via the high-level representation (the padding of <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">struct</span> <span class="n">S</span></code>), but that are accessible via the low-level representation.</p>
-</div>
-<div class="section" id="id5">
-<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
+In particular, there are parts of memory that are not accessible via the high-level representation (the padding of <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">struct</span><span class="w"> </span><span class="nc">S</span></code>), but that are accessible via the low-level representation.</p>
+</section>
+<section id="id5">
+<h3>How is this reflected in BRiCk?<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
 <p>BRiCk provides access to the low-level view of data via the <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Vraw</span></span> <span class="n"><span class="pre">r</span></span></code> value - where <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">r</span></span></code> represents a “raw byte”.
 BRiCk is parametric in this notion of raw byte, but a simple model would instantiate it with <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">byte</span></span> <span class="o"><span class="pre">|</span></span> <span class="n"><span class="pre">pointer</span></span> <span class="n"><span class="pre">fragment</span></span> <span class="o"><span class="pre">|</span></span> <span class="n"><span class="pre">poison</span></span></code> (i.e. <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.model.simple_pred.html#runtime_val'">runtime_val’</a> in <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.model.simple_pred.html">bluerock.lang.cpp.model.simple_pred</a>).
 <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#RAW_BYTES">RAW_BYTES</a>, <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#RAW_BYTES_VAL">RAW_BYTES_VAL</a> and <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#RAW_BYTES_MIXIN">RAW_BYTES_MIXIN</a> contain the various axioms and definitions which underly our notion of “raw bytes”.</p>
@@ -377,12 +373,12 @@ BRiCk is parametric in this notion of raw byte, but a simple model would instant
 <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.raw.html">bluerock.lang.cpp.logic.raw</a> uses <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#RAW_BYTES_VAL.raw_bytes_of_val">raw_bytes_of_val</a> to expose conversions from <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">primR</span></span></code> to <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">rawsR</span></span></code> - which is itself an array of <code class="code highlight coq docutils literal notranslate"><span class="n"><span class="pre">Vraw</span></span></code> values.
 <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html">bluerock.lang.cpp.logic.layout</a> uses <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.semantics.values.html#RAW_BYTES_VAL.raw_bytes_of_struct">raw_bytes_of_struct</a> - and the definitions within <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.raw.html">bluerock.lang.cpp.logic.raw</a> - to axiomatize <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#struct_to_raw">struct_to_raw</a> which allows for verifiers to convert <a class="reference internal" href="#object-layout-concepts-pod"><span class="std std-ref">Plain Old Data</span></a> structs into their low-level representation.</p>
 <p>Therefore, the example above can be verified by first converting the struct to raw bytes using <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#struct_to_raw">struct_to_raw</a>, copying the raw bytes and then converting the raw bytes back into the struct using <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.logic.layout.html#struct_to_raw">struct_to_raw</a> once again.</p>
-</div>
-</div>
-<div class="section" id="appendix-c-standard-concepts">
-<h2>Appendix: C++ Standard Concepts<a class="headerlink" href="#appendix-c-standard-concepts" title="Permalink to this heading"></a></h2>
-<div class="section" id="plain-old-data-pod-vs-standard-layout-trivial-data">
-<span id="object-layout-concepts-pod"></span><h3>Plain Old Data (POD) vs Standard-Layout/Trivial Data<a class="headerlink" href="#plain-old-data-pod-vs-standard-layout-trivial-data" title="Permalink to this heading"></a></h3>
+</section>
+</section>
+<section id="appendix-c-standard-concepts">
+<h2>Appendix: C++ Standard Concepts<a class="headerlink" href="#appendix-c-standard-concepts" title="Link to this heading"></a></h2>
+<section id="plain-old-data-pod-vs-standard-layout-trivial-data">
+<span id="object-layout-concepts-pod"></span><h3>Plain Old Data (POD) vs Standard-Layout/Trivial Data<a class="headerlink" href="#plain-old-data-pod-vs-standard-layout-trivial-data" title="Link to this heading"></a></h3>
 <p>The C++ Standard defines <a class="reference external" href="https://eel.is/c++draft/depr.meta.types#:POD">Plain Old Data (POD)</a> as:</p>
 <blockquote class="pull-quote">
 <div><p>[…] a class that is both a trivial class and a standard-layout class, and has no
@@ -397,8 +393,8 @@ of the previous two concepts. Furthermore, the data which we’ve encountered wh
 reasoning explicitly about the layout of structs within <a class="reference external" href="https://bluerock-io.github.io/formal-methods">BlueRock</a>
 has fallen into the category of <strong>POD</strong>. In the future we will want to refine the
 C++-concepts which we expose within the semantics and relax our axioms accordingly.</p>
-<div class="section" id="standard-layout-data">
-<span id="object-layout-concepts-standard-layout"></span><h4>Standard-Layout Data<a class="headerlink" href="#standard-layout-data" title="Permalink to this heading"></a></h4>
+<section id="standard-layout-data">
+<span id="object-layout-concepts-standard-layout"></span><h4>Standard-Layout Data<a class="headerlink" href="#standard-layout-data" title="Link to this heading"></a></h4>
 <p>The C++ Standard defines a <a class="reference external" href="https://eel.is/c++draft/class.prop#3">standard-layout class</a>
 in the following way:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>(3) A class S is a standard-layout class if it:
@@ -427,9 +423,9 @@ in the following way:</p>
 (3.7.5) If X is a non-class, non-array type, the set M(X) is empty.
 </pre></div>
 </div>
-</div>
-<div class="section" id="trivial-data">
-<span id="object-layout-concepts-trivial"></span><h4>Trivial Data<a class="headerlink" href="#trivial-data" title="Permalink to this heading"></a></h4>
+</section>
+<section id="trivial-data">
+<span id="object-layout-concepts-trivial"></span><h4>Trivial Data<a class="headerlink" href="#trivial-data" title="Link to this heading"></a></h4>
 <p>The C++ Standard defines a <a class="reference external" href="https://eel.is/c++draft/class.prop#2">trivial class</a>
 in the following way:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>(1) A trivially copyable class is a class:
@@ -446,10 +442,10 @@ in the following way:</p>
      functions or virtual base classes. — end note]
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="trivially-destructible-objects">
-<span id="object-layout-concepts-trivially-destructible"></span><h3>Trivially Destructible Objects<a class="headerlink" href="#trivially-destructible-objects" title="Permalink to this heading"></a></h3>
+</section>
+</section>
+<section id="trivially-destructible-objects">
+<span id="object-layout-concepts-trivially-destructible"></span><h3>Trivially Destructible Objects<a class="headerlink" href="#trivially-destructible-objects" title="Link to this heading"></a></h3>
 <p>The C++ Standard defines a <a class="reference external" href="https://eel.is/c++draft/class.dtor#8">trivial destructor</a>
 in the following way:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>(8) A destructor is trivial if it is not user-provided and if:
@@ -462,17 +458,19 @@ in the following way:</p>
 <p>Scalars, <a class="reference internal" href="#object-layout-concepts-trivial"><span class="std std-ref">trivial data</span></a> which uses a trivial destructor and arrays of such objects
 are known as <strong>Trivially Destructible Objects</strong>.</p>
 <p class="rubric">Footnotes</p>
-<dl class="footnote brackets">
-<dt class="label" id="krebbers-thesis-2-5"><span class="brackets"><a class="fn-backref" href="#id1">1</a></span></dt>
-<dd><p>Section 2.5 of <a class="reference external" href="https://robbertkrebbers.nl/research/thesis.pdf">Robbert Krebbers - The C standard formalized in Coq</a></p>
-</dd>
-<dt class="label" id="abi-arm"><span class="brackets"><a class="fn-backref" href="#id2">2</a></span></dt>
-<dd><p><a class="reference external" href="https://developer.arm.com/documentation/ihi0042/latest?_ga=2.60211309.1506853196.1533541889-405231439.1528186050">Procedure Call Standard for the Arm Architecture</a></p>
-</dd>
-</dl>
-</div>
-</div>
-</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="krebbers-thesis-2-5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Section 2.5 of <a class="reference external" href="https://robbertkrebbers.nl/research/thesis.pdf">Robbert Krebbers - The C standard formalized in Coq</a></p>
+</aside>
+<aside class="footnote brackets" id="abi-arm" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://developer.arm.com/documentation/ihi0042/latest?_ga=2.60211309.1506853196.1533541889-405231439.1528186050">Procedure Call Standard for the Arm Architecture</a></p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
 
 
            </div>

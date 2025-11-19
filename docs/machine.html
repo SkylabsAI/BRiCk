@@ -1,25 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Assembly Interoperation &mdash; SkyLabs BRiCk alpha documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css" />
-      <link rel="stylesheet" type="text/css" href="_static/alectryon.css" />
-      <link rel="stylesheet" type="text/css" href="_static/css/justify.css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/alectryon.css?v=3179997d" />
+      <link rel="stylesheet" type="text/css" href="_static/css/justify.css?v=94af2184" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/alectryon.js"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=1f169f65"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/alectryon.js?v=749f78b6"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +37,6 @@
           <a href="index.html" class="icon icon-home">
             SkyLabs BRiCk
           </a>
-              <div class="version">
-                0.5.0
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -89,15 +85,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="assembly-interoperation">
-<span id="machine-interop"></span><h1>Assembly Interoperation<a class="headerlink" href="#assembly-interoperation" title="Permalink to this heading"></a></h1>
+  <section id="assembly-interoperation">
+<span id="machine-interop"></span><h1>Assembly Interoperation<a class="headerlink" href="#assembly-interoperation" title="Link to this heading"></a></h1>
 <p>This section describes the mechanisms that BRiCk uses to connect C++ concepts to the underlying generated machine code.
 These connections are generally necessary in low-level code that inter-operates with assembly.
 For example, accessing C++ memory from assembly, calling C++ functions from assembly, changing the address space that the C++ program is running in, etc.</p>
 <p>While crucial for low-level programs these features are generally not used in high-level programs.
 Even for low-level programs, a relatively small amount of the program requires properties at this level.</p>
-<div class="section" id="compiler-correctness">
-<h2>Compiler Correctness<a class="headerlink" href="#compiler-correctness" title="Permalink to this heading"></a></h2>
+<section id="compiler-correctness">
+<h2>Compiler Correctness<a class="headerlink" href="#compiler-correctness" title="Link to this heading"></a></h2>
 <p>BRiCk’s strategy for connecting C++ programs to machine programs is to connect the weakest pre-condition of C++ functions to a weakest pre-condition for machine code.
 The relevant definitions can be found in <a class="reference external" href="_static/coqdoc/bluerock.lang.cpp.compile.html">bluerock.lang.cpp.compile</a>.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>  (** compilation of a function [f] is correct if the weakest pre-condition
@@ -130,8 +126,8 @@ When C++ code is running, the C++ abstract machines <em>owns</em> the underlying
 This characterization makes it possible (and even natural) to escape the abstract machine in limited circumstances and interact at a lower-level of abstraction.
 For example, a viable model of inline assembly is to borrow resources from the abstract machine, run the assembly, and then return the underlying resources back to the abstract machine.
 The <a class="reference internal" href="object_layout.html#object-layout"><span class="std std-ref">Object representation, layout and padding</span></a> section goes into more details regarding how this access to memory is coordinated within BRiCk.</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
