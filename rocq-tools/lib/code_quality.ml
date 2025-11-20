@@ -152,7 +152,9 @@ let make_item : state -> item =
   | W -> Warning (make_warning file pos data full)
   | U -> assert false
 
-let gather : line list -> item list = fun lines ->
+let gather : ?assume_errors:bool -> line list -> item list =
+  fun ?(assume_errors=true) lines ->
+  let default_kind = if assume_errors then E else U in
   let rec gather i rev_items state lines =
     let gather = gather (i+1) in
     match (state, lines) with
@@ -168,7 +170,7 @@ let gather : line list -> item list = fun lines ->
       let item = make_item s in
       gather (item :: rev_items) None lines
     | (None                 , Header{file; pos; full} :: lines) ->
-        gather rev_items (Some{kind=U; file; pos; headers=[full]; data=[]}) lines
+        gather rev_items (Some{kind=default_kind; file; pos; headers=[full]; data=[]}) lines
     | (None                 , Data(line, false) :: lines) ->
         gather (Line(i, line) :: rev_items) state lines
     | (None                 , Data(_   , true ) :: _    ) ->
@@ -184,7 +186,7 @@ let gather : line list -> item list = fun lines ->
         gather rev_items (Some{s with data=line :: data}) lines
     | (Some({kind=E; _} as s), Header({file=h_file; pos=h_pos; full}) :: lines) ->
       let item = make_item s in
-      gather (item :: rev_items) (Some{kind=U; file=h_file; pos=h_pos; headers=[full]; data=[]}) lines
+      gather (item :: rev_items) (Some{kind=default_kind; file=h_file; pos=h_pos; headers=[full]; data=[]}) lines
     | (Some({kind=W; _} as s), Data(line, false) :: lines) ->
         gather rev_items (Some{s with data=line :: s.data}) lines
     | (Some({kind=W; _} as s), Data(line, true ) :: lines) ->
@@ -195,8 +197,8 @@ let gather : line list -> item list = fun lines ->
   in
   gather 1 [] None lines
 
-let parse_lines lines =
-  let items = gather lines in
+let parse_lines ?(assume_errors=false) lines =
+  let items = gather ~assume_errors lines in
   let (lines, warnings, errors) =
     let f item (lines, warnings, errors) =
       match item with
