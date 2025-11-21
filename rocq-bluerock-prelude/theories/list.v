@@ -47,6 +47,29 @@ Proof.
   rewrite !list_equiv_Forall2. apply Forall2_symmetric_strong.
 Qed.
 
+Lemma Forall_proper_simpl {A B} (R : A -> B -> Prop) (P0 : A -> Prop) (P1 : B -> Prop) xs0 xs1 :
+  (forall x0 x1, R x0 x1 -> P0 x0 -> P1 x1) ->
+  Forall2 R xs0 xs1 -> List.Forall P0 xs0 -> List.Forall P1 xs1.
+Proof.
+  move => HRP01 + HP0 => /Forall2_Forall_r; apply.
+  move: HP0; apply List.Forall_impl => x0 Hx0 x1 /HRP01 Hx01; tauto.
+Qed.
+
+Lemma Forall2_Forall' {A B} (P : A → B → Prop) l1 l2 :
+  Forall2 P l1 l2 <-> length l1 = length l2 ∧ List.Forall (uncurry P) (zip l1 l2).
+Proof.
+  elim: l1 l2 => [|x l1 IH] l2.
+  - rewrite /= Forall_nil; split.
+    + by move => /Forall2_nil_inv_l ->.
+    + rewrite symmetry_iff length_zero_iff_nil.
+      move => [->]; constructor.
+  - case: l2 => [|y l2].
+    { split => [|[]] /=; inversion 1. }
+    rewrite Forall2_cons_iff {}IH /= Forall_cons_iff inj_iff /=.
+    tauto.
+Qed.
+
+
 (** ** Type-level list quantifier *)
 
 Inductive ForallT {A} (P : A -> Type) : list A -> Type :=
