@@ -22,7 +22,7 @@ Running coqc
   $ coqc -color on large.v
   $ coqc -color on huge.v
   $ coqc -color on medium_variation.v
-  $ coqc -color on err_out.v
+  $ coqc -color on err_out.v 2>&1
   File "./err_out.v", line 3, characters 6-20:
   Warning: Unused variable: x. [ltac2-unused-variable,ltac2,default]
   nat : Set
@@ -39,7 +39,7 @@ Running our coqc wrapper
   $ coqc-perf -color on large.v
   $ coqc-perf -color on huge.v
   $ coqc-perf -color on medium_variation.v
-  $ coqc-perf -color on err_out.v
+  $ coqc-perf -color on err_out.v 2>&1
   File "./err_out.v", line 3, characters 6-20:
   Warning: Unused variable: x. [ltac2-unused-variable,ltac2,default]
   nat : Set
