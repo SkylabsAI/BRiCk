@@ -230,6 +230,13 @@ Proof. unfold replicateN; rewrite N2Nat.inj_add; apply replicate_add. Qed.
 Lemma elem_of_replicateN {A} (count : N) (b a : A) : a ∈ replicateN count b → b = a.
 Proof. by intros [-> _]%elem_of_replicate. Qed.
 
+Lemma reverse_nil_iff {A} (xs : list A) : reverse xs = [] <-> xs = [].
+Proof.
+  case: xs => [|x xs];
+    rewrite !(reverse_nil,reverse_cons,app_nil) //;
+    intuition; discriminate.
+Qed.
+
 (* Outside [Section listN] to generalize over [A]. *)
 Lemma length_lengthN {A} (xs : list A) :
   length xs = N.to_nat (lengthN xs).
@@ -295,6 +302,36 @@ Section listN.
   Lemma takeN_replicateN_plus n m x :
     takeN n (replicateN (n + m) x) = replicateN n x.
   Proof. by rewrite /takeN /replicateN N2Nat.inj_add take_replicate_add. Qed.
+
+  Lemma takeN_map {B} n (f : A -> B) (xs : list A) :
+    takeN n (map f xs) = map f (takeN n xs).
+  Proof. by rewrite /takeN firstn_map. Qed.
+
+  Lemma takeN_fmap {B} n (f : A -> B) (xs : list A) :
+    takeN n (fmap f xs) = fmap f (takeN n xs).
+  Proof. by rewrite /takeN firstn_map. Qed.
+
+  Lemma dropN_map {B} n (f : A -> B) (xs : list A) :
+    dropN n (map f xs) = map f (dropN n xs).
+  Proof. by rewrite /dropN skipn_map. Qed.
+
+  Lemma dropN_fmap {B} n (f : A -> B) (xs : list A) :
+    dropN n (fmap f xs) = fmap f (dropN n xs).
+  Proof. by rewrite /dropN skipn_map. Qed.
+
+  Lemma takeN_reverse n (xs : list A) :
+    takeN n (reverse xs) = reverse (dropN (lengthN xs - n)%N xs).
+  Proof.
+    rewrite /lengthN/takeN/dropN take_reverse; do 2 f_equiv.
+    lia.
+  Qed.
+
+  Lemma dropN_reverse n (xs : list A) :
+    dropN n (reverse xs) = reverse (takeN (lengthN xs - n)%N xs).
+  Proof.
+    rewrite /lengthN/takeN/dropN drop_reverse; do 2 f_equiv.
+    lia.
+  Qed.
 
   Lemma to_nat_lengthN xs :
     N.to_nat (lengthN xs) = length xs.
@@ -366,12 +403,19 @@ Section listN.
     lengthN (<[i:=x]> xs) = lengthN xs.
   Proof. rewrite /lengthN. f_equal. by apply: length_insert. Qed.
 
+  Lemma lengthN_reverse (xs : list A) : lengthN (reverse xs) = lengthN xs.
+  Proof.
+    elim: xs => [|x xs IH];
+      by rewrite !(reverse_cons,reverse_nil,lengthN_app,lengthN_cons,lengthN_nil,N.add_0_l) // IH.
+  Qed.
+
   Definition lengthN_simpl :=
     (@lengthN_fold,
      @lengthN_nil, @lengthN_cons,
      @lengthN_app, @lengthN_map,
      @lengthN_dropN, @lengthN_takeN,
-     @lengthN_rotateN, @lengthN_replicateN).
+     @lengthN_rotateN, @lengthN_replicateN,
+     @lengthN_reverse ).
 
   Lemma lengthN_zip {B} xs (ys : list B) :
     lengthN (zip xs ys) = (lengthN xs) `min` (lengthN ys).
@@ -554,13 +598,6 @@ Section listN.
     dropN n (<[i:=x]> xs) = dropN n xs.
   Proof. move=> H. apply: drop_insert_gt. lia. Qed.
 
-  (* NOTE: This exists for registration as a pure hint when necessary. *)
-  Lemma dropN_congr n1 n2 xs1 xs2 :
-    n1 = n2 ->
-    xs1 = xs2 ->
-    dropN n1 xs1 = dropN n2 xs2.
-  Proof. by move=> -> ->. Qed.
-
   Lemma takeN_zero xs :
     takeN 0 xs = [].
   Proof. reflexivity. Qed.
@@ -657,12 +694,6 @@ Section listN.
     (i < n)%N ->
     takeN n (<[i:=x]> xs) = <[i:=x]> (takeN n xs).
   Proof. move=> H. apply: take_insert_lt. lia. Qed.
-
-  Lemma takeN_congr n1 n2 xs1 xs2 :
-    n1 = n2 ->
-    xs1 = xs2 ->
-    takeN n1 xs1 = takeN n2 xs2.
-  Proof. by move=> -> ->. Qed.
 
   Lemma rotateN_fold k xs :
     rotate (N.to_nat k) xs = rotateN k xs.
@@ -984,11 +1015,25 @@ Section listN.
     rewrite !fmap_Some. intros (x' & ? & ->). by rewrite Nat2N.id.
   Qed.
 
+  Lemma takeN_zip_with {B C} (f : A -> B -> C) n xs ys :
+    takeN n (zip_with f xs ys) = zip_with f (takeN n xs) (takeN n ys).
+  Proof. by rewrite /takeN zip_with_take. Qed.
+
+  Lemma dropN_zip_with {B C} (f : A -> B -> C) n xs ys :
+    dropN n (zip_with f xs ys) = zip_with f (dropN n xs) (dropN n ys).
+  Proof. by rewrite /dropN zip_with_drop. Qed.
+
+  Lemma zip_with_lookupN_Some {B C} (f : A -> B -> C) x (y : B) xs (ys : list B) i :
+    xs !! i = Some x
+    -> ys !! i = Some y
+    -> zip_with f xs ys !! i = Some (f x y).
+  Proof. by rewrite !list_lookupN_lookup lookup_zip_with => -> ->. Qed.
+
   Lemma zip_lookupN_Some {B} x (y : B) xs (ys : list B) i :
     xs !! i = Some x
     -> ys !! i = Some y
     -> zip xs ys !! i = Some (x, y).
-  Proof. by move=>??; apply: zip_lookup_Some. Qed.
+  Proof. apply zip_with_lookupN_Some. Qed.
 
   Lemma insertN_seqN (i j k : N) :
     <[ k := (i + k)%N ]> (seqN i j) = seqN i j.
@@ -1149,6 +1194,11 @@ Section listZ.
       then <[ Z.to_nat k := a ]> l
       else l.
 
+  Definition takeZ {A} (n : Z) := (takeN (A := A) (Z.to_N n)).
+  #[global] Hint Opaque takeZ : typeclass_instances br_opacity.
+  Definition dropZ {A} (n : Z) := (dropN (A := A) (Z.to_N n)).
+  #[global] Hint Opaque dropZ : typeclass_instances br_opacity.
+
   Lemma insertZ_eq_insertN {A} (k : Z) x (xs : list A) :
     <[ k := x ]> xs =
       if bool_decide (0 ≤ k)
@@ -1251,6 +1301,40 @@ Section listZ.
      @bool_decide_refl,
      @bool_decide_lt_irrefl
     ).
+
+  Lemma takeZ_map {A B} n (f : A -> B) (xs : list A) :
+    takeZ n (map f xs) = map f (takeZ n xs).
+  Proof. by rewrite /takeZ takeN_map. Qed.
+
+  Lemma takeZ_fmap {A B} n (f : A -> B) (xs : list A) :
+    takeZ n (fmap f xs) = fmap f (takeZ n xs).
+  Proof. by rewrite /takeZ takeN_map. Qed.
+
+  Lemma dropZ_map {A B} n (f : A -> B) (xs : list A) :
+    dropZ n (map f xs) = map f (dropZ n xs).
+  Proof. by rewrite /dropZ dropN_map. Qed.
+
+  Lemma dropZ_fmap {A B} n (f : A -> B) (xs : list A) :
+    dropZ n (fmap f xs) = fmap f (dropZ n xs).
+  Proof. by rewrite /dropZ dropN_map. Qed.
+
+  Lemma takeZ_reverse {A} n (xs : list A) :
+    takeZ n (reverse xs) = reverse (dropZ (lengthZ xs - n)%Z xs).
+  Proof.
+    rewrite /takeZ/dropZ.
+    have [Hn|Hn] : (n ≤ 0 ∨ 0 ≤ n)%Z by lia.
+    { have Hn' : Z.to_N n = 0%N by lia.
+      rewrite Hn' takeN_zero dropN_lengthN //; lia. }
+    rewrite takeN_reverse; do 2 f_equiv.
+    lia.
+  Qed.
+
+  Lemma dropZ_reverse {A} n (xs : list A) :
+    dropZ n (reverse xs) = reverse (takeZ (lengthZ xs - n)%Z xs).
+  Proof.
+    rewrite -[X in takeZ _ X]reverse_involutive takeZ_reverse reverse_involutive.
+    by rewrite lengthN_reverse Z.sub_sub_distr Z.sub_diag Z.add_0_l.
+  Qed.
 
   Lemma insertZ_nil {A} (i : Z) (x : A) : <[i:=x]>[] = [].
   Proof. rewrite /insert /list_insertZ; case: bool_decide_reflect => //. Qed.
